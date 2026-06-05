@@ -33,7 +33,7 @@ import inspect
 import os
 import sys
 import time
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Dict, List, Optional, Type
 
 from . import base_agent as _base_agent_module
 from . import contracts as _contracts_module
@@ -530,12 +530,6 @@ def merge_visual_context(*contexts: Any) -> JsonDict:
     return merged
 
 
-
-
-# =============================================================================
-# v24 VisualPlanner focused packet builder
-# =============================================================================
-
 def _clip_text_for_visual_planner(value: Any, limit: int = 1200) -> str:
     return clean_text(value or "", limit)
 
@@ -732,14 +726,6 @@ def build_visual_planner_packet(
     analogy_result: JsonDict,
     strategy_result: JsonDict,
 ) -> JsonDict:
-    """
-    Build a compact, high-quality packet for VisualPlannerAgent.
-
-    This does NOT reduce lesson quality. It prevents one agent from receiving
-    the whole raw PDF/Vision dump. Source/RAG/Vision/Teaching agents keep their
-    full outputs, but VisualPlanner receives only the distilled board-design
-    contract it needs.
-    """
     visual_lesson = safe_dict(working.get("visualLessonInput"))
     selected_node_obj = selected_node(working)
 
@@ -796,7 +782,7 @@ def build_visual_planner_packet(
         + [x for a in nearby_page_summaries for x in safe_list(a.get("relationships"))]
     )
 
-    packet = {
+    return {
         "packetVersion": "visual-planner-packet-v24",
         "plannerContract": {
             "role": "VisualPlanner must create board blueprint only.",
@@ -911,8 +897,6 @@ def build_visual_planner_packet(
         },
     }
 
-    return packet
-
 
 def build_partner_power(mcp_trace: List[JsonDict]) -> JsonDict:
     used_items = [item for item in mcp_trace if item.get("mcpUsed")]
@@ -977,13 +961,34 @@ async def run_required_agent(
     phase: str,
 ) -> JsonDict:
     started = now_ms()
-    result = await run_agent_with_timeout(agent_name, payload)
-    result.setdefault("metadata", {})
-    result["metadata"]["runtimeMs"] = now_ms() - started
-    require_ok(agent_name, result)
-    trace.append(trace_item(agent_name, result, summary, phase))
-    mission_trace.append(mission_item(agent_name, "done", summary))
-    return result
+    try:
+        result = await run_agent_with_timeout(agent_name, payload)
+        result.setdefault("metadata", {})
+        result["metadata"]["runtimeMs"] = now_ms() - started
+        trace.append(trace_item(agent_name, result, summary, phase))
+        mission_trace.append(mission_item(agent_name, "done" if result.get("ok") else "failed", summary))
+        require_ok(agent_name, result)
+        return result
+    except Exception as exc:
+        already_traced = bool(trace and safe_dict(trace[-1]).get("agent") == agent_name)
+        if not already_traced:
+            failed_result = {
+                "ok": False,
+                "agentName": agent_name,
+                "mode": payload.get("mode") or "run",
+                "result": {},
+                "errors": [str(exc)],
+                "warnings": [],
+                "metadata": {
+                    "fallbackUsed": False,
+                    "usedSmartFallback": False,
+                    "requiredAgentFailed": True,
+                    "runtimeMs": now_ms() - started,
+                },
+            }
+            trace.append(trace_item(agent_name, failed_result, f"{summary} failed: {exc}", phase))
+            mission_trace.append(mission_item(agent_name, "failed", f"{summary}: {exc}"))
+        raise
 
 
 async def run_mcp_mission_step(
@@ -1066,11 +1071,6 @@ async def run_selected_page_vision_direct(
     trace: List[JsonDict],
     mission_trace: List[JsonDict],
 ) -> JsonDict:
-    """
-    Directly uses the real selected_page_vision_agent.py helper functions.
-    This avoids BaseLiveTutorAgent signature mismatches and still performs real
-    Gemini Vision calls with image bytes.
-    """
     started = now_ms()
 
     try:
@@ -1622,13 +1622,6 @@ async def run_teach_node_pipeline(payload: JsonDict) -> JsonDict:
             "verifiedSourceRefs": grounded_refs,
         }
     )
-
-    # -------------------------------------------------------------------------
-    # Phase 1 brain wiring fix.
-    # Concept -> KnowledgeGraph -> TeachingStrategy must be sequential.
-    # This prevents a weak/generic board because every later agent receives
-    # rich source truth + vision + previous brain outputs.
-    # -------------------------------------------------------------------------
 
     concept_payload = {
         **build_teaching_brain_packet(

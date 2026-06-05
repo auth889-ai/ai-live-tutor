@@ -337,6 +337,75 @@ def _step_refs_for_role(step: JsonDict, clean_refs: Dict[str, List[JsonDict]]) -
     return dedupe_source_refs(refs)[:5]
 
 
+def _first_text(*values: Any, limit: int = 2400) -> str:
+    for value in values:
+        text = clean_text(value, limit)
+        if text:
+            return text
+    return ""
+
+
+def _step_teacher_move(step: JsonDict) -> str:
+    """
+    Map Gemini's dynamic teaching fields into teacherMove.
+    Does not invent topic content.
+    """
+    return _first_text(
+        step.get("teacherMove"),
+        step.get("teachingMove"),
+        step.get("teacherAction"),
+        step.get("spokenPlan"),
+        step.get("spokenExplanation"),
+        step.get("explanation"),
+        step.get("reason"),
+        step.get("description"),
+        step.get("studentFriendlyExplanation"),
+        limit=2400,
+    )
+
+
+def _step_board_move(step: JsonDict) -> str:
+    """
+    Map Gemini's dynamic board fields into boardMove.
+    Does not invent topic content.
+    """
+    return _first_text(
+        step.get("boardMove"),
+        step.get("boardAction"),
+        step.get("boardNote"),
+        step.get("boardInstruction"),
+        step.get("visualPlan"),
+        step.get("visualMove"),
+        step.get("teacherBoardAction"),
+        step.get("displayOnBoard"),
+        step.get("diagramAction"),
+        limit=2200,
+    )
+
+
+def _route_repair_move(route: JsonDict) -> str:
+    return _first_text(
+        route.get("repairMove"),
+        route.get("teacherMove"),
+        route.get("teacherAction"),
+        route.get("correction"),
+        route.get("explanation"),
+        route.get("description"),
+        limit=2200,
+    )
+
+
+def _route_board_move(route: JsonDict) -> str:
+    return _first_text(
+        route.get("boardMove"),
+        route.get("boardAction"),
+        route.get("boardNote"),
+        route.get("visualRepair"),
+        route.get("teacherBoardAction"),
+        limit=1800,
+    )
+
+
 def _bridge_refs(bridge: JsonDict, primary_refs: List[JsonDict]) -> List[JsonDict]:
     refs = dedupe_source_refs([safe_dict(x) for x in safe_list(bridge.get("sourceRefs"))])
     cleaned: List[JsonDict] = []
@@ -346,160 +415,6 @@ def _bridge_refs(bridge: JsonDict, primary_refs: List[JsonDict]) -> List[JsonDic
     if not cleaned:
         cleaned = primary_refs[:4]
     return dedupe_source_refs(normalize_source_refs(cleaned))[:6]
-
-
-def _field(obj: JsonDict, *keys: str) -> Any:
-    """Return the first non-empty value from many possible dynamic Gemini keys."""
-    data = safe_dict(obj)
-    for key in keys:
-        if key in data:
-            value = data.get(key)
-            if isinstance(value, (dict, list)):
-                if value:
-                    return value
-            elif clean_text(value, 20_000):
-                return value
-    return ""
-
-
-def _stringify_dynamic(value: Any, limit: int = 2200) -> str:
-    """Preserve real dynamic nested planner content without inventing static text."""
-    if isinstance(value, str):
-        return clean_text(value, limit)
-    if isinstance(value, (int, float, bool)):
-        return clean_text(str(value), limit)
-    if isinstance(value, list):
-        parts: List[str] = []
-        for item in value:
-            text = _stringify_dynamic(item, max(200, limit // 2))
-            if text:
-                parts.append(text)
-        return clean_text("; ".join(parts), limit)
-    if isinstance(value, dict):
-        priority: List[str] = []
-        for key in [
-            "text", "script", "say", "narration", "instruction", "description",
-            "action", "intent", "target", "label", "title", "summary", "detail",
-        ]:
-            text = _stringify_dynamic(value.get(key), max(200, limit // 2))
-            if text:
-                priority.append(text)
-        if priority:
-            return clean_text("; ".join(priority), limit)
-        try:
-            return clean_text(json.dumps(value, ensure_ascii=False), limit)
-        except Exception:
-            return clean_text(value, limit)
-    return clean_text(value, limit)
-
-
-def _schema_echo_text(text: str) -> bool:
-    t = clean_text(text, 1000).lower().strip()
-    if not t:
-        return False
-    schema_phrases = {
-        "what the teacher says and why",
-        "what appears on board: write/draw/circle/arrow/highlight/compare/quiz",
-        "what appears on board",
-        "specific step name",
-        "why this step helps the student",
-        "what student can do after this step",
-        "how teacher repairs",
-        "visual repair on board",
-        "student confusion",
-    }
-    return t in schema_phrases or t.startswith("what the teacher says") or t.startswith("what appears on board")
-
-
-def _join_real_texts(limit: int, *values: Any) -> str:
-    parts: List[str] = []
-    seen = set()
-    for value in values:
-        text = _stringify_dynamic(value, limit)
-        if not text or _schema_echo_text(text):
-            continue
-        key = text.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        parts.append(text)
-    return clean_text(" ".join(parts), limit)
-
-
-def _step_teacher_move(step: JsonDict) -> str:
-    """Map real LLM aliases to the contract field teacherMove."""
-    return _join_real_texts(
-        2400,
-        _field(step, "teacherMove", "teacher_move"),
-        _field(step, "teacherAction", "teacher_action", "tutorMove", "tutor_move"),
-        _field(step, "teacherScript", "teacher_script", "voiceScript", "voice_script"),
-        _field(step, "explanation", "explain", "narration", "say", "talkTrack"),
-        _field(step, "teachingMove", "teaching_move", "microLesson", "miniLesson"),
-        _field(step, "studentFacingExplanation", "student_facing_explanation"),
-        _field(step, "reason"),
-    )
-
-
-def _step_board_move(step: JsonDict) -> str:
-    """Map real LLM aliases to the contract field boardMove."""
-    return _join_real_texts(
-        2200,
-        _field(step, "boardMove", "board_move"),
-        _field(step, "boardAction", "board_action", "boardActions", "board_actions"),
-        _field(step, "boardNote", "board_note", "boardInstruction", "board_instruction"),
-        _field(step, "visualMove", "visual_move", "visualPlan", "visual_plan"),
-        _field(step, "drawingPlan", "drawing_plan", "draw", "writeOnBoard", "write_on_board"),
-        _field(step, "markingPlan", "teacherMarking", "teacher_marking"),
-        _field(step, "screenPlan", "screen_plan", "diagramAction", "diagram_action"),
-    )
-
-
-def _route_repair_move(route: JsonDict) -> str:
-    return _join_real_texts(
-        2200,
-        _field(route, "repairMove", "repair_move"),
-        _field(route, "teacherMove", "teacher_move", "teacherAction", "teacher_action"),
-        _field(route, "explanation", "repairExplanation", "repair_explanation"),
-        _field(route, "script", "say", "narration"),
-    )
-
-
-def _route_board_move(route: JsonDict) -> str:
-    return _join_real_texts(
-        1800,
-        _field(route, "boardMove", "board_move"),
-        _field(route, "boardAction", "board_action", "boardActions", "board_actions"),
-        _field(route, "boardNote", "board_note", "visualMove", "visual_move"),
-        _field(route, "drawingPlan", "drawing_plan", "diagramAction", "diagram_action"),
-    )
-
-
-def _step_visual_type(step: JsonDict) -> str:
-    raw = clean_text(
-        _field(step, "visualType", "visual_type", "type", "screenType", "screen_type", "boardType"),
-        100,
-    )
-    if raw:
-        return raw
-    name = clean_text(step.get("name"), 300).lower()
-    board = _step_board_move(step).lower()
-    teacher = _step_teacher_move(step).lower()
-    combined = f"{name} {board} {teacher}"
-    if any(x in combined for x in ["quiz", "check", "question"]):
-        return "quiz"
-    if any(x in combined for x in ["mistake", "confusion", "repair"]):
-        return "mistake-repair"
-    if any(x in combined for x in ["example", "case", "sql", "code"]):
-        return "worked-example"
-    if any(x in combined for x in ["compare", "versus", " vs ", "difference"]):
-        return "comparison"
-    if any(x in combined for x in ["diagram", "draw", "arrow", "relationship", "flow"]):
-        return "diagram"
-    return "definition"
-
-
-def _valid_dynamic_step(step: JsonDict) -> bool:
-    return bool(_step_teacher_move(step) or _step_board_move(step) or clean_text(step.get("name"), 200))
 
 
 def _unwrap_strategy_raw(raw: JsonDict) -> JsonDict:
@@ -524,6 +439,8 @@ def _unwrap_strategy_raw(raw: JsonDict) -> JsonDict:
             current = candidate
             break
 
+    # If Gemini echoed the schema instead of producing real content, keep empty.
+    # Validator should fail; we do not fake-fill.
     if current.get("requiredOutputSchema") and not (
         current.get("teachingGoal") or current.get("teachingSteps") or current.get("steps")
     ):
@@ -561,9 +478,6 @@ Hard rules:
 - Do not echo requiredOutputSchema.
 - Do not wrap in markdown.
 - Top-level JSON must contain: teachingGoal, teachingSteps, boardActionPlan, repairRoutes, visualBoardBridge.
-- For every teachingSteps item, use exact keys teacherMove and boardMove.
-- teacherMove must be a complete helpful tutor explanation, not a heading.
-- boardMove must describe concrete board writing/drawing/marking, not be empty.
 - No fixed domain.
 - No fake fallback.
 - No unsupported facts.
@@ -794,74 +708,42 @@ Hard rules:
         if not primary_refs:
             raise RuntimeError("TeachingStrategyAgent cannot normalize without clean primary sourceRefs.")
 
-        raw_steps = safe_list(
-            raw.get("teachingSteps")
-            or raw.get("steps")
-            or raw.get("lessonSteps")
-            or raw.get("strategySteps")
-            or raw.get("planSteps")
-            or safe_dict(raw.get("lessonPlan")).get("steps")
-            or safe_dict(raw.get("teachingPlan")).get("steps")
-        )
-
         steps: List[JsonDict] = []
-        field_mapping_repairs = 0
-        for index, item in enumerate(raw_steps):
+        for index, item in enumerate(safe_list(raw.get("teachingSteps") or raw.get("steps"))):
             step = safe_dict(item)
-            if not step or not _valid_dynamic_step(step):
-                continue
-
-            teacher_move = _step_teacher_move(step)
-            board_move = _step_board_move(step)
-            if teacher_move != clean_text(step.get("teacherMove") or "", 2400) or board_move != clean_text(step.get("boardMove") or "", 2200):
-                field_mapping_repairs += 1
-
-            normalized_for_refs = {**step, "teacherMove": teacher_move, "boardMove": board_move}
-            step_refs = _step_refs_for_role(normalized_for_refs, clean_refs)
+            step_refs = _step_refs_for_role(step, clean_refs)
             steps.append(
                 {
-                    "stepId": normalize_id(_field(step, "stepId", "id") or f"step_{index + 1}", f"step_{index + 1}"),
-                    "name": clean_text(_field(step, "name", "title", "label") or f"Step {index + 1}", 180),
-                    "teacherMove": teacher_move,
-                    "boardMove": board_move,
-                    "visualType": _step_visual_type(step),
-                    "reason": clean_text(_field(step, "reason", "why", "rationale") or "", 1300),
-                    "learningOutcome": clean_text(_field(step, "learningOutcome", "outcome", "studentOutcome", "objective") or "", 900),
+                    "stepId": normalize_id(step.get("stepId") or f"step_{index + 1}", f"step_{index + 1}"),
+                    "name": clean_text(step.get("name") or f"Step {index + 1}", 180),
+                    "teacherMove": _step_teacher_move(step),
+                    "boardMove": _step_board_move(step),
+                    "visualType": clean_text(step.get("visualType") or "definition", 100),
+                    "reason": clean_text(step.get("reason") or "", 1300),
+                    "learningOutcome": clean_text(step.get("learningOutcome") or "", 900),
                     "sourceRefs": step_refs,
                     "metadata": {
                         **safe_dict(step.get("metadata")),
                         "sourceRefsCleanedV2": True,
                         "sourceRefsRepairedFromPayload": False,
-                        "strategyStepFieldMappingV2": True,
                     },
                 }
             )
 
         repair_routes: List[JsonDict] = []
-        raw_routes = safe_list(
-            raw.get("repairRoutes")
-            or raw.get("misconceptionRoutes")
-            or raw.get("confusionRepairs")
-            or raw.get("repairPlan")
-            or safe_dict(raw.get("repairStrategy")).get("routes")
-        )
-        for index, item in enumerate(raw_routes):
+        for index, item in enumerate(safe_list(raw.get("repairRoutes"))):
             route = safe_dict(item)
-            repair_move = _route_repair_move(route)
-            board_move = _route_board_move(route)
-            normalized_for_refs = {**route, "teacherMove": repair_move, "boardMove": board_move}
-            route_refs = _step_refs_for_role(normalized_for_refs, clean_refs)
+            route_refs = _step_refs_for_role(route, clean_refs)
             repair_routes.append(
                 {
-                    "routeId": normalize_id(_field(route, "routeId", "id") or f"repair_{index + 1}", f"repair_{index + 1}"),
-                    "trigger": clean_text(_field(route, "trigger", "confusion", "misconception", "when") or "", 800),
-                    "repairMove": repair_move,
-                    "boardMove": board_move,
+                    "routeId": normalize_id(route.get("routeId") or f"repair_{index + 1}", f"repair_{index + 1}"),
+                    "trigger": clean_text(route.get("trigger") or "", 800),
+                    "repairMove": _route_repair_move(route),
+                    "boardMove": _route_board_move(route),
                     "sourceRefs": route_refs,
                     "metadata": {
                         **safe_dict(route.get("metadata")),
                         "sourceRefsCleanedV2": True,
-                        "strategyStepFieldMappingV2": True,
                     },
                 }
             )
@@ -958,7 +840,6 @@ Hard rules:
                 "sourceRefsRepairedFromPayload": False,
                 "strategyShapeNormalizerV2": True,
                 "strategyStepFieldMappingV2": True,
-                "strategyFieldMappingRepairCount": field_mapping_repairs,
             },
         }
 
