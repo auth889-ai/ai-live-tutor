@@ -322,53 +322,6 @@ async def create_session_if_needed(
         await result
 
 
-def _safe_json_for_repair(value: Any, limit: int = 45000) -> str:
-    try:
-        return clean_text(json.dumps(value, ensure_ascii=False, indent=2), limit)
-    except Exception:
-        return clean_text(value, limit)
-
-
-def _build_agent_repair_prompt(
-    *,
-    agent_name: str,
-    original_prompt: str,
-    raw_output: JsonDict,
-    normalized_output: JsonDict,
-    validation: ValidationResult,
-    attempt: int,
-) -> str:
-    """
-    Ask the SAME Gemini/ADK agent to repair its own weak output.
-    This does not fake-fill content in Python.
-    """
-    repair_packet = {
-        "task": "Repair your previous JSON output so it passes this agent's validator.",
-        "agentName": agent_name,
-        "repairAttempt": attempt + 1,
-        "hardRules": [
-            "Return ONLY the corrected JSON object.",
-            "Do not return markdown.",
-            "Do not explain the repair.",
-            "Do not echo the schema.",
-            "Do not invent unsupported facts.",
-            "Use the original prompt/source context as truth.",
-            "Fix every validation error exactly.",
-        ],
-        "validationErrors": safe_list(validation.errors),
-        "validationWarnings": safe_list(validation.warnings),
-        "previousRawOutput": raw_output,
-        "previousNormalizedOutput": normalized_output,
-        "originalPromptReminder": clean_text(original_prompt, 70000),
-        "requiredBehavior": {
-            "fallbackUsed": False,
-            "usedSmartFallback": False,
-            "agentSelfRepairLoopV1": True,
-        },
-    }
-    return _safe_json_for_repair(repair_packet, 120000)
-
-
 class BaseLiveTutorAgent(ABC):
     agent_name: str = "BaseLiveTutorAgent"
     agent_group: str = "base"
@@ -504,12 +457,8 @@ class BaseLiveTutorAgent(ABC):
                     "fallbackUsed": False,
                     "usedSmartFallback": False,
                     "stage": "separate-agent-input-validation",
-                    "agentSelfRepairLoopV1": True,
                 },
             )
-
-        repair_attempts = int(os.getenv("LIVE_TUTOR_AGENT_REPAIR_ATTEMPTS", "1") or "1")
-        repair_attempts = max(0, min(repair_attempts, 2))
 
         try:
             prompt = self.build_prompt(payload, context)
@@ -522,46 +471,18 @@ class BaseLiveTutorAgent(ABC):
             normalized = self.normalize_output(raw, payload, context)
             output_validation = self.validate_output(normalized, payload, context)
 
-            repair_history: List[JsonDict] = []
-
-            if self.uses_adk and not output_validation.ok and repair_attempts > 0:
-                for attempt in range(repair_attempts):
-                    repair_history.append(
-                        {
-                            "attempt": attempt + 1,
-                            "errors": safe_list(output_validation.errors),
-                            "warnings": safe_list(output_validation.warnings),
-                        }
-                    )
-
-                    repair_prompt = _build_agent_repair_prompt(
-                        agent_name=self.agent_name,
-                        original_prompt=prompt,
-                        raw_output=raw,
-                        normalized_output=normalized,
-                        validation=output_validation,
-                        attempt=attempt,
-                    )
-
-                    raw = await self.run_adk_json(repair_prompt, context)
-                    normalized = self.normalize_output(raw, payload, context)
-                    output_validation = self.validate_output(normalized, payload, context)
-
-                    if output_validation.ok:
-                        break
-
             return AgentResult(
                 ok=output_validation.ok,
                 agentName=self.agent_name,
                 mode=mode,
-                result=normalized if output_validation.ok else {},
+                result=normalized,
                 validation=output_validation,
                 errors=output_validation.errors,
                 warnings=output_validation.warnings,
-                sourceRefs=safe_list(normalized.get("sourceRefs")) if output_validation.ok else [],
-                boardCommands=safe_list(normalized.get("boardCommands")) if output_validation.ok else [],
-                voiceScript=safe_list(normalized.get("voiceScript")) if output_validation.ok else [],
-                subtitles=safe_list(normalized.get("subtitles")) if output_validation.ok else [],
+                sourceRefs=safe_list(normalized.get("sourceRefs")),
+                boardCommands=safe_list(normalized.get("boardCommands")),
+                voiceScript=safe_list(normalized.get("voiceScript")),
+                subtitles=safe_list(normalized.get("subtitles")),
                 metadata={
                     "agentGroup": self.agent_group,
                     "realSeparateAgent": True,
@@ -569,9 +490,6 @@ class BaseLiveTutorAgent(ABC):
                     "model": self.model,
                     "fallbackUsed": False,
                     "usedSmartFallback": False,
-                    "agentSelfRepairLoopV1": True,
-                    "repairAttemptCount": len(repair_history),
-                    "repairHistory": repair_history,
                 },
             )
 
@@ -596,11 +514,9 @@ class BaseLiveTutorAgent(ABC):
                     "usesAdk": self.uses_adk,
                     "fallbackUsed": False,
                     "usedSmartFallback": False,
-                    "agentSelfRepairLoopV1": True,
                     "traceback": traceback.format_exc() if os.getenv("NODE_ENV") == "development" else "",
                 },
             )
-
 
     def run_without_adk(self, payload: JsonDict, context: AgentContext) -> JsonDict:
         raise RuntimeError(f"{self.agent_name} requires ADK and cannot run without it.")
