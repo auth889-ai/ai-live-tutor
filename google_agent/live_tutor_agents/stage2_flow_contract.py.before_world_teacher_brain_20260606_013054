@@ -477,73 +477,19 @@ def build_teaching_brain_packet(
         },
         "qualityContract": {
             **safe_dict(working.get("qualityContract")),
-            "target": "world-class human tutor brain that later becomes a dynamic premium board lesson",
-            "worldTeacherBrainContractV1": True,
+            "target": "dynamic premium human tutor board, not fixed template and not fixed domain",
             "mustUseSourceEvidence": True,
-            "mustUseSelectedPageFullText": True,
             "mustUsePageImageAnalyses": True,
-            "mustUseConceptExtraction": True,
-            "mustUseKnowledgeGraph": True,
-            "mustUseTeachingStrategy": True,
-            "mustUseAnalogyExample": True,
             "mustPreserveSourceRefs": True,
-            "mustCreateBoardReadyMicroSteps": True,
-            "mustCreateTeacherPointingPlan": True,
-            "mustCreateMistakeRepairPlan": True,
-            "mustCreateExplainBackPrompt": True,
             "mustUseFullPdfSummaryAsBackground": True,
             "mustUseFullPdfOutlineAsBackground": True,
             "noRawPdfDump": True,
             "noBase64ImageBytes": True,
-            "noParagraphOnlyLesson": True,
-            "noFixedTemplate": True,
-            "noDomainHardcoding": True,
             "fallbackUsed": False,
             "usedSmartFallback": False,
         },
-        "teacherBrainOutputContract": {
-            "worldTeacherBrainContractV1": True,
-            "requiredSections": [
-                "simpleDefinition",
-                "intuition",
-                "sourceGroundedExplanation",
-                "diagramOrVisualExplanation",
-                "stepByStep",
-                "workedExample",
-                "commonMistakes",
-                "boardNotes",
-                "checkpoint",
-                "worldTeacherLesson"
-            ],
-            "stepQuality": {
-                "minimumSteps": 6,
-                "eachStepNeeds": [
-                    "student-friendly explanation",
-                    "boardNote",
-                    "teacherAction",
-                    "sourceRefs",
-                    "misconception or check when useful"
-                ]
-            },
-            "agentCollaboration": {
-                "sequentialSpine": [
-                    "RagRetrievalAgent",
-                    "SelectedPageVisionAgent",
-                    "ConceptExtractionAgent",
-                    "KnowledgeGraphAgent",
-                    "TeachingStrategyAgent",
-                    "DetailedExplanationAgent"
-                ],
-                "parallelAfterStrategy": [
-                    "AnalogyExampleAgent",
-                    "DetailedExplanationAgent"
-                ],
-                "fusionRule": "DetailedExplanationAgent must synthesize sourceTruth + vision + conceptExtraction + knowledgeGraph + teachingStrategy + analogyExample into one board-ready teacher brain."
-            }
-        },
         "metadata": {
             "richTeachingBrainPacket": True,
-            "worldTeacherBrainContractV1": True,
             "mode": mode,
             "sourceRefCount": len(refs),
             "selectedEvidenceCount": len(safe_list(working.get("selectedEvidence"))),
