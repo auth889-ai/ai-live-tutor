@@ -1,0 +1,59 @@
+# dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.json.key
+service-account*.json
+google-credentials*.json
+credentials.json
+token.json
+
+# build outputs
+dist/
+build/
+.next/
+out/
+coverage/
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS/editor
+.DS_Store
+.vscode/settings.json
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+live-tutor-adk/
+
+# uploaded/generated tutor files
+server/public/live-tutor-page-images/
+server/uploads/
+server/tmp/
+tmp/
+.cache/
+
+# zip backups / large archives
+*.zip
+
+# local DB/cache
+*.sqlite
+*.sqlite3
+*.db

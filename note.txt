@@ -1,0 +1,34 @@
+Full PDF/source context
+↓
+orchestrator_registry.py keeps full working memory
+↓
+MCP read
+↓
+RAG / source
+↓
+SelectedPageVision
+↓
+Parallel planning/source block:
+  ConceptExtractionAgent
+  KnowledgeGraphAgent
+  TeachingStrategyAgent
+↓
+Parallel teaching block:
+  DetailedExplanationAgent
+  AnalogyExampleAgent
+↓
+VisualPlannerAgent
+↓
+DiagramCompilerAgent + AssessmentQuizAgent
+↓
+BoardSceneAgent
+↓
+BoardCommandAgent
+↓
+LayoutAgent + HandwritingDrawingAgent
+↓
+VoiceScriptAgent
+↓
+SubtitleSyncAgent
+↓
+MCP save

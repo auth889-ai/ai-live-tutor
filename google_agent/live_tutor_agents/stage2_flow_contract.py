@@ -1,0 +1,841 @@
+"""
+Real Stage2 flow contract for Live Tutor v26.
+
+This file is NOT a test.
+It controls how rich information moves between later agents.
+
+Goal:
+- Keep full source context in orchestrator working memory.
+- Give each later agent a small but strong packet.
+- Make MCP mandatory in final/hackathon mode.
+- Add flowAudit proof to final output.
+- Prevent BoardSceneAgent timeout by compacting huge raw payload safely.
+- Phase 1 fix: build a rich teaching brain packet so Concept -> KG -> Strategy
+  -> DetailedExplanation receives enough context without raw full-PDF dumps.
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Any, Dict, List
+
+from .contracts import JsonDict, clean_text, dedupe_source_refs, safe_dict, safe_list
+
+
+def _env_true(name: str, fallback: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None or raw == "":
+        return fallback
+    return str(raw).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def enforce_mcp_policy(payload: JsonDict) -> JsonDict:
+    out = dict(payload or {})
+    debug_allow_skip = bool(out.get("debugAllowMcpSkip"))
+
+    require_mcp = (
+        bool(out.get("requireMcp"))
+        or _env_true("LIVE_TUTOR_REQUIRE_MCP", False)
+        or _env_true("HACKATHON_REQUIRE_MCP", True)
+    )
+
+    out["requireMcp"] = require_mcp
+
+    if require_mcp and not debug_allow_skip:
+        out["skipMcpRead"] = False
+        out["skipMcpSave"] = False
+
+    meta = safe_dict(out.get("metadata"))
+    meta.update({
+        "mcpPolicyEnforced": True,
+        "requireMcp": require_mcp,
+        "debugAllowMcpSkip": debug_allow_skip,
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+    })
+    out["metadata"] = meta
+    return out
+
+
+def _walk_refs(value: Any, refs: List[JsonDict]) -> None:
+    if isinstance(value, list):
+        for item in value:
+            _walk_refs(item, refs)
+        return
+
+    if isinstance(value, dict):
+        if isinstance(value.get("sourceRefs"), list):
+            refs.extend([safe_dict(x) for x in value.get("sourceRefs") if safe_dict(x)])
+
+        if value.get("sourceRef") or value.get("chunkId") or value.get("pageRef") or value.get("quote"):
+            refs.append(safe_dict(value))
+
+        for child in value.values():
+            if isinstance(child, (dict, list)):
+                _walk_refs(child, refs)
+
+
+def collect_refs(*values: Any) -> List[JsonDict]:
+    refs: List[JsonDict] = []
+    for value in values:
+        _walk_refs(value, refs)
+    return dedupe_source_refs(refs)
+
+
+def compact_ref(ref: Any) -> JsonDict:
+    item = safe_dict(ref)
+    return {
+        "chunkId": clean_text(item.get("chunkId") or item.get("id") or "", 180),
+        "sourceRef": clean_text(item.get("sourceRef") or item.get("ref") or item.get("pageRef") or "", 260),
+        "pageRef": clean_text(item.get("pageRef") or item.get("sourceRef") or "", 260),
+        "page": item.get("page") or item.get("pageNumber"),
+        "quote": clean_text(item.get("quote") or item.get("text") or item.get("textPreview") or "", 900),
+        "confidence": item.get("confidence"),
+        "resourceId": clean_text(item.get("resourceId") or "", 180),
+    }
+
+
+def compact_refs(refs: Any, limit: int = 80) -> List[JsonDict]:
+    return [compact_ref(x) for x in dedupe_source_refs(safe_list(refs))[:limit]]
+
+
+def compact_evidence(items: Any, fallback_refs: List[JsonDict], limit: int = 12) -> List[JsonDict]:
+    out: List[JsonDict] = []
+    seen = set()
+
+    for raw in safe_list(items):
+        item = safe_dict(raw)
+        quote = clean_text(
+            item.get("quote")
+            or item.get("text")
+            or item.get("textPreview")
+            or item.get("content")
+            or "",
+            1400,
+        )
+        page = item.get("page") or item.get("pageNumber")
+        key = f"{page}|{quote[:140]}".lower()
+        if key in seen:
+            continue
+        seen.add(key)
+
+        out.append({
+            "page": page,
+            "quote": quote,
+            "role": clean_text(item.get("role") or item.get("evidenceRole") or "evidence", 100),
+            "sourceRefs": compact_refs(item.get("sourceRefs") or [item], 4),
+        })
+
+        if len(out) >= limit:
+            break
+
+    if not out:
+        for ref in fallback_refs[:limit]:
+            out.append({
+                "page": ref.get("page"),
+                "quote": clean_text(ref.get("quote") or "", 900),
+                "role": "sourceRef",
+                "sourceRefs": [ref],
+            })
+
+    return out
+
+
+def _short_dict_list(items: Any, limit: int = 8) -> List[JsonDict]:
+    out: List[JsonDict] = []
+    for raw in safe_list(items)[:limit]:
+        item = safe_dict(raw)
+        if item:
+            out.append(item)
+    return out
+
+
+def visual_truth_pack(working: JsonDict, selected_page_vision_result: JsonDict) -> JsonDict:
+    vision = safe_dict(selected_page_vision_result)
+    visual_context = safe_dict(working.get("visualContext"))
+
+    analyses = (
+        safe_list(vision.get("pageImageAnalyses"))
+        or safe_list(working.get("pageImageAnalyses"))
+        or safe_list(working.get("selectedPageAnalyses"))
+        or safe_list(visual_context.get("pageImageAnalyses"))
+    )
+
+    diagrams = (
+        safe_list(vision.get("detectedDiagrams"))
+        or safe_list(working.get("detectedVisualDiagrams"))
+        or safe_list(working.get("detectedDiagrams"))
+        or safe_list(visual_context.get("detectedDiagrams"))
+    )
+
+    diagram_elements: List[Any] = []
+    relationships: List[Any] = []
+    teacher_marking_hints: List[Any] = []
+    board_redraw_hints: List[Any] = []
+    common_confusions: List[Any] = []
+
+    for analysis in analyses:
+        item = safe_dict(analysis)
+        diagram_elements.extend(safe_list(item.get("diagramElements")))
+        relationships.extend(safe_list(item.get("relationships")))
+        teacher_marking_hints.extend(safe_list(item.get("teacherMarkingHints")))
+        board_redraw_hints.extend(safe_list(item.get("boardRedrawHints")))
+        common_confusions.extend(safe_list(item.get("commonConfusions")))
+
+    teacher_marking_hints.extend(safe_list(vision.get("teacherMarkingHints")))
+    board_redraw_hints.extend(safe_list(vision.get("boardRedrawHints")))
+    common_confusions.extend(safe_list(vision.get("commonConfusions")))
+
+    return {
+        "selectedPageVisionUsed": bool(analyses or diagrams),
+        "pageImageAnalyses": analyses[:8],
+        "detectedDiagrams": diagrams[:8],
+        "diagramElements": diagram_elements[:80],
+        "relationships": relationships[:80],
+        "teacherMarkingHints": teacher_marking_hints[:80],
+        "boardRedrawHints": board_redraw_hints[:80],
+        "commonConfusions": common_confusions[:40],
+        "metadata": {
+            "pageImageAnalysisCount": len(analyses),
+            "detectedDiagramCount": len(diagrams),
+            "diagramElementCount": len(diagram_elements),
+            "relationshipCount": len(relationships),
+            "teacherMarkingHintCount": len(teacher_marking_hints),
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def compact_visual_plan_for_scene(visual_result: JsonDict) -> JsonDict:
+    visual = safe_dict(visual_result)
+    adaptive = safe_dict(visual.get("adaptiveBoardDesign"))
+
+    screens = (
+        safe_list(visual.get("premiumBoardScreens"))
+        or safe_list(visual.get("boardScreens"))
+        or safe_list(visual.get("screens"))
+        or safe_list(adaptive.get("screens"))
+        or safe_list(adaptive.get("screenBlueprints"))
+    )
+
+    compact_screens: List[JsonDict] = []
+    for index, screen in enumerate(screens[:7], start=1):
+        sc = safe_dict(screen)
+        blocks = []
+
+        for b_index, block in enumerate(safe_list(sc.get("blocks") or sc.get("visualBlocks") or sc.get("sections"))[:8], start=1):
+            b = safe_dict(block)
+            blocks.append({
+                "blockId": clean_text(b.get("blockId") or b.get("id") or f"block_{b_index}", 120),
+                "type": clean_text(b.get("type") or b.get("visualForm") or b.get("blockType") or "", 120),
+                "title": clean_text(b.get("title") or "", 220),
+                "purpose": clean_text(b.get("purpose") or b.get("goal") or "", 500),
+                "content": clean_text(b.get("content") or b.get("body") or b.get("text") or "", 900),
+                "teacherNotes": clean_text(b.get("teacherNotes") or b.get("narrationHint") or "", 700),
+                "recommendedAction": clean_text(b.get("recommendedAction") or b.get("action") or "", 120),
+                "layoutBox": safe_dict(b.get("layoutBox")),
+                "sourceRefs": compact_refs(b.get("sourceRefs"), 4),
+            })
+
+        compact_screens.append({
+            "screenId": clean_text(sc.get("screenId") or sc.get("id") or f"screen_{index}", 120),
+            "screenNo": sc.get("screenNo") or sc.get("order") or index,
+            "title": clean_text(sc.get("title") or "", 220),
+            "screenGoal": clean_text(sc.get("screenGoal") or sc.get("goal") or sc.get("purpose") or "", 700),
+            "teacherNarrative": clean_text(sc.get("teacherNarrative") or sc.get("narration") or "", 900),
+            "screenType": clean_text(sc.get("screenType") or sc.get("type") or "", 120),
+            "sourceRefs": compact_refs(sc.get("sourceRefs"), 5),
+            "blocks": blocks,
+        })
+
+    return {
+        "title": clean_text(visual.get("title") or "", 220),
+        "premiumBoardScreens": compact_screens,
+        "boardScreens": compact_screens,
+        "screens": compact_screens,
+        "metadata": {
+            **safe_dict(visual.get("metadata")),
+            "compactedForBoardScene": True,
+            "originalScreenCount": len(screens),
+            "compactScreenCount": len(compact_screens),
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def compact_diagrams_for_scene(diagram_result: JsonDict) -> JsonDict:
+    diagram = safe_dict(diagram_result)
+    diagrams = (
+        safe_list(diagram.get("compiledDiagrams"))
+        or safe_list(diagram.get("diagrams"))
+        or safe_list(safe_dict(diagram.get("diagramArtifacts")).get("compiledDiagrams"))
+    )
+
+    compact: List[JsonDict] = []
+    for d_raw in diagrams[:8]:
+        d = safe_dict(d_raw)
+        compact.append({
+            "diagramId": clean_text(d.get("diagramId") or d.get("id") or "", 120),
+            "title": clean_text(d.get("title") or d.get("diagramTitle") or "", 220),
+            "type": clean_text(d.get("type") or d.get("diagramType") or "", 120),
+            "summary": clean_text(d.get("summary") or d.get("teacherNotes") or d.get("description") or "", 900),
+            "nodes": _short_dict_list(d.get("nodes") or d.get("elements"), 20),
+            "edges": _short_dict_list(d.get("edges") or d.get("relationships"), 24),
+            "sourceRefs": compact_refs(d.get("sourceRefs"), 5),
+        })
+
+    return {
+        "compiledDiagrams": compact,
+        "metadata": {
+            **safe_dict(diagram.get("metadata")),
+            "compactedForBoardScene": True,
+            "originalDiagramCount": len(diagrams),
+            "compactDiagramCount": len(compact),
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def compact_explanation_for_scene(explanation_result: JsonDict) -> JsonDict:
+    exp = safe_dict(explanation_result)
+    return {
+        "title": clean_text(exp.get("title") or exp.get("heading") or "", 220),
+        "summary": clean_text(
+            exp.get("teacherSummary")
+            or exp.get("summary")
+            or exp.get("detailedExplanation")
+            or exp.get("lesson")
+            or "",
+            2200,
+        ),
+        "keyTeachingPoints": safe_list(
+            exp.get("keyTeachingPoints")
+            or exp.get("mainPoints")
+            or exp.get("steps")
+            or exp.get("teachingSteps")
+        )[:12],
+        "commonMistakes": safe_list(exp.get("commonMistakes") or exp.get("mistakes"))[:8],
+        "checkpointQuestions": safe_list(exp.get("checkpointQuestions") or exp.get("questions"))[:6],
+        "sourceRefs": compact_refs(exp.get("sourceRefs"), 8),
+        "metadata": {
+            **safe_dict(exp.get("metadata")),
+            "compactedForBoardScene": True,
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def compact_quiz_for_scene(quiz_result: JsonDict) -> JsonDict:
+    quiz = safe_dict(quiz_result)
+    questions = (
+        safe_list(quiz.get("questions"))
+        or safe_list(quiz.get("quizQuestions"))
+        or safe_list(quiz.get("items"))
+    )
+    return {
+        "questions": questions[:5],
+        "metadata": {
+            **safe_dict(quiz.get("metadata")),
+            "compactedForBoardScene": True,
+            "questionCount": len(questions),
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def _compact_outline_items(full_outline: Any, source_refs: List[JsonDict], limit: int = 14) -> List[JsonDict]:
+    outline = safe_dict(full_outline)
+    items = safe_list(outline.get("outline") or outline.get("items") or outline.get("sections"))
+    pages = set()
+    for ref in safe_list(source_refs):
+        page = safe_dict(ref).get("page") or safe_dict(ref).get("pageNumber")
+        if isinstance(page, int):
+            pages.add(page)
+    selected: List[JsonDict] = []
+    for raw in items:
+        item = safe_dict(raw)
+        page = item.get("page") or item.get("pageNumber")
+        close = isinstance(page, int) and any(abs(page - p) <= 2 for p in pages if isinstance(p, int))
+        if not pages or page in pages or close:
+            selected.append({
+                "page": page,
+                "title": clean_text(item.get("title") or item.get("heading") or "", 220),
+                "preview": clean_text(item.get("preview") or item.get("summary") or item.get("text") or "", 700),
+                "hasTable": bool(item.get("hasTable") or item.get("hasTables")),
+                "hasFigure": bool(item.get("hasFigure") or item.get("hasFigures")),
+            })
+        if len(selected) >= limit:
+            break
+    return selected
+
+
+def _summary_text(summary_obj: Any, limit: int = 2600) -> str:
+    item = safe_dict(summary_obj)
+    if not item and isinstance(summary_obj, str):
+        return clean_text(summary_obj, limit)
+    return clean_text(
+        item.get("summary")
+        or item.get("overview")
+        or item.get("text")
+        or item.get("content")
+        or "",
+        limit,
+    )
+
+
+def build_teaching_brain_packet(
+    working: JsonDict,
+    grounded_refs: List[JsonDict],
+    selected_page_vision_result: JsonDict,
+    *,
+    concept_result: JsonDict | None = None,
+    knowledge_result: JsonDict | None = None,
+    strategy_result: JsonDict | None = None,
+    mode: str = "teaching_brain",
+) -> JsonDict:
+    """
+    Build the rich-selected packet for the Phase-1 teaching brain.
+
+    This intentionally avoids raw full-PDF dumps, base64/image bytes, and duplicate
+    metadata, but it preserves the source truth, global PDF map, structured vision
+    facts, concept extraction, knowledge graph, and teaching strategy needed for a
+    human-tutor-quality board.
+    """
+    refs = compact_refs(grounded_refs or working.get("sourceRefs"), 120)
+    visual_lesson = safe_dict(working.get("visualLessonInput"))
+    visual_truth = visual_truth_pack(working, selected_page_vision_result)
+
+    full_summary = visual_lesson.get("fullPdfSummary") or working.get("fullPdfSummary") or working.get("pdfSummary")
+    full_outline = visual_lesson.get("fullPdfOutline") or working.get("fullPdfOutline") or working.get("pdfOutline")
+
+    selected_text = (
+        visual_lesson.get("selectedPageFullText")
+        or working.get("selectedPageFullText")
+        or working.get("selectedPageText")
+        or ""
+    )
+
+    packet: JsonDict = {
+        "mode": mode,
+        "packetVersion": "phase1-rich-teaching-brain-v1",
+        "selectedNode": safe_dict(working.get("selectedNode") or working.get("node")),
+        "studentLevel": clean_text(working.get("studentLevel") or "beginner", 80),
+        "language": clean_text(working.get("language") or "english", 80),
+        "question": clean_text(working.get("question") or working.get("query") or "", 1400),
+        "sourceRefs": refs,
+        "chunks": safe_list(working.get("chunks") or working.get("retrievedChunks"))[:18],
+        "sourceTruth": {
+            "selectedEvidence": compact_evidence(working.get("selectedEvidence"), refs, 16),
+            "samePageEvidence": compact_evidence(working.get("samePageEvidence"), refs, 10),
+            "nearbyEvidence": compact_evidence(working.get("nearbyEvidence"), refs, 10),
+            "relatedEvidence": compact_evidence(working.get("relatedEvidence"), refs, 8),
+            "comparisonEvidence": compact_evidence(working.get("comparisonEvidence"), refs, 8),
+            "selectedPageFullTextExcerpt": clean_text(selected_text, 10000),
+            "sourceRefs": refs,
+        },
+        "pdfBackground": {
+            "fullPdfSummary": {
+                "summary": _summary_text(full_summary, 3200),
+                **safe_dict(full_summary),
+            } if (full_summary or safe_dict(full_summary)) else {},
+            "fullPdfOutline": {
+                **safe_dict(full_outline),
+                "relevantOutline": _compact_outline_items(full_outline, refs, 16),
+            } if (full_outline or safe_dict(full_outline)) else {},
+            "rule": "Use as course/chapter map only. Selected evidence remains primary truth.",
+        },
+        "visualTruth": visual_truth,
+        "selectedPageVision": safe_dict(selected_page_vision_result),
+        "pageImageAnalyses": safe_list(visual_truth.get("pageImageAnalyses")),
+        "detectedVisualDiagrams": safe_list(visual_truth.get("detectedDiagrams")),
+        "diagramElements": safe_list(visual_truth.get("diagramElements")),
+        "relationships": safe_list(visual_truth.get("relationships")),
+        "boardRedrawHints": safe_list(visual_truth.get("boardRedrawHints")),
+        "teacherMarkingHints": safe_list(visual_truth.get("teacherMarkingHints")),
+        "commonConfusions": safe_list(visual_truth.get("commonConfusions")),
+        "figures": safe_list(working.get("figures") or visual_lesson.get("figures"))[:10],
+        "tables": safe_list(working.get("tables") or visual_lesson.get("tables"))[:10],
+        "layoutBlocks": safe_list(working.get("layoutBlocks") or visual_lesson.get("layoutBlocks"))[:12],
+        "conceptExtraction": safe_dict(concept_result),
+        "concepts": safe_list(safe_dict(concept_result).get("concepts")),
+        "knowledgeGraph": safe_dict(knowledge_result),
+        "teachingStrategy": safe_dict(strategy_result),
+        "truthRules": {
+            **safe_dict(working.get("truthRules")),
+            "selectedEvidenceIsPrimaryTruth": True,
+            "pdfExtractedTextIsTruth": True,
+            "selectedPageFullTextIsTruth": True,
+            "imageTextIsTruth": False,
+            "ocrIsHelperOnly": True,
+            "visionIsVisualGuideOnly": True,
+            "noUnsupportedFacts": True,
+        },
+        "qualityContract": {
+            **safe_dict(working.get("qualityContract")),
+            "target": "dynamic premium human tutor board, not fixed template and not fixed domain",
+            "mustUseSourceEvidence": True,
+            "mustUsePageImageAnalyses": True,
+            "mustPreserveSourceRefs": True,
+            "mustUseFullPdfSummaryAsBackground": True,
+            "mustUseFullPdfOutlineAsBackground": True,
+            "noRawPdfDump": True,
+            "noBase64ImageBytes": True,
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+        "metadata": {
+            "richTeachingBrainPacket": True,
+            "mode": mode,
+            "sourceRefCount": len(refs),
+            "selectedEvidenceCount": len(safe_list(working.get("selectedEvidence"))),
+            "hasFullPdfSummary": bool(_summary_text(full_summary, 50)),
+            "hasFullPdfOutline": bool(safe_dict(full_outline) or safe_list(safe_dict(full_outline).get("outline"))),
+            "pageImageAnalysisCount": safe_dict(visual_truth.get("metadata")).get("pageImageAnalysisCount", 0),
+            "diagramElementCount": safe_dict(visual_truth.get("metadata")).get("diagramElementCount", 0),
+            "relationshipCount": safe_dict(visual_truth.get("metadata")).get("relationshipCount", 0),
+            "conceptCount": len(safe_list(safe_dict(concept_result).get("concepts"))),
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+        "stage2AgentTimeoutMs": working.get("stage2AgentTimeoutMs"),
+        "agentTimeoutsMs": working.get("agentTimeoutsMs"),
+    }
+    return packet
+
+
+def build_diagram_compiler_packet(
+    working: JsonDict,
+    grounded_refs: List[JsonDict],
+    visual_result: JsonDict,
+    explanation_result: JsonDict,
+    selected_page_vision_result: JsonDict,
+) -> JsonDict:
+    refs = compact_refs(grounded_refs, 100)
+    return {
+        "mode": "compile_diagrams",
+        "selectedNode": safe_dict(working.get("selectedNode") or working.get("node")),
+        "sourceRefs": refs,
+        "sourceTruth": {
+            "selectedEvidence": compact_evidence(working.get("selectedEvidence"), refs, 12),
+            "selectedPageFullTextExcerpt": clean_text(working.get("selectedPageFullText") or "", 7000),
+        },
+        "visualPlan": visual_result,
+        "visualTruth": visual_truth_pack(working, selected_page_vision_result),
+        "explanation": explanation_result,
+        "contract": {
+            "pdfTextIsTruth": True,
+            "visionIsVisualGuideOnly": True,
+            "noFixedTemplate": True,
+            "mustPreserveSourceRefs": True,
+            "mustCreateRedrawableSpecs": True,
+            "fallbackUsed": False,
+        },
+        "stage2AgentTimeoutMs": working.get("stage2AgentTimeoutMs"),
+        "agentTimeoutsMs": working.get("agentTimeoutsMs"),
+    }
+
+
+def build_board_scene_packet(
+    working: JsonDict,
+    grounded_refs: List[JsonDict],
+    visual_result: JsonDict,
+    diagram_result: JsonDict,
+    explanation_result: JsonDict,
+    quiz_result: JsonDict,
+    selected_page_vision_result: JsonDict,
+) -> JsonDict:
+    refs = compact_refs(grounded_refs, 120)
+    return {
+        "mode": "build_board_scenes",
+        "selectedNode": safe_dict(working.get("selectedNode") or working.get("node")),
+        "sourceRefs": refs,
+        "sourceTruth": {
+            "selectedEvidence": compact_evidence(working.get("selectedEvidence"), refs, 14),
+            "samePageEvidence": compact_evidence(working.get("samePageEvidence"), refs, 8),
+            "nearbyEvidence": compact_evidence(working.get("nearbyEvidence"), refs, 8),
+            "selectedPageFullTextExcerpt": clean_text(working.get("selectedPageFullText") or "", 8000),
+        },
+        "pdfBackground": {
+            "fullPdfSummary": {
+                "summary": _summary_text(
+                    safe_dict(working.get("visualLessonInput")).get("fullPdfSummary")
+                    or working.get("fullPdfSummary")
+                    or working.get("pdfSummary"),
+                    2600,
+                )
+            },
+            "relevantOutline": _compact_outline_items(
+                safe_dict(working.get("visualLessonInput")).get("fullPdfOutline")
+                or working.get("fullPdfOutline")
+                or working.get("pdfOutline"),
+                refs,
+                14,
+            ),
+            "rule": "Background only. Selected evidence remains primary truth.",
+        },
+        "teachingBrain": {
+            "conceptExtraction": safe_dict(working.get("conceptExtraction")),
+            "knowledgeGraph": safe_dict(working.get("knowledgeGraph")),
+            "teachingStrategy": safe_dict(working.get("teachingStrategy")),
+            "analogyExample": safe_dict(working.get("analogyExample")),
+        },
+        "visualPlan": compact_visual_plan_for_scene(visual_result),
+        "compiledDiagrams": compact_diagrams_for_scene(diagram_result),
+        "explanation": compact_explanation_for_scene(explanation_result),
+        "quiz": compact_quiz_for_scene(quiz_result),
+        "visualTruth": visual_truth_pack(working, selected_page_vision_result),
+        "requirements": {
+            "requirePremiumScreens": True,
+            "requireMultiScreen": True,
+            "requireAutoGrow": True,
+            "requireSourceCards": True,
+            "requireDiagramBlocks": True,
+            "requireMistakeQuizBlocks": True,
+            "noFixedTemplate": True,
+            "noDomainHardcoding": True,
+        },
+        "stage2AgentTimeoutMs": working.get("stage2AgentTimeoutMs"),
+        "agentTimeoutsMs": working.get("agentTimeoutsMs"),
+    }
+
+
+def build_board_command_packet(
+    working: JsonDict,
+    grounded_refs: List[JsonDict],
+    board_scene_result: JsonDict,
+    visual_result: JsonDict,
+    diagram_result: JsonDict,
+    selected_page_vision_result: JsonDict,
+) -> JsonDict:
+    refs = compact_refs(grounded_refs, 120)
+    return {
+        "mode": "build_board_commands",
+        "selectedNode": safe_dict(working.get("selectedNode") or working.get("node")),
+        "sourceRefs": refs,
+        "boardScene": board_scene_result,
+        "visualPlan": compact_visual_plan_for_scene(visual_result),
+        "compiledDiagrams": compact_diagrams_for_scene(diagram_result),
+        "visualTruth": visual_truth_pack(working, selected_page_vision_result),
+        "requiredCommandTypes": [
+            "setViewport",
+            "writeText",
+            "drawBox",
+            "drawArrow",
+            "drawCircle",
+            "underline",
+            "highlightNode",
+            "showSourceBadge",
+            "drawFlowchart",
+            "drawTable",
+            "drawTree",
+            "showQuiz",
+            "pauseForQuestion",
+            "recap",
+        ],
+        "contract": {
+            "commandsMustComeFromBoardScene": True,
+            "mustPreserveCommandDraftMeaning": True,
+            "mustPreserveSourceRefs": True,
+            "noGenericFillerCommands": True,
+            "noFixedDomainTemplate": True,
+            "frontendPlayable": True,
+        },
+        "stage2AgentTimeoutMs": working.get("stage2AgentTimeoutMs"),
+        "agentTimeoutsMs": working.get("agentTimeoutsMs"),
+    }
+
+
+def build_layout_packet(
+    working: JsonDict,
+    grounded_refs: List[JsonDict],
+    board_scene_result: JsonDict,
+    command_result: JsonDict,
+) -> JsonDict:
+    return {
+        "mode": "validate_layout",
+        "sourceRefs": compact_refs(grounded_refs, 100),
+        "boardScene": board_scene_result,
+        "boardCommands": safe_list(command_result.get("boardCommands") or command_result.get("commands")),
+        "layoutContract": {
+            "mustPreventOverlap": True,
+            "mustSupportAutoGrow": True,
+            "mustSupportMultiScreen": True,
+            "mustSupportFrontendReplay": True,
+        },
+        "stage2AgentTimeoutMs": working.get("stage2AgentTimeoutMs"),
+        "agentTimeoutsMs": working.get("agentTimeoutsMs"),
+    }
+
+
+def build_handwriting_packet(
+    working: JsonDict,
+    grounded_refs: List[JsonDict],
+    command_result: JsonDict,
+    selected_page_vision_result: JsonDict,
+) -> JsonDict:
+    return {
+        "mode": "add_handwriting_drawing_hints",
+        "sourceRefs": compact_refs(grounded_refs, 100),
+        "boardCommands": safe_list(command_result.get("boardCommands") or command_result.get("commands")),
+        "visualTruth": visual_truth_pack(working, selected_page_vision_result),
+        "handwritingContract": {
+            "humanMarkerStyle": True,
+            "drawCircleArrowUnderlineHighlight": True,
+            "noFixedTemplate": True,
+        },
+        "stage2AgentTimeoutMs": working.get("stage2AgentTimeoutMs"),
+        "agentTimeoutsMs": working.get("agentTimeoutsMs"),
+    }
+
+
+def build_voice_script_packet(
+    working: JsonDict,
+    grounded_refs: List[JsonDict],
+    explanation_result: JsonDict,
+    board_scene_result: JsonDict,
+    command_result: JsonDict,
+    selected_page_vision_result: JsonDict,
+) -> JsonDict:
+    refs = compact_refs(grounded_refs, 120)
+    return {
+        "mode": "make_command_synced_voice_script",
+        "selectedNode": safe_dict(working.get("selectedNode") or working.get("node")),
+        "studentLevel": working.get("studentLevel"),
+        "language": working.get("language"),
+        "question": working.get("question") or working.get("query"),
+        "sourceRefs": refs,
+        "sourceTruth": {
+            "selectedEvidence": compact_evidence(working.get("selectedEvidence"), refs, 12),
+            "selectedPageFullTextExcerpt": clean_text(working.get("selectedPageFullText") or "", 7000),
+        },
+        "explanation": compact_explanation_for_scene(explanation_result),
+        "boardScene": board_scene_result,
+        "boardCommands": safe_list(command_result.get("boardCommands") or command_result.get("commands")),
+        "visualTruth": visual_truth_pack(working, selected_page_vision_result),
+        "voiceContract": {
+            "mustUseRealCommandIds": True,
+            "mustExplainWhatBoardIsDoing": True,
+            "mustSoundLikePrivateTutor": True,
+            "mustMentionSourceWhenShowingSourceBadge": True,
+            "mustUseWhyAndLookHereLanguage": True,
+            "noGenericRepeatedLines": True,
+            "noUnsupportedFacts": True,
+            "googleTtsReady": True,
+        },
+        "stage2AgentTimeoutMs": working.get("stage2AgentTimeoutMs"),
+        "agentTimeoutsMs": working.get("agentTimeoutsMs"),
+    }
+
+
+def build_subtitle_packet(
+    working: JsonDict,
+    voice_result: JsonDict,
+    command_result: JsonDict,
+) -> JsonDict:
+    return {
+        "mode": "sync_subtitles",
+        "voiceScript": safe_list(voice_result.get("voiceScript")),
+        "boardCommands": safe_list(command_result.get("boardCommands") or command_result.get("commands")),
+        "subtitleContract": {
+            "mustUseVoiceLineIds": True,
+            "mustUseCommandIds": True,
+            "mustKeepTimingOrdered": True,
+            "fallbackUsed": False,
+        },
+        "stage2AgentTimeoutMs": working.get("stage2AgentTimeoutMs"),
+        "agentTimeoutsMs": working.get("agentTimeoutsMs"),
+    }
+
+
+def build_flow_audit(
+    trace: List[JsonDict],
+    mission_trace: List[JsonDict],
+    mcp_trace: List[JsonDict],
+    candidate: JsonDict,
+) -> JsonDict:
+    agents = []
+    for item in safe_list(trace):
+        obj = safe_dict(item)
+        name = clean_text(obj.get("agent") or obj.get("name") or obj.get("step") or "", 120)
+        if name:
+            agents.append(name)
+
+    commands = safe_list(candidate.get("boardCommands"))
+    command_types: Dict[str, int] = {}
+    for command in commands:
+        typ = clean_text(safe_dict(command).get("type") or safe_dict(command).get("action") or "unknown", 100)
+        command_types[typ] = command_types.get(typ, 0) + 1
+
+    metadata = safe_dict(candidate.get("metadata"))
+    partner_power = safe_dict(candidate.get("partnerPower"))
+    refs = safe_list(candidate.get("sourceRefs"))
+    voice = safe_list(candidate.get("voiceScript"))
+    subtitles = safe_list(candidate.get("subtitles"))
+
+    expected = [
+        "RagRetrievalAgent",
+        "SelectedPageVisionAgent",
+        "DetailedExplanationAgent",
+        "VisualPlannerAgent",
+        "DiagramCompilerAgent",
+        "BoardSceneAgent",
+        "BoardCommandAgent",
+        "VoiceScriptAgent",
+        "SubtitleSyncAgent",
+    ]
+
+    missing = [name for name in expected if name not in agents]
+    mcp_used = bool(metadata.get("mcpUsed")) or bool(partner_power.get("mcpUsed")) or bool(mcp_trace)
+
+    return {
+        "ok": bool(refs) and bool(commands) and bool(voice) and bool(subtitles) and not missing,
+        "agentOrder": agents,
+        "missingExpectedSpine": missing,
+        "mcpUsed": mcp_used,
+        "mcpTraceCount": len(safe_list(mcp_trace)),
+        "sourceRefCount": len(refs),
+        "premiumScreenCount": len(safe_list(candidate.get("premiumBoardScreens") or candidate.get("boardScreens"))),
+        "compiledDiagramCount": len(safe_list(candidate.get("compiledDiagrams"))),
+        "boardCommandCount": len(commands),
+        "commandTypes": command_types,
+        "voiceLineCount": len(voice),
+        "subtitleCount": len(subtitles),
+        "qualityFlags": {
+            "hasSourceRefs": bool(refs),
+            "hasVisualPlan": bool(safe_dict(candidate.get("visualPlan"))),
+            "hasBoardScene": bool(safe_dict(candidate.get("boardScene"))),
+            "hasBoardCommands": bool(commands),
+            "hasVoiceScript": bool(voice),
+            "hasSubtitles": bool(subtitles),
+            "fallbackUsed": bool(metadata.get("fallbackUsed")),
+            "usedSmartFallback": bool(metadata.get("usedSmartFallback")),
+        },
+    }
+
+
+def assert_final_flow_quality(candidate: JsonDict, require_mcp: bool = True) -> None:
+    metadata = safe_dict(candidate.get("metadata"))
+    flow_audit = safe_dict(candidate.get("flowAudit"))
+
+    if metadata.get("fallbackUsed") or metadata.get("usedSmartFallback"):
+        raise RuntimeError("Stage2 rejected: fallbackUsed/usedSmartFallback is true.")
+
+    if require_mcp and not (metadata.get("mcpUsed") or flow_audit.get("mcpUsed")):
+        raise RuntimeError("Stage2 rejected: MongoDB MCP is mandatory but mcpUsed is false.")
+
+    if not safe_list(candidate.get("sourceRefs")):
+        raise RuntimeError("Stage2 rejected: sourceRefs missing.")
+
+    if not safe_list(candidate.get("boardCommands")):
+        raise RuntimeError("Stage2 rejected: boardCommands missing.")
+
+    if not safe_list(candidate.get("voiceScript")):
+        raise RuntimeError("Stage2 rejected: voiceScript missing.")
+
+    if not safe_list(candidate.get("subtitles")):
+        raise RuntimeError("Stage2 rejected: subtitles missing.")

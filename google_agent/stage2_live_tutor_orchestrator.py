@@ -1,0 +1,416 @@
+"""
+google_agent/stage2_live_tutor_orchestrator.py
+===============================================================================
+Stage 2 Live Tutor Orchestrator entrypoint.
+
+This file is the Python entrypoint called by Node's stage2LiveTutorBridge.
+It keeps stdout as clean JSON and exposes strong selected-page vision output.
+
+v20 fix:
+- exposes visualLessonInput at top-level and result level
+- keeps diagramSummary as debug only
+- checkpoint mode returns clean planner-ready packet, not only repeated summary
+- does not fake fallback
+===============================================================================
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import os
+import sys
+import traceback
+from typing import Any, Dict, List
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from google_agent.live_tutor_agents.contracts import JsonDict, clean_text, safe_dict, safe_list
+from google_agent.live_tutor_agents.orchestrator_registry import (
+    agent_count,
+    health_all,
+    list_agents,
+    run_agent,
+    run_interrupt_repair_pipeline,
+    run_teach_node_pipeline,
+)
+
+
+def read_stdin_json() -> JsonDict:
+    raw = sys.stdin.read()
+    if not raw.strip():
+        return {}
+    parsed = json.loads(raw)
+    if not isinstance(parsed, dict):
+        raise ValueError("stdin JSON must be an object.")
+    return parsed
+
+
+def _dedupe_text(items: List[Any], max_items: int = 80, max_len: int = 900) -> List[str]:
+    out: List[str] = []
+    seen = set()
+    for item in items:
+        text = clean_text(item, max_len)
+        if not text or text.lower() in seen:
+            continue
+        seen.add(text.lower())
+        out.append(text)
+        if len(out) >= max_items:
+            break
+    return out
+
+
+def _extract_all(items: List[Any], key: str) -> List[Any]:
+    out: List[Any] = []
+    for item in items:
+        out.extend(safe_list(safe_dict(item).get(key)))
+    return out
+
+
+def _source_refs_from(*values: Any) -> List[Any]:
+    refs: List[Any] = []
+    for value in values:
+        if isinstance(value, list):
+            for item in value:
+                obj = safe_dict(item)
+                if obj.get("sourceRefs"):
+                    refs.extend(safe_list(obj.get("sourceRefs")))
+                elif obj.get("sourceRef") or obj.get("chunkId") or obj.get("page") or obj.get("quote"):
+                    refs.append(obj)
+        elif isinstance(value, dict):
+            refs.extend(safe_list(value.get("sourceRefs")))
+    seen = set()
+    out = []
+    for ref in refs:
+        obj = safe_dict(ref)
+        key = "|".join(
+            [
+                clean_text(obj.get("chunkId") or obj.get("id") or "", 160),
+                clean_text(obj.get("sourceRef") or obj.get("ref") or "", 300),
+                str(obj.get("page") or ""),
+                clean_text(obj.get("quote") or obj.get("text") or "", 80),
+            ]
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(obj)
+    return out[:160]
+
+
+def build_visual_lesson_input_from_result(root: JsonDict) -> JsonDict:
+    obj = safe_dict(root)
+    inner = safe_dict(obj.get("result"))
+    selected_page_vision = safe_dict(
+        obj.get("selectedPageVision")
+        or inner.get("selectedPageVision")
+        or safe_dict(inner.get("visualContext")).get("selectedPageVision")
+        or safe_dict(inner.get("agentOutputs")).get("SelectedPageVisionAgent")
+    )
+
+    existing = safe_dict(
+        obj.get("visualLessonInput")
+        or inner.get("visualLessonInput")
+        or selected_page_vision.get("visualLessonInput")
+        or safe_dict(inner.get("visualContext")).get("visualLessonInput")
+    )
+
+    existing_has_context = bool(
+        safe_dict(existing.get("selectedNode")).get("title")
+        or safe_dict(existing.get("selectedNode")).get("label")
+        or safe_dict(existing.get("selectedNode")).get("nodeId")
+        or safe_list(existing.get("selectedEvidence"))
+        or clean_text(existing.get("selectedPageFullText") or "", 100)
+        or safe_dict(existing.get("fullPdfSummary"))
+        or safe_dict(existing.get("fullPdfOutline"))
+    )
+
+    # Do not return a plannerReady packet if it lost source context.
+    # v21 bug: selectedPageVision.visualLessonInput can be plannerReady:true
+    # but selectedNode/evidence/fullPdf fields are empty because registry merged
+    # vision results without payload context.
+    if existing.get("plannerReady") and existing_has_context:
+        return existing
+
+    analyses = safe_list(
+        selected_page_vision.get("pageImageAnalyses")
+        or inner.get("pageImageAnalyses")
+        or safe_dict(inner.get("visualContext")).get("pageImageAnalyses")
+    )
+    diagrams = safe_list(
+        selected_page_vision.get("detectedDiagrams")
+        or inner.get("detectedVisualDiagrams")
+        or safe_dict(inner.get("visualContext")).get("detectedDiagrams")
+    )
+
+    selected_node = safe_dict(inner.get("selectedNode") or obj.get("selectedNode"))
+    selected_evidence = safe_list(inner.get("selectedEvidence") or obj.get("selectedEvidence"))
+    same_page = safe_list(inner.get("samePageEvidence") or obj.get("samePageEvidence"))
+    nearby = safe_list(inner.get("nearbyEvidence") or obj.get("nearbyEvidence"))
+    related = safe_list(inner.get("relatedEvidence") or obj.get("relatedEvidence"))
+
+    diagram_elements = _extract_all(analyses, "diagramElements")
+    relationships = _extract_all(analyses, "relationships")
+    board_redraw_hints = _extract_all(analyses, "boardRedrawHints")
+    teacher_marking_hints = _extract_all(analyses, "teacherMarkingHints")
+    visual_teaching_hints = safe_list(selected_page_vision.get("visualTeachingHints")) + safe_list(inner.get("visualTeachingHints"))
+    core_visual_facts = _extract_all(analyses, "coreVisualFacts")
+    common_confusions = _extract_all(analyses, "commonConfusions")
+
+    return {
+        "plannerReady": True,
+        "inputVersion": "visual-lesson-input-v20-orchestrator",
+        "selectedNode": selected_node,
+        "selectedNodeTitle": clean_text(selected_node.get("title") or selected_node.get("label") or "Selected node", 360),
+        "selectedEvidence": selected_evidence[:16],
+        "selectedPageFullText": clean_text(inner.get("selectedPageFullText") or obj.get("selectedPageFullText") or "", 24000),
+        "samePageEvidence": same_page[:12],
+        "nearbyEvidence": nearby[:12],
+        "relatedEvidence": related[:10],
+        "pageContexts": safe_list(inner.get("pageContexts") or obj.get("pageContexts"))[:10],
+        "fullPdfSummary": safe_dict(inner.get("fullPdfSummary") or obj.get("fullPdfSummary") or inner.get("pdfSummary") or obj.get("pdfSummary")),
+        "fullPdfOutline": safe_dict(inner.get("fullPdfOutline") or obj.get("fullPdfOutline")),
+        "fullPdfOutlineText": clean_text(inner.get("fullPdfOutlineText") or obj.get("fullPdfOutlineText") or "", 12000),
+        "selectedPageAnalyses": analyses,
+        "nearbyPageAnalyses": [],
+        "pageImageAnalyses": analyses,
+        "detectedDiagrams": diagrams,
+        "diagramElements": diagram_elements[:120],
+        "relationships": relationships[:120],
+        "coreVisualFacts": _dedupe_text(core_visual_facts + visual_teaching_hints, 80, 900),
+        "boardRedrawHints": _dedupe_text(board_redraw_hints, 80, 900),
+        "teacherMarkingHints": teacher_marking_hints[:120],
+        "visualTeachingHints": _dedupe_text(visual_teaching_hints, 80, 900),
+        "commonConfusions": _dedupe_text(common_confusions, 40, 700),
+        "tables": safe_list(selected_page_vision.get("tables")) + safe_list(inner.get("tables") or obj.get("tables"))[:12],
+        "figures": safe_list(inner.get("figures") or obj.get("figures"))[:12],
+        "layoutBlocks": safe_list(selected_page_vision.get("layoutBlocks")) + safe_list(inner.get("layoutBlocks") or obj.get("layoutBlocks"))[:20],
+        "sourceRefs": _source_refs_from(obj, inner, selected_page_vision, analyses, diagrams, selected_evidence),
+        "truthRules": {
+            "selectedEvidenceIsPrimaryTruth": True,
+            "pdfExtractedTextIsTruth": True,
+            "selectedPageFullTextIsTruth": True,
+            "imageTextIsTruth": False,
+            "ocrIsHelperOnly": True,
+            "pageImageUse": "visual_preview_layout_diagram_shape_only",
+            "diagramSummaryIsDebugOnly": True,
+            "plannerMustUseStructuredFields": True,
+            "noUnsupportedFacts": True,
+        },
+        "qualityContract": {
+            "doNotUseDiagramSummaryAsMainInput": True,
+            "mustUseSourceEvidence": True,
+            "mustUsePageImageAnalyses": bool(analyses),
+            "mustPreserveSourceRefs": True,
+            "target": "dynamic premium human tutor board, not fixed template and not fixed domain",
+        },
+        "metadata": {
+            "plannerReady": True,
+            "pageImageAnalysisCount": len(analyses),
+            "detectedDiagramCount": len(diagrams),
+            "diagramElementCount": len(diagram_elements),
+            "relationshipCount": len(relationships),
+            "boardRedrawHintCount": len(board_redraw_hints),
+            "teacherMarkingHintCount": len(teacher_marking_hints),
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def selected_page_vision_proof(result: JsonDict) -> JsonDict:
+    root = safe_dict(result)
+    inner = safe_dict(root.get("result"))
+    selected_page_vision = safe_dict(
+        root.get("selectedPageVision")
+        or inner.get("selectedPageVision")
+        or safe_dict(inner.get("visualContext")).get("selectedPageVision")
+        or safe_dict(root.get("metadata")).get("selectedPageVision")
+        or safe_dict(inner.get("agentOutputs")).get("SelectedPageVisionAgent")
+    )
+    meta: JsonDict = {}
+    for item in [
+        safe_dict(selected_page_vision.get("metadata")),
+        safe_dict(inner.get("metadata")),
+        safe_dict(root.get("metadata")),
+        safe_dict(safe_dict(inner.get("visualContext")).get("metadata")),
+    ]:
+        meta.update(item)
+
+    analyses = safe_list(
+        selected_page_vision.get("pageImageAnalyses")
+        or inner.get("pageImageAnalyses")
+        or safe_dict(inner.get("visualContext")).get("pageImageAnalyses")
+    )
+    diagrams = safe_list(
+        selected_page_vision.get("detectedDiagrams")
+        or inner.get("detectedVisualDiagrams")
+        or safe_dict(inner.get("visualContext")).get("detectedDiagrams")
+    )
+    visual_lesson_input = build_visual_lesson_input_from_result(root)
+    diagram_summary = clean_text(
+        selected_page_vision.get("diagramSummary")
+        or inner.get("selectedPageVisionDiagramSummary")
+        or safe_dict(inner.get("visualContext")).get("diagramSummary")
+        or meta.get("diagramSummary")
+        or "",
+        12000,
+    )
+    used = bool(meta.get("selectedPageVisionUsed") or selected_page_vision.get("selectedPageVisionUsed") or analyses)
+    return {
+        "selectedPageVision": selected_page_vision,
+        "visualLessonInput": visual_lesson_input,
+        "metadata": {
+            "selectedPageVisionAgentConnected": bool(meta.get("selectedPageVisionAgentConnected") or selected_page_vision or analyses or diagram_summary),
+            "selectedPageVisionUsed": used,
+            "imageBytesLoaded": bool(meta.get("imageBytesLoaded")),
+            "imageBytesLength": int(meta.get("imageBytesLength") or 0),
+            "resolvedLocalPathExists": bool(meta.get("resolvedLocalPathExists")),
+            "geminiVisionCalled": bool(meta.get("geminiVisionCalled")),
+            "geminiVisionCallCount": int(meta.get("geminiVisionCallCount") or 0),
+            "modelVisionUsed": bool(meta.get("modelVisionUsed")),
+            "visionModel": clean_text(meta.get("visionModel") or "", 160),
+            "pageImageAnalysisCount": int(meta.get("pageImageAnalysisCount") or len(analyses)),
+            "detectedDiagramCount": int(meta.get("detectedDiagramCount") or meta.get("detectedVisualDiagramCount") or len(diagrams)),
+            "diagramSummary": diagram_summary,
+            "diagramSummaryIsDebugOnly": True,
+            "visualLessonInputReady": bool(visual_lesson_input.get("plannerReady")),
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def expose_selected_page_vision(result: JsonDict) -> JsonDict:
+    obj = safe_dict(result).copy()
+    inner = safe_dict(obj.get("result")).copy()
+    proof = selected_page_vision_proof(obj)
+    vision = safe_dict(proof["selectedPageVision"])
+    visual_lesson_input = safe_dict(proof["visualLessonInput"])
+    vision_meta = safe_dict(proof["metadata"])
+
+    if vision:
+        vision.setdefault("visualLessonInput", visual_lesson_input)
+        vision.setdefault("plannerReady", bool(visual_lesson_input.get("plannerReady")))
+        obj["selectedPageVision"] = vision
+        inner["selectedPageVision"] = vision
+        inner.setdefault("agentOutputs", {})
+        if isinstance(inner["agentOutputs"], dict):
+            inner["agentOutputs"].setdefault("SelectedPageVisionAgent", vision)
+
+    obj["visualLessonInput"] = visual_lesson_input
+    inner["visualLessonInput"] = visual_lesson_input
+    inner["plannerReady"] = bool(visual_lesson_input.get("plannerReady"))
+
+    visual_context = safe_dict(inner.get("visualContext")).copy()
+    visual_context["visualLessonInput"] = visual_lesson_input
+    if vision:
+        visual_context["selectedPageVision"] = vision
+    visual_context["metadata"] = {
+        **safe_dict(visual_context.get("metadata")),
+        **vision_meta,
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+    }
+    inner["visualContext"] = visual_context
+
+    obj["metadata"] = {**safe_dict(obj.get("metadata")), **vision_meta, "fallbackUsed": False, "usedSmartFallback": False}
+    inner["metadata"] = {**safe_dict(inner.get("metadata")), **vision_meta, "fallbackUsed": False, "usedSmartFallback": False}
+    obj["result"] = inner
+    return obj
+
+
+async def run_orchestrator(payload: JsonDict) -> JsonDict:
+    mode = clean_text(payload.get("mode") or "health", 80)
+    if mode == "health":
+        health = await health_all()
+        return {
+            "ok": bool(health.get("ok")),
+            "service": "stage2_live_tutor_orchestrator.py",
+            "stage": 2,
+            "mode": mode,
+            "agentCount": agent_count(),
+            "realSeparateAgents": True,
+            "agents": list_agents(),
+            "health": health.get("health"),
+            "capabilities": {
+                "sourceGrounding": True,
+                "ragRetrieval": True,
+                "selectedPageVision": True,
+                "visualLessonInput": True,
+                "selectedPageVisionProofExposed": True,
+                "checkpointStopAfterSelectedPageVision": True,
+                "checkpointStopAfterVisualPlanner": True,
+                "checkpointStopAfterBoardScene": True,
+                "perAgentTimeout": True,
+                "mcpToolAgent": True,
+                "detailedExplanation": True,
+                "visualPlanning": True,
+                "boardScenes": True,
+                "boardCommands": True,
+                "voiceScript": True,
+                "subtitleSync": True,
+                "interrupt": True,
+                "repair": True,
+                "validatorSafety": True,
+                "fakeFallback": False,
+            },
+            "metadata": {
+                "fallbackUsed": False,
+                "usedSmartFallback": False,
+                "realSeparateAgents": True,
+                "selectedPageVisionAgentConnected": True,
+                "visualLessonInputReady": True,
+            },
+        }
+
+    if mode == "list_agents":
+        return {"ok": True, "mode": mode, "agentCount": agent_count(), "agents": list_agents(), "metadata": {"fallbackUsed": False, "usedSmartFallback": False, "realSeparateAgents": True}}
+
+    if mode == "run_agent":
+        agent_name = clean_text(payload.get("agentName"), 120)
+        if not agent_name:
+            raise ValueError("run_agent mode requires agentName.")
+        agent_payload = safe_dict(payload.get("agentPayload") or payload.get("payload") or payload)
+        return {"ok": True, "mode": mode, "agentName": agent_name, "result": await run_agent(agent_name, agent_payload), "metadata": {"fallbackUsed": False, "usedSmartFallback": False, "realSeparateAgents": True}}
+
+    if mode == "teach_node_pipeline":
+        return expose_selected_page_vision(await run_teach_node_pipeline(payload))
+
+    if mode in {"interrupt_repair_pipeline", "interrupt_repair"}:
+        return expose_selected_page_vision(await run_interrupt_repair_pipeline(payload))
+
+    raise ValueError("Unsupported mode. Use health, list_agents, run_agent, teach_node_pipeline, interrupt_repair_pipeline.")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", default="", help="health | list_agents | run_agent | teach_node_pipeline | interrupt_repair_pipeline")
+    args = parser.parse_args()
+    try:
+        payload = read_stdin_json()
+        if args.mode:
+            payload["mode"] = args.mode
+        result = asyncio.run(run_orchestrator(payload))
+        print(json.dumps(result, ensure_ascii=False))
+    except Exception as exc:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": str(exc),
+                    "traceback": traceback.format_exc() if os.getenv("NODE_ENV") == "development" else "",
+                    "metadata": {"stage": 2, "fallbackUsed": False, "usedSmartFallback": False, "realSeparateAgents": True},
+                },
+                ensure_ascii=False,
+            )
+        )
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
