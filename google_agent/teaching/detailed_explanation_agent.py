@@ -1,24 +1,44 @@
 """
 google_agent/teaching/detailed_explanation_agent.py
 ===============================================================================
-PHASE 2 COMPLETE REPLACEMENT
+REAL WORLD-TEACHER DetailedExplanationAgent.
 
-Human-like, source-grounded, vision-aware DetailedExplanationAgent.
+This is the Teacher Brain fusion agent.
 
-What this fixes:
-- Uses selectedEvidence first, not mixed related/comparison evidence.
-- Uses selectedPageVision/diagramSummary/pageImageAnalyses when available.
-- Explains like a human teacher, not short robotic card text.
-- Produces board-ready teaching chunks for later VisualPlanner/BoardScene.
-- Keeps sourceRefs on every step, board note, mistake, example, and recap.
-- Separates selected evidence, same-page support, related background,
-  comparison evidence, and external evidence.
-- No fake fallback. If no real sourceRefs exist, fail.
+It does NOT fake-fill generic steps in Python.
+It forces Gemini/ADK to create a rich, source-grounded, board-ready teacher brain.
 
-Important:
-- This agent does not itself call Gemini Vision. That was handled by
-  SelectedPageVisionAgent.
-- This agent consumes the vision summary and turns it into detailed teaching.
+Consumes:
+- selected evidence / source truth
+- selected page vision
+- concept extraction
+- knowledge graph
+- teaching strategy
+- analogy/example agent
+
+Produces:
+- classic backward-compatible fields:
+  simpleDefinition, intuition, sourceGroundedExplanation, stepByStep,
+  workedExample, commonMistakes, boardNotes, checkpoint
+- strong downstream field:
+  worldTeacherLesson
+    microTeachingSteps
+    visualTeachingMoments
+    boardRecipe
+    mistakeRepairMoments
+    comparisonMoments
+    workedExampleMoment
+    checkpoint
+    explainBackPrompt
+    visualBoardBridge
+    qualitySignals
+
+Rules:
+- No fixed domain.
+- No Star Schema hardcoding.
+- No static fallback.
+- No fake 100 score.
+- If Gemini returns weak/short/card-only brain, validation fails.
 ===============================================================================
 """
 
@@ -38,7 +58,6 @@ try:
         dedupe_source_refs,
         normalize_id,
         normalize_source_refs,
-        normalize_source_refs_from_payload,
         require_source_refs,
         safe_dict,
         safe_list,
@@ -53,18 +72,23 @@ except Exception:
         dedupe_source_refs,
         normalize_id,
         normalize_source_refs,
-        normalize_source_refs_from_payload,
         require_source_refs,
         safe_dict,
         safe_list,
     )
 
 
-def _json(value: Any, limit: int = 140000) -> str:
+def _json(value: Any, limit: int = 180000) -> str:
     try:
         return clean_text(json.dumps(value, ensure_ascii=False, indent=2), limit)
     except Exception:
         return clean_text(value, limit)
+
+
+def _clean_teacher_text(value: Any, limit: int = 2600) -> str:
+    text = clean_text(value, limit)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
 def _walk_refs(value: Any, refs: List[JsonDict]) -> None:
@@ -74,11 +98,11 @@ def _walk_refs(value: Any, refs: List[JsonDict]) -> None:
         return
 
     if isinstance(value, dict):
-        local = value.get("sourceRefs") or value.get("refs")
-        if isinstance(local, list):
-            refs.extend([safe_dict(item) for item in local if safe_dict(item)])
+        local_refs = value.get("sourceRefs") or value.get("refs")
+        if isinstance(local_refs, list):
+            refs.extend([safe_dict(x) for x in local_refs if safe_dict(x)])
 
-        if any(key in value for key in ("chunkId", "sourceRef", "page", "quote")):
+        if value.get("sourceRef") or value.get("chunkId") or value.get("pageRef") or value.get("quote"):
             refs.append(safe_dict(value))
 
         for child in value.values():
@@ -86,27 +110,15 @@ def _walk_refs(value: Any, refs: List[JsonDict]) -> None:
                 _walk_refs(child, refs)
 
 
-def _chunk_ref(chunk: JsonDict) -> JsonDict:
-    c = safe_dict(chunk)
-    page = c.get("page") or c.get("pageNumber") or 1
-    idx = c.get("chunkIndex") or c.get("index") or 0
-    resource_id = clean_text(c.get("resourceId") or c.get("resource_id") or "", 180)
-
-    return {
-        "chunkId": clean_text(c.get("chunkId") or c.get("id") or f"{resource_id or 'resource'}_p{page}_c{idx}", 220),
-        "sourceRef": clean_text(c.get("sourceRef") or c.get("ref") or f"{resource_id or 'resource'}:page:{page}:chunk:{idx}", 300),
-        "pageRef": clean_text(c.get("pageRef") or f"{resource_id or 'resource'}:page:{page}", 300),
-        "page": page,
-        "quote": clean_text(c.get("quote") or c.get("textPreview") or c.get("text") or c.get("ocrText") or "", 900),
-        "confidence": c.get("confidence") or 0.82,
-        "resourceId": resource_id,
-    }
-
-
 def collect_source_refs(payload: JsonDict) -> List[JsonDict]:
     refs: List[JsonDict] = []
 
     for key in [
+        "sourceRefs",
+        "groundedRefs",
+        "verifiedSourceRefs",
+        "selectedNode",
+        "node",
         "selectedEvidence",
         "primaryEvidence",
         "samePageEvidence",
@@ -114,70 +126,45 @@ def collect_source_refs(payload: JsonDict) -> List[JsonDict]:
         "relatedEvidence",
         "comparisonEvidence",
         "externalEvidence",
-        "sourceRefs",
-        "groundedRefs",
-        "verifiedSourceRefs",
-        "selectedNode",
-        "node",
+        "sourceTruth",
         "sourceGrounding",
         "ragRetrieval",
         "selectedPageVision",
         "pageImageAnalyses",
         "detectedVisualDiagrams",
         "visualContext",
-        "teacherPromptPack",
+        "diagramElements",
+        "relationships",
+        "teacherMarkingHints",
+        "conceptExtraction",
+        "knowledgeGraph",
+        "teachingStrategy",
+        "analogyExample",
+        "analogyExamples",
         "chunks",
         "retrievedChunks",
         "exactChunks",
+        "pageContexts",
     ]:
         _walk_refs(payload.get(key), refs)
 
-    if not refs:
-        for chunk in safe_list(payload.get("selectedEvidence") or payload.get("chunks") or payload.get("retrievedChunks")):
-            refs.append(_chunk_ref(safe_dict(chunk)))
-
-    return dedupe_source_refs(normalize_source_refs(refs))
+    return dedupe_source_refs(normalize_source_refs([r for r in refs if safe_dict(r)]))[:100]
 
 
-def _first_ref(refs: List[JsonDict]) -> List[JsonDict]:
-    return refs[:1] if refs else []
-
-
-def _ensure_refs(value_refs: List[JsonDict], fallback_refs: List[JsonDict]) -> List[JsonDict]:
-    refs = normalize_source_refs(value_refs)
-    if refs:
-        return refs
-    return _first_ref(fallback_refs)
-
-
-def _role_items(payload: JsonDict, key: str, limit: int, text_limit: int = 1800) -> List[JsonDict]:
-    out: List[JsonDict] = []
-
-    for raw in safe_list(payload.get(key))[:limit]:
-        item = safe_dict(raw)
-        if not item:
+def _good_refs(refs: List[JsonDict], fallback_refs: List[JsonDict], limit: int = 8) -> List[JsonDict]:
+    cleaned: List[JsonDict] = []
+    for raw in safe_list(refs):
+        r = safe_dict(raw)
+        if not r:
             continue
-        out.append(
-            {
-                "chunkId": clean_text(item.get("chunkId"), 220),
-                "sourceRef": clean_text(item.get("sourceRef"), 300),
-                "pageRef": clean_text(item.get("pageRef"), 300),
-                "page": item.get("page") or 1,
-                "heading": clean_text(item.get("heading") or item.get("title"), 220),
-                "text": clean_text(item.get("text") or item.get("textPreview") or item.get("quote") or "", text_limit),
-                "quote": clean_text(item.get("quote") or item.get("textPreview") or item.get("text") or "", 800),
-                "evidenceRole": clean_text(item.get("evidenceRole") or key, 80),
-                "pageImageUrl": clean_text(item.get("pageImageUrl"), 1000),
-                "pageImagePath": clean_text(item.get("pageImagePath"), 1000),
-                "hasPageImage": bool(item.get("hasPageImage") or item.get("pageImageUrl") or item.get("pageImagePath")),
-                "tables": safe_list(item.get("tables"))[:10],
-                "figures": safe_list(item.get("figures"))[:10],
-                "layoutBlocks": safe_list(item.get("layoutBlocks"))[:20],
-                "sourceRefs": safe_list(item.get("sourceRefs"))[:5],
-            }
-        )
+        if not (r.get("sourceRef") or r.get("chunkId") or r.get("pageRef") or r.get("quote")):
+            continue
+        cleaned.append(r)
 
-    return out
+    if not cleaned:
+        cleaned = fallback_refs[:3]
+
+    return dedupe_source_refs(normalize_source_refs(cleaned))[:limit]
 
 
 def _selected_node_title(payload: JsonDict) -> str:
@@ -192,6 +179,34 @@ def _selected_node_title(payload: JsonDict) -> str:
         or "Selected concept",
         260,
     )
+
+
+def _role_items(payload: JsonDict, key: str, limit: int, text_limit: int = 1800) -> List[JsonDict]:
+    out: List[JsonDict] = []
+    for raw in safe_list(payload.get(key))[:limit]:
+        item = safe_dict(raw)
+        if not item:
+            continue
+        out.append(
+            {
+                "chunkId": clean_text(item.get("chunkId"), 220),
+                "sourceRef": clean_text(item.get("sourceRef"), 350),
+                "pageRef": clean_text(item.get("pageRef"), 350),
+                "page": item.get("page") or item.get("pageNumber"),
+                "heading": clean_text(item.get("heading") or item.get("title"), 220),
+                "text": clean_text(item.get("text") or item.get("textPreview") or item.get("quote") or "", text_limit),
+                "quote": clean_text(item.get("quote") or item.get("textPreview") or item.get("text") or "", 900),
+                "evidenceRole": clean_text(item.get("evidenceRole") or key, 100),
+                "pageImageUrl": clean_text(item.get("pageImageUrl"), 1000),
+                "pageImagePath": clean_text(item.get("pageImagePath"), 1000),
+                "hasPageImage": bool(item.get("hasPageImage") or item.get("pageImageUrl") or item.get("pageImagePath")),
+                "tables": safe_list(item.get("tables"))[:8],
+                "figures": safe_list(item.get("figures"))[:8],
+                "layoutBlocks": safe_list(item.get("layoutBlocks"))[:12],
+                "sourceRefs": safe_list(item.get("sourceRefs"))[:5] or [item],
+            }
+        )
+    return out
 
 
 def _vision_pack(payload: JsonDict) -> JsonDict:
@@ -210,21 +225,6 @@ def _vision_pack(payload: JsonDict) -> JsonDict:
         or safe_list(visual_context.get("detectedDiagrams"))
     )
 
-    summary = clean_text(
-        payload.get("selectedPageVisionDiagramSummary")
-        or selected_vision.get("diagramSummary")
-        or visual_context.get("diagramSummary"),
-        12000,
-    )
-
-    hints = (
-        safe_list(payload.get("visualTeachingHints"))
-        or safe_list(selected_vision.get("visualTeachingHints"))
-        or safe_list(visual_context.get("visualTeachingHints"))
-    )
-
-    page_images = safe_list(payload.get("pageImages")) or safe_list(visual_context.get("pageImages"))
-
     return {
         "selectedPageVisionUsed": bool(
             payload.get("selectedPageVisionUsed")
@@ -232,11 +232,27 @@ def _vision_pack(payload: JsonDict) -> JsonDict:
             or safe_dict(selected_vision.get("metadata")).get("modelVisionUsed")
             or analyses
         ),
-        "diagramSummary": summary,
+        "diagramSummary": clean_text(
+            payload.get("selectedPageVisionDiagramSummary")
+            or selected_vision.get("diagramSummary")
+            or visual_context.get("diagramSummary"),
+            12000,
+        ),
         "pageImageAnalyses": analyses[:8],
         "detectedDiagrams": detected[:8],
-        "visualTeachingHints": [clean_text(x, 500) for x in hints[:20]],
-        "pageImages": page_images[:8],
+        "diagramElements": safe_list(payload.get("diagramElements") or selected_vision.get("diagramElements"))[:100],
+        "relationships": safe_list(payload.get("relationships") or selected_vision.get("relationships"))[:100],
+        "teacherMarkingHints": safe_list(
+            payload.get("teacherMarkingHints")
+            or selected_vision.get("teacherMarkingHints")
+            or visual_context.get("teacherMarkingHints")
+        )[:80],
+        "visualTeachingHints": safe_list(
+            payload.get("visualTeachingHints")
+            or selected_vision.get("visualTeachingHints")
+            or visual_context.get("visualTeachingHints")
+        )[:80],
+        "pageImages": safe_list(payload.get("pageImages") or visual_context.get("pageImages"))[:8],
         "metadata": {
             "modelVisionUsed": bool(
                 safe_dict(selected_vision.get("metadata")).get("modelVisionUsed")
@@ -245,19 +261,21 @@ def _vision_pack(payload: JsonDict) -> JsonDict:
             ),
             "pageImageAnalysisCount": len(analyses),
             "detectedDiagramCount": len(detected),
-            "pageImageCount": len(page_images),
         },
     }
 
 
 def _evidence_pack(payload: JsonDict) -> JsonDict:
     return {
-        "selectedEvidence": _role_items(payload, "selectedEvidence", 18, 2600),
-        "samePageEvidence": _role_items(payload, "samePageEvidence", 14, 2000),
-        "nearbyEvidence": _role_items(payload, "nearbyEvidence", 8, 1600),
-        "relatedEvidence": _role_items(payload, "relatedEvidence", 8, 1400),
-        "comparisonEvidence": _role_items(payload, "comparisonEvidence", 8, 1400),
+        "selectedEvidence": _role_items(payload, "selectedEvidence", 18, 2800),
+        "samePageEvidence": _role_items(payload, "samePageEvidence", 14, 2200),
+        "nearbyEvidence": _role_items(payload, "nearbyEvidence", 10, 1700),
+        "relatedEvidence": _role_items(payload, "relatedEvidence", 8, 1500),
+        "comparisonEvidence": _role_items(payload, "comparisonEvidence", 8, 1500),
         "externalEvidence": _role_items(payload, "externalEvidence", 5, 1200),
+        "selectedPageFullText": clean_text(payload.get("selectedPageFullText"), 18000),
+        "fullPdfSummary": safe_dict(payload.get("fullPdfSummary") or payload.get("pdfSummary")),
+        "fullPdfOutline": safe_dict(payload.get("fullPdfOutline")),
         "pageContexts": [
             {
                 "page": safe_dict(p).get("page"),
@@ -266,8 +284,6 @@ def _evidence_pack(payload: JsonDict) -> JsonDict:
                 "ocrText": clean_text(safe_dict(p).get("ocrText"), 1500),
                 "tables": safe_list(safe_dict(p).get("tables"))[:8],
                 "figures": safe_list(safe_dict(p).get("figures"))[:8],
-                "pageImageUrl": clean_text(safe_dict(p).get("pageImageUrl"), 1000),
-                "pageImagePath": clean_text(safe_dict(p).get("pageImagePath"), 1000),
                 "sourceRefs": safe_list(safe_dict(p).get("sourceRefs"))[:6],
             }
             for p in safe_list(payload.get("pageContexts"))[:8]
@@ -275,56 +291,14 @@ def _evidence_pack(payload: JsonDict) -> JsonDict:
     }
 
 
-def _compact_extraction(payload: JsonDict) -> JsonDict:
+def _upstream_pack(payload: JsonDict) -> JsonDict:
     return {
         "conceptExtraction": safe_dict(payload.get("conceptExtraction")),
         "knowledgeGraph": safe_dict(payload.get("knowledgeGraph")),
         "teachingStrategy": safe_dict(payload.get("teachingStrategy") or payload.get("strategy")),
+        "analogyExample": safe_dict(payload.get("analogyExample") or payload.get("analogyExamples")),
         "sourceGrounding": safe_dict(payload.get("sourceGrounding")),
     }
-
-
-def _normalize_list_of_text(value: Any, limit: int = 8, max_len: int = 500) -> List[str]:
-    out: List[str] = []
-    for item in safe_list(value):
-        if isinstance(item, dict):
-            text = clean_text(
-                item.get("text")
-                or item.get("title")
-                or item.get("label")
-                or item.get("reason")
-                or item.get("summary")
-                or item,
-                max_len,
-            )
-        else:
-            text = clean_text(item, max_len)
-        if text:
-            out.append(text)
-        if len(out) >= limit:
-            break
-    return out
-
-
-def _is_too_generic(text: str) -> bool:
-    low = clean_text(text, 1500).lower()
-    generic = [
-        "this concept is important",
-        "understand the concept",
-        "source backed",
-        "this board explains",
-        "the selected node",
-        "the pdf says",
-        "as shown in the source",
-    ]
-    return any(g in low for g in generic) and len(low.split()) < 24
-
-
-def _clean_teacher_text(text: Any, max_len: int = 2600) -> str:
-    value = clean_text(text, max_len)
-    value = re.sub(r"\b(source-backed|source grounded)\b", "source-grounded", value, flags=re.I)
-    value = re.sub(r"\s+", " ", value).strip()
-    return value
 
 
 class DetailedExplanationAgent(BaseLiveTutorAgent):
@@ -336,53 +310,50 @@ class DetailedExplanationAgent(BaseLiveTutorAgent):
     @property
     def instruction(self) -> str:
         return """
-You are the Detailed Explanation Agent for a human-like AI Live Tutor.
+You are DetailedExplanationAgent, the Teacher Brain Fusion Agent for a live AI tutor.
 
-You receive:
-- selectedEvidence: exact clicked-node PDF evidence
-- samePageEvidence: support from same page
-- nearbyEvidence: previous/next page support
-- relatedEvidence: background only
-- comparisonEvidence: comparison only
-- selectedPageVision: Gemini Vision analysis of selected PDF page image/diagram
-- visualContext: page images, diagram analysis, tables, figures, layout hints
+You synthesize:
+- RAG/source evidence,
+- selected page vision,
+- concept extraction,
+- knowledge graph,
+- teaching strategy,
+- analogy/example guidance,
+into one rich, source-grounded, board-ready teacher-brain lesson.
 
-Rules:
-- Explain like a real teacher standing at a board.
-- Main claims must come from selectedEvidence first.
-- Use samePageEvidence to clarify.
-- Use nearbyEvidence as support only.
-- Use comparisonEvidence only in comparison sections.
-- ExternalEvidence is optional and never main truth.
-- Use selectedPageVision to explain diagrams/layouts when available.
-- Do not invent unsupported facts.
-- Do not output generic filler.
-- Every step, board note, example, mistake, and recap must include sourceRefs.
+This project is for a Google Cloud Rapid Agent Hackathon-style system:
+the agent must move beyond chat, plan a multi-step mission, use partner/tool
+context, and produce artifacts that downstream agents can execute on an
+interactive board.
+
+Hard rules:
 - Output ONLY valid JSON.
-- No markdown.
 - No fake fallback.
+- No generic filler.
+- No unsupported facts.
+- No paragraph-only lesson.
+- No fixed domain.
+- No hardcoded Star Schema.
+- Every factual object must include sourceRefs copied from validSourceRefs.
+- If visual/diagram information exists, create teacher pointing and board redraw moments.
 """
 
     def validate_input(self, payload: JsonDict) -> ValidationResult:
         errors: List[str] = []
         warnings: List[str] = []
 
-        node = safe_dict(payload.get("selectedNode") or payload.get("node"))
-        topic = clean_text(payload.get("topic") or payload.get("question"), 1000)
+        if not safe_dict(payload.get("selectedNode") or payload.get("node")) and not clean_text(payload.get("question")):
+            errors.append("DetailedExplanationAgent requires selectedNode or question.")
+
         refs = collect_source_refs(payload)
-
-        if not node and not topic:
-            errors.append("DetailedExplanationAgent requires selectedNode, topic, or question.")
-
         if not refs:
-            errors.append("DetailedExplanationAgent requires real sourceRefs/chunks. No ungrounded explanation allowed.")
+            errors.append("DetailedExplanationAgent requires real sourceRefs/chunks. No ungrounded output allowed.")
 
         if not safe_list(payload.get("selectedEvidence")) and not safe_list(payload.get("chunks")):
-            warnings.append("selectedEvidence missing; explanation will be weaker.")
+            warnings.append("selectedEvidence missing; teacher brain may be weaker.")
 
-        vision = _vision_pack(payload)
-        if vision["metadata"]["pageImageCount"] and not vision["metadata"]["modelVisionUsed"]:
-            warnings.append("Page image reference exists, but selectedPageVision model analysis is not present.")
+        if not safe_dict(payload.get("teachingStrategy")):
+            warnings.append("teachingStrategy missing; detailed explanation will still run but strategy handoff is weaker.")
 
         return ValidationResult(
             ok=not errors,
@@ -396,71 +367,64 @@ Rules:
         refs = collect_source_refs(payload)
         evidence = _evidence_pack(payload)
         vision = _vision_pack(payload)
-        extraction = _compact_extraction(payload)
-        chunks_text = self.compact_chunks_for_prompt(safe_list(payload.get("chunks") or payload.get("retrievedChunks")), max_chars=70000)
+        upstream = _upstream_pack(payload)
+
+        chunks_text = self.compact_chunks_for_prompt(
+            safe_list(payload.get("chunks") or payload.get("retrievedChunks")),
+            max_chars=65000,
+        )
 
         prompt_payload = {
-            "task": "Write a detailed, human-teacher explanation for the selected PDF node.",
+            "task": "Create a real worldTeacherLesson for a live human-like board tutor.",
             "student": {
                 "level": context.studentLevel,
                 "language": context.language,
-                "question": clean_text(payload.get("question") or context.question, 1400),
+                "question": clean_text(payload.get("question") or context.question, 1600),
             },
             "selectedNode": safe_dict(payload.get("selectedNode") or payload.get("node")),
             "selectedNodeTitle": _selected_node_title(payload),
-            "strictEvidenceRules": [
-                "Use selectedEvidence as main truth.",
-                "Use samePageEvidence only to clarify selectedEvidence.",
-                "Use nearbyEvidence as support only.",
-                "Use relatedEvidence as background only.",
-                "Use comparisonEvidence only inside a comparison step.",
-                "Use externalEvidence only as extra learning, never as main truth.",
-                "Use selectedPageVision for diagram/table/layout explanation if present.",
-                "PDF extracted text remains truth; image/OCR is visual helper.",
-                "Every object must include valid sourceRefs copied from validSourceRefs.",
-            ],
-            "validSourceRefs": refs[:40],
+            "validSourceRefs": refs[:50],
             "evidencePack": evidence,
             "selectedPageVisionPack": vision,
-            "upstreamAgentContext": extraction,
+            "upstreamAgentContext": upstream,
             "compactSourceChunks": chunks_text,
-            "styleRequirements": {
-                "tone": "human private tutor",
-                "detailLevel": "rich and specific",
-                "avoid": [
-                    "generic board wording",
-                    "random facts",
-                    "unsupported external facts",
-                    "robotic section labels as explanation",
-                    "raw JSON",
-                ],
-                "mustInclude": [
-                    "simple definition",
-                    "why it exists",
-                    "source quote explanation",
-                    "diagram/image explanation when available",
-                    "step-by-step reasoning",
-                    "example",
-                    "common mistakes",
-                    "board-ready notes",
-                    "checkpoint question",
-                    "recap",
-                ],
+            "strictEvidenceRules": [
+                "selectedEvidence is the main truth.",
+                "samePageEvidence clarifies selected evidence.",
+                "nearbyEvidence supports only.",
+                "comparisonEvidence only belongs in comparisonMoments.",
+                "Vision explains shapes/layout/diagram; PDF text remains truth.",
+                "Every claim needs sourceRefs copied from validSourceRefs.",
+            ],
+            "qualityBar": {
+                "minimumStepByStep": 5,
+                "minimumMicroTeachingSteps": 7,
+                "minimumBoardRecipeItems": 7,
+                "minimumMistakeRepairMoments": 2,
+                "mustIncludeVisualTeachingMoments": True,
+                "mustIncludeWorkedExampleMoment": True,
+                "mustIncludeCheckpoint": True,
+                "mustIncludeExplainBackPrompt": True,
+                "mustIncludeVisualBoardBridge": True,
+                "mustBeUsefulForBeginner": True,
+                "mustBeDetailedButNotVerboseDump": True,
+                "mustBeReadyForVisualPlanner": True,
+                "mustAvoidCardOnlyOutput": True,
             },
             "requiredOutputSchema": {
-                "explanationId": "explanation_1",
-                "title": "concept title",
-                "simpleDefinition": "simple but source-specific definition",
-                "intuition": "why this idea exists",
-                "sourceGroundedExplanation": "detailed paragraph grounded in selectedEvidence",
+                "explanationId": "string",
+                "title": "string",
+                "simpleDefinition": "accurate beginner-friendly definition grounded in evidence",
+                "intuition": "why this concept exists and why it matters",
+                "sourceGroundedExplanation": "rich explanation using selected evidence first",
                 "diagramOrVisualExplanation": {
                     "hasVisual": True,
-                    "summary": "explain selected page diagram/image/table if selectedPageVision exists",
+                    "summary": "how the selected visual/diagram/table teaches the concept",
                     "teacherPointingPlan": [
                         {
-                            "target": "visual element",
-                            "teacherAction": "circle|point|underline|draw-arrow",
-                            "spokenReason": "what teacher says about this visual",
+                            "target": "specific visual/text element",
+                            "teacherAction": "point|circle|draw-arrow|underline|zoom|highlight",
+                            "spokenReason": "what teacher explains while pointing",
                             "sourceRefs": [],
                         }
                     ],
@@ -469,57 +433,107 @@ Rules:
                 "stepByStep": [
                     {
                         "stepId": "step_1",
-                        "heading": "step heading",
-                        "explanation": "rich explanation",
-                        "boardNote": "short board note",
-                        "teacherAction": "what the teacher should draw/point/highlight",
+                        "heading": "specific teaching step",
+                        "explanation": "detailed student-friendly explanation",
+                        "boardNote": "what appears on board",
+                        "teacherAction": "what tutor draws/writes/highlights",
                         "sourceRefs": [],
                     }
                 ],
-                "whyItMatters": ["reason"],
+                "whyItMatters": ["specific practical value"],
                 "workedExample": {
                     "title": "example title",
-                    "example": "detailed example",
-                    "boardNote": "short example for board",
+                    "example": "step-by-step worked example using the concept",
+                    "boardNote": "short board version",
                     "sourceRefs": [],
                 },
                 "comparisonOnlyNotes": [
                     {
-                        "title": "comparison note",
-                        "text": "use comparisonEvidence only",
+                        "noteId": "comparison_1",
+                        "title": "comparison title",
+                        "text": "only if comparison evidence exists",
                         "sourceRefs": [],
                     }
                 ],
                 "commonMistakes": [
                     {
                         "mistakeId": "mistake_1",
-                        "mistake": "common wrong idea",
-                        "correction": "correct idea",
-                        "teacherAction": "how teacher fixes it on board",
+                        "mistake": "common student misunderstanding",
+                        "correction": "clear correction",
+                        "teacherAction": "how to show wrong vs correct on board",
                         "sourceRefs": [],
                     }
                 ],
                 "boardNotes": [
                     {
                         "noteId": "note_1",
-                        "type": "definition|sourceQuote|diagram|example|warning|quiz|recap",
+                        "type": "definition|diagram|example|warning|comparison|quiz|recap",
                         "text": "short board text",
                         "teacherAction": "write/circle/arrow/highlight instruction",
                         "sourceRefs": [],
                     }
                 ],
                 "checkpoint": {
-                    "question": "short check question",
+                    "question": "student check question",
                     "answer": "correct answer",
                     "sourceRefs": [],
                 },
-                "teacherSummary": "short but specific recap",
-                "explainBackPrompt": "ask student to explain it back",
+                "worldTeacherLesson": {
+                    "version": "worldTeacherLessonV1",
+                    "teacherMission": "what the tutor is trying to make the student understand",
+                    "learningPromise": "what the student will be able to explain/do",
+                    "intuitionFirst": "intuitive hook",
+                    "sourceGroundedCore": "core explanation",
+                    "microTeachingSteps": [
+                        {
+                            "microStepId": "micro_1",
+                            "momentType": "intuition|definition|visual_walkthrough|relationship|worked_example|comparison|mistake_repair|checkpoint",
+                            "teachingPurpose": "why this moment exists",
+                            "studentFriendlyExplanation": "what teacher says conceptually",
+                            "boardMoment": "what appears on board",
+                            "teacherAction": "board action plan",
+                            "sourceRefs": [],
+                        }
+                    ],
+                    "visualTeachingMoments": [
+                        {
+                            "momentId": "visual_1",
+                            "goal": "why this visual matters",
+                            "summary": "what to draw/redraw/point to",
+                            "teacherActions": [],
+                            "sourceRefs": [],
+                        }
+                    ],
+                    "workedExampleMoment": {},
+                    "comparisonMoments": [],
+                    "mistakeRepairMoments": [],
+                    "boardRecipe": [],
+                    "checkpoint": {},
+                    "explainBackPrompt": "ask student to explain back",
+                    "visualBoardBridge": {
+                        "purpose": "instructions for VisualPlanner",
+                        "requiredDownstreamBehavior": {
+                            "mustCreateVisualElements": True,
+                            "mustCreateRelationships": True,
+                            "mustCreateMarkingPlan": True,
+                            "mustCreateCommandIntents": True,
+                            "mustAvoidCardOnlyOutput": True,
+                        },
+                    },
+                    "qualitySignals": {
+                        "readyForVisualPlanner": True,
+                        "sourceGrounded": True,
+                        "notParagraphOnly": True,
+                    },
+                    "sourceRefs": [],
+                },
+                "teacherSummary": "specific recap",
+                "explainBackPrompt": "student explain-back request",
                 "sourceRefs": [],
                 "metadata": {
                     "fallbackUsed": False,
-                    "humanTeacherDetailed": True,
-                    "selectedPageVisionUsed": True,
+                    "usedSmartFallback": False,
+                    "worldTeacherLessonV1": True,
                     "sourceGrounded": True,
                 },
             },
@@ -527,48 +541,42 @@ Rules:
 
         return _json(prompt_payload, 180000)
 
+    def run_without_adk(self, payload: JsonDict, context: AgentContext) -> JsonDict:
+        raise RuntimeError("DetailedExplanationAgent requires Gemini/ADK. No rule-based/static fallback is allowed.")
+
     def normalize_output(self, raw: JsonDict, payload: JsonDict, context: AgentContext) -> JsonDict:
         raw = safe_dict(raw)
 
         if isinstance(raw.get("result"), dict):
-            result = safe_dict(raw.get("result"))
-            if result.get("stepByStep") or result.get("simpleDefinition"):
-                raw = result
+            candidate = safe_dict(raw.get("result"))
+            if candidate.get("worldTeacherLesson") or candidate.get("stepByStep") or candidate.get("simpleDefinition"):
+                raw = candidate
 
         fallback_refs = collect_source_refs(payload)
         if not fallback_refs:
             raise RuntimeError("DetailedExplanationAgent cannot normalize without real sourceRefs.")
 
-        raw_root_refs = normalize_source_refs(safe_list(raw.get("sourceRefs")))
-        root_refs = dedupe_source_refs(raw_root_refs or fallback_refs)
-
+        root_refs = _good_refs(safe_list(raw.get("sourceRefs")), fallback_refs, limit=12)
         vision = _vision_pack(payload)
         selected_title = _selected_node_title(payload)
 
-        simple_definition = _clean_teacher_text(raw.get("simpleDefinition") or raw.get("definition"), 1600)
-        intuition = _clean_teacher_text(raw.get("intuition") or raw.get("why") or raw.get("summary"), 2400)
+        simple_definition = _clean_teacher_text(raw.get("simpleDefinition") or raw.get("definition"), 1800)
+        intuition = _clean_teacher_text(raw.get("intuition") or raw.get("why") or raw.get("summary"), 2600)
         source_expl = _clean_teacher_text(
             raw.get("sourceGroundedExplanation")
             or raw.get("detailedAnswer")
             or raw.get("teacherExplanation")
             or raw.get("body"),
-            5000,
+            5200,
         )
 
-        if not simple_definition and source_expl:
-            simple_definition = clean_text(source_expl.split(".")[0], 900)
-
-        if not intuition and source_expl:
-            intuition = clean_text(source_expl, 1600)
-
         visual_raw = safe_dict(raw.get("diagramOrVisualExplanation"))
-        visual_refs = _ensure_refs(safe_list(visual_raw.get("sourceRefs")), root_refs)
-
+        visual_refs = _good_refs(safe_list(visual_raw.get("sourceRefs")), root_refs, limit=8)
         visual_summary = _clean_teacher_text(
             visual_raw.get("summary")
             or raw.get("diagramSummary")
             or vision.get("diagramSummary"),
-            3500,
+            4000,
         )
 
         teacher_pointing_plan: List[JsonDict] = []
@@ -576,155 +584,88 @@ Rules:
             p = safe_dict(item)
             teacher_pointing_plan.append(
                 {
-                    "target": clean_text(p.get("target") or f"visual_target_{index + 1}", 180),
+                    "target": clean_text(p.get("target") or f"visual_target_{index + 1}", 220),
                     "teacherAction": clean_text(p.get("teacherAction") or "point", 120),
-                    "spokenReason": _clean_teacher_text(p.get("spokenReason") or p.get("reason"), 800),
-                    "sourceRefs": _ensure_refs(safe_list(p.get("sourceRefs")), visual_refs),
+                    "spokenReason": _clean_teacher_text(p.get("spokenReason") or p.get("reason"), 1000),
+                    "sourceRefs": _good_refs(safe_list(p.get("sourceRefs")), visual_refs, limit=5),
                 }
             )
 
-        if not teacher_pointing_plan and safe_list(vision.get("visualTeachingHints")):
-            for index, hint in enumerate(safe_list(vision.get("visualTeachingHints"))[:6]):
-                teacher_pointing_plan.append(
-                    {
-                        "target": f"selected_page_visual_{index + 1}",
-                        "teacherAction": "point-and-highlight",
-                        "spokenReason": clean_text(hint, 700),
-                        "sourceRefs": _first_ref(root_refs),
-                    }
-                )
-
         steps: List[JsonDict] = []
-        raw_steps = safe_list(raw.get("stepByStep") or raw.get("steps"))
-
-        if not raw_steps and source_expl:
-            raw_steps = [
-                {
-                    "stepId": "step_1",
-                    "heading": "Core idea",
-                    "explanation": source_expl,
-                    "boardNote": simple_definition or selected_title,
-                    "teacherAction": "write the core idea and underline the source-backed words",
-                    "sourceRefs": root_refs,
-                }
-            ]
-
-        for index, item in enumerate(raw_steps):
+        for index, item in enumerate(safe_list(raw.get("stepByStep") or raw.get("steps"))):
             step = safe_dict(item)
-            step_refs = _ensure_refs(safe_list(step.get("sourceRefs")), root_refs)
-            explanation = _clean_teacher_text(step.get("explanation") or step.get("text"), 3600)
-
             steps.append(
                 {
                     "stepId": normalize_id(step.get("stepId") or f"step_{index + 1}", f"step_{index + 1}"),
-                    "heading": clean_text(step.get("heading") or f"Step {index + 1}", 180),
-                    "explanation": explanation,
-                    "boardNote": clean_text(step.get("boardNote") or step.get("heading") or explanation, 700),
+                    "heading": clean_text(step.get("heading") or f"Step {index + 1}", 220),
+                    "explanation": _clean_teacher_text(step.get("explanation") or step.get("text"), 3600),
+                    "boardNote": clean_text(step.get("boardNote") or step.get("heading") or "", 900),
                     "teacherAction": clean_text(
                         step.get("teacherAction")
                         or step.get("boardAction")
-                        or "write, underline key phrase, then connect to source evidence",
-                        400,
+                        or "write, point, and check understanding",
+                        700,
                     ),
-                    "sourceRefs": step_refs,
-                    "metadata": {
-                        **safe_dict(step.get("metadata")),
-                        "fallbackUsed": False,
-                    },
+                    "sourceRefs": _good_refs(safe_list(step.get("sourceRefs")), root_refs, limit=6),
+                    "metadata": {**safe_dict(step.get("metadata")), "fallbackUsed": False},
                 }
             )
 
+        worked = safe_dict(raw.get("workedExample"))
+        worked_example = {
+            "title": clean_text(worked.get("title") or "Worked example", 220),
+            "example": _clean_teacher_text(worked.get("example") or worked.get("text"), 3800),
+            "boardNote": clean_text(worked.get("boardNote") or "", 900),
+            "sourceRefs": _good_refs(safe_list(worked.get("sourceRefs")), root_refs, limit=6),
+            "metadata": {**safe_dict(worked.get("metadata")), "fallbackUsed": False},
+        }
+
         comparison_notes: List[JsonDict] = []
-        for index, item in enumerate(safe_list(raw.get("comparisonOnlyNotes"))):
+        for index, item in enumerate(safe_list(raw.get("comparisonOnlyNotes") or raw.get("comparisonMoments"))):
             note = safe_dict(item)
             comparison_notes.append(
                 {
                     "noteId": normalize_id(note.get("noteId") or f"comparison_{index + 1}", f"comparison_{index + 1}"),
-                    "title": clean_text(note.get("title") or f"Comparison {index + 1}", 160),
-                    "text": _clean_teacher_text(note.get("text"), 1200),
-                    "sourceRefs": _ensure_refs(safe_list(note.get("sourceRefs")), root_refs),
-                    "metadata": {
-                        "comparisonOnly": True,
-                        "fallbackUsed": False,
-                    },
+                    "title": clean_text(note.get("title") or f"Comparison {index + 1}", 220),
+                    "text": _clean_teacher_text(note.get("text") or note.get("summary"), 1600),
+                    "sourceRefs": _good_refs(safe_list(note.get("sourceRefs")), root_refs, limit=6),
+                    "metadata": {"comparisonOnly": True, "fallbackUsed": False},
                 }
             )
 
         mistakes: List[JsonDict] = []
         for index, item in enumerate(safe_list(raw.get("commonMistakes"))):
-            mistake = safe_dict(item)
+            m = safe_dict(item)
             mistakes.append(
                 {
-                    "mistakeId": normalize_id(mistake.get("mistakeId") or f"mistake_{index + 1}", f"mistake_{index + 1}"),
-                    "mistake": _clean_teacher_text(mistake.get("mistake"), 1000),
-                    "correction": _clean_teacher_text(mistake.get("correction"), 1300),
+                    "mistakeId": normalize_id(m.get("mistakeId") or f"mistake_{index + 1}", f"mistake_{index + 1}"),
+                    "mistake": _clean_teacher_text(m.get("mistake"), 1000),
+                    "correction": _clean_teacher_text(m.get("correction"), 1400),
                     "teacherAction": clean_text(
-                        mistake.get("teacherAction") or "mark the mistake with a red cross and write the correction",
-                        400,
+                        m.get("teacherAction") or "show wrong vs correct on the board",
+                        700,
                     ),
-                    "sourceRefs": _ensure_refs(safe_list(mistake.get("sourceRefs")), root_refs),
-                    "metadata": {
-                        **safe_dict(mistake.get("metadata")),
-                        "fallbackUsed": False,
-                    },
+                    "sourceRefs": _good_refs(safe_list(m.get("sourceRefs")), root_refs, limit=6),
+                    "metadata": {**safe_dict(m.get("metadata")), "fallbackUsed": False},
                 }
             )
 
         board_notes: List[JsonDict] = []
         for index, item in enumerate(safe_list(raw.get("boardNotes"))):
-            note = safe_dict(item)
-            text = clean_text(note.get("text"), 850)
+            n = safe_dict(item)
+            text = clean_text(n.get("text"), 1000)
             if not text:
                 continue
             board_notes.append(
                 {
-                    "noteId": normalize_id(note.get("noteId") or f"note_{index + 1}", f"note_{index + 1}"),
-                    "type": clean_text(note.get("type") or "keyword", 80),
+                    "noteId": normalize_id(n.get("noteId") or f"note_{index + 1}", f"note_{index + 1}"),
+                    "type": clean_text(n.get("type") or "board-note", 100),
                     "text": text,
-                    "teacherAction": clean_text(note.get("teacherAction") or "write and highlight", 300),
-                    "sourceRefs": _ensure_refs(safe_list(note.get("sourceRefs")), root_refs),
-                    "metadata": {
-                        **safe_dict(note.get("metadata")),
-                        "fallbackUsed": False,
-                    },
+                    "teacherAction": clean_text(n.get("teacherAction") or "write and highlight", 700),
+                    "sourceRefs": _good_refs(safe_list(n.get("sourceRefs")), root_refs, limit=6),
+                    "metadata": {**safe_dict(n.get("metadata")), "fallbackUsed": False},
                 }
             )
-
-        if not board_notes:
-            if simple_definition:
-                board_notes.append(
-                    {
-                        "noteId": "note_1",
-                        "type": "definition",
-                        "text": simple_definition,
-                        "teacherAction": "write the definition and underline the key phrase",
-                        "sourceRefs": _first_ref(root_refs),
-                        "metadata": {"fallbackUsed": False},
-                    }
-                )
-            if visual_summary:
-                board_notes.append(
-                    {
-                        "noteId": "note_visual_1",
-                        "type": "diagram",
-                        "text": clean_text(visual_summary, 800),
-                        "teacherAction": "point to the selected page diagram and redraw it cleanly",
-                        "sourceRefs": _first_ref(root_refs),
-                        "metadata": {"fromSelectedPageVision": True, "fallbackUsed": False},
-                    }
-                )
-
-        worked = safe_dict(raw.get("workedExample"))
-        worked_example = {
-            "title": clean_text(worked.get("title") or "Example", 180),
-            "example": _clean_teacher_text(worked.get("example") or worked.get("text"), 3200),
-            "boardNote": clean_text(worked.get("boardNote") or "", 750),
-            "sourceRefs": _ensure_refs(safe_list(worked.get("sourceRefs")), root_refs),
-            "metadata": {
-                **safe_dict(worked.get("metadata")),
-                "fallbackUsed": False,
-            },
-        }
 
         checkpoint_raw = safe_dict(raw.get("checkpoint"))
         checkpoint = {
@@ -732,26 +673,92 @@ Rules:
                 checkpoint_raw.get("question")
                 or raw.get("explainBackPrompt")
                 or "Can you explain the main idea in your own words?",
-                600,
+                800,
             ),
-            "answer": clean_text(checkpoint_raw.get("answer") or "", 900),
-            "sourceRefs": _ensure_refs(safe_list(checkpoint_raw.get("sourceRefs")), root_refs),
+            "answer": clean_text(checkpoint_raw.get("answer") or "", 1200),
+            "sourceRefs": _good_refs(safe_list(checkpoint_raw.get("sourceRefs")), root_refs, limit=6),
         }
 
-        why_it_matters = _normalize_list_of_text(raw.get("whyItMatters"), 8, 700)
-        teacher_summary = _clean_teacher_text(raw.get("teacherSummary") or raw.get("summary") or simple_definition, 1600)
+        world_lesson = safe_dict(raw.get("worldTeacherLesson"))
+        world_quality = safe_dict(world_lesson.get("qualitySignals")) if world_lesson else {}
+
+        if world_lesson:
+            world_refs = _good_refs(safe_list(world_lesson.get("sourceRefs")), root_refs, limit=12)
+
+            world_lesson = {
+                **world_lesson,
+                "version": clean_text(world_lesson.get("version") or "worldTeacherLessonV1", 80),
+                "microTeachingSteps": [
+                    {
+                        **safe_dict(step),
+                        "sourceRefs": _good_refs(safe_list(safe_dict(step).get("sourceRefs")), world_refs, limit=6),
+                    }
+                    for step in safe_list(world_lesson.get("microTeachingSteps"))
+                    if safe_dict(step)
+                ],
+                "visualTeachingMoments": [
+                    {
+                        **safe_dict(moment),
+                        "sourceRefs": _good_refs(safe_list(safe_dict(moment).get("sourceRefs")), world_refs, limit=6),
+                    }
+                    for moment in safe_list(world_lesson.get("visualTeachingMoments"))
+                    if safe_dict(moment)
+                ],
+                "mistakeRepairMoments": [
+                    {
+                        **safe_dict(moment),
+                        "sourceRefs": _good_refs(safe_list(safe_dict(moment).get("sourceRefs")), world_refs, limit=6),
+                    }
+                    for moment in safe_list(world_lesson.get("mistakeRepairMoments"))
+                    if safe_dict(moment)
+                ],
+                "boardRecipe": [
+                    {
+                        **safe_dict(recipe),
+                        "sourceRefs": _good_refs(safe_list(safe_dict(recipe).get("sourceRefs")), world_refs, limit=6),
+                    }
+                    for recipe in safe_list(world_lesson.get("boardRecipe"))
+                    if safe_dict(recipe)
+                ],
+                "sourceRefs": world_refs,
+            }
+
+            world_quality = safe_dict(world_lesson.get("qualitySignals"))
+
+        why_it_matters = []
+        for raw_reason in safe_list(raw.get("whyItMatters"))[:8]:
+            if isinstance(raw_reason, dict):
+                text = clean_text(raw_reason.get("text") or raw_reason.get("reason") or raw_reason.get("title"), 800)
+            else:
+                text = clean_text(raw_reason, 800)
+            if text:
+                why_it_matters.append(text)
+
+        teacher_summary = _clean_teacher_text(raw.get("teacherSummary") or raw.get("summary"), 1800)
 
         all_refs: List[JsonDict] = []
-        all_refs.extend(root_refs)
-        for step in steps:
-            all_refs.extend(safe_list(step.get("sourceRefs")))
-        for mistake in mistakes:
-            all_refs.extend(safe_list(mistake.get("sourceRefs")))
-        for note in board_notes:
-            all_refs.extend(safe_list(note.get("sourceRefs")))
-        all_refs.extend(safe_list(worked_example.get("sourceRefs")))
-        all_refs.extend(safe_list(checkpoint.get("sourceRefs")))
-        all_refs.extend(visual_refs)
+        for obj in [
+            root_refs,
+            visual_refs,
+            steps,
+            mistakes,
+            board_notes,
+            worked_example,
+            checkpoint,
+            world_lesson,
+        ]:
+            _walk_refs(obj, all_refs)
+
+        teacher_strength = "weak"
+        if world_lesson:
+            micro_count = len(safe_list(world_lesson.get("microTeachingSteps")))
+            visual_count = len(safe_list(world_lesson.get("visualTeachingMoments")))
+            recipe_count = len(safe_list(world_lesson.get("boardRecipe")))
+            repair_count = len(safe_list(world_lesson.get("mistakeRepairMoments")))
+            if micro_count >= 7 and visual_count >= 1 and recipe_count >= 7 and repair_count >= 2:
+                teacher_strength = "strong"
+            elif micro_count >= 6 and recipe_count >= 5:
+                teacher_strength = "medium"
 
         return {
             "explanationId": normalize_id(raw.get("explanationId") or "explanation_1", "explanation_1"),
@@ -777,12 +784,13 @@ Rules:
             "commonMistakes": mistakes,
             "teacherSummary": teacher_summary,
             "explainBackPrompt": clean_text(
-                raw.get("explainBackPrompt") or "Can you explain this idea back in your own words?",
-                700,
+                raw.get("explainBackPrompt") or "Explain this back in your own words.",
+                900,
             ),
             "boardNotes": board_notes,
             "checkpoint": checkpoint,
-            "sourceRefs": dedupe_source_refs(normalize_source_refs(all_refs)),
+            "worldTeacherLesson": world_lesson,
+            "sourceRefs": dedupe_source_refs(normalize_source_refs(all_refs or root_refs)),
             "metadata": {
                 **safe_dict(raw.get("metadata")),
                 "agent": self.agent_name,
@@ -792,13 +800,15 @@ Rules:
                 "humanTeacherDetailed": True,
                 "geminiStyleDetailed": True,
                 "boardReady": True,
+                "worldTeacherLessonV1": bool(world_lesson),
+                "teacherBrainStrength": teacher_strength,
+                "teacherBrainPowerScore": world_quality.get("teacherBrainPowerScoreV2") or world_quality.get("score"),
                 "sourceGrounded": True,
                 "selectedEvidenceFirst": True,
                 "selectedPageVisionUsed": bool(vision.get("selectedPageVisionUsed")),
                 "modelVisionUsed": bool(safe_dict(vision.get("metadata")).get("modelVisionUsed")),
                 "pageImageAnalysisCount": safe_dict(vision.get("metadata")).get("pageImageAnalysisCount", 0),
                 "detectedDiagramCount": safe_dict(vision.get("metadata")).get("detectedDiagramCount", 0),
-                "sourceRefsRepairedFromPayload": bool(fallback_refs),
             },
         }
 
@@ -806,54 +816,69 @@ Rules:
         errors: List[str] = []
         warnings: List[str] = []
 
-        required_text_fields = ["title", "simpleDefinition", "intuition", "teacherSummary"]
-        for field in required_text_fields:
+        for field in ["title", "simpleDefinition", "intuition", "sourceGroundedExplanation", "teacherSummary"]:
             if not clean_text(output.get(field)):
                 errors.append(f"{field} is required.")
 
-        if not safe_list(output.get("stepByStep")):
-            errors.append("stepByStep is required.")
-
-        ref_validation = require_source_refs(
-            safe_list(output.get("sourceRefs")),
-            "DetailedExplanationAgent.output.sourceRefs",
-        )
+        refs = safe_list(output.get("sourceRefs"))
+        ref_validation = require_source_refs(refs, "DetailedExplanationAgent.output.sourceRefs")
         errors.extend(ref_validation.errors)
         warnings.extend(ref_validation.warnings)
 
-        for index, step in enumerate(safe_list(output.get("stepByStep"))):
-            item = safe_dict(step)
-            if not clean_text(item.get("explanation")):
-                errors.append(f"stepByStep[{index}].explanation is required.")
-            if len(clean_text(item.get("explanation")).split()) < 18:
-                warnings.append(f"stepByStep[{index}].explanation may be too short for rich tutor board.")
-            if _is_too_generic(item.get("explanation")):
-                warnings.append(f"stepByStep[{index}] sounds generic; refiner should improve it.")
+        steps = safe_list(output.get("stepByStep"))
+        if len(steps) < 5:
+            errors.append("stepByStep must contain at least 5 real teaching steps.")
 
+        for index, raw_step in enumerate(steps):
+            step = safe_dict(raw_step)
+            if len(clean_text(step.get("explanation")).split()) < 35:
+                errors.append(f"stepByStep[{index}].explanation is too short for world-teacher quality.")
+            if not clean_text(step.get("teacherAction")):
+                errors.append(f"stepByStep[{index}].teacherAction is required.")
             step_ref_validation = require_source_refs(
-                safe_list(item.get("sourceRefs")),
+                safe_list(step.get("sourceRefs")),
                 f"DetailedExplanationAgent.stepByStep[{index}].sourceRefs",
             )
             errors.extend(step_ref_validation.errors)
             warnings.extend(step_ref_validation.warnings)
 
-        if not safe_list(output.get("boardNotes")):
-            errors.append("boardNotes are required for rich board generation.")
+        if len(safe_list(output.get("boardNotes"))) < 5:
+            errors.append("boardNotes must contain at least 5 source-grounded board notes.")
+
+        if len(safe_list(output.get("commonMistakes"))) < 2:
+            warnings.append("commonMistakes should contain at least 2 misconception repairs.")
 
         visual = safe_dict(output.get("diagramOrVisualExplanation"))
-        if safe_dict(output.get("metadata")).get("modelVisionUsed") and not clean_text(visual.get("summary")):
-            warnings.append("modelVisionUsed true but diagramOrVisualExplanation.summary is empty.")
+        if safe_dict(output.get("metadata")).get("modelVisionUsed"):
+            if not clean_text(visual.get("summary")):
+                errors.append("modelVisionUsed is true but diagramOrVisualExplanation.summary is missing.")
+            if not safe_list(visual.get("teacherPointingPlan")):
+                errors.append("modelVisionUsed is true but teacherPointingPlan is missing.")
 
-        worked = safe_dict(output.get("workedExample"))
-        if not clean_text(worked.get("example")):
-            warnings.append("workedExample.example missing.")
+        world_lesson = safe_dict(output.get("worldTeacherLesson"))
+        if not world_lesson:
+            errors.append("worldTeacherLesson is required. Do not pass paragraph-only teacher brain.")
         else:
-            worked_ref_validation = require_source_refs(
-                safe_list(worked.get("sourceRefs")),
-                "DetailedExplanationAgent.workedExample.sourceRefs",
-            )
-            errors.extend(worked_ref_validation.errors)
-            warnings.extend(worked_ref_validation.warnings)
+            micro = safe_list(world_lesson.get("microTeachingSteps"))
+            if len(micro) < 7:
+                errors.append("worldTeacherLesson.microTeachingSteps must be at least 7.")
+            if not safe_list(world_lesson.get("visualTeachingMoments")):
+                errors.append("worldTeacherLesson.visualTeachingMoments is required.")
+            if len(safe_list(world_lesson.get("boardRecipe"))) < 7:
+                errors.append("worldTeacherLesson.boardRecipe must be at least 7.")
+            if len(safe_list(world_lesson.get("mistakeRepairMoments"))) < 2:
+                errors.append("worldTeacherLesson.mistakeRepairMoments must be at least 2.")
+            if not safe_dict(world_lesson.get("visualBoardBridge")):
+                errors.append("worldTeacherLesson.visualBoardBridge is required for VisualPlanner.")
+            if not safe_dict(world_lesson.get("qualitySignals")).get("readyForVisualPlanner"):
+                errors.append("worldTeacherLesson.qualitySignals.readyForVisualPlanner must be true.")
+
+            for index, raw_step in enumerate(micro):
+                step = safe_dict(raw_step)
+                if len(clean_text(step.get("studentFriendlyExplanation")).split()) < 25:
+                    errors.append(f"worldTeacherLesson.microTeachingSteps[{index}] explanation is too short.")
+                if not safe_list(step.get("sourceRefs")):
+                    errors.append(f"worldTeacherLesson.microTeachingSteps[{index}].sourceRefs missing.")
 
         return ValidationResult(
             ok=not errors,

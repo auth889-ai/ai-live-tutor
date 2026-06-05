@@ -117,5 +117,5 @@ main().catch(async (err) => {
   try {
     await mongoose.disconnect();
   } catch {}
-  process.exit(1);
+  process.exitls(1);
 });

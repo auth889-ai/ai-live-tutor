@@ -1715,6 +1715,29 @@ async def run_teach_node_pipeline(payload: JsonDict) -> JsonDict:
     strategy_result = output_result(strategy)
     working["teachingStrategy"] = strategy_result
 
+    if bool(working.get("stopAfterTeachingStrategy")):
+        return checkpoint_response(
+            "teaching_strategy",
+            working,
+            trace,
+            mission_trace,
+            selected_page_vision_result,
+            extra_result={
+                "conceptExtraction": concept_result,
+                "knowledgeGraph": knowledge_result,
+                "teachingStrategy": strategy_result,
+            },
+            extra_metadata={
+                "stoppedAfterTeachingStrategy": True,
+                "phase1PreDetailedBrainWired": True,
+                "conceptCount": len(safe_list(concept_result.get("concepts") or concept_result.get("keyConcepts"))),
+                "knowledgeNodeCount": len(safe_list(knowledge_result.get("nodes"))),
+                "knowledgeEdgeCount": len(safe_list(knowledge_result.get("edges"))),
+                "teachingStepCount": len(safe_list(strategy_result.get("teachingSteps"))),
+                "strategySourceRefCount": len(safe_list(strategy_result.get("sourceRefs"))),
+            },
+        )
+
     explanation_payload = {
         **build_teaching_brain_packet(
             working,

@@ -1707,6 +1707,7 @@ async function teachSelectedNode(input = {}) {
     // v19 checkpoint/debug flags forwarded to Python orchestrator.
     stopAfterSelectedPageVision: Boolean(body.stopAfterSelectedPageVision),
     stopAfterTeachingBrain: Boolean(body.stopAfterTeachingBrain),
+    stopAfterTeachingStrategy: Boolean(body.stopAfterTeachingStrategy),
     visionProbeOnly: Boolean(body.visionProbeOnly),
     stopAfterVisualPlanner: Boolean(body.stopAfterVisualPlanner),
     stopAfterBoardScene: Boolean(body.stopAfterBoardScene),
