@@ -179,44 +179,6 @@ def _refs_for_edge(
     return _clean_refs(refs, all_refs, limit=6)
 
 
-def _label_from_dynamic_node_id(node_id: str) -> str:
-    text = clean_text(node_id, 220)
-    text = re.sub(r"^vision_hint_", "visual hint ", text)
-    text = re.sub(r"^diagramelements_", "diagram element ", text)
-    text = re.sub(r"^relationships_", "relationship ", text)
-    text = re.sub(r"^diagramsummary$", "diagram summary", text)
-    text = text.replace("_", " ").replace("-", " ")
-    text = re.sub(r"\s+", " ", text).strip()
-    return text[:1].upper() + text[1:] if text else "Visual hint"
-
-
-def _make_dynamic_visual_hint_node(node_id: str, all_refs: List[JsonDict], order: int) -> JsonDict:
-    label = _label_from_dynamic_node_id(node_id)
-    return {
-        "nodeId": node_id,
-        "label": label,
-        "summary": f"Dynamic visual/source hint created from Gemini graph relation target: {label}.",
-        "nodeType": "visual_hint",
-        "level": 2,
-        "order": order,
-        "importance": 0.55,
-        "teachingRole": "supporting",
-        "learningGoal": f"Use this visual hint while explaining the selected concept: {label}.",
-        "boardPlacementHint": "side-card",
-        "visualEncoding": "highlight",
-        "misconceptionRisk": "medium",
-        "sourceRefs": _clean_refs([], all_refs, limit=4),
-        "visualHints": [label],
-        "metadata": {
-            "worldKnowledgeGraphV2": True,
-            "sourceRefsCleanedV2": True,
-            "kgDynamicVisualHintNodeV2": True,
-            "dynamicGeminiNode": True,
-            "fallbackUsed": False,
-        },
-    }
-
-
 class KnowledgeGraphAgent(BaseLiveTutorAgent):
     agent_name = "KnowledgeGraphAgent"
     agent_group = "source"
@@ -426,26 +388,11 @@ Your job:
         node_ids = {node["nodeId"] for node in nodes}
         nodes_by_id = {node["nodeId"]: node for node in nodes}
 
-        def ensure_dynamic_visual_hint_node(node_id: str) -> None:
-            if not node_id or node_id in node_ids:
-                return
-
-            # Gemini may create visual-hint edge endpoints from selected-page vision.
-            # Keep them dynamic and valid by converting them into KG nodes.
-            dynamic_node = _make_dynamic_visual_hint_node(node_id, all_concept_refs, len(nodes))
-            nodes.append(dynamic_node)
-            node_ids.add(node_id)
-            nodes_by_id[node_id] = dynamic_node
-
         edges: List[JsonDict] = []
         for index, raw_edge in enumerate(safe_list(raw.get("edges"))):
             edge = safe_dict(raw_edge)
             from_id = normalize_id(edge.get("from") or edge.get("source"), "")
             to_id = normalize_id(edge.get("to") or edge.get("target"), "")
-
-            ensure_dynamic_visual_hint_node(from_id)
-            ensure_dynamic_visual_hint_node(to_id)
-
             edge_type = clean_text(edge.get("type") or "related", 90)
             if edge_type not in VALID_EDGE_TYPES:
                 edge_type = "related"
@@ -580,7 +527,6 @@ Your job:
                 "usedSmartFallback": False,
                 "worldKnowledgeGraphV2": True,
                 "sourceRefsCleanedV2": True,
-                "kgDynamicVisualHintNodeV2": True,
             },
         }
 
