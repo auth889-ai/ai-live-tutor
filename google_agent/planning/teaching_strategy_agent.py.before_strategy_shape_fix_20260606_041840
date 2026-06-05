@@ -348,42 +348,6 @@ def _bridge_refs(bridge: JsonDict, primary_refs: List[JsonDict]) -> List[JsonDic
     return dedupe_source_refs(normalize_source_refs(cleaned))[:6]
 
 
-def _unwrap_strategy_raw(raw: JsonDict) -> JsonDict:
-    """
-    Unwrap real Gemini/ADK strategy output from common wrappers.
-    This does NOT generate lesson content.
-    This does NOT fake missing steps.
-    It only finds the actual dynamic strategy object if Gemini wrapped it.
-    """
-    current = safe_dict(raw)
-
-    for key in ["result", "teachingStrategy", "strategy", "plan", "output", "data", "json", "response"]:
-        candidate = safe_dict(current.get(key))
-        if candidate and (
-            candidate.get("teachingGoal")
-            or candidate.get("teachingSteps")
-            or candidate.get("steps")
-            or candidate.get("repairRoutes")
-            or candidate.get("boardActionPlan")
-            or candidate.get("visualBoardBridge")
-        ):
-            current = candidate
-            break
-
-    # If Gemini echoed the schema instead of producing real content, keep empty.
-    # Validator should fail; we do not fake-fill.
-    if current.get("requiredOutputSchema") and not (
-        current.get("teachingGoal") or current.get("teachingSteps") or current.get("steps")
-    ):
-        return {}
-
-    current["metadata"] = {
-        **safe_dict(current.get("metadata")),
-        "strategyShapeNormalizerV2": True,
-    }
-    return current
-
-
 class TeachingStrategyAgent(BaseLiveTutorAgent):
     agent_name = "TeachingStrategyAgent"
     agent_group = "planning"
@@ -405,10 +369,6 @@ Your job:
 
 Hard rules:
 - Output ONLY JSON.
-- Return the ACTUAL strategy object, not the schema and not prose.
-- Do not echo requiredOutputSchema.
-- Do not wrap in markdown.
-- Top-level JSON must contain: teachingGoal, teachingSteps, boardActionPlan, repairRoutes, visualBoardBridge.
 - No fixed domain.
 - No fake fallback.
 - No unsupported facts.
@@ -581,30 +541,6 @@ Hard rules:
                     "worldTeachingStrategyV2": True,
                 },
             },
-            "responseInstruction": {
-                "important": "Return only the actual JSON strategy result. Do not return this schema. Do not wrap in markdown.",
-                "topLevelMustContain": [
-                    "strategyId",
-                    "title",
-                    "teachingGoal",
-                    "studentModel",
-                    "teachingSteps",
-                    "boardActionPlan",
-                    "visualBoardBridge",
-                    "pacingPlan",
-                    "repairRoutes",
-                    "voiceStyle",
-                    "qualitySignals",
-                    "sourceRefs",
-                    "metadata"
-                ],
-                "doNotEcho": [
-                    "requiredOutputSchema",
-                    "qualityBar",
-                    "sourceRules",
-                    "responseInstruction"
-                ]
-            },
             "qualityBar": {
                 "teachingStepsMinimum": 7,
                 "mustInclude": [
@@ -630,7 +566,9 @@ Hard rules:
         raise RuntimeError("TeachingStrategyAgent requires Gemini/ADK. No rule-based/static fallback is allowed.")
 
     def normalize_output(self, raw: JsonDict, payload: JsonDict, context: AgentContext) -> JsonDict:
-        raw = _unwrap_strategy_raw(safe_dict(raw))
+        raw = safe_dict(raw)
+        if isinstance(raw.get("result"), dict):
+            raw = safe_dict(raw.get("result"))
 
         clean_refs = _collect_ranked_refs(payload)
         primary_refs = clean_refs.get("primary", [])
@@ -769,7 +707,6 @@ Hard rules:
                 "worldTeachingStrategyV2": True,
                 "sourceRefsCleanedV2": True,
                 "sourceRefsRepairedFromPayload": False,
-                "strategyShapeNormalizerV2": True,
             },
         }
 
