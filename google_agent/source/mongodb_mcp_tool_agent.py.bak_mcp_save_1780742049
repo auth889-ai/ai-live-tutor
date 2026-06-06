@@ -665,341 +665,114 @@ def _compact_session_document(payload: JsonDict) -> JsonDict:
 
 
 def run_mission_save_session(payload: JsonDict, timeout_sec: int) -> JsonDict:
-    """
-    Save/prove Stage2 tutor session/sourceTruth through MongoDB MCP.
-
-    This is the first MCP-layer fix:
-    - MCP already calls tools, but selected local resource may not exist in MongoDB.
-    - For hackathon, MCP must still perform a meaningful tutor action.
-    - So this saves the generated sourceTruthPacket / vision checkpoint / board session
-      through MongoDB MCP, then reads it back through MCP aggregate.
-
-    It is dynamic:
-    - no hardcoded lesson content
-    - no fake mcpUsed:true
-    - no static selected concept
-    """
-
-    def _fn(name, fallback=None):
-        return globals().get(name) or fallback
-
-    def _txt(value, limit=4000):
-        try:
-            return clean_text(value or "", limit)
-        except Exception:
-            return str(value or "")[:limit]
-
-    def _preview(value, limit=2500):
-        try:
-            return _txt(json.dumps(value, ensure_ascii=False), limit)
-        except Exception:
-            return _txt(value, limit)
-
-    def _safe_dict(value):
-        try:
-            return safe_dict(value)
-        except Exception:
-            return value if isinstance(value, dict) else {}
-
-    def _safe_list(value):
-        try:
-            return safe_list(value)
-        except Exception:
-            return value if isinstance(value, list) else []
-
     cols = collection_names()
-    tools, _raw = list_mcp_tools(timeout_sec=timeout_sec)
 
-    pick_tool = _fn("_select_tool") or _fn("select_tool")
-    if not pick_tool:
-        raise RuntimeError("No MCP tool selector function found: _select_tool/select_tool")
-
-    aggregate_tool = pick_tool(tools, "aggregate")
-    insert_tool = pick_tool(tools, "insert")
-    update_tool = pick_tool(tools, "update")
-    schema_tool = pick_tool(tools, "schema")
-    indexes_tool = pick_tool(tools, "indexes")
-
-    record_call = _fn("_record_tool_call") or _fn("tool_call_record")
-    if not record_call:
-        raise RuntimeError("No MCP tool call recorder found: _record_tool_call/tool_call_record")
-
-    def rec(tool, purpose, ok, arguments=None, result=None, error=""):
-        return record_call(tool, purpose, ok, arguments or {}, result, error)
-
-    compact_fn = _fn("_compact_session_document") or _fn("compact_stage2_document")
-    if compact_fn:
-        document = compact_fn(payload)
-    else:
-        # Last-resort dynamic document builder, not content fallback.
-        document = {
-            "sessionId": _txt(payload.get("sessionId") or f"mcp_stage2_session_{int(time.time() * 1000)}", 260),
-            "ownerKey": _txt(payload.get("ownerKey"), 180),
-            "offlineUserId": _txt(payload.get("offlineUserId"), 180),
-            "resourceId": _txt(payload.get("resourceId"), 240),
-            "treeId": _txt(payload.get("treeId"), 240),
-            "boardId": _txt(payload.get("boardId"), 240),
-            "selectedNode": _safe_dict(payload.get("selectedNode") or payload.get("node")),
-            "sourceRefs": _safe_list(payload.get("sourceRefs"))[:120],
-            "agentTrace": _safe_list(payload.get("agentTrace"))[:200],
-            "missionTrace": _safe_list(payload.get("missionTrace"))[:200],
-            "metadata": {"fallbackUsed": False, "usedSmartFallback": False},
-        }
-
-    # Preserve rich source truth.
-    source_truth_packet = _safe_dict(payload.get("sourceTruthPacket"))
-    if source_truth_packet:
-        document["sourceTruthPacket"] = source_truth_packet
-        document["sourceTruthPacketSummary"] = {
-            "selectedEvidenceCount": len(_safe_list(source_truth_packet.get("selectedEvidence"))),
-            "samePageEvidenceCount": len(_safe_list(source_truth_packet.get("samePageEvidence"))),
-            "nearbyEvidenceCount": len(_safe_list(source_truth_packet.get("nearbyEvidence"))),
-            "pageContextCount": len(_safe_list(source_truth_packet.get("pageContexts"))),
-            "sourceRefCount": len(_safe_list(source_truth_packet.get("sourceRefs"))),
-            "hasSelectedPageFullText": bool(_txt(source_truth_packet.get("selectedPageFullText"), 200000)),
-            "hasFullPdfSummary": bool(_txt(source_truth_packet.get("fullPdfSummary"), 200000)),
-            "hasFullPdfOutlineText": bool(_txt(source_truth_packet.get("fullPdfOutlineText"), 200000)),
-        }
-
-    # Preserve selected-page vision checkpoint.
-    for key in [
-        "selectedPageVision",
-        "pageImageAnalyses",
-        "detectedVisualDiagrams",
-        "selectedPageVisionDiagramSummary",
-        "ragRetrieval",
-        "mcpTrace",
-        "partnerPower",
-    ]:
-        if payload.get(key):
-            document[key] = payload.get(key)
-
-    document["mcpSavedAtMs"] = int(time.time() * 1000)
-    document["mcpSaveKind"] = _txt(payload.get("mcpSaveKind") or "stage2_session_or_checkpoint", 120)
-    document.setdefault("metadata", {})
-    if isinstance(document["metadata"], dict):
-        document["metadata"]["savedByMongoDbMcpToolAgent"] = True
-        document["metadata"]["hugePayloadPreserved"] = True
-        document["metadata"]["fallbackUsed"] = False
-        document["metadata"]["usedSmartFallback"] = False
+    tools, raw_tools = list_mcp_tools(timeout_sec=timeout_sec)
+    update_tool = _select_tool(tools, "update")
+    insert_tool = _select_tool(tools, "insert")
+    schema_tool = _select_tool(tools, "schema")
+    indexes_tool = _select_tool(tools, "indexes")
 
     tool_calls: List[JsonDict] = [
-        rec("tools/list", "List MongoDB MCP tools before mission save.", True, result={"toolCount": len(tools)})
+        _record_tool_call("tools/list", "List MongoDB MCP tools before session save.", True, result={"toolCount": len(tools)})
     ]
     real_calls: List[JsonDict] = []
 
-    def add_success(tool, purpose, args, result):
-        r = rec(tool, purpose, True, args, result.get("toolResult") if isinstance(result, dict) else result)
-        tool_calls.append(r)
-        real_calls.append(r)
+    document = _compact_session_document(payload)
+    write_available = bool(update_tool or insert_tool)
 
-    def add_failure(tool, purpose, args, exc):
-        tool_calls.append(rec(tool, purpose, False, args, error=str(exc)))
-
-    aggregate_args_fn = _fn("_aggregate_args") or _fn("aggregate_args")
-    collection_args_fn = _fn("_collection_args") or _fn("collection_tool_args")
-    call_tool = call_mcp_tool
-
-    def make_aggregate_args(collection, pipeline, limit_bytes=2_000_000):
-        if aggregate_args_fn:
-            try:
-                return aggregate_args_fn(collection, pipeline, limit_bytes=limit_bytes)
-            except TypeError:
-                return aggregate_args_fn(collection, pipeline)
-        return {
-            "database": db_name(),
-            "collection": collection,
-            "pipeline": pipeline,
-            "responseBytesLimit": limit_bytes,
-        }
-
-    def make_collection_args(collection, sample_size=10):
-        if collection_args_fn:
-            try:
-                return collection_args_fn(collection, sample_size=sample_size)
-            except TypeError:
-                return collection_args_fn(collection)
-        return {
-            "database": db_name(),
-            "collection": collection,
-            "sampleSize": sample_size,
-            "responseBytesLimit": 1_000_000,
-        }
-
-    def make_insert_args(collection, doc):
-        insert_args_fn = _fn("insert_args") or _fn("_insert_args")
-        if insert_args_fn:
-            return insert_args_fn(collection, doc)
-        return {
-            "database": db_name(),
-            "collection": collection,
-            "document": doc,
-        }
-
-    def make_update_args(collection, filt, update, upsert=True):
-        update_args_fn = _fn("update_args") or _fn("_update_args")
-        if update_args_fn:
-            return update_args_fn(collection, filt, update, upsert=upsert)
-        return {
-            "database": db_name(),
-            "collection": collection,
-            "filter": filt,
-            "update": update,
-            "upsert": upsert,
-        }
-
-    write_available = bool(update_tool or insert_tool or aggregate_tool)
-    saved_by_mcp = False
-    read_back_ok = False
-    read_back_docs: List[JsonDict] = []
-
-    # 1) Update/upsert if MCP exposes update.
     if update_tool:
-        args = make_update_args(
-            cols["stage2Sessions"],
-            {"sessionId": document["sessionId"], "ownerKey": document.get("ownerKey", "")},
-            {"$set": document},
-            upsert=True,
+        args = {
+            "database": db_name(),
+            "collection": cols["stage2Sessions"],
+            "filter": {
+                "sessionId": document["sessionId"],
+                "ownerKey": document.get("ownerKey", ""),
+            },
+            "update": {"$set": document},
+            "upsert": True,
+        }
+        _call_and_record(
+            tool_calls,
+            real_calls,
+            update_tool,
+            "Upsert generated live tutor board session through MongoDB MCP.",
+            args,
+            timeout_sec,
         )
-        try:
-            result = call_tool(update_tool, args, timeout_sec=timeout_sec)
-            add_success(update_tool, "Upsert Stage2 sourceTruth/board session through MongoDB MCP.", args, result)
-            saved_by_mcp = True
-        except Exception as exc:
-            add_failure(update_tool, "Upsert Stage2 sourceTruth/board session through MongoDB MCP.", args, exc)
-
-    # 2) Insert if exposed.
     elif insert_tool:
-        args = make_insert_args(cols["stage2Sessions"], document)
-        try:
-            result = call_tool(insert_tool, args, timeout_sec=timeout_sec)
-            add_success(insert_tool, "Insert Stage2 sourceTruth/board session through MongoDB MCP.", args, result)
-            saved_by_mcp = True
-        except Exception as exc:
-            add_failure(insert_tool, "Insert Stage2 sourceTruth/board session through MongoDB MCP.", args, exc)
-
-    # 3) Aggregate-only write attempt using $documents + $merge.
-    elif aggregate_tool:
-        args = make_aggregate_args(
-            cols["stage2Sessions"],
-            [
-                {"$documents": [document]},
-                {
-                    "$merge": {
-                        "into": cols["stage2Sessions"],
-                        "on": "sessionId",
-                        "whenMatched": "replace",
-                        "whenNotMatched": "insert",
-                    }
-                },
-            ],
-            limit_bytes=2_000_000,
+        args = {
+            "database": db_name(),
+            "collection": cols["stage2Sessions"],
+            "document": document,
+        }
+        _call_and_record(
+            tool_calls,
+            real_calls,
+            insert_tool,
+            "Insert generated live tutor board session through MongoDB MCP.",
+            args,
+            timeout_sec,
         )
-        try:
-            result = call_tool(aggregate_tool, args, timeout_sec=timeout_sec)
-            add_success(aggregate_tool, "Save Stage2 checkpoint/session using aggregate $documents + $merge.", args, result)
-            saved_by_mcp = True
-        except Exception as exc:
-            add_failure(aggregate_tool, "Save Stage2 checkpoint/session using aggregate $documents + $merge.", args, exc)
-
-    # 4) Read-back proof.
-    if aggregate_tool:
-        read_args = make_aggregate_args(
-            cols["stage2Sessions"],
-            [
-                {
-                    "$match": {
-                        "sessionId": document["sessionId"],
-                        "ownerKey": document.get("ownerKey", ""),
-                    }
-                },
-                {
-                    "$project": {
-                        "_id": 0,
-                        "sessionId": 1,
-                        "ownerKey": 1,
-                        "resourceId": 1,
-                        "treeId": 1,
-                        "selectedNode": 1,
-                        "sourceRefs": 1,
-                        "sourceTruthPacketSummary": 1,
-                        "mcpSaveKind": 1,
-                        "mcpSavedAtMs": 1,
-                        "metadata": 1,
-                    }
-                },
-                {"$limit": 1},
-            ],
-            limit_bytes=1_000_000,
+    else:
+        tool_calls.append(
+            _record_tool_call(
+                "read-only-mcp",
+                "MongoDB MCP server is read-only; app DB should persist while MCP proves partner read/schema/index power.",
+                True,
+                result={"writeAvailable": False},
+            )
         )
-        try:
-            read_result = call_tool(aggregate_tool, read_args, timeout_sec=timeout_sec)
-            add_success(aggregate_tool, "Read back saved Stage2 MCP sourceTruth/session proof.", read_args, read_result)
 
-            preview = _preview(read_result.get("toolResult") if isinstance(read_result, dict) else read_result, 3000).lower()
-            read_back_ok = "0 documents" not in preview and "resulted in 0" not in preview
-            read_back_docs = _safe_list(read_result.get("toolResult")) if isinstance(read_result, dict) else []
-        except Exception as exc:
-            add_failure(aggregate_tool, "Read back saved Stage2 MCP sourceTruth/session proof.", read_args, exc)
+    if schema_tool:
+        _call_and_record(
+            tool_calls,
+            real_calls,
+            schema_tool,
+            "Inspect Stage2 session collection schema after save.",
+            _collection_args(cols["stage2Sessions"], 20),
+            timeout_sec,
+        )
 
-    # 5) Schema/index proof for judging.
-    def call_collection_tool(tool, purpose, collection):
-        if not tool:
-            return
-        args = make_collection_args(collection, sample_size=10)
-        try:
-            result = call_tool(tool, args, timeout_sec=timeout_sec)
-            add_success(tool, purpose, args, result)
-        except Exception as exc:
-            add_failure(tool, purpose, args, exc)
-
-    call_collection_tool(schema_tool, "Inspect Stage2 session collection schema.", cols["stage2Sessions"])
-    call_collection_tool(indexes_tool, "Inspect Stage2 session collection indexes.", cols["stage2Sessions"])
-    call_collection_tool(schema_tool, "Inspect agent trace collection schema.", cols["agentTrace"])
-    call_collection_tool(indexes_tool, "Inspect agent trace collection indexes.", cols["agentTrace"])
-
-    source_truth_summary = _safe_dict(document.get("sourceTruthPacketSummary"))
+    if indexes_tool:
+        _call_and_record(
+            tool_calls,
+            real_calls,
+            indexes_tool,
+            "Inspect Stage2 session collection indexes after save.",
+            _collection_args(cols["stage2Sessions"], 10),
+            timeout_sec,
+        )
 
     return {
         "mcpUsed": bool(real_calls),
         "configured": True,
         "partner": "MongoDB",
         "tools": tools,
+        "toolCalls": tool_calls,
         "sessionId": document["sessionId"],
         "writeAvailable": write_available,
-        "savedByMcp": bool(saved_by_mcp),
-        "readBackOk": bool(read_back_ok),
-        "readBackDocs": read_back_docs,
         "savedDocumentPreview": {
             "sessionId": document["sessionId"],
             "resourceId": document.get("resourceId"),
             "treeId": document.get("treeId"),
-            "boardCommandCount": len(_safe_list(document.get("boardCommands"))),
-            "voiceLineCount": len(_safe_list(document.get("voiceScript"))),
-            "diagramCount": len(_safe_list(document.get("compiledDiagrams"))),
-            "sourceRefCount": len(_safe_list(document.get("sourceRefs"))),
-            "sourceTruthPacketSummary": source_truth_summary,
+            "boardCommandCount": len(safe_list(document.get("boardCommands"))),
+            "voiceLineCount": len(safe_list(document.get("voiceScript"))),
+            "screenCount": len(safe_list(document.get("premiumBoardScreens"))),
+            "sourceRefCount": len(safe_list(document.get("sourceRefs"))),
         },
-        "toolCalls": tool_calls,
         "metadata": {
             "agent": "MongoDbMcpToolAgent",
             "realMcpUsed": bool(real_calls),
             "fallbackUsed": False,
-            "usedSmartFallback": False,
-            "insertTool": insert_tool,
-            "updateTool": update_tool,
-            "aggregateTool": aggregate_tool,
-            "schemaTool": schema_tool,
-            "indexesTool": indexes_tool,
-            "writeAvailable": write_available,
-            "savedByMcp": bool(saved_by_mcp),
-            "readBackOk": bool(read_back_ok),
-            "aggregateMergeSaveAttempted": bool((not insert_tool and not update_tool) and aggregate_tool),
             "toolCount": len(tools),
             "realToolCallCount": len(real_calls),
-            "hackathonPartnerPowerProof": bool(real_calls),
+            "writeAvailable": write_available,
+            "rawToolsResponse": _json_preview(raw_tools, 1000),
+            "mission": "save_session",
         },
     }
+
 
 class MongoDbMcpToolAgent(BaseLiveTutorAgent):
     agent_name = "MongoDbMcpToolAgent"

@@ -1450,81 +1450,59 @@ async def run_teach_node_pipeline(payload: JsonDict) -> JsonDict:
         }
     )
 
-    # -------------------------------------------------------------------------
-    # Rich RAG enrichment must run even when sourceContextBuilder already built
-    # selected context.
-    #
-    # Previous behavior skipped RAG when node context existed:
-    #   ragSkippedBecauseNodeContextAlreadyBuilt: true
-    #
-    # That made downstream output poor:
-    #   selectedEvidenceCount = 1
-    #   samePageEvidenceCount = 0
-    #   sourceRefCount = 1
-    #
-    # New behavior:
-    # - always call RagRetrievalAgent over the already-built sourceContext packet
-    # - it is not expensive vector search; it enriches local selectedPageFullText,
-    #   pageContexts, selectedEvidence, nearbyEvidence, sourceRefs
-    # - no fake fallback, no static content
-    # -------------------------------------------------------------------------
-    rag = await run_required_agent(
-        "RagRetrievalAgent",
-        {
-            **working,
-            "mode": working.get("ragMode") or "retrieve_selected_node",
-            "query": working.get("query") or working.get("question") or get_title(working),
+    if should_skip_rag(working):
+        rag_result = {
             "chunks": chunks,
-            "sourceRefs": input_refs,
-
-            # Critical rich source fields from sourceContextBuilder.
-            "selectedNode": selected_node(working),
-            "selectedEvidence": safe_list(working.get("selectedEvidence")),
+            "selectedEvidence": safe_list(working.get("selectedEvidence")) or chunks,
             "samePageEvidence": safe_list(working.get("samePageEvidence")),
             "nearbyEvidence": safe_list(working.get("nearbyEvidence")),
             "relatedEvidence": safe_list(working.get("relatedEvidence")),
             "comparisonEvidence": safe_list(working.get("comparisonEvidence")),
             "externalEvidence": safe_list(working.get("externalEvidence")),
             "pageContexts": safe_list(working.get("pageContexts")),
-            "selectedPageFullText": clean_text(
-                working.get("selectedPageFullText")
-                or working.get("selectedPageFullTextExcerpt")
-                or "",
-                80000,
-            ),
-            "fullPdfSummary": clean_text(
-                working.get("fullPdfSummary")
-                or working.get("pdfSummary")
-                or "",
-                50000,
-            ),
-            "fullPdfOutline": working.get("fullPdfOutline"),
-            "fullPdfOutlineText": clean_text(
-                working.get("fullPdfOutlineText")
-                or "",
-                50000,
-            ),
-            "visualContext": safe_dict(working.get("visualContext")),
             "pageImages": safe_list(working.get("pageImages")),
-            "tables": safe_list(working.get("tables")),
-            "figures": safe_list(working.get("figures")),
-            "layoutBlocks": safe_list(working.get("layoutBlocks")),
-
-            # This flag is for trace/debug proof only.
-            "forceRichRagEnrichmentV5": True,
-            "doNotSkipRagBecauseContextExists": True,
-        },
-        trace,
-        mission_trace,
-        "Enriched selected-node source truth from prebuilt context.",
-        "source",
-    )
-    rag_result = output_result(rag)
-
-    # === ORCH_PRESERVE_CLEAN_RAG_PACKET_V8_EXACT ===
-    # RagRetrievalAgent returns the canonical cleaned sourceTruthPacket.
-    # Preserve it. Do not rebuild/overwrite it with a V1 packet later.
-    rag_source_truth_packet = safe_dict(rag_result.get("sourceTruthPacket"))
+            "visualContext": safe_dict(working.get("visualContext")),
+            "sourceRefs": input_refs,
+            "metadata": {
+                "ragSkippedBecauseNodeContextAlreadyBuilt": True,
+                "fallbackUsed": False,
+                "usedSmartFallback": False,
+            },
+        }
+        trace.append(
+            {
+                "agent": "RagRetrievalAgent",
+                "phase": "source",
+                "ok": True,
+                "status": "skipped",
+                "summary": "Skipped expensive RAG because Node/sourceContextBuilder already supplied selected context.",
+                "fallbackUsed": False,
+                "atMs": now_ms(),
+            }
+        )
+        mission_trace.append(
+            mission_item(
+                "RagRetrievalAgent",
+                "skipped",
+                "Skipped expensive RAG because selected context already exists.",
+            )
+        )
+    else:
+        rag = await run_required_agent(
+            "RagRetrievalAgent",
+            {
+                **working,
+                "mode": working.get("ragMode") or "retrieve_local",
+                "query": working.get("query") or working.get("question") or get_title(working),
+                "chunks": chunks,
+                "sourceRefs": input_refs,
+            },
+            trace,
+            mission_trace,
+            "Retrieved selected-node PDF context.",
+            "source",
+        )
+        rag_result = output_result(rag)
 
     retrieved_chunks = safe_list(rag_result.get("chunks")) or chunks
     rag_refs = dedupe_source_refs(stable_refs(rag_result, retrieved_chunks) or input_refs)
@@ -1546,47 +1524,30 @@ async def run_teach_node_pipeline(payload: JsonDict) -> JsonDict:
         {
             "chunks": retrieved_chunks,
             "retrievedChunks": retrieved_chunks,
-
             "selectedEvidence": safe_list(rag_result.get("selectedEvidence"))
-            or safe_list(rag_source_truth_packet.get("selectedEvidence"))
             or safe_list(working.get("selectedEvidence"))
             or retrieved_chunks,
-
             "samePageEvidence": safe_list(rag_result.get("samePageEvidence"))
-            or safe_list(rag_source_truth_packet.get("samePageEvidence"))
             or safe_list(working.get("samePageEvidence")),
-
             "nearbyEvidence": safe_list(rag_result.get("nearbyEvidence"))
-            or safe_list(rag_source_truth_packet.get("nearbyEvidence"))
             or safe_list(working.get("nearbyEvidence")),
-
             "relatedEvidence": safe_list(rag_result.get("relatedEvidence"))
-            or safe_list(rag_source_truth_packet.get("relatedEvidence"))
             or safe_list(working.get("relatedEvidence")),
-
             "comparisonEvidence": safe_list(rag_result.get("comparisonEvidence"))
-            or safe_list(rag_source_truth_packet.get("comparisonEvidence"))
             or safe_list(working.get("comparisonEvidence")),
-
             "externalEvidence": safe_list(rag_result.get("externalEvidence"))
-            or safe_list(rag_source_truth_packet.get("externalEvidence"))
             or safe_list(working.get("externalEvidence")),
-
             "pageContexts": safe_list(rag_result.get("pageContexts"))
-            or safe_list(rag_source_truth_packet.get("pageContexts"))
             or safe_list(working.get("pageContexts")),
-
             "pageImages": rag_page_images,
             "visualContext": rag_visual_context,
+            "sourceRefs": rag_refs,
+            "groundedRefs": rag_refs,
+            "verifiedSourceRefs": rag_refs,
 
-            "sourceRefs": safe_list(rag_source_truth_packet.get("sourceRefs")) or rag_refs,
-            "groundedRefs": safe_list(rag_source_truth_packet.get("sourceRefs")) or rag_refs,
-            "verifiedSourceRefs": safe_list(rag_source_truth_packet.get("sourceRefs")) or rag_refs,
-
+            # Preserve full source handoff for downstream agents and checkpoint debug.
             "ragRetrieval": rag_result,
-
-            "sourceTruthPacket": rag_source_truth_packet
-            or {
+            "sourceTruthPacket": {
                 "selectedEvidence": safe_list(rag_result.get("selectedEvidence"))
                     or safe_list(working.get("selectedEvidence"))
                     or retrieved_chunks,
@@ -1625,7 +1586,7 @@ async def run_teach_node_pipeline(payload: JsonDict) -> JsonDict:
                 "contentFlags": safe_dict(rag_result.get("contentFlags")),
                 "metadata": {
                     **safe_dict(rag_result.get("metadata")),
-                    "sourceTruthPacketBuiltByOrchestratorOnlyBecauseRagPacketMissing": True,
+                    "sourceTruthPacketV1": True,
                     "preserveHugePayloadForDownstreamAgents": True,
                     "fallbackUsed": False,
                     "usedSmartFallback": False,

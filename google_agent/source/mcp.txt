@@ -1,0 +1,17 @@
+1. MongoDbMcpToolAgent
+
+This is the first starting agent.
+
+Its job:
+
+Use real MongoDB MCP
+↓
+prove partner power for hackathon
+↓
+read resource/chunks/tree/session context
+↓
+save/replay generated board session later
+↓
+emit mcpUsed:true and real toolCalls
+
+For Devpost, this is important because the hackathon requires meaningful partner MCP use, not only mcpConfigured:true

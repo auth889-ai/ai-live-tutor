@@ -1521,11 +1521,6 @@ async def run_teach_node_pipeline(payload: JsonDict) -> JsonDict:
     )
     rag_result = output_result(rag)
 
-    # === ORCH_PRESERVE_CLEAN_RAG_PACKET_V8_EXACT ===
-    # RagRetrievalAgent returns the canonical cleaned sourceTruthPacket.
-    # Preserve it. Do not rebuild/overwrite it with a V1 packet later.
-    rag_source_truth_packet = safe_dict(rag_result.get("sourceTruthPacket"))
-
     retrieved_chunks = safe_list(rag_result.get("chunks")) or chunks
     rag_refs = dedupe_source_refs(stable_refs(rag_result, retrieved_chunks) or input_refs)
 
@@ -1546,47 +1541,33 @@ async def run_teach_node_pipeline(payload: JsonDict) -> JsonDict:
         {
             "chunks": retrieved_chunks,
             "retrievedChunks": retrieved_chunks,
-
             "selectedEvidence": safe_list(rag_result.get("selectedEvidence"))
-            or safe_list(rag_source_truth_packet.get("selectedEvidence"))
             or safe_list(working.get("selectedEvidence"))
             or retrieved_chunks,
-
             "samePageEvidence": safe_list(rag_result.get("samePageEvidence"))
-            or safe_list(rag_source_truth_packet.get("samePageEvidence"))
             or safe_list(working.get("samePageEvidence")),
-
             "nearbyEvidence": safe_list(rag_result.get("nearbyEvidence"))
-            or safe_list(rag_source_truth_packet.get("nearbyEvidence"))
             or safe_list(working.get("nearbyEvidence")),
-
             "relatedEvidence": safe_list(rag_result.get("relatedEvidence"))
-            or safe_list(rag_source_truth_packet.get("relatedEvidence"))
             or safe_list(working.get("relatedEvidence")),
-
             "comparisonEvidence": safe_list(rag_result.get("comparisonEvidence"))
-            or safe_list(rag_source_truth_packet.get("comparisonEvidence"))
             or safe_list(working.get("comparisonEvidence")),
-
             "externalEvidence": safe_list(rag_result.get("externalEvidence"))
-            or safe_list(rag_source_truth_packet.get("externalEvidence"))
             or safe_list(working.get("externalEvidence")),
-
             "pageContexts": safe_list(rag_result.get("pageContexts"))
-            or safe_list(rag_source_truth_packet.get("pageContexts"))
             or safe_list(working.get("pageContexts")),
-
             "pageImages": rag_page_images,
             "visualContext": rag_visual_context,
-
-            "sourceRefs": safe_list(rag_source_truth_packet.get("sourceRefs")) or rag_refs,
-            "groundedRefs": safe_list(rag_source_truth_packet.get("sourceRefs")) or rag_refs,
-            "verifiedSourceRefs": safe_list(rag_source_truth_packet.get("sourceRefs")) or rag_refs,
-
+            "sourceRefs": rag_refs,
+            "groundedRefs": rag_refs,
+            "verifiedSourceRefs": rag_refs,
             "ragRetrieval": rag_result,
+            "sourceTruthPacket": safe_dict(rag_result.get("sourceTruthPacket"))
+            or safe_dict(working.get("sourceTruthPacket")),
 
-            "sourceTruthPacket": rag_source_truth_packet
-            or {
+            # Preserve full source handoff for downstream agents and checkpoint debug.
+            "ragRetrieval": rag_result,
+            "sourceTruthPacket": {
                 "selectedEvidence": safe_list(rag_result.get("selectedEvidence"))
                     or safe_list(working.get("selectedEvidence"))
                     or retrieved_chunks,
@@ -1625,7 +1606,7 @@ async def run_teach_node_pipeline(payload: JsonDict) -> JsonDict:
                 "contentFlags": safe_dict(rag_result.get("contentFlags")),
                 "metadata": {
                     **safe_dict(rag_result.get("metadata")),
-                    "sourceTruthPacketBuiltByOrchestratorOnlyBecauseRagPacketMissing": True,
+                    "sourceTruthPacketV1": True,
                     "preserveHugePayloadForDownstreamAgents": True,
                     "fallbackUsed": False,
                     "usedSmartFallback": False,
