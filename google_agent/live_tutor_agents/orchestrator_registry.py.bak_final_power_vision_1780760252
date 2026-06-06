@@ -1673,17 +1673,7 @@ async def run_teach_node_pipeline(payload: JsonDict) -> JsonDict:
                     12000,
                 ),
                 "visualTeachingHints": safe_list(selected_page_vision_result.get("visualTeachingHints")),
-
-                # === ORCH_LIFT_FINAL_POWERFUL_VISUAL_PACKET_V8 ===
-                # Make rich vision intelligence available to Concept/KG/Teaching/VisualPlanner/Board.
-                "visualTeacherPacket": safe_dict(selected_page_vision_result.get("visualTeacherPacket")),
-                "visualLessonInput": safe_dict(selected_page_vision_result.get("visualLessonInput")),
-                "visualContext": {
-                    **safe_dict(merged_visual_context),
-                    "visualTeacherPacket": safe_dict(selected_page_vision_result.get("visualTeacherPacket")),
-                    "visualLessonInput": safe_dict(selected_page_vision_result.get("visualLessonInput")),
-                    "finalPowerfulVisionHandoffV8": True,
-                },
+                "visualContext": merged_visual_context,
             }
         )
     else:

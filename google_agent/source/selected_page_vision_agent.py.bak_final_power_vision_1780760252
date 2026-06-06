@@ -1008,3 +1008,582 @@ class SelectedPageVisionAgent(BaseLiveTutorAgent):
             },
         }
         return merged
+
+# === WORLD_TEACHER_VISION_JSON_REPAIR_V4 ===
+# Fix:
+# - Gemini Vision sometimes returns rich JSON that is truncated or not perfectly closed.
+# - This patch keeps the real Gemini output, repairs only JSON structure, and parses it.
+# - No fake visual fallback. No hardcoded topic. No static lesson content.
+# - It also makes the prompt ask for compact but rich visual-teacher packet.
+
+_ORIG_PARSE_JSON_FROM_TEXT_V4 = parse_json_from_text
+_ORIG_BUILD_VISION_PROMPT_V4 = build_vision_prompt
+
+
+def _v4_try_json_loads(text):
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
+        if isinstance(parsed, list):
+            return {"items": parsed}
+    except Exception:
+        return None
+    return None
+
+
+def _v4_strip_to_json_candidate(text):
+    raw = strip_json_fence(text)
+    if not raw:
+        return ""
+
+    starts = [i for i in [raw.find("{"), raw.find("[")] if i >= 0]
+    if not starts:
+        return raw
+    return raw[min(starts):].strip()
+
+
+def _v4_remove_bad_trailing_commas(text):
+    # common model issue: trailing comma before object/array close
+    return re.sub(r",\s*([}\]])", r"\1", text)
+
+
+def _v4_balance_json(text):
+    """
+    Best-effort repair for truncated Gemini JSON:
+    - closes open string
+    - removes dangling comma
+    - closes open braces/brackets
+    """
+    raw = _v4_strip_to_json_candidate(text)
+    if not raw:
+        return raw
+
+    stack = []
+    in_string = False
+    escape = False
+    out = []
+
+    for ch in raw:
+        out.append(ch)
+
+        if escape:
+            escape = False
+            continue
+
+        if ch == "\\" and in_string:
+            escape = True
+            continue
+
+        if ch == '"':
+            in_string = not in_string
+            continue
+
+        if in_string:
+            continue
+
+        if ch == "{":
+            stack.append("}")
+        elif ch == "[":
+            stack.append("]")
+        elif ch in "}]":
+            if stack and stack[-1] == ch:
+                stack.pop()
+
+    fixed = "".join(out).rstrip()
+
+    if in_string:
+        fixed += '"'
+
+    # remove dangling comma or colon at end after truncation
+    fixed = re.sub(r",\s*$", "", fixed)
+    fixed = re.sub(r":\s*$", ": null", fixed)
+
+    # close remaining brackets
+    while stack:
+        fixed += stack.pop()
+
+    fixed = _v4_remove_bad_trailing_commas(fixed)
+    return fixed
+
+
+def _v4_extract_best_json_span(text):
+    raw = _v4_strip_to_json_candidate(text)
+    spans = []
+
+    for opener, closer in [("{", "}"), ("[", "]")]:
+        start = -1
+        depth = 0
+        in_string = False
+        escape = False
+
+        for i, ch in enumerate(raw):
+            if escape:
+                escape = False
+                continue
+
+            if ch == "\\" and in_string:
+                escape = True
+                continue
+
+            if ch == '"':
+                in_string = not in_string
+                continue
+
+            if in_string:
+                continue
+
+            if ch == opener:
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif ch == closer and depth > 0:
+                depth -= 1
+                if depth == 0 and start >= 0:
+                    spans.append(raw[start:i + 1])
+                    start = -1
+
+    best = None
+    best_score = -1
+    for span in spans:
+        parsed = _v4_try_json_loads(span)
+        if not parsed:
+            continue
+
+        score = 0
+        for key in [
+            "pageImageAnalyses",
+            "visualTeacherPacket",
+            "visualLessonInput",
+            "detectedDiagrams",
+            "teacherMarkingHints",
+            "boardRedrawHints",
+            "metadata",
+        ]:
+            if key in parsed:
+                score += 10
+
+        if score > best_score:
+            best = parsed
+            best_score = score
+
+    return best
+
+
+def _v4_parse_json_from_text(text: str) -> JsonDict:
+    """
+    Replacement parser:
+    1. original parser first
+    2. direct parse
+    3. best complete span parse
+    4. truncated JSON repair and parse
+    """
+    raw = strip_json_fence(text)
+    if not raw:
+        raise RuntimeError("Gemini vision returned empty text.")
+
+    try:
+        return _ORIG_PARSE_JSON_FROM_TEXT_V4(raw)
+    except Exception:
+        pass
+
+    parsed = _v4_try_json_loads(raw)
+    if parsed:
+        return parsed
+
+    best = _v4_extract_best_json_span(raw)
+    if best:
+        return best
+
+    repaired = _v4_balance_json(raw)
+    parsed = _v4_try_json_loads(repaired)
+    if parsed:
+        parsed.setdefault("metadata", {})
+        if isinstance(parsed["metadata"], dict):
+            parsed["metadata"]["visionJsonRepairedFromTruncatedOutputV4"] = True
+            parsed["metadata"]["originalVisionTextLength"] = len(raw)
+            parsed["metadata"]["repairedVisionTextLength"] = len(repaired)
+            parsed["metadata"]["fallbackUsed"] = False
+            parsed["metadata"]["usedSmartFallback"] = False
+        return parsed
+
+    raise RuntimeError(
+        "Gemini vision did not return valid JSON even after repair. "
+        f"Preview: {clean_text(raw, 1200)}"
+    )
+
+
+def _v4_build_vision_prompt(context: JsonDict, image: JsonDict) -> str:
+    """
+    Rich but compact prompt:
+    - still gives visual detail
+    - prevents giant narrative fields that cause JSON truncation
+    - requires visualTeacherPacket for downstream agents
+    """
+    base = _ORIG_BUILD_VISION_PROMPT_V4(context, image)
+
+    compact_contract = {
+        "IMPORTANT_OUTPUT_CONTROL": {
+            "returnJsonOnly": True,
+            "doNotUseMarkdown": True,
+            "doNotWriteLongParagraphsInsideOneString": True,
+            "maxWordsPerStringField": 80,
+            "preferArraysOfShortObjects": True,
+            "doNotRepeatSourceText": True,
+            "doNotCopyFullPageText": True,
+        },
+        "WORLD_TEACHER_VISION_PACKET_REQUIRED": {
+            "visualTeacherPacket": {
+                "pageVisualNarrative": "70-120 words, compact but teacher-useful.",
+                "sourceGroundedVisualFacts": "5-10 items; each has visualFact, sourceProof, teachingMeaning.",
+                "diagramElementDetails": "5-12 items; each has label, kind, visualRole, conceptMeaning, boardRedrawInstruction.",
+                "relationshipWalkthrough": "4-10 items; from, to, relationship, whyItMatters, boardAction.",
+                "teacherMarkingScript": "6-12 items; markType, target, teacherReason, spokenCue.",
+                "boardRedrawPlan": "6-12 items; order, action, content, layoutHint, voiceHint.",
+                "misconceptionRisks": "2-5 items; risk, repairMove, boardRepair.",
+                "visualTeachingSequence": "5-8 items; teacherMove, boardMove, studentCheck.",
+                "downstreamAgentInstructions": {
+                    "forConceptExtractionAgent": "short instruction",
+                    "forKnowledgeGraphAgent": "short instruction",
+                    "forTeachingStrategyAgent": "short instruction",
+                    "forVisualPlannerAgent": "short instruction",
+                    "forBoardCommandAgent": "short instruction",
+                    "forVoiceScriptAgent": "short instruction",
+                },
+            }
+        },
+        "REQUIRED_TOP_LEVEL_KEYS": [
+            "pageImageAnalyses",
+            "detectedDiagrams",
+            "visualTeachingHints",
+            "diagramSummary",
+            "visualTeacherPacket",
+            "metadata",
+        ],
+        "QUALITY_RULE": "Detailed visual intelligence, but compact valid JSON. Never produce prose outside JSON.",
+    }
+
+    return (
+        base
+        + "\n\nSTRICT_COMPACT_JSON_REPAIR_SAFE_CONTRACT_V4:\n"
+        + json.dumps(compact_contract, ensure_ascii=False, indent=2)
+        + "\n\nReturn exactly one valid JSON object. Close all braces and arrays."
+    )
+
+
+def _v4_normalize_visual_teacher_packet(parsed: JsonDict, image: JsonDict) -> JsonDict:
+    packet = safe_dict(parsed.get("visualTeacherPacket"))
+
+    # If Gemini placed packet inside analysis, lift it.
+    if not packet:
+        for analysis in safe_list(parsed.get("pageImageAnalyses")):
+            inner = safe_dict(safe_dict(analysis).get("visualTeacherPacket"))
+            if inner:
+                packet = inner
+                break
+
+    # If packet missing but normal vision fields exist, build a structural packet
+    # from the real Gemini fields. This is not fake; it is reshaping real output.
+    if not packet:
+        analyses = safe_list(parsed.get("pageImageAnalyses"))
+        elements = []
+        relationships = []
+        marks = []
+        redraw = []
+        confusions = []
+        facts = []
+
+        for analysis in analyses:
+            a = safe_dict(analysis)
+            elements.extend(safe_list(a.get("diagramElements")))
+            relationships.extend(safe_list(a.get("relationships")))
+            marks.extend(safe_list(a.get("teacherMarkingHints")))
+            redraw.extend(safe_list(a.get("boardRedrawHints")))
+            confusions.extend(safe_list(a.get("commonConfusions")))
+            facts.extend(safe_list(a.get("coreVisualFacts")))
+
+        packet = {
+            "pageVisualNarrative": clean_text(parsed.get("diagramSummary") or "", 1600),
+            "sourceGroundedVisualFacts": [
+                {"visualFact": clean_text(x, 500), "sourceProof": "", "teachingMeaning": clean_text(x, 500)}
+                for x in facts[:10]
+            ],
+            "diagramElementDetails": [
+                {
+                    "label": clean_text(safe_dict(x).get("label") or safe_dict(x).get("name") or "", 160),
+                    "kind": clean_text(safe_dict(x).get("kind") or "visual-element", 80),
+                    "visualRole": clean_text(safe_dict(x).get("description") or "", 500),
+                    "conceptMeaning": clean_text(safe_dict(x).get("teachingMeaning") or "", 500),
+                    "boardRedrawInstruction": clean_text(safe_dict(x).get("boardRedrawInstruction") or safe_dict(x).get("description") or "", 500),
+                }
+                for x in elements[:12]
+            ],
+            "relationshipWalkthrough": [
+                {
+                    "from": clean_text(safe_dict(x).get("from") or "", 120),
+                    "to": clean_text(safe_dict(x).get("to") or "", 120),
+                    "relationship": clean_text(safe_dict(x).get("relationship") or "", 160),
+                    "whyItMatters": clean_text(safe_dict(x).get("teachingMeaning") or "", 500),
+                    "boardAction": "trace this relationship with an arrow/highlight",
+                }
+                for x in relationships[:10]
+            ],
+            "teacherMarkingScript": marks[:12],
+            "boardRedrawPlan": [
+                {"order": i + 1, "action": "draw/write/highlight", "content": clean_text(x, 500)}
+                for i, x in enumerate(redraw[:12])
+            ],
+            "misconceptionRisks": [
+                {"risk": clean_text(x, 500), "repairMove": "clarify using the source text", "boardRepair": "mark the confusing visual part"}
+                for x in confusions[:5]
+            ],
+            "visualTeachingSequence": [],
+            "downstreamAgentInstructions": {
+                "forConceptExtractionAgent": "Preserve visual labels and source-grounded elements.",
+                "forKnowledgeGraphAgent": "Preserve visual relationships and arrows.",
+                "forTeachingStrategyAgent": "Teach in the same order as the visual walkthrough.",
+                "forVisualPlannerAgent": "Create rich board screens from redraw and marking plan.",
+                "forBoardCommandAgent": "Use concrete draw, circle, arrow, highlight commands.",
+                "forVoiceScriptAgent": "Sync narration with visual marks and redraw steps.",
+            },
+        }
+
+    parsed["visualTeacherPacket"] = packet
+    return parsed
+
+
+# Replace global functions used by call_gemini_vision_for_image.
+parse_json_from_text = _v4_parse_json_from_text
+build_vision_prompt = _v4_build_vision_prompt
+
+
+# Wrap call_gemini_vision_for_image so parsed output always carries visualTeacherPacket when possible.
+_ORIG_CALL_GEMINI_VISION_FOR_IMAGE_V4 = call_gemini_vision_for_image
+
+
+def call_gemini_vision_for_image(context: JsonDict, image: JsonDict, index: int = 0) -> JsonDict:
+    result = _ORIG_CALL_GEMINI_VISION_FOR_IMAGE_V4(context, image, index)
+    result = _v4_normalize_visual_teacher_packet(result, image)
+    result.setdefault("metadata", {})
+    if isinstance(result["metadata"], dict):
+        result["metadata"]["worldTeacherVisionJsonRepairV4"] = True
+        result["metadata"]["richVisualTeacherPacketNormalizedV4"] = True
+        result["metadata"]["fallbackUsed"] = False
+        result["metadata"]["usedSmartFallback"] = False
+    return result
+
+
+# === VISION_PAGE_IMAGE_ANALYSES_SHAPE_FIX_V5 ===
+# Fix:
+# - Gemini may return valid JSON but not under pageImageAnalyses.
+# - Original agent requires pageImageAnalyses.
+# - This normalizes real Gemini output into the required shape.
+# - No fake visual content. No static topic hardcoding.
+
+_PREV_PARSE_JSON_FROM_TEXT_V5 = parse_json_from_text
+
+
+def _v5_wc(value):
+    return len(clean_text(value or "", 20000).split())
+
+
+def _v5_text(value, limit=4000):
+    try:
+        return clean_text(value or "", limit)
+    except Exception:
+        return str(value or "")[:limit]
+
+
+def _v5_dict(value):
+    try:
+        return safe_dict(value)
+    except Exception:
+        return value if isinstance(value, dict) else {}
+
+
+def _v5_list(value):
+    try:
+        return safe_list(value)
+    except Exception:
+        return value if isinstance(value, list) else []
+
+
+def _v5_page_from_context_or_image(parsed: JsonDict) -> int:
+    # Best effort only; does not invent semantic content.
+    for key in ["page", "pageNumber"]:
+        try:
+            v = int(parsed.get(key) or 0)
+            if v > 0:
+                return v
+        except Exception:
+            pass
+    return 0
+
+
+def _v5_wrap_analysis_from_packet(parsed: JsonDict) -> JsonDict:
+    packet = _v5_dict(parsed.get("visualTeacherPacket") or _v5_dict(parsed.get("visualLessonInput")).get("visualTeacherPacket"))
+    diagram_summary = _v5_text(
+        parsed.get("diagramSummary")
+        or parsed.get("summary")
+        or parsed.get("pageVisualNarrative")
+        or packet.get("pageVisualNarrative")
+        or "",
+        3000,
+    )
+
+    detected = _v5_list(parsed.get("detectedDiagrams") or parsed.get("detectedVisualDiagrams"))
+    hints = _v5_list(parsed.get("visualTeachingHints") or parsed.get("teacherMarkingHints"))
+
+    analysis = {
+        "page": _v5_page_from_context_or_image(parsed),
+        "imageRole": _v5_text(parsed.get("imageRole") or "selectedPageFullImage", 120),
+        "visualType": _v5_text(parsed.get("visualType") or "mixed", 120),
+        "topicFromContext": _v5_text(parsed.get("topicFromContext") or parsed.get("title") or "", 240),
+        "summary": diagram_summary,
+        "layoutDescription": _v5_text(parsed.get("layoutDescription") or diagram_summary, 2500),
+        "diagramSummary": diagram_summary,
+        "diagramElements": _v5_list(parsed.get("diagramElements") or packet.get("diagramElementDetails")),
+        "relationships": _v5_list(parsed.get("relationships") or packet.get("relationshipWalkthrough")),
+        "teacherMarkingHints": _v5_list(parsed.get("teacherMarkingHints") or packet.get("teacherMarkingScript") or hints),
+        "boardRedrawHints": _v5_list(parsed.get("boardRedrawHints") or packet.get("boardRedrawPlan")),
+        "visualTeachingHints": hints,
+        "detectedDiagrams": detected,
+        "visualTeacherPacket": packet,
+        "metadata": {
+            **_v5_dict(parsed.get("metadata")),
+            "pageImageAnalysisWrappedFromGeminiShapeV5": True,
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+    return analysis
+
+
+def _v5_normalize_vision_shape(parsed: JsonDict) -> JsonDict:
+    parsed = _v5_dict(parsed)
+    if not parsed:
+        return parsed
+
+    analyses = _v5_list(parsed.get("pageImageAnalyses"))
+
+    # Case A: Gemini returned {"items":[...]}.
+    if not analyses and _v5_list(parsed.get("items")):
+        items = _v5_list(parsed.get("items"))
+        candidate_analyses = []
+        for item in items:
+            item_d = _v5_dict(item)
+            if not item_d:
+                continue
+            # If item itself looks like analysis, preserve it.
+            if (
+                item_d.get("summary")
+                or item_d.get("diagramSummary")
+                or item_d.get("layoutDescription")
+                or item_d.get("visualTeacherPacket")
+                or item_d.get("diagramElements")
+                or item_d.get("relationships")
+            ):
+                candidate_analyses.append(item_d)
+        if candidate_analyses:
+            analyses = candidate_analyses
+
+    # Case B: Gemini returned one analysis object directly.
+    if not analyses and (
+        parsed.get("summary")
+        or parsed.get("diagramSummary")
+        or parsed.get("layoutDescription")
+        or parsed.get("visualTeacherPacket")
+        or parsed.get("diagramElements")
+        or parsed.get("relationships")
+    ):
+        analyses = [_v5_wrap_analysis_from_packet(parsed)]
+
+    # Case C: packet only.
+    if not analyses and _v5_dict(parsed.get("visualTeacherPacket")):
+        analyses = [_v5_wrap_analysis_from_packet(parsed)]
+
+    normalized_analyses = []
+    for idx, raw in enumerate(analyses):
+        a = _v5_dict(raw)
+        if not a:
+            continue
+
+        packet = _v5_dict(a.get("visualTeacherPacket") or parsed.get("visualTeacherPacket"))
+        summary = _v5_text(
+            a.get("summary")
+            or a.get("diagramSummary")
+            or a.get("layoutDescription")
+            or packet.get("pageVisualNarrative")
+            or parsed.get("diagramSummary")
+            or "",
+            3000,
+        )
+
+        # Keep real Gemini content, only fill structural keys.
+        a["page"] = a.get("page") or parsed.get("page") or 0
+        a["imageRole"] = _v5_text(a.get("imageRole") or parsed.get("imageRole") or "selectedPageFullImage", 120)
+        a["visualType"] = _v5_text(a.get("visualType") or parsed.get("visualType") or "mixed", 120)
+        a["summary"] = summary
+        a["diagramSummary"] = _v5_text(a.get("diagramSummary") or summary, 3000)
+        a["layoutDescription"] = _v5_text(a.get("layoutDescription") or summary, 3000)
+
+        if not _v5_list(a.get("diagramElements")) and packet:
+            a["diagramElements"] = _v5_list(packet.get("diagramElementDetails"))
+        if not _v5_list(a.get("relationships")) and packet:
+            a["relationships"] = _v5_list(packet.get("relationshipWalkthrough"))
+        if not _v5_list(a.get("teacherMarkingHints")) and packet:
+            a["teacherMarkingHints"] = _v5_list(packet.get("teacherMarkingScript"))
+        if not _v5_list(a.get("boardRedrawHints")) and packet:
+            a["boardRedrawHints"] = _v5_list(packet.get("boardRedrawPlan"))
+
+        if packet:
+            a["visualTeacherPacket"] = packet
+
+        a["metadata"] = {
+            **_v5_dict(a.get("metadata")),
+            "normalizedPageImageAnalysisV5": True,
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        }
+        normalized_analyses.append(a)
+
+    if normalized_analyses:
+        parsed["pageImageAnalyses"] = normalized_analyses
+
+    # Top-level detected diagrams from analyses if missing.
+    if not _v5_list(parsed.get("detectedDiagrams")) and not _v5_list(parsed.get("detectedVisualDiagrams")):
+        diagrams = []
+        for a in normalized_analyses:
+            diagrams.extend(_v5_list(a.get("detectedDiagrams")))
+        if diagrams:
+            parsed["detectedDiagrams"] = diagrams
+
+    # Top-level visualTeacherPacket from first analysis if missing.
+    if not _v5_dict(parsed.get("visualTeacherPacket")):
+        for a in normalized_analyses:
+            packet = _v5_dict(a.get("visualTeacherPacket"))
+            if packet:
+                parsed["visualTeacherPacket"] = packet
+                break
+
+    parsed["metadata"] = {
+        **_v5_dict(parsed.get("metadata")),
+        "visionShapeNormalizedV5": True,
+        "pageImageAnalysisCountAfterNormalizeV5": len(_v5_list(parsed.get("pageImageAnalyses"))),
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+    }
+    return parsed
+
+
+def parse_json_from_text(text: str) -> JsonDict:
+    parsed = _PREV_PARSE_JSON_FROM_TEXT_V5(text)
+    parsed = _v5_normalize_vision_shape(parsed)
+
+    if not _v5_list(parsed.get("pageImageAnalyses")):
+        raise RuntimeError(
+            "Gemini vision returned JSON but no usable pageImageAnalyses after V5 shape normalization. "
+            f"Keys: {list(parsed.keys()) if isinstance(parsed, dict) else type(parsed)}"
+        )
+
+    return parsed

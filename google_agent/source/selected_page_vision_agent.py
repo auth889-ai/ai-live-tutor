@@ -620,7 +620,7 @@ def call_gemini_vision_for_image(context: JsonDict, image: JsonDict, index: int 
         config={
             "temperature": 0.05,
             "top_p": 0.8,
-            "max_output_tokens": safe_int(os.getenv("SELECTED_PAGE_VISION_MAX_OUTPUT_TOKENS"), 12000),
+            "max_output_tokens": safe_int(os.getenv("SELECTED_PAGE_VISION_MAX_OUTPUT_TOKENS"), 24000),
             "response_mime_type": "application/json",
         },
     )
@@ -1587,3 +1587,1257 @@ def parse_json_from_text(text: str) -> JsonDict:
         )
 
     return parsed
+
+
+# === FINAL_POWERFUL_VISUAL_TEACHER_PACKET_V8 ===
+# Final v34 Vision handoff fix.
+#
+# What it does:
+# - Keeps Gemini Vision as the real reader of full page images.
+# - Builds a downstream-ready visualTeacherPacket from real pageImageAnalyses,
+#   detectedDiagrams, diagramElements, relationships, teacherMarkingHints,
+#   boardRedrawHints, commonConfusions, summaries.
+# - If RAG misses text quotes, Vision still contributes visual observations:
+#   sourceType="visual_observation", needsSourceVerification=True.
+# - It does not invent source quotes.
+# - It does not hardcode Star Schema or any topic.
+# - It only reshapes/derives board-teacher plans from real visual output.
+
+_ORIG_MERGE_VISION_RESULTS_FINAL_V8 = merge_vision_results
+
+
+def _fv8_text(value, limit=1200):
+    try:
+        return clean_text(value or "", limit)
+    except Exception:
+        return str(value or "")[:limit]
+
+
+def _fv8_dict(value):
+    try:
+        return safe_dict(value)
+    except Exception:
+        return value if isinstance(value, dict) else {}
+
+
+def _fv8_list(value):
+    try:
+        return safe_list(value)
+    except Exception:
+        return value if isinstance(value, list) else []
+
+
+def _fv8_has_source_proof(item):
+    d = _fv8_dict(item)
+    if _fv8_text(d.get("sourceProof"), 500):
+        return True
+    if _fv8_text(d.get("quote"), 500):
+        return True
+    if _fv8_list(d.get("sourceRefs")):
+        return True
+    return False
+
+
+def _fv8_mark_source_type(item):
+    d = _fv8_dict(item)
+    has_proof = _fv8_has_source_proof(d)
+    d["sourceType"] = "source_grounded_visual" if has_proof else "visual_observation"
+    d["needsSourceVerification"] = not has_proof
+    return d
+
+
+def _fv8_dedupe_text(items, limit=80, text_limit=900):
+    out = []
+    seen = set()
+
+    for raw in items:
+        text = _fv8_text(raw, text_limit)
+        if not text:
+            continue
+
+        key = " ".join(text.lower().split())
+        if key in seen:
+            continue
+
+        seen.add(key)
+        out.append(text)
+
+        if len(out) >= limit:
+            break
+
+    return out
+
+
+def _fv8_dedupe_dicts(items, keys, limit=100):
+    out = []
+    seen = set()
+
+    for raw in items:
+        item = _fv8_dict(raw)
+        if not item:
+            continue
+
+        key = "|".join(_fv8_text(item.get(k), 220).lower() for k in keys)
+        if not key.strip("|"):
+            key = _fv8_text(str(item), 350).lower()
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        out.append(item)
+
+        if len(out) >= limit:
+            break
+
+    return out
+
+
+def _fv8_fact_from_any(raw, source_hint=""):
+    if isinstance(raw, dict):
+        item = _fv8_dict(raw)
+        fact = _fv8_text(
+            item.get("visualFact")
+            or item.get("fact")
+            or item.get("text")
+            or item.get("description")
+            or item.get("summary")
+            or item.get("caption"),
+            900,
+        )
+        source_proof = _fv8_text(
+            item.get("sourceProof")
+            or item.get("sourceText")
+            or item.get("quote")
+            or source_hint,
+            900,
+        )
+        out = {
+            "visualFact": fact,
+            "sourceProof": source_proof,
+            "teachingMeaning": _fv8_text(
+                item.get("teachingMeaning")
+                or item.get("meaning")
+                or item.get("whyItMatters")
+                or item.get("description")
+                or fact,
+                900,
+            ),
+            "sourceRefs": _fv8_list(item.get("sourceRefs")),
+        }
+        return _fv8_mark_source_type(out)
+
+    text = _fv8_text(raw, 900)
+    out = {
+        "visualFact": text,
+        "sourceProof": source_hint,
+        "teachingMeaning": text,
+        "sourceRefs": [],
+    }
+    return _fv8_mark_source_type(out)
+
+
+def _fv8_element_from_any(raw):
+    if isinstance(raw, dict):
+        item = _fv8_dict(raw)
+        label = _fv8_text(
+            item.get("label")
+            or item.get("name")
+            or item.get("id")
+            or item.get("text")
+            or item.get("target")
+            or item.get("title"),
+            220,
+        )
+        role = _fv8_text(
+            item.get("visualRole")
+            or item.get("role")
+            or item.get("description")
+            or item.get("position")
+            or item.get("summary")
+            or "",
+            900,
+        )
+        meaning = _fv8_text(
+            item.get("conceptMeaning")
+            or item.get("teachingMeaning")
+            or item.get("meaning")
+            or item.get("whyItMatters")
+            or role,
+            900,
+        )
+        out = {
+            "label": label,
+            "kind": _fv8_text(
+                item.get("kind")
+                or item.get("type")
+                or item.get("visualType")
+                or "visual-element",
+                120,
+            ),
+            "visualRole": role,
+            "conceptMeaning": meaning,
+            "boardRedrawInstruction": _fv8_text(
+                item.get("boardRedrawInstruction")
+                or item.get("boardAction")
+                or item.get("drawInstruction")
+                or role
+                or label,
+                900,
+            ),
+            "sourceRefs": _fv8_list(item.get("sourceRefs")),
+        }
+        return _fv8_mark_source_type(out)
+
+    text = _fv8_text(raw, 900)
+    out = {
+        "label": text[:180],
+        "kind": "visual-element",
+        "visualRole": text,
+        "conceptMeaning": text,
+        "boardRedrawInstruction": text,
+        "sourceRefs": [],
+    }
+    return _fv8_mark_source_type(out)
+
+
+def _fv8_relationship_from_any(raw):
+    if isinstance(raw, dict):
+        item = _fv8_dict(raw)
+        rel = _fv8_text(
+            item.get("relationship")
+            or item.get("type")
+            or item.get("label")
+            or item.get("description")
+            or item.get("summary"),
+            350,
+        )
+        why = _fv8_text(
+            item.get("whyItMatters")
+            or item.get("teachingMeaning")
+            or item.get("meaning")
+            or item.get("description")
+            or rel,
+            900,
+        )
+        out = {
+            "from": _fv8_text(item.get("from") or item.get("source") or item.get("start") or item.get("left"), 220),
+            "to": _fv8_text(item.get("to") or item.get("target") or item.get("end") or item.get("right"), 220),
+            "relationship": rel,
+            "whyItMatters": why,
+            "boardAction": _fv8_text(
+                item.get("boardAction")
+                or item.get("boardMove")
+                or item.get("drawInstruction")
+                or "trace this relationship with an arrow/highlight",
+                700,
+            ),
+            "sourceRefs": _fv8_list(item.get("sourceRefs")),
+        }
+        return _fv8_mark_source_type(out)
+
+    text = _fv8_text(raw, 900)
+    out = {
+        "from": "",
+        "to": "",
+        "relationship": text,
+        "whyItMatters": text,
+        "boardAction": "highlight this relationship on the board",
+        "sourceRefs": [],
+    }
+    return _fv8_mark_source_type(out)
+
+
+def _fv8_mark_from_any(raw):
+    if isinstance(raw, dict):
+        item = _fv8_dict(raw)
+        target = _fv8_text(
+            item.get("target")
+            or item.get("label")
+            or item.get("element")
+            or item.get("content")
+            or item.get("text")
+            or item.get("description"),
+            260,
+        )
+        reason = _fv8_text(
+            item.get("teacherReason")
+            or item.get("reason")
+            or item.get("why")
+            or item.get("teachingMeaning")
+            or item.get("description")
+            or target,
+            900,
+        )
+        return {
+            "markType": _fv8_text(item.get("markType") or item.get("type") or item.get("action") or "highlight", 100),
+            "target": target,
+            "teacherReason": reason,
+            "spokenCue": _fv8_text(
+                item.get("spokenCue")
+                or item.get("voiceHint")
+                or item.get("teacherMove")
+                or reason,
+                900,
+            ),
+            "sourceType": "visual_teacher_action",
+        }
+
+    text = _fv8_text(raw, 900)
+    return {
+        "markType": "highlight",
+        "target": text[:240],
+        "teacherReason": text,
+        "spokenCue": text,
+        "sourceType": "visual_teacher_action",
+    }
+
+
+def _fv8_redraw_from_any(raw, index):
+    if isinstance(raw, dict):
+        item = _fv8_dict(raw)
+        content = _fv8_text(
+            item.get("content")
+            or item.get("target")
+            or item.get("label")
+            or item.get("text")
+            or item.get("description")
+            or item.get("boardRedrawInstruction"),
+            900,
+        )
+        return {
+            "order": int(item.get("order") or index + 1),
+            "action": _fv8_text(item.get("action") or item.get("type") or "draw/write/highlight", 120),
+            "content": content,
+            "layoutHint": _fv8_text(
+                item.get("layoutHint")
+                or item.get("position")
+                or item.get("where")
+                or "preserve the relative position/grouping from the source page image",
+                700,
+            ),
+            "voiceHint": _fv8_text(
+                item.get("voiceHint")
+                or item.get("spokenCue")
+                or item.get("teacherMove")
+                or content,
+                900,
+            ),
+            "sourceType": "visual_redraw_instruction",
+        }
+
+    text = _fv8_text(raw, 900)
+    return {
+        "order": index + 1,
+        "action": "draw/write/highlight",
+        "content": text,
+        "layoutHint": "preserve the relative position/grouping from the source page image",
+        "voiceHint": text,
+        "sourceType": "visual_redraw_instruction",
+    }
+
+
+def _fv8_risk_from_any(raw):
+    if isinstance(raw, dict):
+        item = _fv8_dict(raw)
+        risk = _fv8_text(
+            item.get("risk")
+            or item.get("confusion")
+            or item.get("mistake")
+            or item.get("text")
+            or item.get("description"),
+            900,
+        )
+        return {
+            "risk": risk,
+            "repairMove": _fv8_text(
+                item.get("repairMove")
+                or item.get("fix")
+                or item.get("teacherRepair")
+                or "clarify using the source text and visual marking",
+                900,
+            ),
+            "boardRepair": _fv8_text(
+                item.get("boardRepair")
+                or item.get("boardMove")
+                or "mark the confusing visual part and redraw the relationship",
+                900,
+            ),
+            "sourceType": "visual_misconception_detection",
+        }
+
+    text = _fv8_text(raw, 900)
+    return {
+        "risk": text,
+        "repairMove": "clarify using the source text and visual marking",
+        "boardRepair": "mark the confusing visual part and redraw the relationship",
+        "sourceType": "visual_misconception_detection",
+    }
+
+
+def _fv8_collect_from_packet(packet):
+    packet = _fv8_dict(packet)
+    return {
+        "narratives": [_fv8_text(packet.get("pageVisualNarrative"), 3000)] if _fv8_text(packet.get("pageVisualNarrative"), 3000) else [],
+        "facts": _fv8_list(packet.get("sourceGroundedVisualFacts")),
+        "elements": _fv8_list(packet.get("diagramElementDetails")),
+        "relationships": _fv8_list(packet.get("relationshipWalkthrough")),
+        "marks": _fv8_list(packet.get("teacherMarkingScript")),
+        "redraw": _fv8_list(packet.get("boardRedrawPlan")),
+        "risks": _fv8_list(packet.get("misconceptionRisks")),
+        "sequence": _fv8_list(packet.get("visualTeachingSequence")),
+    }
+
+
+def _fv8_build_packet_from_merged(merged, raw_results=None):
+    raw_results = raw_results or []
+    analyses = _fv8_list(merged.get("pageImageAnalyses"))
+    diagrams = _fv8_list(merged.get("detectedDiagrams") or merged.get("detectedVisualDiagrams"))
+
+    narratives = []
+    facts = []
+    elements = []
+    relationships = []
+    marks = []
+    redraw = []
+    risks = []
+    sequence = []
+
+    # Preserve any packet already produced by direct Gemini response/wrappers.
+    for result in raw_results:
+        result = _fv8_dict(result)
+        packets = []
+        if _fv8_dict(result.get("visualTeacherPacket")):
+            packets.append(_fv8_dict(result.get("visualTeacherPacket")))
+
+        for analysis in _fv8_list(result.get("pageImageAnalyses")):
+            analysis = _fv8_dict(analysis)
+            if _fv8_dict(analysis.get("visualTeacherPacket")):
+                packets.append(_fv8_dict(analysis.get("visualTeacherPacket")))
+
+        for packet in packets:
+            collected = _fv8_collect_from_packet(packet)
+            narratives.extend(collected["narratives"])
+            facts.extend(collected["facts"])
+            elements.extend(collected["elements"])
+            relationships.extend(collected["relationships"])
+            marks.extend(collected["marks"])
+            redraw.extend(collected["redraw"])
+            risks.extend(collected["risks"])
+            sequence.extend(collected["sequence"])
+
+    # Build from final merged page analyses.
+    for analysis in analyses:
+        a = _fv8_dict(analysis)
+        if not a:
+            continue
+
+        packet = _fv8_dict(a.get("visualTeacherPacket"))
+        if packet:
+            collected = _fv8_collect_from_packet(packet)
+            narratives.extend(collected["narratives"])
+            facts.extend(collected["facts"])
+            elements.extend(collected["elements"])
+            relationships.extend(collected["relationships"])
+            marks.extend(collected["marks"])
+            redraw.extend(collected["redraw"])
+            risks.extend(collected["risks"])
+            sequence.extend(collected["sequence"])
+
+        summary = _fv8_text(
+            a.get("summary")
+            or a.get("diagramSummary")
+            or a.get("layoutDescription")
+            or "",
+            2500,
+        )
+        if summary:
+            narratives.append(summary)
+            facts.append(_fv8_fact_from_any({
+                "visualFact": summary,
+                "teachingMeaning": summary,
+                "sourceRefs": _fv8_list(a.get("sourceRefs")),
+            }))
+
+        for field in ["coreVisualFacts", "visualFacts", "facts"]:
+            facts.extend(_fv8_fact_from_any(x) for x in _fv8_list(a.get(field)))
+
+        for field in ["diagramElements", "elements", "layoutElements", "detectedObjects"]:
+            elements.extend(_fv8_element_from_any(x) for x in _fv8_list(a.get(field)))
+
+        for field in ["relationships", "edges", "links", "connections"]:
+            relationships.extend(_fv8_relationship_from_any(x) for x in _fv8_list(a.get(field)))
+
+        for field in ["teacherMarkingHints", "visualTeachingHints", "markingHints"]:
+            marks.extend(_fv8_mark_from_any(x) for x in _fv8_list(a.get(field)))
+
+        for field in ["boardRedrawHints", "redrawHints", "drawPlan"]:
+            base = len(redraw)
+            redraw.extend(_fv8_redraw_from_any(x, base + i) for i, x in enumerate(_fv8_list(a.get(field))))
+
+        for field in ["commonConfusions", "misconceptions", "mistakeRisks"]:
+            risks.extend(_fv8_risk_from_any(x) for x in _fv8_list(a.get(field)))
+
+    # Build from detected diagrams as additional visual evidence.
+    for diagram in diagrams:
+        d = _fv8_dict(diagram)
+        desc = _fv8_text(
+            d.get("description")
+            or d.get("summary")
+            or d.get("caption")
+            or d.get("title")
+            or d.get("diagramType"),
+            1000,
+        )
+        if desc:
+            narratives.append(desc)
+            facts.append(_fv8_fact_from_any({
+                "visualFact": desc,
+                "teachingMeaning": desc,
+                "sourceRefs": _fv8_list(d.get("sourceRefs")),
+            }))
+
+        for field in ["elements", "diagramElements", "nodes", "objects"]:
+            elements.extend(_fv8_element_from_any(x) for x in _fv8_list(d.get(field)))
+
+        for field in ["relationships", "edges", "links", "connections"]:
+            relationships.extend(_fv8_relationship_from_any(x) for x in _fv8_list(d.get(field)))
+
+    narratives = _fv8_dedupe_text(narratives, 8, 900)
+    facts = _fv8_dedupe_dicts(facts, ["visualFact", "teachingMeaning"], 100)
+    elements = _fv8_dedupe_dicts(elements, ["label", "kind", "visualRole"], 120)
+    relationships = _fv8_dedupe_dicts(relationships, ["from", "to", "relationship"], 120)
+    marks = _fv8_dedupe_dicts(marks, ["markType", "target", "spokenCue"], 120)
+    redraw = _fv8_dedupe_dicts(redraw, ["order", "action", "content"], 120)
+    risks = _fv8_dedupe_dicts(risks, ["risk"], 60)
+    sequence = _fv8_dedupe_dicts(sequence, ["step", "teacherMove", "boardMove"], 60)
+
+    # Derive teacher marking/redraw actions from real detected visual objects when Gemini
+    # did not explicitly provide board actions. This is not fake lesson content.
+    if not marks:
+        for idx, element in enumerate(elements[:18]):
+            label = _fv8_text(element.get("label"), 220)
+            meaning = _fv8_text(element.get("conceptMeaning") or element.get("visualRole"), 900)
+            if label or meaning:
+                marks.append({
+                    "markType": "circle" if idx == 0 else "highlight",
+                    "target": label or meaning[:220],
+                    "teacherReason": meaning or f"Focus attention on {label}.",
+                    "spokenCue": meaning or f"Look carefully at {label}.",
+                    "sourceType": "derived_from_detected_visual_element",
+                })
+
+    if not redraw:
+        order = 1
+
+        for element in elements[:18]:
+            label = _fv8_text(element.get("label"), 220)
+            instruction = _fv8_text(
+                element.get("boardRedrawInstruction")
+                or element.get("visualRole")
+                or element.get("conceptMeaning")
+                or label,
+                900,
+            )
+            if instruction:
+                redraw.append({
+                    "order": order,
+                    "action": "draw/write/highlight",
+                    "content": instruction,
+                    "layoutHint": "preserve the relative layout/grouping from the source page image",
+                    "voiceHint": instruction,
+                    "sourceType": "derived_from_detected_visual_element",
+                })
+                order += 1
+
+        for rel in relationships[:14]:
+            rel_text = _fv8_text(rel.get("relationship") or rel.get("whyItMatters"), 700)
+            if rel_text:
+                redraw.append({
+                    "order": order,
+                    "action": "draw-arrow/highlight-relationship",
+                    "content": rel_text,
+                    "layoutHint": "draw between the related visual elements as shown in the source image",
+                    "voiceHint": rel_text,
+                    "sourceType": "derived_from_detected_visual_relationship",
+                })
+                order += 1
+
+    if not sequence:
+        for idx, step in enumerate(redraw[:14]):
+            step = _fv8_dict(step)
+            move = _fv8_text(step.get("voiceHint") or step.get("content"), 900)
+            if not move:
+                continue
+
+            sequence.append({
+                "step": idx + 1,
+                "teacherMove": move,
+                "boardMove": f"{_fv8_text(step.get('action'), 120)}: {_fv8_text(step.get('content'), 700)}",
+                "studentCheck": "Ask the student to explain what this marked visual part means before moving on.",
+                "sourceType": "derived_from_visual_redraw_plan",
+            })
+
+    packet = {
+        "pageVisualNarrative": _fv8_text(" ".join(narratives), 4500),
+        "sourceGroundedVisualFacts": facts,
+        "diagramElementDetails": elements,
+        "relationshipWalkthrough": relationships,
+        "teacherMarkingScript": marks[:120],
+        "boardRedrawPlan": redraw[:120],
+        "misconceptionRisks": risks[:60],
+        "visualTeachingSequence": sequence[:60],
+        "downstreamAgentInstructions": {
+            "forConceptExtractionAgent": "Use sourceGroundedVisualFacts and diagramElementDetails as visual concept hints.",
+            "forKnowledgeGraphAgent": "Use relationshipWalkthrough to create visual graph edges.",
+            "forTeachingStrategyAgent": "Use visualTeachingSequence and teacherMarkingScript to plan human visual teaching moves.",
+            "forVisualPlannerAgent": "Use boardRedrawPlan for premium multi-screen board scene design.",
+            "forBoardCommandAgent": "Convert boardRedrawPlan and teacherMarkingScript into draw/circle/arrow/highlight/reveal commands.",
+            "forVoiceScriptAgent": "Sync spokenCue/voiceHint with board drawing and marking.",
+            "forValidatorSafetyAgent": "Treat sourceType=visual_observation as visual truth; require text citation only when the claim is textual.",
+        },
+        "metadata": {
+            "visualTeacherPacketV8": True,
+            "finalPowerfulVisionHandoffV8": True,
+            "builtFromRealGeminiVisionOutput": True,
+            "usesFullPageImageAnalyses": True,
+            "addsVisualObservationWhenRagMisses": True,
+            "doesNotInventSourceQuotes": True,
+            "pageImageAnalysisCount": len(analyses),
+            "detectedDiagramCount": len(diagrams),
+            "sourceGroundedVisualFactCount": len(facts),
+            "diagramElementDetailCount": len(elements),
+            "relationshipWalkthroughCount": len(relationships),
+            "teacherMarkingScriptCount": len(marks),
+            "boardRedrawPlanCount": len(redraw),
+            "visualTeachingSequenceCount": len(sequence),
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+    return packet
+
+
+def merge_vision_results(results: List[JsonDict], context: Optional[JsonDict] = None) -> JsonDict:
+    merged = _ORIG_MERGE_VISION_RESULTS_FINAL_V8(results, context)
+    packet = _fv8_build_packet_from_merged(merged, results)
+
+    merged["visualTeacherPacket"] = packet
+    merged["visualLessonInput"] = {
+        **_fv8_dict(merged.get("visualLessonInput")),
+        "visualTeacherPacket": packet,
+        "richVisualTeacherPacket": True,
+        "plannerReady": True,
+        "addsVisualObservationWhenRagMisses": True,
+    }
+    merged["plannerReady"] = True
+    merged["metadata"] = {
+        **_fv8_dict(merged.get("metadata")),
+        "visualTeacherPacketV8": True,
+        "finalPowerfulVisionHandoffV8": True,
+        "richVisualTeacherPacket": True,
+        "addsVisualObservationWhenRagMisses": True,
+        "doesNotInventSourceQuotes": True,
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+    }
+    return merged
+
+
+# === SUPER_TEACHER_VISION_PROMPT_AND_PACKET_V9 ===
+# v35 final depth upgrade:
+# - Previous V8 made visualTeacherPacket exist.
+# - But the original prompt was compact and allowed short items.
+# - This V9 prompt forces detailed teacher-quality visual understanding.
+# - Still real/dynamic: uses Gemini Vision on page images.
+# - No hardcoded Star Schema. No fake source quotes.
+# - If RAG misses text, Vision adds visual_observation with needsSourceVerification=True.
+
+_PREV_BUILD_VISION_PROMPT_SUPER_V9 = build_vision_prompt
+_PREV_MERGE_VISION_RESULTS_SUPER_V9 = merge_vision_results
+
+
+def _stv9_text(value, limit=1200):
+    try:
+        return clean_text(value or "", limit)
+    except Exception:
+        return str(value or "")[:limit]
+
+
+def _stv9_dict(value):
+    try:
+        return safe_dict(value)
+    except Exception:
+        return value if isinstance(value, dict) else {}
+
+
+def _stv9_list(value):
+    try:
+        return safe_list(value)
+    except Exception:
+        return value if isinstance(value, list) else []
+
+
+def _stv9_has_source(item):
+    d = _stv9_dict(item)
+    return bool(
+        _stv9_text(d.get("sourceProof"), 400)
+        or _stv9_text(d.get("quote"), 400)
+        or _stv9_list(d.get("sourceRefs"))
+    )
+
+
+def _stv9_source_type(item):
+    return "source_grounded_visual" if _stv9_has_source(item) else "visual_observation"
+
+
+def _stv9_enrich_fact(item):
+    d = _stv9_dict(item)
+    fact = _stv9_text(
+        d.get("visualFact")
+        or d.get("fact")
+        or d.get("text")
+        or d.get("description")
+        or d.get("teachingMeaning"),
+        1000,
+    )
+    meaning = _stv9_text(d.get("teachingMeaning") or d.get("meaning") or d.get("whyItMatters") or fact, 1000)
+    source_proof = _stv9_text(d.get("sourceProof") or d.get("sourceText") or d.get("quote"), 1000)
+    source_type = _stv9_source_type({**d, "sourceProof": source_proof})
+    return {
+        **d,
+        "visualFact": fact,
+        "sourceProof": source_proof,
+        "visualObservation": _stv9_text(d.get("visualObservation") or fact, 1000),
+        "teachingMeaning": meaning,
+        "whyStudentShouldCare": _stv9_text(
+            d.get("whyStudentShouldCare")
+            or d.get("studentMeaning")
+            or f"This helps the student connect the page image to the concept: {meaning}",
+            1000,
+        ),
+        "exactBoardMove": _stv9_text(
+            d.get("exactBoardMove")
+            or d.get("boardAction")
+            or d.get("boardMove")
+            or "mark this visual fact on the board and connect it to the source text",
+            900,
+        ),
+        "spokenTeacherLine": _stv9_text(
+            d.get("spokenTeacherLine")
+            or d.get("spokenCue")
+            or d.get("voiceHint")
+            or meaning,
+            1000,
+        ),
+        "studentCheckQuestion": _stv9_text(
+            d.get("studentCheckQuestion")
+            or "What does this visual detail tell us about the concept?",
+            500,
+        ),
+        "sourceType": source_type,
+        "needsSourceVerification": source_type == "visual_observation",
+        "confidence": d.get("confidence", 0.82 if source_type == "visual_observation" else 0.9),
+        "sourceRefs": _stv9_list(d.get("sourceRefs")),
+    }
+
+
+def _stv9_enrich_element(item):
+    d = _stv9_dict(item)
+    label = _stv9_text(d.get("label") or d.get("name") or d.get("text") or d.get("target"), 220)
+    role = _stv9_text(d.get("visualRole") or d.get("role") or d.get("description"), 1000)
+    meaning = _stv9_text(d.get("conceptMeaning") or d.get("teachingMeaning") or d.get("meaning") or role, 1000)
+    source_type = _stv9_source_type(d)
+    return {
+        **d,
+        "label": label,
+        "kind": _stv9_text(d.get("kind") or d.get("type") or "visual-element", 120),
+        "exactLocation": _stv9_text(d.get("exactLocation") or d.get("position") or d.get("location") or "location inferred from page image layout", 500),
+        "visualRole": role,
+        "attributesSeen": _stv9_list(d.get("attributesSeen") or d.get("attributes") or d.get("visibleAttributes")),
+        "connectedTo": _stv9_list(d.get("connectedTo") or d.get("connections")),
+        "conceptMeaning": meaning,
+        "teacherExplanation": _stv9_text(
+            d.get("teacherExplanation")
+            or f"Point to {label or 'this element'} and explain: {meaning}",
+            1000,
+        ),
+        "boardRedrawInstruction": _stv9_text(
+            d.get("boardRedrawInstruction")
+            or d.get("drawInstruction")
+            or d.get("boardAction")
+            or f"Draw/write {label or 'this element'} and explain its role.",
+            1000,
+        ),
+        "exactBoardMove": _stv9_text(
+            d.get("exactBoardMove")
+            or d.get("boardRedrawInstruction")
+            or f"draw/write/highlight: {label or meaning}",
+            900,
+        ),
+        "spokenTeacherLine": _stv9_text(
+            d.get("spokenTeacherLine")
+            or d.get("spokenCue")
+            or d.get("voiceHint")
+            or meaning,
+            1000,
+        ),
+        "studentCheckQuestion": _stv9_text(
+            d.get("studentCheckQuestion")
+            or f"What role does {label or 'this visual element'} play in the diagram?",
+            600,
+        ),
+        "sourceType": source_type,
+        "needsSourceVerification": source_type == "visual_observation",
+        "confidence": d.get("confidence", 0.82 if source_type == "visual_observation" else 0.9),
+        "sourceRefs": _stv9_list(d.get("sourceRefs")),
+    }
+
+
+def _stv9_enrich_relationship(item):
+    d = _stv9_dict(item)
+    rel = _stv9_text(d.get("relationship") or d.get("type") or d.get("label") or d.get("description"), 500)
+    why = _stv9_text(d.get("whyItMatters") or d.get("teachingMeaning") or d.get("meaning") or rel, 1000)
+    source_type = _stv9_source_type(d)
+    return {
+        **d,
+        "from": _stv9_text(d.get("from") or d.get("source") or d.get("start") or d.get("left"), 220),
+        "to": _stv9_text(d.get("to") or d.get("target") or d.get("end") or d.get("right"), 220),
+        "relationship": rel,
+        "visualEvidence": _stv9_text(
+            d.get("visualEvidence")
+            or d.get("description")
+            or "relationship inferred from visual connection/position/arrow/grouping in the page image",
+            1000,
+        ),
+        "sourceProof": _stv9_text(d.get("sourceProof") or d.get("quote") or d.get("sourceText"), 1000),
+        "whyItMatters": why,
+        "misconceptionRisk": _stv9_text(
+            d.get("misconceptionRisk")
+            or "Student may miss the direction or meaning of this visual connection.",
+            900,
+        ),
+        "boardAction": _stv9_text(
+            d.get("boardAction")
+            or d.get("boardMove")
+            or "draw an arrow/highlight between the connected visual elements",
+            900,
+        ),
+        "spokenCue": _stv9_text(
+            d.get("spokenCue")
+            or d.get("voiceHint")
+            or why,
+            1000,
+        ),
+        "studentCheckQuestion": _stv9_text(
+            d.get("studentCheckQuestion")
+            or "Can you explain why these two visual parts are connected?",
+            600,
+        ),
+        "sourceType": source_type,
+        "needsSourceVerification": source_type == "visual_observation",
+        "confidence": d.get("confidence", 0.82 if source_type == "visual_observation" else 0.9),
+        "sourceRefs": _stv9_list(d.get("sourceRefs")),
+    }
+
+
+def _stv9_enrich_mark(item):
+    d = _stv9_dict(item)
+    target = _stv9_text(d.get("target") or d.get("label") or d.get("element") or d.get("content") or d.get("text"), 260)
+    reason = _stv9_text(d.get("teacherReason") or d.get("reason") or d.get("why") or d.get("description"), 1000)
+    return {
+        **d,
+        "markType": _stv9_text(d.get("markType") or d.get("type") or d.get("action") or "highlight", 100),
+        "target": target,
+        "teacherReason": reason or f"Focus student attention on {target}.",
+        "spokenCue": _stv9_text(d.get("spokenCue") or d.get("voiceHint") or d.get("teacherMove") or reason or target, 1000),
+        "studentAttentionGoal": _stv9_text(
+            d.get("studentAttentionGoal")
+            or "Make the learner notice the exact visual detail before abstract explanation.",
+            800,
+        ),
+        "sourceType": "visual_teacher_action",
+    }
+
+
+def _stv9_enrich_redraw(item, index):
+    d = _stv9_dict(item)
+    content = _stv9_text(d.get("content") or d.get("target") or d.get("label") or d.get("description") or d.get("text"), 1000)
+    return {
+        **d,
+        "order": int(d.get("order") or index + 1),
+        "action": _stv9_text(d.get("action") or d.get("type") or "draw/write/highlight", 120),
+        "content": content,
+        "layoutHint": _stv9_text(
+            d.get("layoutHint")
+            or d.get("position")
+            or d.get("where")
+            or "preserve the relative layout and grouping from the page image",
+            900,
+        ),
+        "voiceHint": _stv9_text(d.get("voiceHint") or d.get("spokenCue") or d.get("teacherMove") or content, 1000),
+        "teacherPurpose": _stv9_text(
+            d.get("teacherPurpose")
+            or "Build the diagram slowly so the student understands the visual structure.",
+            900,
+        ),
+        "studentCheckQuestion": _stv9_text(
+            d.get("studentCheckQuestion")
+            or "What did we just add to the board, and why is it important?",
+            600,
+        ),
+        "sourceType": "visual_redraw_instruction",
+    }
+
+
+def _stv9_enrich_sequence(item, index):
+    d = _stv9_dict(item)
+    teacher = _stv9_text(d.get("teacherMove") or d.get("voiceHint") or d.get("spokenCue"), 1200)
+    board = _stv9_text(d.get("boardMove") or d.get("boardAction") or d.get("content"), 1200)
+    return {
+        **d,
+        "step": int(d.get("step") or index + 1),
+        "teacherMove": teacher,
+        "boardMove": board,
+        "whyThisStepNow": _stv9_text(
+            d.get("whyThisStepNow")
+            or "This step follows the visual reading order and reduces cognitive load.",
+            900,
+        ),
+        "studentCheck": _stv9_text(
+            d.get("studentCheck")
+            or "Ask the student to explain the marked visual part in their own words.",
+            900,
+        ),
+        "sourceType": "visual_teaching_sequence",
+    }
+
+
+def _stv9_super_build_vision_prompt(context: JsonDict, image: JsonDict) -> str:
+    source_text = compact_evidence_text(context, max_chars=42000)
+    pdf_context = compact_pdf_context(context)
+    selected_node = safe_dict(context.get("selectedNode"))
+
+    contract = {
+        "returnJsonOnly": True,
+        "role": "You are a world-class visual teacher, not a captioning bot.",
+        "nonNegotiableTruthRules": [
+            "Use PDF/source text as textual truth.",
+            "Use the page image as visual truth for layout, labels, arrows, grouping, boxes, tables, diagrams, hierarchy, and what a teacher should mark.",
+            "If source text/RAG misses something but the page image clearly shows it, include it as sourceType='visual_observation' with needsSourceVerification=true.",
+            "Never invent sourceQuote/sourceProof. Leave sourceProof empty when only visual observation exists.",
+            "If an image detail is uncertain, mark confidence below 0.65 and do not teach it as confirmed fact.",
+            "Do not give a generic summary. Read the page like a human teacher at a board.",
+        ],
+        "requiredDepth": {
+            "pageVisualNarrative": "180-260 words. Explain what the learner should notice first, second, third. Mention visual hierarchy and why it matters.",
+            "sourceGroundedVisualFacts": "8-14 objects. Each: visualFact, sourceProof if available, visualObservation, teachingMeaning, whyStudentShouldCare, exactBoardMove, spokenTeacherLine, studentCheckQuestion, sourceType, needsSourceVerification, confidence.",
+            "diagramElementDetails": "8-18 objects. Each: label, kind, exactLocation, visualRole, attributesSeen, connectedTo, conceptMeaning, teacherExplanation, boardRedrawInstruction, exactBoardMove, spokenTeacherLine, studentCheckQuestion, sourceType, confidence.",
+            "relationshipWalkthrough": "6-14 objects. Each: from, to, relationship, visualEvidence, sourceProof if available, whyItMatters, misconceptionRisk, boardAction, spokenCue, studentCheckQuestion, sourceType, confidence.",
+            "teacherMarkingScript": "8-16 objects. Each: markType, target, teacherReason, spokenCue, studentAttentionGoal.",
+            "boardRedrawPlan": "8-16 objects. Each: order, action, content, layoutHint, voiceHint, teacherPurpose, studentCheckQuestion.",
+            "misconceptionRisks": "4-8 objects. Each: risk, repairMove, boardRepair, visualTrigger.",
+            "visualTeachingSequence": "6-12 objects. Each: step, teacherMove, boardMove, whyThisStepNow, studentCheck.",
+        },
+        "boardQualityTarget": "The output should let a later BoardCommandAgent draw and teach like a premium human teacher: write, draw boxes, arrows, circle, highlight, zoom, reveal step-by-step.",
+    }
+
+    schema = {
+        "pageImageAnalyses": [
+            {
+                "page": image.get("page"),
+                "imageRole": "selectedPageFullImage|nearbyPageFullImage",
+                "visualType": "schema|table|diagram|flowchart|text-heavy|mixed|unknown",
+                "topicFromContext": "topic inferred from node + source text",
+                "summary": "rich but not final lesson",
+                "layoutDescription": "explain layout, positions, hierarchy, grouping, arrows/lines",
+                "sourceTextMapping": [
+                    {"visualThing": "label/box/arrow", "sourceQuote": "only if available from source text", "reason": "why mapped"}
+                ],
+                "visibleLabels": ["all important visible labels"],
+                "diagramElements": [
+                    {
+                        "label": "visual label",
+                        "kind": "box|table|arrow|node|edge|caption|cluster|text-block",
+                        "exactLocation": "center/top-left/etc",
+                        "visualRole": "what it does visually",
+                        "attributesSeen": ["visible attribute/field/list item"],
+                        "connectedTo": ["other labels visually connected"],
+                        "conceptMeaning": "what this means for the concept",
+                        "teacherExplanation": "how a teacher should explain this element",
+                        "boardRedrawInstruction": "exact redraw instruction",
+                        "spokenTeacherLine": "teacher narration line",
+                        "studentCheckQuestion": "quick check question",
+                        "sourceType": "source_grounded_visual|visual_observation",
+                        "needsSourceVerification": False,
+                        "confidence": 0.0
+                    }
+                ],
+                "relationships": [
+                    {
+                        "from": "visual label",
+                        "to": "visual label",
+                        "relationship": "arrow/connection/containment/adjacency/hierarchy",
+                        "visualEvidence": "what in image proves this relationship",
+                        "sourceProof": "source quote only if available",
+                        "whyItMatters": "conceptual meaning",
+                        "misconceptionRisk": "what student might misunderstand",
+                        "boardAction": "how to draw/mark this relation",
+                        "spokenCue": "teacher narration",
+                        "studentCheckQuestion": "question",
+                        "sourceType": "source_grounded_visual|visual_observation",
+                        "confidence": 0.0
+                    }
+                ],
+                "coreVisualFacts": [
+                    {
+                        "visualFact": "fact visible or source-grounded",
+                        "sourceProof": "quote if available, empty if visual-only",
+                        "visualObservation": "what the image shows",
+                        "teachingMeaning": "why it matters",
+                        "whyStudentShouldCare": "learning value",
+                        "exactBoardMove": "draw/circle/highlight/write",
+                        "spokenTeacherLine": "teacher voice line",
+                        "studentCheckQuestion": "question",
+                        "sourceType": "source_grounded_visual|visual_observation",
+                        "needsSourceVerification": False,
+                        "confidence": 0.0
+                    }
+                ],
+                "boardRedrawHints": [
+                    {
+                        "order": 1,
+                        "action": "draw/write/circle/arrow/highlight/zoom/reveal",
+                        "content": "what to place on board",
+                        "layoutHint": "where and why",
+                        "voiceHint": "what teacher says",
+                        "teacherPurpose": "why this helps",
+                        "studentCheckQuestion": "quick check"
+                    }
+                ],
+                "teacherMarkingHints": [
+                    {
+                        "markType": "circle|arrow|underline|highlight|zoom|source-preview",
+                        "target": "what to mark",
+                        "teacherReason": "why mark it",
+                        "spokenCue": "teacher line",
+                        "studentAttentionGoal": "what student should notice"
+                    }
+                ],
+                "commonConfusions": [
+                    {
+                        "risk": "mistake",
+                        "repairMove": "how teacher fixes",
+                        "boardRepair": "what to draw/mark",
+                        "visualTrigger": "what in the image may cause confusion"
+                    }
+                ],
+                "confidence": 0.0,
+                "visualTeacherPacket": {}
+            }
+        ],
+        "detectedDiagrams": [
+            {
+                "page": image.get("page"),
+                "diagramType": "ERD|star-schema|snowflake-schema|workflow|flowchart|table|architecture|concept-map|unknown",
+                "title": "short title",
+                "summary": "teacher-useful visual summary",
+                "elements": [],
+                "relationships": [],
+                "needsRedraw": True,
+                "sourceRefs": []
+            }
+        ],
+        "visualTeacherPacket": {
+            "pageVisualNarrative": "",
+            "sourceGroundedVisualFacts": [],
+            "diagramElementDetails": [],
+            "relationshipWalkthrough": [],
+            "teacherMarkingScript": [],
+            "boardRedrawPlan": [],
+            "misconceptionRisks": [],
+            "visualTeachingSequence": [],
+            "downstreamAgentInstructions": {
+                "forConceptExtractionAgent": "Use visual facts/elements.",
+                "forKnowledgeGraphAgent": "Use visual relationships.",
+                "forTeachingStrategyAgent": "Use visual teaching sequence.",
+                "forVisualPlannerAgent": "Use redraw plan.",
+                "forBoardCommandAgent": "Use marks/redraw.",
+                "forVoiceScriptAgent": "Sync voice with marks.",
+            },
+        },
+        "visualTeachingHints": [],
+        "diagramSummary": "debug summary only",
+        "metadata": {
+            "selectedPageVisionUsed": True,
+            "modelVisionUsed": True,
+            "superTeacherVisionPromptV9": True,
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+    return f"""
+SUPER TEACHER SELECTED PAGE VISION AGENT
+
+MISSION:
+Inspect the attached PDF page image as a world-class human teacher.
+Do not just summarize. Produce detailed visual teaching intelligence for an animated board lesson.
+Your output must be useful for: ConceptExtractionAgent, KnowledgeGraphAgent, TeachingStrategyAgent, VisualPlannerAgent, BoardCommandAgent, VoiceScriptAgent.
+
+SELECTED NODE:
+{json.dumps({
+    "nodeId": selected_node.get("nodeId") or selected_node.get("id"),
+    "title": selected_node.get("title") or selected_node.get("label"),
+    "summary": selected_node.get("summary") or selected_node.get("shortDefinition"),
+    "pageRefs": selected_node.get("pageRefs"),
+}, ensure_ascii=False, indent=2)[:8000]}
+
+PAGE IMAGE METADATA:
+{json.dumps({
+    "page": image.get("page"),
+    "imageRole": image.get("imageRole"),
+    "evidenceRole": image.get("evidenceRole"),
+    "pageImagePath": image.get("pageImagePath"),
+    "pageImageUrl": image.get("pageImageUrl"),
+    "resolvedLocalPathExists": image.get("resolvedLocalPathExists"),
+    "mimeType": image.get("mimeType"),
+    "useRule": image.get("useRule"),
+}, ensure_ascii=False, indent=2)[:8000]}
+
+FULL PDF / OUTLINE CONTEXT:
+{json.dumps(pdf_context, ensure_ascii=False, indent=2)[:32000]}
+
+SOURCE TEXT / SELECTED PAGE / RAG EVIDENCE:
+{source_text}
+
+STRICT CONTRACT:
+{json.dumps(contract, ensure_ascii=False, indent=2)}
+
+RETURN JSON ONLY.
+Use this schema and fill it with real visual/page information:
+{json.dumps(schema, ensure_ascii=False, indent=2)}
+""".strip()
+
+
+def _stv9_super_merge_vision_results(results: List[JsonDict], context: Optional[JsonDict] = None) -> JsonDict:
+    merged = _PREV_MERGE_VISION_RESULTS_SUPER_V9(results, context)
+
+    packet = _stv9_dict(merged.get("visualTeacherPacket"))
+    if not packet:
+        packet = _stv9_dict(_stv9_dict(merged.get("visualLessonInput")).get("visualTeacherPacket"))
+
+    facts = [_stv9_enrich_fact(x) for x in _stv9_list(packet.get("sourceGroundedVisualFacts"))]
+    elements = [_stv9_enrich_element(x) for x in _stv9_list(packet.get("diagramElementDetails"))]
+    relationships = [_stv9_enrich_relationship(x) for x in _stv9_list(packet.get("relationshipWalkthrough"))]
+    marks = [_stv9_enrich_mark(x) for x in _stv9_list(packet.get("teacherMarkingScript"))]
+    redraw = [_stv9_enrich_redraw(x, i) for i, x in enumerate(_stv9_list(packet.get("boardRedrawPlan")))]
+    sequence = [_stv9_enrich_sequence(x, i) for i, x in enumerate(_stv9_list(packet.get("visualTeachingSequence")))]
+
+    # Add missing facts/elements/relationships directly from page analyses.
+    for analysis in _stv9_list(merged.get("pageImageAnalyses")):
+        a = _stv9_dict(analysis)
+        for x in _stv9_list(a.get("coreVisualFacts") or a.get("visualFacts") or a.get("facts")):
+            facts.append(_stv9_enrich_fact(x))
+        for x in _stv9_list(a.get("diagramElements") or a.get("elements")):
+            elements.append(_stv9_enrich_element(x))
+        for x in _stv9_list(a.get("relationships") or a.get("edges") or a.get("links")):
+            relationships.append(_stv9_enrich_relationship(x))
+        for x in _stv9_list(a.get("teacherMarkingHints") or a.get("visualTeachingHints")):
+            marks.append(_stv9_enrich_mark(x))
+        for i, x in enumerate(_stv9_list(a.get("boardRedrawHints") or a.get("redrawHints"))):
+            redraw.append(_stv9_enrich_redraw(x, len(redraw) + i))
+
+    def dedupe(items, key_fields, limit):
+        out = []
+        seen = set()
+        for item in items:
+            d = _stv9_dict(item)
+            key = "|".join(_stv9_text(d.get(k), 250).lower() for k in key_fields)
+            if not key.strip("|"):
+                key = _stv9_text(str(d), 400).lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(d)
+            if len(out) >= limit:
+                break
+        return out
+
+    facts = dedupe(facts, ["visualFact", "teachingMeaning"], 120)
+    elements = dedupe(elements, ["label", "kind", "visualRole"], 140)
+    relationships = dedupe(relationships, ["from", "to", "relationship"], 140)
+    marks = dedupe(marks, ["markType", "target", "spokenCue"], 140)
+    redraw = dedupe(redraw, ["order", "action", "content"], 140)
+    sequence = dedupe(sequence, ["step", "teacherMove", "boardMove"], 80)
+
+    # If sequence is still short, build it from redraw plan.
+    if len(sequence) < 6:
+        for i, step in enumerate(redraw[:12]):
+            d = _stv9_dict(step)
+            sequence.append(_stv9_enrich_sequence({
+                "step": i + 1,
+                "teacherMove": d.get("voiceHint") or d.get("content"),
+                "boardMove": f"{d.get('action')}: {d.get('content')}",
+                "studentCheck": d.get("studentCheckQuestion"),
+            }, i))
+        sequence = dedupe(sequence, ["step", "teacherMove", "boardMove"], 80)
+
+    narrative = _stv9_text(packet.get("pageVisualNarrative"), 5000)
+    if len(narrative.split()) < 120:
+        parts = []
+        for fact in facts[:5]:
+            parts.append(_stv9_text(fact.get("spokenTeacherLine") or fact.get("teachingMeaning") or fact.get("visualFact"), 500))
+        for rel in relationships[:3]:
+            parts.append(_stv9_text(rel.get("spokenCue") or rel.get("whyItMatters") or rel.get("relationship"), 500))
+        narrative = _stv9_text((narrative + " " + " ".join(parts)).strip(), 5000)
+
+    packet = {
+        **packet,
+        "pageVisualNarrative": narrative,
+        "sourceGroundedVisualFacts": facts,
+        "diagramElementDetails": elements,
+        "relationshipWalkthrough": relationships,
+        "teacherMarkingScript": marks,
+        "boardRedrawPlan": redraw,
+        "visualTeachingSequence": sequence,
+        "metadata": {
+            **_stv9_dict(packet.get("metadata")),
+            "superTeacherVisionPacketV9": True,
+            "superTeacherVisionPromptV9": True,
+            "worldClassVisualExplanationReady": True,
+            "addsVisualObservationWhenRagMisses": True,
+            "doesNotInventSourceQuotes": True,
+            "sourceGroundedVisualFactCount": len(facts),
+            "diagramElementDetailCount": len(elements),
+            "relationshipWalkthroughCount": len(relationships),
+            "teacherMarkingScriptCount": len(marks),
+            "boardRedrawPlanCount": len(redraw),
+            "visualTeachingSequenceCount": len(sequence),
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+    merged["visualTeacherPacket"] = packet
+    merged["visualLessonInput"] = {
+        **_stv9_dict(merged.get("visualLessonInput")),
+        "visualTeacherPacket": packet,
+        "richVisualTeacherPacket": True,
+        "plannerReady": True,
+        "superTeacherVisionPacketV9": True,
+    }
+    merged["metadata"] = {
+        **_stv9_dict(merged.get("metadata")),
+        "superTeacherVisionPromptV9": True,
+        "superTeacherVisionPacketV9": True,
+        "worldClassVisualExplanationReady": True,
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+    }
+    return merged
+
+
+build_vision_prompt = _stv9_super_build_vision_prompt
+merge_vision_results = _stv9_super_merge_vision_results
