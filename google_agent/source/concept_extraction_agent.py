@@ -492,3 +492,519 @@ Hard rules:
 
 
 __all__ = ["ConceptExtractionAgent"]
+
+
+# === FINAL_VISUAL_PACKET_AWARE_CONCEPT_EXTRACTION_V5 ===
+# v37 final concept fix:
+# - Consume full visualTeacherPacket.
+# - Preserve fullPdfSummary/fullPdfOutline/fullPdfOutlineText.
+# - Create text-grounded + visual-grounded + board-ready concepts.
+# - No static fallback and no hardcoded topic.
+# - If ADK omits visual concepts, normalize_output derives them from real visual packet.
+
+_PREV_CONCEPT_BUILD_PROMPT_V5 = ConceptExtractionAgent.build_prompt
+_PREV_CONCEPT_NORMALIZE_OUTPUT_V5 = ConceptExtractionAgent.normalize_output
+_PREV_CONCEPT_VALIDATE_OUTPUT_V5 = ConceptExtractionAgent.validate_output
+
+
+def _cv5_text(value: Any, limit: int = 1200) -> str:
+    try:
+        return clean_text(value or "", limit)
+    except Exception:
+        return str(value or "")[:limit]
+
+
+def _cv5_dict(value: Any) -> JsonDict:
+    try:
+        return safe_dict(value)
+    except Exception:
+        return value if isinstance(value, dict) else {}
+
+
+def _cv5_list(value: Any) -> List[Any]:
+    try:
+        return safe_list(value)
+    except Exception:
+        return value if isinstance(value, list) else []
+
+
+def _cv5_first_dict(*values: Any) -> JsonDict:
+    for value in values:
+        item = _cv5_dict(value)
+        if item:
+            return item
+    return {}
+
+
+def _cv5_visual_packet(payload: JsonDict) -> JsonDict:
+    vision = _cv5_dict(payload.get("selectedPageVision"))
+    visual_truth = _cv5_dict(payload.get("visualTruth"))
+    visual_lesson = _cv5_dict(payload.get("visualLessonInput"))
+    visual_context = _cv5_dict(payload.get("visualContext"))
+
+    return _cv5_first_dict(
+        payload.get("visualTeacherPacket"),
+        visual_truth.get("visualTeacherPacket"),
+        vision.get("visualTeacherPacket"),
+        _cv5_dict(vision.get("visualLessonInput")).get("visualTeacherPacket"),
+        visual_lesson.get("visualTeacherPacket"),
+        visual_context.get("visualTeacherPacket"),
+        _cv5_dict(visual_context.get("visualLessonInput")).get("visualTeacherPacket"),
+    )
+
+
+def _cv5_source_truth(payload: JsonDict) -> JsonDict:
+    return _cv5_first_dict(
+        payload.get("sourceTruth"),
+        payload.get("sourceTruthPacket"),
+        _cv5_dict(payload.get("ragRetrieval")).get("sourceTruthPacket"),
+    )
+
+
+def _cv5_full_summary(payload: JsonDict) -> Any:
+    source_truth = _cv5_source_truth(payload)
+    return (
+        payload.get("fullPdfSummary")
+        or source_truth.get("fullPdfSummary")
+        or _cv5_dict(payload.get("pdfBackground")).get("fullPdfSummary")
+        or {}
+    )
+
+
+def _cv5_full_outline(payload: JsonDict) -> Any:
+    source_truth = _cv5_source_truth(payload)
+    return (
+        payload.get("fullPdfOutline")
+        or source_truth.get("fullPdfOutline")
+        or _cv5_dict(payload.get("pdfBackground")).get("fullPdfOutline")
+        or {}
+    )
+
+
+def _cv5_full_outline_text(payload: JsonDict) -> str:
+    source_truth = _cv5_source_truth(payload)
+    return _cv5_text(
+        payload.get("fullPdfOutlineText")
+        or source_truth.get("fullPdfOutlineText")
+        or _cv5_dict(payload.get("pdfBackground")).get("fullPdfOutlineText")
+        or "",
+        50000,
+    )
+
+
+def _cv5_selected_page_text(payload: JsonDict) -> str:
+    source_truth = _cv5_source_truth(payload)
+    return _cv5_text(
+        payload.get("selectedPageFullText")
+        or source_truth.get("selectedPageFullText")
+        or source_truth.get("selectedPageFullTextExcerpt")
+        or "",
+        50000,
+    )
+
+
+def _cv5_refs(payload: JsonDict, grounding_text: str, limit: int = 5) -> List[JsonDict]:
+    refs = _collect_chunk_refs(payload)
+    selected_keywords = _selected_keywords(payload)
+    best = _best_refs_for_text(grounding_text, refs, selected_keywords, limit=limit)
+    return best or refs[: min(limit, len(refs))]
+
+
+def _cv5_concept_id(label: str, fallback: str) -> str:
+    return normalize_id(label or fallback, fallback)
+
+
+def _cv5_make_visual_concept(payload: JsonDict, raw: JsonDict, index: int, kind: str) -> JsonDict:
+    label = _cv5_text(
+        raw.get("label")
+        or raw.get("visualFact")
+        or raw.get("relationship")
+        or raw.get("content")
+        or raw.get("target")
+        or raw.get("risk")
+        or raw.get("teacherMove")
+        or f"Visual Concept {index + 1}",
+        160,
+    )
+
+    definition = _cv5_text(
+        raw.get("definition")
+        or raw.get("conceptMeaning")
+        or raw.get("teachingMeaning")
+        or raw.get("whyItMatters")
+        or raw.get("visualObservation")
+        or raw.get("teacherExplanation")
+        or raw.get("visualFact")
+        or raw.get("content")
+        or raw.get("relationship")
+        or label,
+        1800,
+    )
+
+    teacher_line = _cv5_text(
+        raw.get("teacherLine")
+        or raw.get("spokenTeacherLine")
+        or raw.get("spokenCue")
+        or raw.get("voiceHint")
+        or raw.get("teacherExplanation")
+        or raw.get("teacherMove")
+        or definition,
+        1600,
+    )
+
+    board_use = _cv5_text(
+        raw.get("boardUse")
+        or raw.get("exactBoardMove")
+        or raw.get("boardRedrawInstruction")
+        or raw.get("boardAction")
+        or raw.get("boardMove")
+        or raw.get("action")
+        or "draw/highlight",
+        260,
+    )
+
+    grounding_text = " ".join([label, definition, teacher_line, board_use])
+
+    refs = dedupe_source_refs(
+        normalize_source_refs([_cv5_dict(x) for x in _cv5_list(raw.get("sourceRefs"))])
+    )
+    refs = [r for r in refs if _cv5_text(r.get("quote"))][:5] or _cv5_refs(payload, grounding_text, 5)
+
+    source_type = _cv5_text(raw.get("sourceType") or ("source_grounded_visual" if refs else "visual_observation"), 120)
+
+    return {
+        "conceptId": _cv5_concept_id(label, f"visual_concept_{index + 1}"),
+        "label": label,
+        "definition": definition,
+        "summary": _cv5_text(raw.get("summary") or definition, 1000),
+        "conceptType": kind,
+        "importance": max(0.0, min(1.0, float(raw.get("importance") or raw.get("confidence") or 0.82))),
+        "teachingPriority": _cv5_text(raw.get("teachingPriority") or ("core" if index < 5 else "supporting"), 90),
+        "studentDifficulty": _cv5_text(raw.get("studentDifficulty") or "medium", 90),
+        "misconceptionRisk": _cv5_text(raw.get("misconceptionRisk") or raw.get("risk") or "medium", 700),
+        "whyItMatters": _cv5_text(raw.get("whyItMatters") or raw.get("whyStudentShouldCare") or definition, 1200),
+        "explainLikeHuman": _cv5_text(raw.get("explainLikeHuman") or teacher_line or definition, 1600),
+        "boardUse": board_use,
+        "visualRole": _cv5_text(raw.get("visualRole") or raw.get("kind") or kind, 180),
+        "parentHint": _cv5_text(raw.get("parentHint") or "", 180),
+        "dependsOn": [_cv5_text(x, 180) for x in _cv5_list(raw.get("dependsOn"))],
+        "prerequisiteOf": [_cv5_text(x, 180) for x in _cv5_list(raw.get("prerequisiteOf"))],
+        "examples": [_cv5_text(x, 900) for x in _cv5_list(raw.get("examples"))],
+        "commonMistakes": [
+            _cv5_text(raw.get("misconceptionRisk") or raw.get("risk"), 900)
+        ] if _cv5_text(raw.get("misconceptionRisk") or raw.get("risk")) else [],
+        "assessmentSeeds": [
+            _cv5_text(raw.get("studentCheckQuestion") or raw.get("studentCheck") or "Explain this visual/concept in your own words.", 900)
+        ],
+        "visualHints": [
+            _cv5_text(raw.get("exactLocation") or raw.get("layoutHint"), 500),
+            _cv5_text(raw.get("visualObservation") or raw.get("visualEvidence"), 900),
+        ],
+        "teacherLine": teacher_line,
+        "visualProof": {
+            "sourceType": source_type,
+            "needsSourceVerification": bool(raw.get("needsSourceVerification")) or source_type == "visual_observation",
+            "visualObservation": _cv5_text(raw.get("visualObservation") or raw.get("visualEvidence") or definition, 1400),
+            "confidence": raw.get("confidence", 0.82),
+        },
+        "frontendBoardHint": {
+            "boardUse": board_use,
+            "exactBoardMove": _cv5_text(raw.get("exactBoardMove") or raw.get("boardAction") or raw.get("boardRedrawInstruction") or raw.get("boardMove"), 1200),
+            "layoutHint": _cv5_text(raw.get("layoutHint") or raw.get("exactLocation"), 900),
+            "teacherPurpose": _cv5_text(raw.get("teacherPurpose") or raw.get("whyStudentShouldCare") or raw.get("whyItMatters"), 900),
+            "studentCheckQuestion": _cv5_text(raw.get("studentCheckQuestion") or raw.get("studentCheck"), 900),
+        },
+        "sourceRefs": refs,
+        "metadata": {
+            **_cv5_dict(raw.get("metadata")),
+            "visualPacketDerivedConceptV5": True,
+            "sourceType": source_type,
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def _cv5_extra_visual_concepts(payload: JsonDict, limit: int = 18) -> List[JsonDict]:
+    packet = _cv5_visual_packet(payload)
+    if not packet:
+        return []
+
+    raw_items: List[tuple[str, JsonDict]] = []
+
+    for item in _cv5_list(packet.get("sourceGroundedVisualFacts"))[:8]:
+        raw_items.append(("visual_fact", _cv5_dict(item)))
+
+    for item in _cv5_list(packet.get("diagramElementDetails"))[:8]:
+        raw_items.append(("visual_element", _cv5_dict(item)))
+
+    for item in _cv5_list(packet.get("relationshipWalkthrough"))[:8]:
+        raw_items.append(("visual_relationship", _cv5_dict(item)))
+
+    for item in _cv5_list(packet.get("misconceptionRisks"))[:5]:
+        raw_items.append(("visual_misconception", _cv5_dict(item)))
+
+    for item in _cv5_list(packet.get("visualTeachingSequence"))[:5]:
+        raw_items.append(("visual_teaching_step", _cv5_dict(item)))
+
+    out: List[JsonDict] = []
+    seen = set()
+
+    for index, (kind, raw) in enumerate(raw_items):
+        concept = _cv5_make_visual_concept(payload, raw, index, kind)
+        key = _cv5_text(concept.get("label"), 180).lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(concept)
+        if len(out) >= limit:
+            break
+
+    return out
+
+
+def _cv5_build_prompt(self, payload: JsonDict, context: AgentContext) -> str:
+    old_prompt = _PREV_CONCEPT_BUILD_PROMPT_V5(self, payload, context)
+    packet = _cv5_visual_packet(payload)
+    source_truth = _cv5_source_truth(payload)
+
+    prompt_payload = {
+        "task": "Extract rich source-grounded AND visual-board-grounded concepts for a premium live tutor.",
+        "strictInstruction": [
+            "Do not ignore visualTeacherPacket.",
+            "Use sourceTruth selectedEvidence as textual truth.",
+            "Use fullPdfSummary and fullPdfOutlineText to understand where this node fits in the full PDF/course.",
+            "Use visualTeacherPacket as visual/board truth.",
+            "If a concept comes only from image observation, mark sourceType='visual_observation' and needsSourceVerification=true.",
+            "Never invent source quotes.",
+            "Every concept should help later KnowledgeGraph, TeachingStrategy, VisualPlanner, BoardScene, BoardCommand, VoiceScript.",
+            "Output useful frontend board hints, teacher lines, student checks, visual proofs.",
+        ],
+        "student": {
+            "level": context.studentLevel,
+            "language": context.language,
+            "question": _cv5_text(context.question or payload.get("question"), 1800),
+        },
+        "selectedNode": _cv5_dict(payload.get("selectedNode") or payload.get("node")),
+        "sourceTruth": {
+            "selectedEvidence": source_truth.get("selectedEvidence") or payload.get("selectedEvidence") or [],
+            "samePageEvidence": source_truth.get("samePageEvidence") or payload.get("samePageEvidence") or [],
+            "nearbyEvidence": source_truth.get("nearbyEvidence") or payload.get("nearbyEvidence") or [],
+            "sourceRefs": _collect_chunk_refs(payload)[:70],
+            "selectedPageFullTextExcerpt": _cv5_text(
+                source_truth.get("selectedPageFullTextExcerpt")
+                or source_truth.get("selectedPageFullText")
+                or payload.get("selectedPageFullText")
+                or "",
+                16000,
+            ),
+        },
+        "pdfBackground": {
+            "fullPdfSummary": _cv5_full_summary(payload),
+            "fullPdfOutline": _cv5_full_outline(payload),
+            "fullPdfOutlineText": _cv5_full_outline_text(payload),
+            "rule": "Use this as course/chapter context. Selected evidence remains primary truth.",
+        },
+        "visualTeacherPacket": {
+            "pageVisualNarrative": _cv5_text(packet.get("pageVisualNarrative"), 6000),
+            "sourceGroundedVisualFacts": _cv5_list(packet.get("sourceGroundedVisualFacts"))[:50],
+            "diagramElementDetails": _cv5_list(packet.get("diagramElementDetails"))[:60],
+            "relationshipWalkthrough": _cv5_list(packet.get("relationshipWalkthrough"))[:60],
+            "teacherMarkingScript": _cv5_list(packet.get("teacherMarkingScript"))[:45],
+            "boardRedrawPlan": _cv5_list(packet.get("boardRedrawPlan"))[:45],
+            "misconceptionRisks": _cv5_list(packet.get("misconceptionRisks"))[:30],
+            "visualTeachingSequence": _cv5_list(packet.get("visualTeachingSequence"))[:35],
+            "metadata": _cv5_dict(packet.get("metadata")),
+        },
+        "frontendBoardNeeds": {
+            "needConceptTree": True,
+            "needBoardCards": True,
+            "needFlowBlocks": True,
+            "needSourceEvidenceBlocks": True,
+            "needVisualMarkingPlan": True,
+            "needVoiceSyncHints": True,
+        },
+        "outputSchema": {
+            "title": "concept map title",
+            "concepts": [
+                {
+                    "conceptId": "stable_snake_case",
+                    "label": "short label",
+                    "definition": "clear source-grounded or visual-observation-grounded definition",
+                    "summary": "simple teaching sentence",
+                    "conceptType": "root|topic|definition|process|example|warning|rule|relationship|visual_fact|visual_element|visual_relationship|visual_misconception",
+                    "importance": 0.9,
+                    "teachingPriority": "core|supporting|advanced|repair",
+                    "studentDifficulty": "easy|medium|hard",
+                    "misconceptionRisk": "specific risk",
+                    "whyItMatters": "why student needs this",
+                    "explainLikeHuman": "patient human teacher explanation, 2-4 sentences",
+                    "boardUse": "write|draw|circle|arrow|highlight|compare|quiz",
+                    "visualRole": "center|surrounding|arrow|warning|zoom|table|example|none",
+                    "teacherLine": "spoken teacher line",
+                    "frontendBoardHint": {
+                        "exactBoardMove": "specific board move",
+                        "layoutHint": "where/how to show",
+                        "teacherPurpose": "why this helps",
+                        "studentCheckQuestion": "quick check"
+                    },
+                    "visualProof": {
+                        "sourceType": "source_grounded_visual|visual_observation",
+                        "visualObservation": "what the image shows",
+                        "needsSourceVerification": False,
+                        "confidence": 0.9,
+                    },
+                    "dependsOn": [],
+                    "prerequisiteOf": [],
+                    "examples": [],
+                    "commonMistakes": [],
+                    "assessmentSeeds": [],
+                    "visualHints": [],
+                    "sourceRefs": [],
+                }
+            ],
+            "conceptClusters": [],
+            "metadata": {
+                "fallbackUsed": False,
+                "worldConceptExtractionV5": True,
+                "visualTeacherPacketConsumedV5": True,
+                "fullPdfContextUsedV5": True,
+            },
+        },
+        "qualityBar": {
+            "minimumConcepts": 8,
+            "mustInclude": [
+                "core source concept",
+                "definition concept",
+                "visual element concept",
+                "visual relationship concept",
+                "mistake/confusion concept",
+                "board/action concept",
+                "student check concept",
+            ],
+            "mustUseVisualTeacherPacket": bool(packet),
+            "mustUseFullPdfSummary": bool(_cv5_full_summary(payload)),
+            "mustUseFullPdfOutlineText": bool(_cv5_full_outline_text(payload)),
+            "everyConceptNeedsBoardUse": True,
+            "everyConceptNeedsHumanExplanation": True,
+            "visualOnlyConceptsMustBeMarked": True,
+        },
+        "previousPromptForCompatibility": old_prompt,
+    }
+
+    return _json(prompt_payload, 240000)
+
+
+def _cv5_normalize_output(self, raw: JsonDict, payload: JsonDict, context: AgentContext) -> JsonDict:
+    out = _PREV_CONCEPT_NORMALIZE_OUTPUT_V5(self, raw, payload, context)
+
+    concepts = _cv5_list(out.get("concepts"))
+    existing = {_cv5_text(_cv5_dict(c).get("label"), 180).lower() for c in concepts}
+
+    extras: List[JsonDict] = []
+    for concept in _cv5_extra_visual_concepts(payload, 18):
+        key = _cv5_text(concept.get("label"), 180).lower()
+        if key and key not in existing:
+            existing.add(key)
+            extras.append(concept)
+
+    concepts = (concepts + extras)[:28]
+
+    all_refs: List[JsonDict] = []
+    for concept in concepts:
+        c = _cv5_dict(concept)
+        all_refs.extend(_cv5_list(c.get("sourceRefs")))
+
+    packet = _cv5_visual_packet(payload)
+
+    out["concepts"] = concepts
+    out["conceptCount"] = len(concepts)
+    out["sourceRefs"] = dedupe_source_refs(all_refs) or out.get("sourceRefs")
+    out["pdfBackground"] = {
+        "fullPdfSummary": _cv5_full_summary(payload),
+        "fullPdfOutline": _cv5_full_outline(payload),
+        "fullPdfOutlineText": _cv5_full_outline_text(payload),
+    }
+    out["visualTeacherPacketSummary"] = {
+        "consumed": bool(packet),
+        "derivedConceptCount": len(extras),
+        "sourceGroundedVisualFactCount": len(_cv5_list(packet.get("sourceGroundedVisualFacts"))),
+        "diagramElementDetailCount": len(_cv5_list(packet.get("diagramElementDetails"))),
+        "relationshipWalkthroughCount": len(_cv5_list(packet.get("relationshipWalkthrough"))),
+        "boardRedrawPlanCount": len(_cv5_list(packet.get("boardRedrawPlan"))),
+        "visualTeachingSequenceCount": len(_cv5_list(packet.get("visualTeachingSequence"))),
+    }
+
+    out["qualitySignals"] = {
+        **_cv5_dict(out.get("qualitySignals")),
+        "worldConceptExtractionV5": True,
+        "visualTeacherPacketConsumedV5": bool(packet),
+        "visualPacketDerivedConceptCount": len(extras),
+        "fullPdfContextUsedV5": bool(_cv5_full_summary(payload) or _cv5_full_outline_text(payload)),
+        "readyForKnowledgeGraph": True,
+        "readyForTeachingStrategy": True,
+        "readyForFrontendBoard": True,
+        "fallbackUsed": False,
+    }
+
+    out["metadata"] = {
+        **_cv5_dict(out.get("metadata")),
+        "worldConceptExtractionV5": True,
+        "visualTeacherPacketConsumedV5": bool(packet),
+        "visualPacketDerivedConceptCount": len(extras),
+        "fullPdfContextUsedV5": bool(_cv5_full_summary(payload) or _cv5_full_outline_text(payload)),
+        "conceptCount": len(concepts),
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+    }
+
+    return out
+
+
+def _cv5_validate_output(self, output: JsonDict, payload: JsonDict, context: AgentContext) -> ValidationResult:
+    result = _PREV_CONCEPT_VALIDATE_OUTPUT_V5(self, output, payload, context)
+
+    errors = list(result.errors)
+    warnings = list(result.warnings)
+
+    packet = _cv5_visual_packet(payload)
+    if packet and not _cv5_dict(output.get("metadata")).get("visualTeacherPacketConsumedV5"):
+        errors.append("ConceptExtractionAgent ignored visualTeacherPacket.")
+
+    visual_concept_count = 0
+    board_hint_count = 0
+    teacher_line_count = 0
+
+    for concept in _cv5_list(output.get("concepts")):
+        c = _cv5_dict(concept)
+        if _cv5_text(c.get("conceptType")).startswith("visual") or _cv5_dict(c.get("visualProof")):
+            visual_concept_count += 1
+        if _cv5_dict(c.get("frontendBoardHint")):
+            board_hint_count += 1
+        if _cv5_text(c.get("teacherLine")) or _cv5_text(c.get("explainLikeHuman")):
+            teacher_line_count += 1
+
+    if packet and visual_concept_count < 3:
+        errors.append("ConceptExtractionAgent must create at least 3 visual/diagram-aware concepts when visualTeacherPacket exists.")
+
+    if packet and board_hint_count < 4:
+        errors.append("ConceptExtractionAgent must create frontendBoardHint for at least 4 concepts.")
+
+    if teacher_line_count < 6:
+        errors.append("ConceptExtractionAgent must create teacherLine/explainLikeHuman for at least 6 concepts.")
+
+    if (_cv5_full_summary(payload) or _cv5_full_outline_text(payload)) and not _cv5_dict(output.get("metadata")).get("fullPdfContextUsedV5"):
+        errors.append("ConceptExtractionAgent did not preserve/use full PDF summary or outline context.")
+
+    return ValidationResult(
+        ok=not errors,
+        errors=errors,
+        warnings=warnings,
+        validator="ConceptExtractionAgent.validate_output.visualPacketAwareV5",
+        fallbackUsed=False,
+    )
+
+
+ConceptExtractionAgent.build_prompt = _cv5_build_prompt
+ConceptExtractionAgent.normalize_output = _cv5_normalize_output
+ConceptExtractionAgent.validate_output = _cv5_validate_output

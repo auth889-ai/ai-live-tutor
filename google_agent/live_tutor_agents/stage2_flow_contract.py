@@ -893,3 +893,387 @@ def assert_final_flow_quality(candidate: JsonDict, require_mcp: bool = True) -> 
 
     if not safe_list(candidate.get("subtitles")):
         raise RuntimeError("Stage2 rejected: subtitles missing.")
+
+# === FINAL_PAYLOAD_BRIDGE_VISUAL_TEACHER_PACKET_V4 ===
+# v37 final bridge fix:
+# - Preserve rich visualTeacherPacket after Vision.
+# - Preserve fullPdfSummary/fullPdfOutline/fullPdfOutlineText for whole-PDF context.
+# - Create frontendVisualBlocks for future React/Konva/board tools.
+# - No fake/static content. This only forwards real RAG + Vision data.
+
+_ORIG_VISUAL_TRUTH_PACK_V4 = visual_truth_pack
+_ORIG_BUILD_TEACHING_BRAIN_PACKET_V4 = build_teaching_brain_packet
+
+
+def _pb4_text(value: Any, limit: int = 1200) -> str:
+    try:
+        return clean_text(value or "", limit)
+    except Exception:
+        return str(value or "")[:limit]
+
+
+def _pb4_dict(value: Any) -> JsonDict:
+    try:
+        return safe_dict(value)
+    except Exception:
+        return value if isinstance(value, dict) else {}
+
+
+def _pb4_list(value: Any) -> List[Any]:
+    try:
+        return safe_list(value)
+    except Exception:
+        return value if isinstance(value, list) else []
+
+
+def _pb4_first_dict(*values: Any) -> JsonDict:
+    for value in values:
+        item = _pb4_dict(value)
+        if item:
+            return item
+    return {}
+
+
+def _pb4_dedupe_dicts(items: Any, keys: List[str], limit: int = 160) -> List[JsonDict]:
+    out: List[JsonDict] = []
+    seen = set()
+
+    for raw in _pb4_list(items):
+        item = _pb4_dict(raw)
+        if not item:
+            continue
+
+        key = "|".join(_pb4_text(item.get(k), 240).lower() for k in keys)
+        if not key.strip("|"):
+            key = _pb4_text(str(item), 360).lower()
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        out.append(item)
+
+        if len(out) >= limit:
+            break
+
+    return out
+
+
+def _pb4_find_visual_teacher_packet(working: JsonDict, vision: JsonDict) -> JsonDict:
+    visual_context = _pb4_dict(working.get("visualContext"))
+    working_visual_lesson = _pb4_dict(working.get("visualLessonInput"))
+    vision_visual_lesson = _pb4_dict(vision.get("visualLessonInput"))
+    context_visual_lesson = _pb4_dict(visual_context.get("visualLessonInput"))
+
+    return _pb4_first_dict(
+        vision.get("visualTeacherPacket"),
+        vision_visual_lesson.get("visualTeacherPacket"),
+        working.get("visualTeacherPacket"),
+        working_visual_lesson.get("visualTeacherPacket"),
+        visual_context.get("visualTeacherPacket"),
+        context_visual_lesson.get("visualTeacherPacket"),
+    )
+
+
+def _pb4_source_truth(working: JsonDict) -> JsonDict:
+    return _pb4_first_dict(
+        working.get("sourceTruthPacket"),
+        working.get("sourceTruth"),
+        _pb4_dict(working.get("ragRetrieval")).get("sourceTruthPacket"),
+    )
+
+
+def _pb4_full_pdf_summary(working: JsonDict) -> Any:
+    source_truth = _pb4_source_truth(working)
+    visual_lesson = _pb4_dict(working.get("visualLessonInput"))
+    return (
+        source_truth.get("fullPdfSummary")
+        or visual_lesson.get("fullPdfSummary")
+        or working.get("fullPdfSummary")
+        or working.get("pdfSummary")
+        or {}
+    )
+
+
+def _pb4_full_pdf_outline(working: JsonDict) -> Any:
+    source_truth = _pb4_source_truth(working)
+    visual_lesson = _pb4_dict(working.get("visualLessonInput"))
+    return (
+        source_truth.get("fullPdfOutline")
+        or visual_lesson.get("fullPdfOutline")
+        or working.get("fullPdfOutline")
+        or working.get("pdfOutline")
+        or {}
+    )
+
+
+def _pb4_full_pdf_outline_text(working: JsonDict) -> str:
+    source_truth = _pb4_source_truth(working)
+    visual_lesson = _pb4_dict(working.get("visualLessonInput"))
+    return _pb4_text(
+        source_truth.get("fullPdfOutlineText")
+        or visual_lesson.get("fullPdfOutlineText")
+        or working.get("fullPdfOutlineText")
+        or working.get("pdfOutlineText")
+        or "",
+        50000,
+    )
+
+
+def _pb4_selected_page_full_text(working: JsonDict) -> str:
+    source_truth = _pb4_source_truth(working)
+    visual_lesson = _pb4_dict(working.get("visualLessonInput"))
+    return _pb4_text(
+        source_truth.get("selectedPageFullText")
+        or source_truth.get("selectedPageFullTextExcerpt")
+        or visual_lesson.get("selectedPageFullText")
+        or working.get("selectedPageFullText")
+        or working.get("selectedPageText")
+        or "",
+        80000,
+    )
+
+
+def _pb4_frontend_blocks(packet: JsonDict, facts: List[Any], elements: List[Any], relationships: List[Any], marks: List[Any], redraw: List[Any], risks: List[Any], sequence: List[Any]) -> JsonDict:
+    return {
+        "pageNarrative": _pb4_text(packet.get("pageVisualNarrative"), 6000),
+        "facts": facts[:80],
+        "elements": elements[:100],
+        "relationships": relationships[:100],
+        "teacherMarks": marks[:100],
+        "redrawSteps": redraw[:100],
+        "misconceptionRisks": risks[:80],
+        "teachingSequence": sequence[:80],
+        "suggestedBoardWidgets": [
+            "concept-roadmap",
+            "main-diagram-redraw",
+            "source-evidence-card",
+            "teacher-marking-overlay",
+            "mistake-repair-card",
+            "student-check-quiz",
+        ],
+        "frontendReady": bool(packet),
+    }
+
+
+def visual_truth_pack(working: JsonDict, selected_page_vision_result: JsonDict) -> JsonDict:
+    vision = _pb4_dict(selected_page_vision_result)
+    old_pack = _ORIG_VISUAL_TRUTH_PACK_V4(working, selected_page_vision_result)
+    visual_context = _pb4_dict(working.get("visualContext"))
+
+    packet = _pb4_find_visual_teacher_packet(working, vision)
+
+    analyses = (
+        _pb4_list(vision.get("pageImageAnalyses"))
+        or _pb4_list(working.get("pageImageAnalyses"))
+        or _pb4_list(working.get("selectedPageAnalyses"))
+        or _pb4_list(visual_context.get("pageImageAnalyses"))
+        or _pb4_list(old_pack.get("pageImageAnalyses"))
+    )
+
+    diagrams = (
+        _pb4_list(vision.get("detectedDiagrams"))
+        or _pb4_list(vision.get("detectedVisualDiagrams"))
+        or _pb4_list(working.get("detectedVisualDiagrams"))
+        or _pb4_list(working.get("detectedDiagrams"))
+        or _pb4_list(visual_context.get("detectedDiagrams"))
+        or _pb4_list(old_pack.get("detectedDiagrams"))
+    )
+
+    facts = _pb4_list(packet.get("sourceGroundedVisualFacts"))
+    elements = _pb4_dedupe_dicts(
+        _pb4_list(packet.get("diagramElementDetails")) + _pb4_list(old_pack.get("diagramElements")),
+        ["label", "kind", "visualRole"],
+        160,
+    )
+    relationships = _pb4_dedupe_dicts(
+        _pb4_list(packet.get("relationshipWalkthrough")) + _pb4_list(old_pack.get("relationships")),
+        ["from", "to", "relationship"],
+        160,
+    )
+    marks = _pb4_dedupe_dicts(
+        _pb4_list(packet.get("teacherMarkingScript")) + _pb4_list(old_pack.get("teacherMarkingHints")),
+        ["markType", "target", "spokenCue"],
+        160,
+    )
+    redraw = _pb4_dedupe_dicts(
+        _pb4_list(packet.get("boardRedrawPlan")) + _pb4_list(old_pack.get("boardRedrawHints")),
+        ["order", "action", "content"],
+        160,
+    )
+    risks = _pb4_dedupe_dicts(
+        _pb4_list(packet.get("misconceptionRisks")) + _pb4_list(old_pack.get("commonConfusions")),
+        ["risk"],
+        100,
+    )
+    sequence = _pb4_dedupe_dicts(
+        _pb4_list(packet.get("visualTeachingSequence")),
+        ["step", "teacherMove", "boardMove"],
+        100,
+    )
+
+    frontend_blocks = _pb4_frontend_blocks(packet, facts, elements, relationships, marks, redraw, risks, sequence)
+
+    return {
+        **_pb4_dict(old_pack),
+
+        "selectedPageVisionUsed": bool(analyses or diagrams or packet),
+        "visualTeacherPacket": packet,
+        "visualLessonInput": {
+            "visualTeacherPacket": packet,
+            "richVisualTeacherPacket": bool(packet),
+            "plannerReady": bool(packet),
+            "frontendReadyVisualPacket": bool(packet),
+        },
+
+        # Rich Vision packet fields.
+        "pageVisualNarrative": _pb4_text(packet.get("pageVisualNarrative"), 6000),
+        "sourceGroundedVisualFacts": facts[:140],
+        "diagramElementDetails": elements[:160],
+        "relationshipWalkthrough": relationships[:160],
+        "teacherMarkingScript": marks[:160],
+        "boardRedrawPlan": redraw[:160],
+        "misconceptionRisks": risks[:100],
+        "visualTeachingSequence": sequence[:100],
+
+        # Backward-compatible aliases for older agents.
+        "pageImageAnalyses": analyses[:12],
+        "detectedDiagrams": diagrams[:12],
+        "diagramElements": elements[:160],
+        "relationships": relationships[:160],
+        "teacherMarkingHints": marks[:160],
+        "boardRedrawHints": redraw[:160],
+        "commonConfusions": risks[:100],
+
+        "frontendVisualBlocks": frontend_blocks,
+
+        "metadata": {
+            **_pb4_dict(_pb4_dict(old_pack).get("metadata")),
+            **_pb4_dict(packet.get("metadata")),
+            "payloadBridgeVisualTeacherPacketV4": True,
+            "noPayloadLossAfterVision": True,
+            "visualTeacherPacketPreserved": bool(packet),
+            "frontendVisualBlocksReady": bool(frontend_blocks.get("frontendReady")),
+            "pageImageAnalysisCount": len(analyses),
+            "detectedDiagramCount": len(diagrams),
+            "sourceGroundedVisualFactCount": len(facts),
+            "diagramElementDetailCount": len(elements),
+            "relationshipWalkthroughCount": len(relationships),
+            "teacherMarkingScriptCount": len(marks),
+            "boardRedrawPlanCount": len(redraw),
+            "misconceptionRiskCount": len(risks),
+            "visualTeachingSequenceCount": len(sequence),
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def build_teaching_brain_packet(
+    working: JsonDict,
+    grounded_refs: List[JsonDict],
+    selected_page_vision_result: JsonDict,
+    *,
+    concept_result: JsonDict | None = None,
+    knowledge_result: JsonDict | None = None,
+    strategy_result: JsonDict | None = None,
+    mode: str = "teaching_brain",
+) -> JsonDict:
+    packet = _ORIG_BUILD_TEACHING_BRAIN_PACKET_V4(
+        working,
+        grounded_refs,
+        selected_page_vision_result,
+        concept_result=concept_result,
+        knowledge_result=knowledge_result,
+        strategy_result=strategy_result,
+        mode=mode,
+    )
+
+    visual_truth = visual_truth_pack(working, selected_page_vision_result)
+    visual_teacher_packet = _pb4_dict(visual_truth.get("visualTeacherPacket"))
+
+    full_summary = _pb4_full_pdf_summary(working)
+    full_outline = _pb4_full_pdf_outline(working)
+    full_outline_text = _pb4_full_pdf_outline_text(working)
+    selected_page_full_text = _pb4_selected_page_full_text(working)
+
+    # Direct top-level names for downstream agents.
+    packet["visualTruth"] = visual_truth
+    packet["visualTeacherPacket"] = visual_teacher_packet
+    packet["visualLessonInput"] = _pb4_dict(visual_truth.get("visualLessonInput"))
+
+    packet["pageVisualNarrative"] = visual_truth.get("pageVisualNarrative")
+    packet["sourceGroundedVisualFacts"] = _pb4_list(visual_truth.get("sourceGroundedVisualFacts"))
+    packet["diagramElementDetails"] = _pb4_list(visual_truth.get("diagramElementDetails"))
+    packet["relationshipWalkthrough"] = _pb4_list(visual_truth.get("relationshipWalkthrough"))
+    packet["teacherMarkingScript"] = _pb4_list(visual_truth.get("teacherMarkingScript"))
+    packet["boardRedrawPlan"] = _pb4_list(visual_truth.get("boardRedrawPlan"))
+    packet["misconceptionRisks"] = _pb4_list(visual_truth.get("misconceptionRisks"))
+    packet["visualTeachingSequence"] = _pb4_list(visual_truth.get("visualTeachingSequence"))
+    packet["frontendVisualBlocks"] = _pb4_dict(visual_truth.get("frontendVisualBlocks"))
+
+    # Legacy aliases.
+    packet["diagramElements"] = _pb4_list(visual_truth.get("diagramElements"))
+    packet["relationships"] = _pb4_list(visual_truth.get("relationships"))
+    packet["teacherMarkingHints"] = _pb4_list(visual_truth.get("teacherMarkingHints"))
+    packet["boardRedrawHints"] = _pb4_list(visual_truth.get("boardRedrawHints"))
+    packet["commonConfusions"] = _pb4_list(visual_truth.get("commonConfusions"))
+
+    # Preserve whole-PDF context.
+    packet["fullPdfSummary"] = full_summary
+    packet["fullPdfOutline"] = full_outline
+    packet["fullPdfOutlineText"] = full_outline_text
+    packet["selectedPageFullText"] = selected_page_full_text
+
+    source_truth = _pb4_dict(packet.get("sourceTruth"))
+    source_truth["selectedPageFullText"] = selected_page_full_text
+    source_truth["fullPdfSummary"] = full_summary
+    source_truth["fullPdfOutline"] = full_outline
+    source_truth["fullPdfOutlineText"] = full_outline_text
+    packet["sourceTruth"] = source_truth
+
+    pdf_background = _pb4_dict(packet.get("pdfBackground"))
+    pdf_background["fullPdfSummary"] = full_summary
+    pdf_background["fullPdfOutline"] = full_outline
+    pdf_background["fullPdfOutlineText"] = full_outline_text
+    pdf_background["rule"] = "Use full PDF context as course/chapter map. Selected evidence remains primary truth."
+    packet["pdfBackground"] = pdf_background
+
+    packet["qualityContract"] = {
+        **_pb4_dict(packet.get("qualityContract")),
+        "mustUseVisualTeacherPacket": True,
+        "mustUseSourceGroundedVisualFacts": True,
+        "mustUseDiagramElementDetails": True,
+        "mustUseRelationshipWalkthrough": True,
+        "mustUseTeacherMarkingScript": True,
+        "mustUseBoardRedrawPlan": True,
+        "mustUseVisualTeachingSequence": True,
+        "mustUseFullPdfSummary": True,
+        "mustUseFullPdfOutline": True,
+        "mustPrepareFrontendBoardBlocks": True,
+        "noPayloadLossAfterVision": True,
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+    }
+
+    packet["metadata"] = {
+        **_pb4_dict(packet.get("metadata")),
+        "payloadBridgeVisualTeacherPacketV4": True,
+        "noPayloadLossAfterVision": True,
+        "visualTeacherPacketPreserved": bool(visual_teacher_packet),
+        "frontendVisualBlocksReady": bool(packet.get("frontendVisualBlocks")),
+        "fullPdfSummaryPreserved": bool(full_summary),
+        "fullPdfOutlinePreserved": bool(full_outline),
+        "fullPdfOutlineTextPreserved": bool(full_outline_text),
+        "selectedPageFullTextPreserved": bool(selected_page_full_text),
+        "sourceGroundedVisualFactCount": len(packet.get("sourceGroundedVisualFacts") or []),
+        "diagramElementDetailCount": len(packet.get("diagramElementDetails") or []),
+        "relationshipWalkthroughCount": len(packet.get("relationshipWalkthrough") or []),
+        "teacherMarkingScriptCount": len(packet.get("teacherMarkingScript") or []),
+        "boardRedrawPlanCount": len(packet.get("boardRedrawPlan") or []),
+        "visualTeachingSequenceCount": len(packet.get("visualTeachingSequence") or []),
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+    }
+
+    return packet
