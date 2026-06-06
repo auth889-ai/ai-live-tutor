@@ -1840,6 +1840,43 @@ async def run_teach_node_pipeline(payload: JsonDict) -> JsonDict:
     working["conceptExtraction"] = concept_result
     working["concepts"] = safe_list(concept_result.get("concepts") or concept_result.get("keyConcepts"))
 
+
+    # === STOP_AFTER_CONCEPT_EXTRACTION_CHECKPOINT_V2 ===
+    # Lets us test ConceptExtractionAgent alone before KnowledgeGraphAgent.
+    # Without this checkpoint, stopAfterConceptExtraction request continues into KG,
+    # and KG timeout hides the concept result.
+    if bool(working.get("stopAfterConceptExtraction")):
+        return checkpoint_response(
+            "concept_extraction",
+            working,
+            trace,
+            mission_trace,
+            selected_page_vision_result,
+            extra_result={
+                "conceptExtraction": concept_result,
+                "concepts": safe_list(concept_result.get("concepts") or concept_result.get("keyConcepts")),
+            },
+            extra_metadata={
+                "stoppedAfterConceptExtraction": True,
+                "conceptCount": len(safe_list(concept_result.get("concepts") or concept_result.get("keyConcepts"))),
+                "visualTeacherPacketConsumedV5": bool(
+                    safe_dict(concept_result.get("metadata")).get("visualTeacherPacketConsumedV5")
+                    or safe_dict(concept_result.get("metadata")).get("visualTeacherPacketConsumedV4")
+                    or safe_dict(concept_result.get("metadata")).get("visualTeacherPacketConsumedV3")
+                ),
+                "fullPdfContextUsedV5": bool(
+                    safe_dict(concept_result.get("metadata")).get("fullPdfContextUsedV5")
+                    or safe_dict(concept_result.get("metadata")).get("fullPdfContextUsedV4")
+                    or safe_dict(concept_result.get("metadata")).get("fullPdfContextUsedV3")
+                ),
+                "readyForFrontendBoard": bool(
+                    safe_dict(concept_result.get("qualitySignals")).get("readyForFrontendBoard")
+                ),
+                "fallbackUsed": False,
+                "usedSmartFallback": False,
+            },
+        )
+
     # === STOP_AFTER_CONCEPT_EXTRACTION_CHECKPOINT_V1 ===
     # Debug checkpoint for testing whether rich RAG + Vision payload is consumed by ConceptExtractionAgent.
     # Without this, request flag stopAfterConceptExtraction continues into KG/Teaching,
