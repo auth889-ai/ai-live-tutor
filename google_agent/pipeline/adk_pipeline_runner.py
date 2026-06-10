@@ -14,6 +14,7 @@ No single timeout kills the pipeline.
 """
 from __future__ import annotations
 import asyncio
+import sys
 from typing import Any, List
 
 try:
@@ -61,7 +62,7 @@ CONTENT = {
 
 
 async def _run_safe(agent_name: str, payload: dict, timeout_ms: int) -> dict:
-    """Run agent with timeout — never raises, always returns dict."""
+    """Run agent with timeout — never raises, always returns dict. Logs failures to stderr."""
     start = now_ms()
     try:
         p = {**payload, "agentTimeoutsMs": {**safe_dict(payload.get("agentTimeoutsMs")), agent_name: timeout_ms}}
@@ -69,9 +70,11 @@ async def _run_safe(agent_name: str, payload: dict, timeout_ms: int) -> dict:
         result.setdefault("metadata", {})["runtimeMs"] = now_ms() - start
         return safe_dict(result)
     except Exception as exc:
+        err_msg = f"{type(exc).__name__}: {str(exc)[:300]}"
+        print(f"[AGENT_ERROR] {agent_name} FAILED — {err_msg}", file=sys.stderr)
         return {
             "ok": False, "agentName": agent_name,
-            "errors": [f"{agent_name}: {type(exc).__name__}: {str(exc)[:200]}"],
+            "errors": [f"{agent_name}: {err_msg}"],
             "result": {}, "metadata": {"runtimeMs": now_ms() - start, "timedOut": "TimeoutError" in type(exc).__name__},
         }
 
@@ -433,3 +436,50 @@ async def run_adk_pipeline(payload: dict) -> dict:
             "mcpToolCallCount": partner_power["toolCallCount"],
         },
     }
+
+
+async def run_pipeline_with_direct_fallback(payload: dict) -> dict:
+    """
+    Primary entry point for Node.js bridge.
+    Tries direct_gemini_pipeline first (always works).
+    Falls back to ADK pipeline only if direct produces 0 screens.
+    """
+    try:
+        from .direct_gemini_pipeline import run_direct_pipeline
+    except ImportError:
+        try:
+            from google_agent.pipeline.direct_gemini_pipeline import run_direct_pipeline
+        except ImportError:
+            run_direct_pipeline = None
+
+    # ── PRIMARY: direct Gemini pipeline ──────────────────────────────────────
+    if run_direct_pipeline is not None:
+        try:
+            direct_result = run_direct_pipeline(payload)
+            screens  = len(direct_result.get("boardScreens") or [])
+            commands = len(direct_result.get("boardCommands") or [])
+            if screens >= 10 and commands >= 20:
+                print(f"[pipeline] direct_gemini succeeded screens={screens} commands={commands}", file=sys.stderr)
+                direct_result.setdefault("metadata", {})["pipeline"] = "direct_gemini_primary"
+                return direct_result
+            else:
+                print(f"[pipeline] direct_gemini low output screens={screens} commands={commands} — trying ADK", file=sys.stderr)
+        except Exception as exc:
+            print(f"[pipeline] direct_gemini FAILED: {exc} — falling back to ADK", file=sys.stderr)
+
+    # ── FALLBACK: ADK 28-agent pipeline ──────────────────────────────────────
+    try:
+        result = await run_adk_pipeline(payload)
+        screens  = len(result.get("boardScreens") or [])
+        commands = len(result.get("boardCommands") or [])
+        print(f"[pipeline] ADK pipeline screens={screens} commands={commands}", file=sys.stderr)
+        result.setdefault("metadata", {})["pipeline"] = "adk_28_agents"
+        return result
+    except Exception as exc:
+        print(f"[pipeline] ADK pipeline FAILED: {exc}", file=sys.stderr)
+        # Last resort: minimal recovery via direct pipeline
+        if run_direct_pipeline is not None:
+            result = run_direct_pipeline(payload)
+            result.setdefault("metadata", {})["pipeline"] = "direct_gemini_last_resort"
+            return result
+        raise

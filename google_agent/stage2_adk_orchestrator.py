@@ -22,7 +22,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from google_agent.live_tutor_agents.contracts import safe_dict, safe_list, clean_text
-from google_agent.pipeline.adk_pipeline_runner import run_adk_pipeline
+from google_agent.pipeline.adk_pipeline_runner import run_pipeline_with_direct_fallback
 
 
 async def run_orchestrator(payload: dict) -> dict:
@@ -40,7 +40,7 @@ async def run_orchestrator(payload: dict) -> dict:
         }
 
     if mode in ("teach_node_pipeline", "teach_node", "teachNode"):
-        return await run_adk_pipeline(payload)
+        return await run_pipeline_with_direct_fallback(payload)
 
     if mode in ("interrupt_repair_pipeline", "interrupt_repair"):
         from google_agent.live.voice.interruption_repair import build_repair_segment

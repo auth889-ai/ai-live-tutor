@@ -67,10 +67,40 @@ function loadEnvHard() {
 loadEnvHard();
 
 const app = require("./app");
+const mongoose = require("mongoose");
 
 const PORT = Number(process.env.PORT || 3000);
 
-app.listen(PORT, () => {
-  console.log(`[AI Live Tutor Rebuild] server running on http://localhost:${PORT}`);
-  console.log(`[Agent 1 health] http://localhost:${PORT}/api/google-agent/live-tutor/agent1/health`);
+async function startServer() {
+  // Connect MongoDB
+  const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+  if (mongoUri) {
+    try {
+      await mongoose.connect(mongoUri, { dbName: process.env.MONGODB_DATABASE || "live-tutor" });
+      console.log("[server.js] MongoDB connected");
+    } catch (err) {
+      console.error("[server.js] MongoDB connection failed:", err.message);
+    }
+  }
+
+  // Start BullMQ worker for background lesson generation
+  try {
+    const bgJob = require("./services/googleAgent/stage2/stage2BackgroundJob.service");
+    bgJob.startWorker();
+    console.log("[server.js] BullMQ lesson worker started");
+  } catch (err) {
+    console.warn("[server.js] BullMQ worker failed to start (Redis may be offline):", err.message);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`[AI Live Tutor Rebuild] server running on http://localhost:${PORT}`);
+    console.log(`[Agent 1 health]   http://localhost:${PORT}/api/google-agent/live-tutor/agent1/health`);
+    console.log(`[Stage2 health]    http://localhost:${PORT}/api/google-agent/live-tutor/stage2/health`);
+    console.log(`[Start lesson]     POST http://localhost:${PORT}/api/google-agent/live-tutor/stage2/sessions/start`);
+  });
+}
+
+startServer().catch((err) => {
+  console.error("[server.js] Fatal startup error:", err);
+  process.exit(1);
 });

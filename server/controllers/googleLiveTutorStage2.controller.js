@@ -19,6 +19,8 @@ const googleTtsVoiceService = require("../services/googleAgent/googleTtsVoice.se
 const { buildSourceContext } = require("../services/googleAgent/sourceContext/sourceContextPipeline");
 const { teachNodeWithAdkPipeline } = require("../services/googleAgent/stage2/stage2LessonOrchestrator");
 const { buildPowerToolsReport } = require("../services/googleAgent/stage2/stage2PowerToolsConfig");
+const persistence = require("../services/googleAgent/stage2/stage2SessionPersistence");
+const backgroundJob = require("../services/googleAgent/stage2/stage2BackgroundJob.service");
 
 function safeString(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
@@ -442,6 +444,156 @@ async function getSession(req, res) {
   }
 }
 
+// ── New non-blocking session handlers ────────────────────────────────────────
+
+async function startSession(req, res) {
+  try {
+    const context = getOwnerContext(req);
+    const body    = safeObject(req.body);
+
+    const nodeId     = safeString(body.nodeId || safeObject(body.selectedNode).nodeId);
+    const nodeTitle  = safeString(body.nodeTitle || safeObject(body.selectedNode).title || safeObject(body.selectedNode).label);
+    const resourceId = safeString(body.resourceId);
+    const treeId     = safeString(body.treeId);
+
+    if (!resourceId && !nodeId) {
+      return res.status(400).json({ ok: false, error: "resourceId and nodeId are required" });
+    }
+
+    // Create session record immediately
+    const session = await persistence.createSession({
+      ownerKey:     context.ownerKey,
+      offlineUserId: context.offlineUserId,
+      deviceId:     context.deviceId,
+      resourceId,
+      treeId,
+      nodeId,
+      nodeTitle,
+      selectedNode: safeObject(body.selectedNode),
+      title: safeString(body.title) || `Lesson: ${nodeTitle || nodeId}`,
+    });
+
+    // Kick off background job
+    let jobQueued = false;
+    try {
+      await backgroundJob.enqueueLesson({
+        sessionId:    session.sessionId,
+        ownerKey:     context.ownerKey,
+        resourceId,
+        treeId,
+        nodeId,
+        nodeTitle,
+        selectedNode: safeObject(body.selectedNode),
+        body,
+      });
+      jobQueued = true;
+    } catch (queueErr) {
+      console.error("[startSession] BullMQ enqueue failed:", queueErr.message);
+    }
+
+    res.status(201).json({
+      ok:        true,
+      sessionId: session.sessionId,
+      status:    "created",
+      jobQueued,
+      streamUrl: `/api/google-agent/live-tutor/stage2/sessions/${session.sessionId}/stream`,
+      statusUrl: `/api/google-agent/live-tutor/stage2/sessions/${session.sessionId}/status`,
+      metadata:  { fallbackUsed: false },
+    });
+  } catch (error) {
+    sendError(res, error, { endpoint: "startSession" });
+  }
+}
+
+async function getSessionStatus(req, res) {
+  try {
+    const sessionId = safeString(req.params.sessionId);
+    const statusDoc = await persistence.getSessionStatus(sessionId);
+
+    if (!statusDoc) {
+      return res.status(404).json({ ok: false, error: "Session not found", sessionId });
+    }
+
+    let jobStatus = null;
+    try {
+      jobStatus = await backgroundJob.getJobStatus(sessionId);
+    } catch (_) {}
+
+    res.status(200).json({
+      ok: true,
+      sessionId,
+      status:   statusDoc.status,
+      counts:   statusDoc.counts || {},
+      nodeId:   statusDoc.nodeId,
+      nodeTitle: statusDoc.nodeTitle,
+      resourceId: statusDoc.resourceId,
+      lastSegmentIndex: (statusDoc.metadata || {}).lastSegmentIndex,
+      jobStatus,
+      metadata: { fallbackUsed: false },
+    });
+  } catch (error) {
+    sendError(res, error, { endpoint: "getSessionStatus", sessionId: req.params.sessionId });
+  }
+}
+
+function streamSession(req, res) {
+  const sessionId = safeString(req.params.sessionId);
+
+  res.setHeader("Content-Type",  "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection",    "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+
+  // Register this response for SSE events from the worker
+  backgroundJob.sseRegister(sessionId, res);
+
+  // Send initial heartbeat
+  res.write(`event: connected\ndata: ${JSON.stringify({ sessionId, ts: Date.now() })}\n\n`);
+
+  // Heartbeat every 25s to keep connection alive
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(`:heartbeat ${Date.now()}\n\n`);
+    } catch (_) {
+      clearInterval(heartbeat);
+    }
+  }, 25000);
+
+  req.on("close", () => {
+    clearInterval(heartbeat);
+    backgroundJob.sseUnregister(sessionId, res);
+  });
+}
+
+async function getBook(req, res) {
+  try {
+    const context   = getOwnerContext(req);
+    const sessionId = safeString(req.params.sessionId);
+
+    const session = await persistence.loadSessionWithArtifacts(sessionId, context.ownerKey);
+    if (!session) {
+      return res.status(404).json({ ok: false, error: "Session not found", sessionId });
+    }
+
+    res.status(200).json({
+      ok:      true,
+      sessionId,
+      title:   session.title || session.nodeTitle,
+      nodeId:  session.nodeId,
+      status:  session.status,
+      boardScreens:  session.boardScreens  || [],
+      boardCommands: session.boardCommands || [],
+      voiceScript:   session.voiceScript   || [],
+      subtitles:     session.subtitles     || [],
+      counts:  session.counts || {},
+      metadata: { fallbackUsed: false },
+    });
+  } catch (error) {
+    sendError(res, error, { endpoint: "getBook", sessionId: req.params.sessionId });
+  }
+}
+
 module.exports = {
   health,
   powerTools,
@@ -449,4 +601,9 @@ module.exports = {
   interruptRepair,
   savePlaybackState,
   getSession,
+  // New non-blocking session endpoints
+  startSession,
+  getSessionStatus,
+  streamSession,
+  getBook,
 };
