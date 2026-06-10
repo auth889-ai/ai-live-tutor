@@ -358,41 +358,113 @@ def _owner_filter(ids: JsonDict) -> JsonDict:
     return {}
 
 
+def _strip_untrusted_user_data_wrappers(text: str) -> str:
+    """
+    MongoDB MCP may wrap returned JSON in:
+      <untrusted-user-data> ... </untrusted-user-data>
+    The wrapper is a trust boundary marker, not part of the JSON payload.
+    """
+    text = clean_text(text or "", 500000)
+    if not text:
+        return ""
+
+    open_tag = "<untrusted-user-data>"
+    close_tag = "</untrusted-user-data>"
+    if open_tag in text and close_tag in text:
+        try:
+            text = text.split(open_tag, 1)[1].split(close_tag, 1)[0]
+        except Exception:
+            pass
+
+    # Some MCP servers include markdown fences around JSON text.
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        lines = stripped.splitlines()
+        if lines and lines[0].strip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        stripped = "\n".join(lines).strip()
+
+    return stripped
+
+
+def _json_load_maybe_wrapped(text: str) -> Any:
+    text = _strip_untrusted_user_data_wrappers(text)
+    if not text:
+        return None
+
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    # Last robust attempt: extract the first JSON array/object region.
+    candidates: List[str] = []
+    first_array = text.find("[")
+    last_array = text.rfind("]")
+    if first_array >= 0 and last_array > first_array:
+        candidates.append(text[first_array : last_array + 1])
+    first_obj = text.find("{")
+    last_obj = text.rfind("}")
+    if first_obj >= 0 and last_obj > first_obj:
+        candidates.append(text[first_obj : last_obj + 1])
+
+    for candidate in candidates:
+        try:
+            return json.loads(candidate)
+        except Exception:
+            continue
+    return None
+
+
+def _docs_from_parsed_json(parsed: Any) -> List[JsonDict]:
+    docs: List[JsonDict] = []
+    if isinstance(parsed, list):
+        docs.extend([safe_dict(x) for x in parsed if safe_dict(x)])
+    elif isinstance(parsed, dict):
+        for key in ["documents", "docs", "result", "results", "data", "cursor", "items"]:
+            value = parsed.get(key)
+            if isinstance(value, list):
+                docs.extend([safe_dict(x) for x in value if safe_dict(x)])
+            elif isinstance(value, dict):
+                # Some tools return { cursor: { firstBatch: [...] } }
+                for nested_key in ["firstBatch", "documents", "docs", "result", "data"]:
+                    nested = value.get(nested_key)
+                    if isinstance(nested, list):
+                        docs.extend([safe_dict(x) for x in nested if safe_dict(x)])
+        if not docs and parsed:
+            docs.append(parsed)
+    return [d for d in docs if d]
+
+
 def _extract_docs(tool_result: JsonDict) -> List[JsonDict]:
     """
     MongoDB MCP aggregate result shape can vary by server version.
-    This normalizes common result containers.
+    This normalizes common result containers and strips MCP trust wrappers.
     """
     result = safe_dict(tool_result)
-    content = safe_list(result.get("content"))
-
     docs: List[JsonDict] = []
 
-    for item in content:
+    # Standard MCP content blocks: [{type:"text", text:"[...]"}]
+    for item in safe_list(result.get("content")):
         item = safe_dict(item)
-        text = clean_text(item.get("text") or "", 200000)
+        text = clean_text(item.get("text") or "", 500000)
         if not text:
             continue
-        try:
-            parsed = json.loads(text)
-            if isinstance(parsed, list):
-                docs.extend([safe_dict(x) for x in parsed])
-            elif isinstance(parsed, dict):
-                if isinstance(parsed.get("documents"), list):
-                    docs.extend([safe_dict(x) for x in parsed.get("documents")])
-                elif isinstance(parsed.get("result"), list):
-                    docs.extend([safe_dict(x) for x in parsed.get("result")])
-                else:
-                    docs.append(parsed)
-        except Exception:
-            continue
+        docs.extend(_docs_from_parsed_json(_json_load_maybe_wrapped(text)))
 
-    for key in ["documents", "result", "data"]:
-        if isinstance(result.get(key), list):
-            docs.extend([safe_dict(x) for x in result.get(key)])
+    # Some SDKs expose parsed objects directly.
+    for key in ["documents", "docs", "result", "results", "data", "items"]:
+        value = result.get(key)
+        if isinstance(value, list):
+            docs.extend([safe_dict(x) for x in value if safe_dict(x)])
+        elif isinstance(value, dict):
+            docs.extend(_docs_from_parsed_json(value))
+        elif isinstance(value, str):
+            docs.extend(_docs_from_parsed_json(_json_load_maybe_wrapped(value)))
 
-    return [d for d in docs if d]
-
+    return _dedupe_docs(docs)
 
 def _call_and_record(
     tool_calls: List[JsonDict],
@@ -442,9 +514,204 @@ def _source_ref_from_chunk(chunk: JsonDict) -> JsonDict:
     }
 
 
+def _dedupe_docs(docs: List[JsonDict]) -> List[JsonDict]:
+    seen = set()
+    out: List[JsonDict] = []
+    for doc in docs or []:
+        d = safe_dict(doc)
+        if not d:
+            continue
+        key = clean_text(
+            d.get("_id")
+            or d.get("resourceId")
+            or d.get("chunkId")
+            or d.get("treeId")
+            or d.get("boardId")
+            or d.get("sessionId")
+            or d.get("id")
+            or json.dumps(d, sort_keys=True, ensure_ascii=False)[:400],
+            600,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(d)
+    return out
+
+
+def _unique_strings(values: List[str]) -> List[str]:
+    seen = set()
+    out: List[str] = []
+    for value in values or []:
+        text = clean_text(value or "", 260)
+        if text and text not in seen:
+            seen.add(text)
+            out.append(text)
+    return out
+
+
+def collection_aliases() -> JsonDict:
+    """
+    v49 project has two collection families:
+    - original upload/extract data: resources, resource_chunks
+    - Stage/MCP-readable mirrors: googlelivetutor*
+    Read both. Prefer env-configured names first, then known aliases.
+    """
+    cols = collection_names()
+    return {
+        "resources": _unique_strings([
+            cols.get("resources"),
+            "googlelivetutorresources",
+            "resources",
+        ]),
+        "chunks": _unique_strings([
+            cols.get("chunks"),
+            "googlelivetutorresourcechunks",
+            "resource_chunks",
+        ]),
+        "trees": _unique_strings([
+            cols.get("trees"),
+            "googlelivetutorconcepttrees",
+        ]),
+        "boards": _unique_strings([
+            cols.get("boards"),
+            "googlelivetutorboards",
+        ]),
+        "stage2Sessions": _unique_strings([
+            cols.get("stage2Sessions"),
+            "googlelivetutorstage2sessions",
+        ]),
+        "agentTrace": _unique_strings([
+            cols.get("agentTrace"),
+            "googlelivetutoragenttraces",
+        ]),
+    }
+
+
+def _owner_filter_candidates(ids: JsonDict) -> List[JsonDict]:
+    owner_key = clean_text(ids.get("ownerKey") or "", 180)
+    offline_user_id = clean_text(ids.get("offlineUserId") or "", 180)
+
+    filters: List[JsonDict] = []
+    if owner_key:
+        filters.extend([
+            {"ownerKey": owner_key},
+            {"owner.ownerKey": owner_key},
+            {"metadata.ownerKey": owner_key},
+        ])
+    if offline_user_id:
+        filters.extend([
+            {"offlineUserId": offline_user_id},
+            {"owner.offlineUserId": offline_user_id},
+            {"metadata.offlineUserId": offline_user_id},
+        ])
+    return filters
+
+
+def _id_match_clauses(field: str, value: str) -> List[JsonDict]:
+    value = clean_text(value or "", 260)
+    if not value:
+        return []
+    clauses = [
+        {field: value},
+        {"id": value},
+        {f"metadata.{field}": value},
+    ]
+    if field.endswith("Id"):
+        clauses.append({field.replace("Id", "_id"): value})
+    return clauses
+
+
+def _combine_owner_and_id(ids: JsonDict, id_clauses: List[JsonDict]) -> JsonDict:
+    owner_clauses = _owner_filter_candidates(ids)
+    if owner_clauses and id_clauses:
+        return {"$and": [{"$or": owner_clauses}, {"$or": id_clauses}]}
+    if id_clauses:
+        return {"$or": id_clauses}
+    if owner_clauses:
+        return {"$or": owner_clauses}
+    return {}
+
+
+def _resource_match(ids: JsonDict) -> JsonDict:
+    return _combine_owner_and_id(ids, _id_match_clauses("resourceId", ids.get("resourceId")))
+
+
+def _tree_match(ids: JsonDict) -> JsonDict:
+    return _combine_owner_and_id(ids, _id_match_clauses("treeId", ids.get("treeId")))
+
+
+def _board_match(ids: JsonDict) -> JsonDict:
+    clauses: List[JsonDict] = []
+    clauses.extend(_id_match_clauses("boardId", ids.get("boardId")))
+    if ids.get("treeId"):
+        clauses.extend([
+            {"treeId": ids["treeId"]},
+            {"metadata.treeId": ids["treeId"]},
+            {"conceptTreeId": ids["treeId"]},
+        ])
+    return _combine_owner_and_id(ids, clauses)
+
+
+def _session_match(ids: JsonDict) -> JsonDict:
+    clauses: List[JsonDict] = []
+    if ids.get("sessionId"):
+        clauses.extend(_id_match_clauses("sessionId", ids.get("sessionId")))
+    elif ids.get("resourceId"):
+        clauses.extend(_id_match_clauses("resourceId", ids.get("resourceId")))
+    return _combine_owner_and_id(ids, clauses)
+
+
+def _query_alias_collections(
+    tool_calls: List[JsonDict],
+    real_calls: List[JsonDict],
+    aggregate_tool: str,
+    collections: List[str],
+    purpose: str,
+    pipeline: List[JsonDict],
+    timeout_sec: int,
+    limit_bytes: int = 3_000_000,
+    stop_after_first_hit: bool = False,
+) -> Tuple[List[JsonDict], List[str], List[str]]:
+    docs: List[JsonDict] = []
+    used: List[str] = []
+    tried: List[str] = []
+
+    for collection in collections or []:
+        collection = clean_text(collection or "", 260)
+        if not collection:
+            continue
+        tried.append(collection)
+        tool_result = _call_and_record(
+            tool_calls,
+            real_calls,
+            aggregate_tool,
+            f"{purpose} [collection={collection}]",
+            _aggregate_args(collection, pipeline, limit_bytes=limit_bytes),
+            timeout_sec,
+        )
+        found = _extract_docs(tool_result)
+        if found:
+            used.append(collection)
+            docs.extend(found)
+            if stop_after_first_hit:
+                break
+
+    return _dedupe_docs(docs), used, tried
+
+
+def _successful_real_tool_calls(real_calls: List[JsonDict]) -> List[JsonDict]:
+    """Only tools/call successes count as mcpUsed proof. tools/list alone is not enough."""
+    return [
+        safe_dict(c)
+        for c in real_calls or []
+        if safe_dict(c).get("ok") is True and clean_text(safe_dict(c).get("tool")) != "tools/list"
+    ]
+
+
 def run_mission_read_context(payload: JsonDict, timeout_sec: int) -> JsonDict:
     ids = _extract_ids(payload)
-    cols = collection_names()
+    aliases = collection_aliases()
 
     tools, raw_tools = list_mcp_tools(timeout_sec=timeout_sec)
     aggregate_tool = _select_tool(tools, "aggregate")
@@ -452,7 +719,12 @@ def run_mission_read_context(payload: JsonDict, timeout_sec: int) -> JsonDict:
     indexes_tool = _select_tool(tools, "indexes")
 
     tool_calls: List[JsonDict] = [
-        _record_tool_call("tools/list", "List MongoDB MCP tools for partner-power proof.", True, result={"toolCount": len(tools)})
+        _record_tool_call(
+            "tools/list",
+            "List MongoDB MCP tools for partner-power discovery. This alone is not counted as mcpUsed=true.",
+            True,
+            result={"toolCount": len(tools), "tools": [_tool_name(t) for t in tools[:40]]},
+        )
     ]
     real_calls: List[JsonDict] = []
 
@@ -460,142 +732,190 @@ def run_mission_read_context(payload: JsonDict, timeout_sec: int) -> JsonDict:
         return {
             "mcpUsed": False,
             "configured": True,
+            "partner": "MongoDB",
             "tools": tools,
             "toolCalls": tool_calls + [
-                _record_tool_call("", "No aggregate tool found.", False, error="MCP tools/list worked but no aggregate tool was available.")
+                _record_tool_call(
+                    "",
+                    "No MongoDB MCP aggregate/find tool found.",
+                    False,
+                    error="MCP tools/list worked, but no aggregate tool was available for real project-data read.",
+                )
             ],
+            "mcpReadResult": {},
             "chunks": safe_list(payload.get("chunks")),
             "sourceRefs": safe_list(payload.get("sourceRefs")),
+            "resourceDocs": [],
+            "treeDocs": [],
+            "boardDocs": [],
+            "previousSessionDocs": [],
             "metadata": {
                 "agent": "MongoDbMcpToolAgent",
                 "realMcpUsed": False,
                 "fallbackUsed": False,
+                "usedSmartFallback": False,
                 "toolCount": len(tools),
+                "realToolCallCount": 0,
+                "aggregateTool": "",
+                "schemaTool": schema_tool,
+                "indexesTool": indexes_tool,
+                "collectionAliases": aliases,
                 "rawToolsResponse": _json_preview(raw_tools, 1200),
             },
         }
-
-    owner = _owner_filter(ids)
 
     read_result: JsonDict = {
         "resourceDocs": [],
         "chunkDocs": [],
         "treeDocs": [],
+        "boardDocs": [],
         "previousSessionDocs": [],
         "schemas": {},
         "indexes": {},
+        "collectionsTried": {},
+        "collectionsUsed": {},
     }
 
-    if ids["resourceId"]:
-        resource_tool_result = _call_and_record(
+    if ids.get("resourceId"):
+        docs, used, tried = _query_alias_collections(
             tool_calls,
             real_calls,
             aggregate_tool,
-            "Read selected resource document through MongoDB MCP aggregate.",
-            _aggregate_args(
-                cols["resources"],
-                [{"$match": {**owner, "resourceId": ids["resourceId"]}}, {"$limit": 1}],
-            ),
+            safe_list(aliases.get("resources")),
+            "Read selected resource document through MongoDB MCP aggregate",
+            [{"$match": _resource_match(ids)}, {"$limit": 1}],
             timeout_sec,
+            limit_bytes=2_000_000,
+            stop_after_first_hit=False,
         )
-        read_result["resourceDocs"] = _extract_docs(resource_tool_result)
+        read_result["resourceDocs"] = docs
+        read_result["collectionsUsed"]["resources"] = used
+        read_result["collectionsTried"]["resources"] = tried
 
-        chunk_tool_result = _call_and_record(
+        docs, used, tried = _query_alias_collections(
             tool_calls,
             real_calls,
             aggregate_tool,
-            "Read selected resource chunks through MongoDB MCP aggregate.",
-            _aggregate_args(
-                cols["chunks"],
-                [
-                    {"$match": {**owner, "resourceId": ids["resourceId"]}},
-                    {"$sort": {"page": 1, "chunkIndex": 1}},
-                    {"$limit": int(payload.get("mcpChunkLimit") or 180)},
-                ],
-                limit_bytes=4_000_000,
-            ),
+            safe_list(aliases.get("chunks")),
+            "Read selected resource chunks through MongoDB MCP aggregate",
+            [
+                {"$match": _resource_match(ids)},
+                {"$sort": {"page": 1, "pageNumber": 1, "chunkIndex": 1, "index": 1}},
+                {"$limit": int(payload.get("mcpChunkLimit") or 180)},
+            ],
             timeout_sec,
+            limit_bytes=5_000_000,
+            stop_after_first_hit=False,
         )
-        read_result["chunkDocs"] = _extract_docs(chunk_tool_result)
+        read_result["chunkDocs"] = docs
+        read_result["collectionsUsed"]["chunks"] = used
+        read_result["collectionsTried"]["chunks"] = tried
 
-    if ids["treeId"]:
-        tree_tool_result = _call_and_record(
+    if ids.get("treeId"):
+        docs, used, tried = _query_alias_collections(
             tool_calls,
             real_calls,
             aggregate_tool,
-            "Read selected concept tree through MongoDB MCP aggregate.",
-            _aggregate_args(
-                cols["trees"],
-                [{"$match": {**owner, "treeId": ids["treeId"]}}, {"$limit": 1}],
-                limit_bytes=2_000_000,
-            ),
+            safe_list(aliases.get("trees")),
+            "Read selected Stage 1 concept tree through MongoDB MCP aggregate",
+            [{"$match": _tree_match(ids)}, {"$limit": 1}],
             timeout_sec,
+            limit_bytes=5_000_000,
+            stop_after_first_hit=False,
         )
-        read_result["treeDocs"] = _extract_docs(tree_tool_result)
+        read_result["treeDocs"] = docs
+        read_result["collectionsUsed"]["trees"] = used
+        read_result["collectionsTried"]["trees"] = tried
 
-    session_filter = {**owner}
-    if ids["sessionId"]:
-        session_filter["sessionId"] = ids["sessionId"]
-    elif ids["resourceId"]:
-        session_filter["resourceId"] = ids["resourceId"]
+        docs, used, tried = _query_alias_collections(
+            tool_calls,
+            real_calls,
+            aggregate_tool,
+            safe_list(aliases.get("boards")),
+            "Read Stage 1 board/tree board through MongoDB MCP aggregate",
+            [
+                {"$match": _board_match(ids)},
+                {"$sort": {"updatedAt": -1, "createdAt": -1, "savedAt": -1}},
+                {"$limit": 1},
+            ],
+            timeout_sec,
+            limit_bytes=4_000_000,
+            stop_after_first_hit=False,
+        )
+        read_result["boardDocs"] = docs
+        read_result["collectionsUsed"]["boards"] = used
+        read_result["collectionsTried"]["boards"] = tried
 
+    session_filter = _session_match(ids)
     if session_filter:
-        session_tool_result = _call_and_record(
+        docs, used, tried = _query_alias_collections(
             tool_calls,
             real_calls,
             aggregate_tool,
-            "Read previous stage2 sessions/replays through MongoDB MCP aggregate.",
-            _aggregate_args(
-                cols["stage2Sessions"],
-                [{"$match": session_filter}, {"$sort": {"updatedAt": -1, "createdAt": -1}}, {"$limit": 5}],
-                limit_bytes=2_000_000,
-            ),
+            safe_list(aliases.get("stage2Sessions")),
+            "Read previous Stage 2 sessions/replays through MongoDB MCP aggregate",
+            [
+                {"$match": session_filter},
+                {"$sort": {"updatedAt": -1, "createdAt": -1, "mcpSavedAtMs": -1}},
+                {"$limit": 5},
+            ],
             timeout_sec,
+            limit_bytes=3_000_000,
+            stop_after_first_hit=False,
         )
-        read_result["previousSessionDocs"] = _extract_docs(session_tool_result)
+        read_result["previousSessionDocs"] = docs
+        read_result["collectionsUsed"]["stage2Sessions"] = used
+        read_result["collectionsTried"]["stage2Sessions"] = tried
 
-    for key, collection in [
-        ("resourcesSchema", cols["resources"]),
-        ("chunksSchema", cols["chunks"]),
-        ("treesSchema", cols["trees"]),
-        ("stage2Schema", cols["stage2Sessions"]),
-    ]:
-        if schema_tool:
+    # Optional schema/index proof. These are real MCP tools/call successes, but mcpUsed still
+    # requires at least one tools/call success, not merely tools/list.
+    for key in ["resources", "chunks", "trees", "boards", "stage2Sessions"]:
+        collection = (safe_list(read_result["collectionsUsed"].get(key)) or safe_list(aliases.get(key)) or [""])[0]
+        if schema_tool and collection:
             read_result["schemas"][key] = _call_and_record(
                 tool_calls,
                 real_calls,
                 schema_tool,
-                f"Inspect schema for {collection}.",
+                f"Inspect schema for {collection} through MongoDB MCP.",
                 _collection_args(collection, sample_size=30),
                 timeout_sec,
             )
 
-    for key, collection in [
-        ("chunksIndexes", cols["chunks"]),
-        ("stage2Indexes", cols["stage2Sessions"]),
-    ]:
-        if indexes_tool:
+    for key in ["chunks", "stage2Sessions"]:
+        collection = (safe_list(read_result["collectionsUsed"].get(key)) or safe_list(aliases.get(key)) or [""])[0]
+        if indexes_tool and collection:
             read_result["indexes"][key] = _call_and_record(
                 tool_calls,
                 real_calls,
                 indexes_tool,
-                f"Inspect indexes/search indexes for {collection}.",
+                f"Inspect indexes/search indexes for {collection} through MongoDB MCP.",
                 _collection_args(collection, sample_size=10),
                 timeout_sec,
             )
 
     mcp_chunks = [_normalize_chunk_doc(d) for d in safe_list(read_result.get("chunkDocs"))]
     mcp_chunks = [c for c in mcp_chunks if clean_text(c.get("chunkId")) and clean_text(c.get("text"))]
+    chunks = mcp_chunks or safe_list(payload.get("chunks"))
 
-    existing_chunks = safe_list(payload.get("chunks"))
-    chunks = mcp_chunks or existing_chunks
+    source_refs = [_source_ref_from_chunk(c) for c in chunks[:60]]
 
-    source_refs = [_source_ref_from_chunk(c) for c in chunks[:40]]
     if not source_refs:
-        source_refs = safe_list(payload.get("sourceRefs"))
+        # If chunks are absent but tree has node sourceRefs, keep Stage 2 source grounding alive.
+        for tree in safe_list(read_result.get("treeDocs")):
+            for node in safe_list(tree.get("nodes") or tree.get("conceptNodes") or tree.get("treeNodes")):
+                node = safe_dict(node)
+                node_key = clean_text(node.get("nodeId") or node.get("id") or "", 220)
+                if ids.get("nodeId") and node_key and node_key != ids.get("nodeId"):
+                    continue
+                source_refs.extend(safe_list(node.get("sourceRefs"))[:30])
+        if not source_refs:
+            source_refs = safe_list(payload.get("sourceRefs"))
+
+    successful_tool_calls = _successful_real_tool_calls(real_calls)
+    real_mcp_used = bool(successful_tool_calls)
 
     return {
-        "mcpUsed": bool(real_calls),
+        "mcpUsed": real_mcp_used,
         "configured": True,
         "partner": "MongoDB",
         "tools": tools,
@@ -605,19 +925,34 @@ def run_mission_read_context(payload: JsonDict, timeout_sec: int) -> JsonDict:
         "sourceRefs": source_refs,
         "resourceDocs": safe_list(read_result.get("resourceDocs")),
         "treeDocs": safe_list(read_result.get("treeDocs")),
+        "boardDocs": safe_list(read_result.get("boardDocs")),
         "previousSessionDocs": safe_list(read_result.get("previousSessionDocs")),
         "metadata": {
             "agent": "MongoDbMcpToolAgent",
-            "realMcpUsed": bool(real_calls),
+            "realMcpUsed": real_mcp_used,
             "fallbackUsed": False,
+            "usedSmartFallback": False,
             "toolCount": len(tools),
-            "realToolCallCount": len(real_calls),
+            "realToolCallCount": len(successful_tool_calls),
+            "rawSuccessfulToolCallCount": len(real_calls),
             "aggregateTool": aggregate_tool,
             "schemaTool": schema_tool,
             "indexesTool": indexes_tool,
-            "partnerPower": True,
+            "partnerPower": real_mcp_used,
             "mission": "read_context",
-            "proof": "MongoDB MCP tools/list + tools/call aggregate/schema/indexes",
+            "proof": "MongoDB MCP tools/call aggregate/schema/indexes over real project collections; tools/list alone does not count.",
+            "collectionAliases": aliases,
+            "collectionsTried": read_result.get("collectionsTried"),
+            "collectionsUsed": read_result.get("collectionsUsed"),
+            "resourceDocCount": len(safe_list(read_result.get("resourceDocs"))),
+            "chunkDocCount": len(safe_list(read_result.get("chunkDocs"))),
+            "treeDocCount": len(safe_list(read_result.get("treeDocs"))),
+            "boardDocCount": len(safe_list(read_result.get("boardDocs"))),
+            "sessionDocCount": len(safe_list(read_result.get("previousSessionDocs"))),
+            "sourceRefCount": len(source_refs),
+            "chunkCount": len(chunks),
+            "localPageImagesKept": True,
+            "untrustedUserDataWrapperSupported": True,
         },
     }
 
@@ -1181,3 +1516,4 @@ __all__ = [
     "call_mcp_tool",
     "configured",
 ]
+

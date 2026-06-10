@@ -228,6 +228,171 @@ function compactChunk(chunk, maxText = 26000) {
   };
 }
 
+
+// chunkToEvidence — converts a raw chunk into a structured evidence object.
+// Called by selectExactChunks, selectSamePageChunks, selectNearbyChunks, selectRelatedChunks.
+function chunkToEvidence(chunk, evidenceType, priority) {
+  const c = compactChunk(chunk, 6000);
+  return {
+    chunkId:      c.chunkId,
+    sourceRef:    c.sourceRef,
+    pageRef:      c.pageRef,
+    page:         c.page,
+    chunkIndex:   c.chunkIndex,
+    resourceId:   c.resourceId,
+    heading:      c.heading,
+    text:         c.text,
+    textPreview:  c.textPreview,
+    ocrText:      c.ocrText,
+    pageImageUrl: c.pageImageUrl,
+    pageImagePath: c.pageImagePath,
+    hasPageImage: c.hasPageImage,
+    tables:       c.tables,
+    figures:      c.figures,
+    evidenceType: evidenceType || "evidence",
+    priority:     typeof priority === "number" ? priority : 50,
+    confidence:   0.85,
+    metadata:     c.metadata,
+  };
+}
+
+async function readChunksFromCollection({ collectionName, ownerKey, resourceId, limit }) {
+  const collection = GoogleLiveTutorResourceChunk.collection?.conn?.db?.collection(collectionName);
+  if (!collection) return [];
+
+  return collection
+    .find({ ownerKey, resourceId })
+    .sort({ page: 1, chunkIndex: 1, createdAt: 1 })
+    .limit(limit)
+    .toArray();
+}
+
+function normalizeChunkDoc(doc, index = 0) {
+  const raw = safeObject(doc);
+  const m = safeObject(raw.metadata);
+
+  const page = Math.max(1, Number(raw.page || raw.pageNumber || m.page || 1));
+  const chunkIndex = Math.max(0, Number(raw.chunkIndex || raw.index || m.chunkIndex || index));
+  const resourceId = cleanText(raw.resourceId || m.resourceId || "", 260);
+  const chunkId = cleanText(
+    raw.chunkId || raw.id || raw._id || m.chunkId || `${resourceId || "resource"}_p${page}_c${chunkIndex}`,
+    260
+  );
+
+  const text = cleanText(
+    raw.text || raw.fullText || raw.content || raw.textPreview || m.text || m.content || "",
+    120000
+  );
+
+  return {
+    ...raw,
+    resourceId,
+    chunkId,
+    id: chunkId,
+    page,
+    pageNumber: page,
+    chunkIndex,
+    sourceRef: cleanText(raw.sourceRef || m.sourceRef || `resource:${resourceId}:page:${page}:chunk:${chunkIndex}`, 420),
+    pageRef: cleanText(raw.pageRef || m.pageRef || `resource:${resourceId}:page:${page}`, 420),
+    text,
+    textPreview: cleanText(raw.textPreview || text, 4000),
+    metadata: m,
+  };
+}
+
+async function loadResourceChunks({ ownerKey, resourceId, limit = 1600 }) {
+  const safeOwnerKey = cleanText(ownerKey, 260);
+  const safeResourceId = cleanText(resourceId, 260);
+  const safeLimit = boundedInt(limit, 1600, 10, 5000);
+
+  if (!safeOwnerKey) {
+    const error = new Error("ownerKey is required to load resource chunks.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!safeResourceId) {
+    const error = new Error("resourceId is required to load resource chunks.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const chunks = [];
+  const warnings = [];
+
+  try {
+    chunks.push(
+      ...(await GoogleLiveTutorResourceChunk.find({
+        ownerKey: safeOwnerKey,
+        resourceId: safeResourceId,
+      })
+        .sort({ page: 1, chunkIndex: 1, createdAt: 1 })
+        .limit(safeLimit)
+        .lean())
+    );
+  } catch (error) {
+    warnings.push(`resource_chunks model read failed: ${error.message}`);
+  }
+
+  for (const collectionName of ["googlelivetutorresourcechunks", "resource_chunks"]) {
+    if (chunks.length >= safeLimit) break;
+
+    try {
+      const extra = await readChunksFromCollection({
+        collectionName,
+        ownerKey: safeOwnerKey,
+        resourceId: safeResourceId,
+        limit: safeLimit,
+      });
+
+      chunks.push(...extra);
+    } catch (error) {
+      warnings.push(`${collectionName} read failed: ${error.message}`);
+    }
+  }
+
+  const normalized = dedupeBy(
+    chunks
+      .map(normalizeChunkDoc)
+      .filter((chunk) => cleanText(chunk.text || chunk.textPreview, 100).length > 0),
+    (chunk) => `${chunk.chunkId}|${chunk.sourceRef}|${chunk.page}|${chunk.chunkIndex}`
+  )
+    .sort(
+      (a, b) =>
+        Number(a.page || 0) - Number(b.page || 0) ||
+        Number(a.chunkIndex || 0) - Number(b.chunkIndex || 0)
+    )
+    .slice(0, safeLimit);
+
+  if (!normalized.length) {
+    const error = new Error(
+      `No resource chunks found for resourceId=${safeResourceId}, ownerKey=${safeOwnerKey}. Checked resource_chunks and googlelivetutorresourcechunks.`
+    );
+    error.statusCode = 404;
+    error.metadata = {
+      fallbackUsed: false,
+      usedSmartFallback: false,
+      ownerKey: safeOwnerKey,
+      resourceId: safeResourceId,
+      checkedCollections: ["resource_chunks", "googlelivetutorresourcechunks"],
+      warnings,
+    };
+    throw error;
+  }
+
+  Object.defineProperty(normalized, "_loadResourceChunksTrace", {
+    value: {
+      ok: true,
+      count: normalized.length,
+      checkedCollections: ["resource_chunks", "googlelivetutorresourcechunks"],
+      warnings,
+    },
+    enumerable: false,
+  });
+
+  return normalized;
+}
+
 function attachEvidenceRole(chunk, evidenceRole, priority, maxText = 22000) {
   const c = compactChunk(chunk, maxText);
   return {
@@ -288,1308 +453,1243 @@ function getRichSourcePackPages(selectedNode) {
   return safeArray(rich.pages).map((p) => Number(p)).filter(Boolean);
 }
 
+function getRichSourcePack(selectedNode) {
+  const n = safeObject(selectedNode);
+  const data = safeObject(n.data);
+  return safeObject(safeObject(n.metadata).richSourcePack || data.richSourcePack || n.richSourcePack);
+}
+
+function getRichSourcePackPageImages(selectedNode) {
+  const rich = getRichSourcePack(selectedNode);
+  const pages = new Set(safeArray(rich.pages).map((p) => Number(p)).filter(Boolean));
+
+  return dedupeBy(
+    safeArray(rich.pageImages || rich.images || rich.pdfPageImages)
+      .map((raw) => {
+        const item = safeObject(raw);
+        const page = Number(item.page || item.pageNumber || item.pageNo || 0) || 0;
+        if (page) pages.add(page);
+        const url = cleanText(item.url || item.src || item.pageImageUrl || item.publicUrl || item.imageUrl || "", 1800);
+        const path = cleanText(item.path || item.pageImagePath || item.filePath || item.localPath || "", 1800);
+        return {
+          page,
+          pageImageUrl: url,
+          pageImagePath: path,
+          url,
+          src: url,
+          path,
+          type: cleanText(item.type || "pdfPageImage", 120),
+          evidenceRole: "selectedNodeRichSourcePackImage",
+          source: "selectedNode.metadata.richSourcePack.pageImages",
+          useRule: "Selected node full-page PDF image. Send to Gemini Vision for diagram/layout/figure shape; source text/OCR/chunks remain truth.",
+        };
+      })
+      .filter((x) => x.page && (x.pageImageUrl || x.pageImagePath)),
+    (x) => `${x.page}|${x.pageImageUrl}|${x.pageImagePath}`
+  );
+}
+
+function imageMapByPage(pageImages) {
+  const map = new Map();
+  for (const image of safeArray(pageImages)) {
+    const item = safeObject(image);
+    const page = Number(item.page || 0);
+    if (!page) continue;
+    const existing = map.get(page) || {};
+    map.set(page, {
+      ...existing,
+      ...item,
+      pageImageUrl: cleanText(existing.pageImageUrl || existing.url || item.pageImageUrl || item.url || item.src || "", 1800),
+      pageImagePath: cleanText(existing.pageImagePath || existing.path || item.pageImagePath || item.path || "", 1800),
+    });
+  }
+  return map;
+}
+
+function hydrateEvidenceImagesFromRichSourcePack(evidence, richPageImages) {
+  const byPage = imageMapByPage(richPageImages);
+  return safeArray(evidence).map((raw) => {
+    const c = safeObject(raw);
+    const page = Number(c.page || 0);
+    const image = byPage.get(page);
+    if (!image) return c;
+    return {
+      ...c,
+      pageImageUrl: c.pageImageUrl || image.pageImageUrl || image.url || "",
+      pageImagePath: c.pageImagePath || image.pageImagePath || image.path || "",
+      hasPageImage: Boolean(c.hasPageImage || c.pageImageUrl || c.pageImagePath || image.pageImageUrl || image.pageImagePath || image.url || image.path),
+      fullPageImageFromRichSourcePack: Boolean(image.pageImageUrl || image.pageImagePath || image.url || image.path),
+    };
+  });
+}
+
+function hydratePageContextsWithRichSourcePackImages(pageContexts, richPageImages) {
+  const byPage = imageMapByPage(richPageImages);
+  return safeArray(pageContexts).map((raw) => {
+    const ctx = safeObject(raw);
+    const page = Number(ctx.page || 0);
+    const image = byPage.get(page);
+    if (!image) return ctx;
+    const pageImageUrl = ctx.pageImageUrl || image.pageImageUrl || image.url || "";
+    const pageImagePath = ctx.pageImagePath || image.pageImagePath || image.path || "";
+    return {
+      ...ctx,
+      pageImageUrl,
+      pageImagePath,
+      hasPageImage: Boolean(pageImageUrl || pageImagePath),
+      fullPageImageFromRichSourcePack: Boolean(image.pageImageUrl || image.pageImagePath || image.url || image.path),
+      visualUseRule: ctx.visualUseRule || "Gemini may inspect this selected-node full-page image as diagram/layout guide; PDF extracted text remains truth.",
+    };
+  });
+}
+
+function mergeRichSourcePackImagesIntoVisualContext(visualContext, richPageImages, pageContexts, sourceRefs) {
+  const selectedPages = new Set([
+    ...safeArray(pageContexts).filter((p) => safeObject(p).relation === "selected_or_same_page").map((p) => Number(safeObject(p).page)).filter(Boolean),
+    ...safeArray(sourceRefs).map((r) => Number(safeObject(r).page)).filter(Boolean),
+  ]);
+
+  const existingImages = safeArray(safeObject(visualContext).pageImages);
+  const richImages = safeArray(richPageImages)
+    .filter((image) => !selectedPages.size || selectedPages.has(Number(safeObject(image).page)))
+    .map((image) => ({
+      ...safeObject(image),
+      evidenceRole: "selectedNodeRichSourcePackImage",
+      useRule: "Send this selected-node full-page PDF image to Gemini Vision for diagram/layout/figure shape. Recover labels from selectedEvidence/OCR/text chunks.",
+    }));
+
+  const pageImages = dedupeBy(
+    [...existingImages, ...richImages],
+    (x) => `${safeObject(x).page}|${safeObject(x).pageImageUrl || safeObject(x).url || ""}|${safeObject(x).pageImagePath || safeObject(x).path || ""}`
+  );
+
+  const meta = safeObject(safeObject(visualContext).metadata);
+  return {
+    ...safeObject(visualContext),
+    pageImages,
+    metadata: {
+      ...meta,
+      pageImageCount: pageImages.length,
+      pageImagesIncluded: pageImages.length > 0,
+      richSourcePackPageImageCount: richImages.length,
+      selectedNodeFullPageImagesAvailable: richImages.length > 0,
+      geminiVisionCanInspectSelectedPageImages: pageImages.length > 0,
+    },
+  };
+}
+
 function selectedNodeTitle(selectedNode) {
   const n = safeObject(selectedNode);
   const data = safeObject(n.data);
   return inlineText(n.title || n.label || n.name || data.title || data.label || n.nodeId || n.id || "selected concept", 360);
 }
 
-function selectedNodeText(selectedNode, sourceRefs = [], question = "") {
+function selectedNodeId(selectedNode) {
   const n = safeObject(selectedNode);
   const data = safeObject(n.data);
-  const rich = safeObject(safeObject(n.metadata).richSourcePack || data.richSourcePack);
-
-  return [
-    n.nodeId,
-    n.id,
-    n.label,
-    n.title,
-    n.name,
-    n.conceptType,
-    n.nodeType,
-    n.shortDefinition,
-    n.definition,
-    n.summary,
-    n.description,
-    data.label,
-    data.title,
-    data.shortDefinition,
-    question,
-    rich.fullPageTextPreview,
-    rich.tablesPreview,
-    rich.figuresPreview,
-    ...safeArray(n.children).map((x) => safeObject(x).label || safeObject(x).title || x),
-    ...safeArray(n.prerequisites).map((x) => safeObject(x).label || safeObject(x).title || x),
-    ...safeArray(n.visualHints),
-    ...safeArray(sourceRefs).map((ref) => safeObject(ref).quote || ""),
-  ]
-    .map((x) => inlineText(x, 900))
-    .filter(Boolean)
-    .join("\n");
+  return cleanText(n.nodeId || n.id || data.nodeId || data.id || selectedNodeTitle(n), 260);
 }
 
-function keywordTokens(text, limit = 140) {
-  const stop = new Set([
-    "the", "and", "for", "with", "that", "this", "from", "source", "page", "chunk", "teacher", "student",
-    "board", "concept", "what", "when", "then", "your", "into", "about", "only", "using", "will", "have",
-    "has", "are", "was", "were", "can", "should", "would", "could", "you", "they", "their", "them", "our",
-    "all", "any", "a", "an", "is", "it", "as", "by", "be", "if", "so", "we", "to", "in", "on", "of", "or",
-    "not", "but", "there", "here", "than", "being", "while", "rather", "before", "after", "each", "own",
-    "explain", "teach", "selected", "node", "details", "human", "voice", "diagram", "flowchart", "table", "quiz"
-  ]);
+function selectedNodeDefinition(selectedNode) {
+  const n = safeObject(selectedNode);
+  const data = safeObject(n.data);
+  const metadata = safeObject(n.metadata);
 
-  const seen = new Set();
-  const matches = inlineText(text, 120000).toLowerCase().match(/[a-z0-9_/-]{3,}/g) || [];
-  const out = [];
-
-  for (const raw of matches) {
-    const word = raw.replace(/^[-_/]+|[-_/]+$/g, "");
-    if (!word || stop.has(word) || seen.has(word)) continue;
-    seen.add(word);
-    out.push(word);
-    if (out.length >= limit) break;
-  }
-
-  return out;
-}
-
-function scoreTextOverlap(text, terms) {
-  const haystack = inlineText(text, 160000).toLowerCase();
-  let score = 0;
-  for (const term of safeArray(terms)) {
-    if (!term) continue;
-    if (haystack.includes(term)) score += term.length >= 10 ? 6 : term.length >= 6 ? 3 : 1;
-  }
-  return score;
-}
-
-function scoreChunkForNode(chunk, selectedNode, sourceRefs = [], question = "") {
-  const c = compactChunk(chunk);
-  const terms = keywordTokens(selectedNodeText(selectedNode, sourceRefs, question), 140);
-  const exactChunkIds = new Set(sourceRefs.map((r) => cleanText(r.chunkId, 260)).filter(Boolean));
-  const exactSourceRefs = new Set(sourceRefs.map((r) => cleanText(r.sourceRef, 420)).filter(Boolean));
-  const exactPages = new Set(sourceRefs.map((r) => Number(r.page)).filter(Boolean));
-
-  let score = 0;
-  if (exactChunkIds.has(c.chunkId)) score += 1000;
-  if (exactSourceRefs.has(c.sourceRef)) score += 950;
-  if (exactPages.has(Number(c.page))) score += 420;
-
-  score += scoreTextOverlap(
-    `${c.heading} ${c.title} ${c.text} ${c.ocrText} ${JSON.stringify(c.entities)} ${c.tables.join(" ")} ${c.figures.join(" ")}`,
-    terms
-  );
-
-  if (c.tables.length) score += 8;
-  if (c.figures.length) score += 8;
-  if (c.ocrText && c.ocrReliable) score += 4;
-  if (c.pageImageUrl || c.pageImagePath) score += 4;
-
-  return score;
-}
-
-function pageTitleHint(pageChunks) {
-  const merged = inlineText(safeArray(pageChunks).map((c) => `${c.heading} ${c.title} ${c.textPreview || c.text}`).join(" "), 3000);
-  return inlineText(
-    safeArray(pageChunks).find((c) => c.heading)?.heading ||
-      safeArray(pageChunks).find((c) => c.title)?.title ||
-      (merged.match(/^([^.!?\n:]{8,140})[:.!?\n]/) || [])[1] ||
-      merged.slice(0, 90),
-    240
+  return cleanText(
+    n.shortDefinition ||
+      n.definition ||
+      n.summary ||
+      n.description ||
+      data.shortDefinition ||
+      data.definition ||
+      data.summary ||
+      data.description ||
+      metadata.shortDefinition ||
+      metadata.summary ||
+      "",
+    5000
   );
 }
 
-async function loadAllChunks({ ownerKey, resourceId, limit }) {
-  const safeLimit = Math.min(Math.max(Number(limit || envNumber(["LIVE_TUTOR_MAX_CONTEXT_CHUNKS"], 1400)), 1), 2500);
-  return GoogleLiveTutorResourceChunk.find({ ownerKey, resourceId })
-    .sort({ page: 1, chunkIndex: 1 })
-    .limit(safeLimit)
-    .lean();
-}
+function nodeSearchText(selectedNode) {
+  const n = safeObject(selectedNode);
+  const rich = getRichSourcePack(n);
 
-function buildPageMap(allChunks) {
-  const pageMap = new Map();
-  for (const raw of safeArray(allChunks)) {
-    const chunk = compactChunk(raw);
-    if (!pageMap.has(chunk.page)) pageMap.set(chunk.page, []);
-    pageMap.get(chunk.page).push(chunk);
-  }
-  for (const chunks of pageMap.values()) {
-    chunks.sort((a, b) => Number(a.chunkIndex) - Number(b.chunkIndex));
-  }
-  return pageMap;
-}
-
-function pickExactChunks(allChunks, sourceRefs, selectedNode, question = "", maxItems = 10) {
-  const exactChunkIds = new Set(sourceRefs.map((r) => cleanText(r.chunkId, 260)).filter(Boolean));
-  const exactSourceRefs = new Set(sourceRefs.map((r) => cleanText(r.sourceRef, 420)).filter(Boolean));
-  const exactPages = new Set([
-    ...sourceRefs.map((r) => Number(r.page)).filter(Boolean),
-    ...getRichSourcePackPages(selectedNode),
-  ]);
-
-  const scored = safeArray(allChunks)
-    .map((chunk) => {
-      const c = compactChunk(chunk);
-      const exact =
-        exactChunkIds.has(c.chunkId) ||
-        exactSourceRefs.has(c.sourceRef) ||
-        exactPages.has(Number(c.page));
-
-      return {
-        raw: chunk,
-        chunk: c,
-        exact,
-        score: scoreChunkForNode(chunk, selectedNode, sourceRefs, question),
-      };
-    })
-    .filter((x) => x.exact || x.score >= 420)
-    .sort((a, b) => b.score - a.score || a.chunk.page - b.chunk.page || a.chunk.chunkIndex - b.chunk.chunkIndex);
-
-  return dedupeBy(scored.map((x) => attachEvidenceRole(x.raw, "selectedEvidence", x.score)), (c) => c.chunkId).slice(0, maxItems);
-}
-
-function pickSamePageChunks(allChunks, selectedEvidence, maxItems = 18) {
-  const pages = new Set(safeArray(selectedEvidence).map((c) => Number(c.page)).filter(Boolean));
-  return dedupeBy(
-    safeArray(allChunks)
-      .map((chunk) => compactChunk(chunk))
-      .filter((chunk) => pages.has(Number(chunk.page)) && !safeArray(selectedEvidence).some((s) => s.chunkId === chunk.chunkId))
-      .map((chunk) => attachEvidenceRole(chunk, "samePageEvidence", 700 - Number(chunk.chunkIndex || 0))),
-    (c) => c.chunkId
-  ).slice(0, maxItems);
-}
-
-function pickNearbyChunks(allChunks, selectedEvidence, maxItems = 18) {
-  const selectedPages = new Set(safeArray(selectedEvidence).map((c) => Number(c.page)).filter(Boolean));
-  const nearbyPages = new Set();
-  for (const page of selectedPages) {
-    if (page > 1) nearbyPages.add(page - 1);
-    nearbyPages.add(page + 1);
-  }
-
-  return dedupeBy(
-    safeArray(allChunks)
-      .map((chunk) => compactChunk(chunk))
-      .filter((chunk) => nearbyPages.has(Number(chunk.page)))
-      .map((chunk) => attachEvidenceRole(chunk, "nearbyEvidence", 420 - Math.abs(Number(chunk.page) - [...selectedPages][0]))),
-    (c) => c.chunkId
-  ).slice(0, maxItems);
-}
-
-function detectComparisonTerms(selectedNode, sourceRefs, question = "") {
-  const text = selectedNodeText(selectedNode, sourceRefs, question).toLowerCase();
-  const terms = [];
-
-  const known = [
-    "star schema",
-    "snowflake schema",
-    "galaxy schema",
-    "fact constellation",
-    "migration",
-    "rollback",
-    "ci/cd",
-    "neural network",
-    "artificial neuron",
-    "normalization",
-    "denormalization",
-  ];
-
-  for (const item of known) {
-    if (!text.includes(item)) terms.push(item);
-  }
-
-  return terms;
-}
-
-function pickComparisonChunks(allChunks, selectedNode, sourceRefs, question = "", maxItems = 10) {
-  const selectedPages = new Set(sourceRefs.map((r) => Number(r.page)).filter(Boolean));
-  const comparisonTerms = detectComparisonTerms(selectedNode, sourceRefs, question);
-  const selectedText = selectedNodeText(selectedNode, sourceRefs, question).toLowerCase();
-
-  const scored = safeArray(allChunks)
-    .map((chunk) => {
-      const c = compactChunk(chunk);
-      const text = `${c.heading} ${c.title} ${c.textPreview} ${c.text}`.toLowerCase();
-      let score = 0;
-
-      for (const term of comparisonTerms) {
-        if (text.includes(term)) score += 40;
-      }
-
-      if (/\b(compare|comparison|versus|vs|difference|different|similar|unlike)\b/.test(text)) score += 20;
-      if (selectedPages.has(c.page)) score -= 80;
-      if (selectedText.includes("star schema") && /\b(galaxy schema|snowflake schema|fact constellation)\b/.test(text)) score += 80;
-      if (selectedText.includes("galaxy schema") && /\b(star schema|snowflake schema)\b/.test(text)) score += 80;
-      if (selectedText.includes("snowflake schema") && /\b(star schema|galaxy schema|fact constellation)\b/.test(text)) score += 80;
-
-      return { raw: chunk, chunk: c, score };
-    })
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score || a.chunk.page - b.chunk.page);
-
-  return dedupeBy(scored.map((x) => attachEvidenceRole(x.raw, "comparisonEvidence", x.score)), (c) => c.chunkId).slice(0, maxItems);
-}
-
-function pickRelatedChunks(allChunks, selectedNode, sourceRefs, question = "", usedChunkIds = new Set(), maxItems = 24) {
-  const scored = safeArray(allChunks)
-    .map((chunk) => {
-      const c = compactChunk(chunk);
-      return {
-        raw: chunk,
-        chunk: c,
-        score: scoreChunkForNode(chunk, selectedNode, sourceRefs, question),
-      };
-    })
-    .filter((x) => !usedChunkIds.has(x.chunk.chunkId))
-    .sort((a, b) => b.score - a.score || a.chunk.page - b.chunk.page || a.chunk.chunkIndex - b.chunk.chunkIndex);
-
-  return dedupeBy(scored.map((x) => attachEvidenceRole(x.raw, "relatedEvidence", x.score)), (c) => c.chunkId).slice(0, maxItems);
-}
-
-function mergeTeachingChunks({ selectedEvidence, samePageEvidence, nearbyEvidence, relatedEvidence, comparisonEvidence, maxItems }) {
-  return dedupeBy(
+  return cleanText(
     [
-      ...safeArray(selectedEvidence),
-      ...safeArray(samePageEvidence),
-      ...safeArray(nearbyEvidence),
-      ...safeArray(relatedEvidence),
-      ...safeArray(comparisonEvidence),
-    ],
-    (c) => c.chunkId
-  ).slice(0, maxItems);
+      selectedNodeTitle(n),
+      selectedNodeDefinition(n),
+      n.nodeType || n.type || "",
+      safeArray(n.tags).join(" "),
+      safeArray(n.visualHints).join(" "),
+      safeArray(rich.pages).join(" "),
+      rich.fullPageTextPreview || "",
+      rich.ocrTextPreview || "",
+      rich.tablesPreview || "",
+      rich.figuresPreview || "",
+    ].join("\n"),
+    30000
+  );
 }
 
-function buildPageContexts({
-  pageMap,
-  selectedEvidence,
-  samePageEvidence,
-  nearbyEvidence,
-  relatedEvidence,
-  comparisonEvidence,
-  maxPages = 16,
-  maxTextPerPage = 36000,
-}) {
-  const relationByPage = new Map();
+function getAllNodeRefsAndPages(selectedNode) {
+  const refsFromNode = sourceRefsFromNode(selectedNode);
+  const rich = getRichSourcePack(selectedNode);
+  const richPages = safeArray(rich.pages || rich.pageRefs).map((p) => Number(p)).filter(Boolean);
+  const pageRefs = safeArray(
+    selectedNode.pageRefs ||
+      selectedNode.pages ||
+      selectedNode.data?.pageRefs ||
+      selectedNode.metadata?.pageRefs ||
+      []
+  )
+    .map((p) => Number(p))
+    .filter(Boolean);
 
-  for (const c of selectedEvidence) relationByPage.set(Number(c.page), "selected_or_same_page");
-  for (const c of samePageEvidence) if (!relationByPage.has(Number(c.page))) relationByPage.set(Number(c.page), "selected_or_same_page");
-  for (const c of nearbyEvidence) if (!relationByPage.has(Number(c.page))) relationByPage.set(Number(c.page), "nearby_page");
-  for (const c of relatedEvidence) if (!relationByPage.has(Number(c.page))) relationByPage.set(Number(c.page), "related_page");
-  for (const c of comparisonEvidence) if (!relationByPage.has(Number(c.page))) relationByPage.set(Number(c.page), "comparison_page");
+  const pages = dedupeBy(
+    [
+      ...refsFromNode.map((ref) => Number(ref.page)).filter(Boolean),
+      ...richPages,
+      ...pageRefs,
+    ],
+    String
+  ).sort((a, b) => a - b);
 
-  const order = {
-    selected_or_same_page: 0,
-    nearby_page: 1,
-    related_page: 2,
-    comparison_page: 3,
-  };
-
-  const pages = [...relationByPage.entries()]
-    .sort((a, b) => order[a[1]] - order[b[1]] || a[0] - b[0])
-    .slice(0, maxPages);
-
-  return pages.map(([page, relation]) => {
-    const chunks = safeArray(pageMap.get(page));
-    const fullText = cleanText(chunks.map((c) => c.text).filter(Boolean).join("\n\n"), maxTextPerPage);
-    const ocrText = cleanText(chunks.map((c) => c.ocrText).filter(Boolean).join("\n\n"), maxTextPerPage);
-    const reliability = textReliability(ocrText);
-    const firstImage = chunks.find((c) => c.pageImageUrl || c.pageImagePath);
-
-    return {
+  const refs = normalizeSourceRefs([
+    ...refsFromNode,
+    ...pages.map((page) => ({
       page,
-      relation,
-      pageTitle: pageTitleHint(chunks),
-      fullText,
-      ocrText,
-      ...reliability,
-      chunks: chunks.slice(0, 20),
-      tables: chunks.flatMap((c) => c.tables || []).slice(0, 80),
-      figures: chunks.flatMap((c) => c.figures || []).slice(0, 80),
-      layoutBlocks: chunks.flatMap((c) => c.layoutBlocks || []).slice(0, 200),
-      entities: chunks.flatMap((c) => c.entities || []).slice(0, 200),
-      pageImageUrl: firstImage?.pageImageUrl || "",
-      pageImagePath: firstImage?.pageImagePath || "",
-      hasPageImage: Boolean(firstImage?.pageImageUrl || firstImage?.pageImagePath),
-      sourceRefs: chunks.map((c) => sourceRefFromChunk(c, relation === "selected_or_same_page" ? 0.95 : 0.78)),
-      visualUseRule:
-        relation === "selected_or_same_page"
-          ? "Gemini may inspect this selected page image as diagram/layout guide; PDF extracted text remains truth."
-          : "Support only; do not override selected evidence.",
-    };
+      pageRef: `selectedNode:page:${page}`,
+      sourceRef: `selectedNode:page:${page}`,
+      quote: "",
+      confidence: 0.7,
+    })),
+  ]);
+
+  return { refs, pages };
+}
+
+function matchChunkBySourceRef(chunk, refs) {
+  const c = compactChunk(chunk, 12000);
+
+  return safeArray(refs).some((ref) => {
+    const r = safeObject(ref);
+    return Boolean(
+      (r.chunkId && c.chunkId && r.chunkId === c.chunkId) ||
+        (r.sourceRef && c.sourceRef && r.sourceRef === c.sourceRef) ||
+        (r.pageRef && c.pageRef && r.pageRef === c.pageRef && Number(r.page) === Number(c.page))
+    );
   });
 }
 
-function buildFullPdfSummary(allChunks, resource, maxChars = 30000) {
-  const chunks = safeArray(allChunks).map((c) => compactChunk(c, 5000));
-  const pageCount = Math.max(...chunks.map((c) => Number(c.page) || 0), Number(resource?.pageCount || resource?.extraction?.pageCount || 0), 0);
-  const byPage = buildPageMap(chunks);
-  const pageSummaries = [...byPage.entries()].slice(0, 80).map(([page, pageChunks]) => ({
-    page,
-    title: pageTitleHint(pageChunks),
-    preview: inlineText(pageChunks.map((c) => c.textPreview || c.text).join(" "), 1200),
-    hasTables: pageChunks.some((c) => safeArray(c.tables).length),
-    hasFigures: pageChunks.some((c) => safeArray(c.figures).length || c.hasPageImage),
-  }));
+function tokenize(text) {
+  const stop = new Set(
+    "the and for with that this from into about page source chunk concept student teacher board what when then your you are was were can will have has had not but or of to in on a an is it as by be if so we they their them our us pdf slide lecture chapter".split(
+      " "
+    )
+  );
 
-  const summaryText = cleanText(
+  const words = inlineText(text, 80000).toLowerCase().match(/[a-z0-9_/-]{3,}/g) || [];
+  return words.filter((w) => !stop.has(w));
+}
+
+function scoreChunkForSelectedNode(chunk, selectedNode, selectedRefs = [], selectedPages = []) {
+  const c = compactChunk(chunk, 18000);
+  const target = nodeSearchText(selectedNode).toLowerCase();
+  const source = cleanText(
     [
-      `Resource: ${compactResource(resource).title}`,
-      `Pages known: ${pageCount}`,
-      ...pageSummaries.map((p) => `Page ${p.page}: ${p.title}. ${p.preview}`),
+      c.title,
+      c.heading,
+      c.text,
+      c.ocrText,
+      c.tables.join("\n"),
+      c.figures.join("\n"),
     ].join("\n"),
-    maxChars
-  );
+    50000
+  ).toLowerCase();
 
-  return {
-    ok: true,
-    summary: summaryText,
-    pageCount,
-    pageSummaries,
-    rule: "Full PDF summary is overview only; selectedEvidence remains primary truth.",
-  };
+  let score = 0;
+
+  if (matchChunkBySourceRef(c, selectedRefs)) score += 120;
+  if (selectedPages.includes(Number(c.page))) score += 55;
+
+  const words = tokenize(target);
+  const seen = new Set();
+
+  for (const word of words) {
+    if (seen.has(word)) continue;
+    seen.add(word);
+    if (source.includes(word)) score += word.length > 7 ? 5 : 2;
+  }
+
+  if (c.hasPageImage) score += 8;
+  if (c.hasDiagramCandidate) score += 7;
+  if (c.hasFigures) score += 5;
+  if (c.hasTables) score += 4;
+  if (c.hasLayoutBlocks) score += 3;
+
+  return score;
 }
 
-function buildPdfOutlineFromChunks(allChunks, resource, maxItems = 80) {
-  const pageMap = buildPageMap(allChunks);
-  const outline = [...pageMap.entries()]
-    .slice(0, maxItems)
-    .map(([page, chunks]) => ({
+function groupChunksByPage(chunks) {
+  const map = new Map();
+
+  for (const raw of safeArray(chunks)) {
+    const c = compactChunk(raw);
+    if (!map.has(c.page)) map.set(c.page, []);
+    map.get(c.page).push(raw);
+  }
+
+  for (const [page, items] of map.entries()) {
+    map.set(
       page,
-      title: pageTitleHint(chunks),
-      preview: inlineText(chunks.map((c) => c.textPreview || c.text).join(" "), 900),
-      hasImage: chunks.some((c) => c.hasPageImage),
-      hasTable: chunks.some((c) => safeArray(c.tables).length),
-      hasFigure: chunks.some((c) => safeArray(c.figures).length),
-    }));
+      items.sort((a, b) => Number(a.chunkIndex || a.metadata?.chunkIndex || 0) - Number(b.chunkIndex || b.metadata?.chunkIndex || 0))
+    );
+  }
 
-  return {
-    ok: true,
-    resourceTitle: compactResource(resource).title,
-    outline,
-    outlineText: cleanText(outline.map((o) => `Pg. ${o.page}: ${o.title} — ${o.preview}`).join("\n"), 22000),
-    rule: "Outline is navigation/background only, not replacement for selected evidence.",
-  };
+  return map;
 }
 
-function buildVisualContext({
-  resource,
-  selectedEvidence,
-  samePageEvidence,
-  nearbyEvidence,
-  relatedEvidence,
-  comparisonEvidence,
-  pageContexts,
-  sourceRefs,
-}) {
-  const selectedAndSupport = dedupeBy(
-    [...safeArray(selectedEvidence), ...safeArray(samePageEvidence), ...safeArray(nearbyEvidence)],
-    (c) => c.chunkId
-  );
+function buildPageContextFromChunks({ page, chunks, relation, richPageImages = [] }) {
+  const compacted = safeArray(chunks).map((chunk) => compactChunk(chunk, 36000));
+  const imageFromChunk = compacted.find((chunk) => chunk.pageImageUrl || chunk.pageImagePath);
+  const richImage = safeArray(richPageImages).find((img) => Number(safeObject(img).page) === Number(page));
 
-  const pageImages = dedupeBy(
-    selectedAndSupport
-      .filter((c) => c.pageImageUrl || c.pageImagePath)
-      .map((c) => ({
-        page: c.page,
-        chunkId: c.chunkId,
-        pageImageUrl: c.pageImageUrl,
-        pageImagePath: c.pageImagePath,
-        sourceRef: c.sourceRef,
-        evidenceRole: c.evidenceRole,
-        useRule:
-          "Use this image only to inspect diagram/layout/figure shape. PDF extracted text and selectedEvidence remain the truth.",
-      })),
-    (x) => `${x.page}|${x.pageImageUrl}|${x.pageImagePath}`
-  );
+  const pageImageUrl =
+    cleanText(imageFromChunk?.pageImageUrl || richImage?.pageImageUrl || richImage?.url || "", 1800);
 
-  const ocrBlocks = selectedAndSupport
-    .filter((c) => c.ocrText)
-    .map((c) => ({
-      page: c.page,
-      chunkId: c.chunkId,
-      ocrText: cleanText(c.ocrText, 12000),
-      ocrReliable: c.ocrReliable,
-      ocrGarbled: c.ocrGarbled,
-      evidenceRole: c.evidenceRole,
-      rule: c.ocrGarbled ? "Ignore garbled OCR text; use page image only visually." : "OCR helper only; PDF text is truth.",
-    }))
-    .slice(0, 80);
+  const pageImagePath =
+    cleanText(imageFromChunk?.pageImagePath || richImage?.pageImagePath || richImage?.path || "", 1800);
 
-  const tables = selectedAndSupport.flatMap((c) =>
-    safeArray(c.tables).map((table, i) => ({
-      page: c.page,
-      chunkId: c.chunkId,
-      index: i,
-      table,
-      evidenceRole: c.evidenceRole,
-    }))
-  );
+  const fullText = cleanText(compacted.map((chunk) => chunk.text).filter(Boolean).join("\n\n"), 80000);
+  const ocrText = cleanText(compacted.map((chunk) => chunk.ocrText).filter(Boolean).join("\n\n"), 50000);
 
-  const figures = selectedAndSupport.flatMap((c) =>
-    safeArray(c.figures).map((figure, i) => ({
-      page: c.page,
-      chunkId: c.chunkId,
-      index: i,
-      figure,
-      evidenceRole: c.evidenceRole,
-    }))
-  );
+  const tables = dedupeBy(
+    compacted.flatMap((chunk) => chunk.tables).filter(Boolean),
+    (x) => inlineText(x, 220).toLowerCase()
+  ).slice(0, 80);
 
-  const layoutBlocks = selectedAndSupport.flatMap((c) =>
-    safeArray(c.layoutBlocks).map((block, i) => ({
-      page: c.page,
-      chunkId: c.chunkId,
-      index: i,
-      block,
-      evidenceRole: c.evidenceRole,
-    }))
-  );
+  const figures = dedupeBy(
+    compacted.flatMap((chunk) => chunk.figures).filter(Boolean),
+    (x) => inlineText(x, 220).toLowerCase()
+  ).slice(0, 80);
 
-  const entities = dedupeBy(
-    selectedAndSupport.flatMap((c) => safeArray(c.entities).map((entity) => ({ page: c.page, entity }))),
-    (x) => inlineText(x.entity, 140)
-  ).slice(0, 260);
+  const layoutBlocks = compacted.flatMap((chunk) => chunk.layoutBlocks).slice(0, 300);
 
   return {
-    ok: true,
-    resource: compactResource(resource),
-    pageImages,
-    ocrBlocks,
+    page,
+    relation,
+    fullText,
+    text: fullText,
+    selectedPageFullText: relation === "selected_or_same_page" ? fullText : "",
+    ocrText,
+    ocrReliable: textReliability(ocrText).ocrReliable,
+    ocrGarbled: textReliability(ocrText).ocrGarbled,
     tables,
     figures,
     layoutBlocks,
-    entities,
-    sourceRefs,
-    pageContexts,
-    selectedPages: dedupeBy(selectedEvidence.map((c) => c.page), String),
-    comparisonOnlyPages: dedupeBy(comparisonEvidence.map((c) => c.page), String),
-    rules: {
-      selectedEvidenceIsMainTruth: true,
-      samePageEvidenceSupportsSelectedNode: true,
-      nearbyEvidenceSupportsOnly: true,
-      comparisonEvidenceOnlyForComparison: true,
-      externalEvidenceSupplementaryOnly: true,
+    chunkIds: compacted.map((chunk) => chunk.chunkId).filter(Boolean),
+    sourceRefs: dedupeBy(compacted.map((chunk) => sourceRefFromChunk(chunk)), (ref) => `${ref.chunkId}|${ref.page}`),
+    pageImageUrl,
+    pageImagePath,
+    hasPageImage: Boolean(pageImageUrl || pageImagePath),
+    fullPageImageAvailableForGeminiVision: Boolean(pageImageUrl || pageImagePath),
+    hasTables: tables.length > 0,
+    hasFigures: figures.length > 0,
+    hasLayoutBlocks: layoutBlocks.length > 0,
+    hasDiagramCandidate:
+      figures.length > 0 ||
+      tables.length > 0 ||
+      layoutBlocks.some((block) =>
+        /diagram|figure|visual|chart|schema|workflow|graph|table|image/i.test(
+          `${safeString(block.type)} ${safeString(block.text)} ${safeString(block.caption)} ${safeString(block.title)}`
+        )
+      ),
+    pdfExtractedTextIsTruth: true,
+    ocrIsHelperOnly: true,
+    imageTextIsTruth: false,
+    visualUseRule:
+      "Full page image can be sent to Gemini Vision for diagram/layout/figure shape. Text labels should be verified from PDF text/OCR/chunks.",
+  };
+}
+
+function evidenceToSourceTextBlock(evidence, maxItems = 12, maxChars = 36000) {
+  const blocks = safeArray(evidence)
+    .slice(0, maxItems)
+    .map((item) => {
+      const e = safeObject(item);
+      return cleanText(
+        [
+          `[${e.evidenceRole || "evidence"} page=${e.page} chunk=${e.chunkId}]`,
+          e.heading ? `Heading: ${e.heading}` : "",
+          e.text ? cleanText(e.text, 4000) : "",
+          e.ocrText ? `OCR: ${cleanText(e.ocrText, 1500)}` : "",
+          e.tables?.length ? `Tables: ${safeArray(e.tables).slice(0, 4).join("\n")}` : "",
+          e.figures?.length ? `Figures: ${safeArray(e.figures).slice(0, 4).join("\n")}` : "",
+          e.pageImageUrl || e.pageImagePath ? `Full page image: ${e.pageImageUrl || e.pageImagePath}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        9000
+      );
+    });
+
+  return cleanText(blocks.join("\n\n---\n\n"), maxChars);
+}
+
+function compactFullPdfSummary(resource, selectedNode) {
+  const r = compactResource(resource);
+  const meta = safeObject(r.metadata);
+  const treeMeta = safeObject(selectedNode?.treeMetadata || selectedNode?.metadata?.treeMetadata);
+
+  const summaryObj =
+    safeObject(meta.fullPdfSummary) ||
+    safeObject(meta.summaryForTree) ||
+    safeObject(treeMeta.fullPdfSummary) ||
+    safeObject(selectedNode?.metadata?.fullPdfSummary);
+
+  const summaryText =
+    summaryObj.fullPdfSummary ||
+    summaryObj.summary ||
+    r.summary ||
+    meta.fullPdfSummaryText ||
+    meta.documentSummary ||
+    "";
+
+  return {
+    fullPdfSummary: cleanText(summaryText, 18000),
+    mainTopic: cleanText(summaryObj.mainTopic || meta.mainTopic || r.title, 260),
+    learningGoal: cleanText(summaryObj.learningGoal || meta.learningGoal || "", 1200),
+    majorThemes: safeArray(summaryObj.majorThemes || meta.majorThemes).map((x) => cleanText(x, 200)).filter(Boolean).slice(0, 20),
+    keyConcepts: safeArray(summaryObj.keyConcepts || meta.keyConcepts).slice(0, 80),
+    diagramPages: safeArray(summaryObj.diagramPages || meta.diagramPages).slice(0, 80),
+  };
+}
+
+function compactFullPdfOutline(resource, selectedNode) {
+  const r = compactResource(resource);
+  const meta = safeObject(r.metadata);
+  const treeMeta = safeObject(selectedNode?.treeMetadata || selectedNode?.metadata?.treeMetadata);
+
+  const outlineObj =
+    safeObject(meta.fullPdfOutline) ||
+    safeObject(meta.pdfOutline) ||
+    safeObject(meta.documentOutline) ||
+    safeObject(treeMeta.fullPdfOutline) ||
+    safeObject(selectedNode?.metadata?.fullPdfOutline);
+
+  const modules = safeArray(outlineObj.modules || meta.roadmapModules || meta.modules);
+
+  return {
+    title: cleanText(outlineObj.title || meta.outlineTitle || r.title, 260),
+    modules: modules
+      .map((raw, index) => {
+        const m = safeObject(raw);
+        return {
+          moduleId: cleanText(m.moduleId || m.id || `module_${index + 1}`, 160),
+          title: cleanText(m.title || `Module ${index + 1}`, 240),
+          summary: cleanText(m.summary || m.description || "", 1200),
+          pages: safeArray(m.pages).map((p) => Number(p)).filter(Boolean),
+          pageStart: Number(m.pageStart || safeArray(m.pages)[0] || 0) || undefined,
+          pageEnd: Number(m.pageEnd || safeArray(m.pages).slice(-1)[0] || 0) || undefined,
+          children: safeArray(m.children || m.items).slice(0, 30),
+        };
+      })
+      .filter((m) => m.title)
+      .slice(0, 40),
+  };
+}
+
+function selectedNodeTreeMetadata(selectedNode, resource) {
+  const n = safeObject(selectedNode);
+  const meta = safeObject(n.metadata);
+  const data = safeObject(n.data);
+  const resourceMeta = safeObject(resource?.metadata);
+
+  return {
+    fullPdfSummary:
+      safeObject(meta.fullPdfSummary) ||
+      safeObject(data.fullPdfSummary) ||
+      safeObject(resourceMeta.fullPdfSummary) ||
+      null,
+    fullPdfOutline:
+      safeObject(meta.fullPdfOutline) ||
+      safeObject(data.fullPdfOutline) ||
+      safeObject(resourceMeta.fullPdfOutline) ||
+      null,
+    roadmapModules:
+      safeArray(meta.roadmapModules || data.roadmapModules || resourceMeta.roadmapModules).slice(0, 40),
+  };
+}
+
+function buildVisualContext({ pageContexts, selectedEvidence, samePageEvidence, nearbyEvidence, richPageImages, selectedNode, resource }) {
+  const allEvidence = [
+    ...safeArray(selectedEvidence),
+    ...safeArray(samePageEvidence),
+    ...safeArray(nearbyEvidence),
+  ];
+
+  const evidenceImages = safeArray(allEvidence)
+    .map((ev) => {
+      const e = safeObject(ev);
+      if (!e.pageImageUrl && !e.pageImagePath) return null;
+      return {
+        page: e.page,
+        pageImageUrl: e.pageImageUrl,
+        pageImagePath: e.pageImagePath,
+        url: e.pageImageUrl,
+        src: e.pageImageUrl,
+        path: e.pageImagePath,
+        evidenceRole: e.evidenceRole || "evidencePageImage",
+        sourceRefs: e.sourceRefs || [],
+        fullPageImageAvailableForGeminiVision: true,
+        imageTextIsTruth: false,
+        pdfExtractedTextIsTruth: true,
+        ocrIsHelperOnly: true,
+      };
+    })
+    .filter(Boolean);
+
+  const contextImages = safeArray(pageContexts)
+    .map((ctx) => {
+      const p = safeObject(ctx);
+      if (!p.pageImageUrl && !p.pageImagePath) return null;
+      return {
+        page: p.page,
+        pageImageUrl: p.pageImageUrl,
+        pageImagePath: p.pageImagePath,
+        url: p.pageImageUrl,
+        src: p.pageImageUrl,
+        path: p.pageImagePath,
+        evidenceRole: p.relation === "selected_or_same_page" ? "selectedPageFullImage" : "nearbyPageFullImage",
+        sourceRefs: p.sourceRefs || [],
+        fullPageImageAvailableForGeminiVision: true,
+        imageTextIsTruth: false,
+        pdfExtractedTextIsTruth: true,
+        ocrIsHelperOnly: true,
+      };
+    })
+    .filter(Boolean);
+
+  const pageImages = dedupeBy(
+    [...safeArray(richPageImages), ...contextImages, ...evidenceImages],
+    (img) => `${safeObject(img).page}|${safeObject(img).pageImageUrl || safeObject(img).url || ""}|${safeObject(img).pageImagePath || safeObject(img).path || ""}`
+  );
+
+  const tables = dedupeBy(
+    allEvidence.flatMap((ev) => safeArray(ev.tables).map((table) => ({ page: ev.page, text: table }))),
+    (x) => `${x.page}|${inlineText(x.text, 180).toLowerCase()}`
+  ).slice(0, 120);
+
+  const figures = dedupeBy(
+    allEvidence.flatMap((ev) => safeArray(ev.figures).map((figure) => ({ page: ev.page, text: figure }))),
+    (x) => `${x.page}|${inlineText(x.text, 180).toLowerCase()}`
+  ).slice(0, 120);
+
+  const layoutBlocks = allEvidence.flatMap((ev) =>
+    safeArray(ev.layoutBlocks).map((block) => ({
+      page: ev.page,
+      ...safeObject(block),
+    }))
+  ).slice(0, 300);
+
+  const diagramPages = dedupeBy(
+    [
+      ...safeArray(pageContexts)
+        .filter((ctx) => safeObject(ctx).hasDiagramCandidate || safeObject(ctx).hasFigures || safeObject(ctx).hasTables)
+        .map((ctx) => ({
+          page: safeObject(ctx).page,
+          hasPageImage: safeObject(ctx).hasPageImage,
+          pageImageUrl: safeObject(ctx).pageImageUrl,
+          pageImagePath: safeObject(ctx).pageImagePath,
+          tableCount: safeArray(safeObject(ctx).tables).length,
+          figureCount: safeArray(safeObject(ctx).figures).length,
+          layoutBlockCount: safeArray(safeObject(ctx).layoutBlocks).length,
+        })),
+      ...safeArray(resource?.metadata?.diagramPages),
+    ],
+    (x) => `${safeObject(x).page}|${safeObject(x).pageImageUrl || ""}`
+  ).slice(0, 100);
+
+  const selectedPages = dedupeBy(
+    safeArray(selectedEvidence).map((ev) => Number(safeObject(ev).page)).filter(Boolean),
+    String
+  );
+
+  return {
+    selectedNode: {
+      nodeId: selectedNodeId(selectedNode),
+      title: selectedNodeTitle(selectedNode),
+      definition: selectedNodeDefinition(selectedNode),
+      sourceRefs: sourceRefsFromNode(selectedNode),
+    },
+    selectedPages,
+    pageImages,
+    tables,
+    figures,
+    layoutBlocks,
+    diagramPages,
+    visualEvidenceText: evidenceToSourceTextBlock(allEvidence, 18, 50000),
+    metadata: {
+      pageImagesIncluded: pageImages.length > 0,
+      pageImageCount: pageImages.length,
+      selectedPageImageCount: pageImages.filter((img) => selectedPages.includes(Number(img.page))).length,
+      richSourcePackPageImageCount: safeArray(richPageImages).length,
+      selectedNodeFullPageImagesAvailable: safeArray(richPageImages).length > 0,
+      geminiVisionPageImagesAvailable: pageImages.length > 0,
+      hasTables: tables.length > 0,
+      hasFigures: figures.length > 0,
+      hasLayoutBlocks: layoutBlocks.length > 0,
+      hasDiagramCandidate: diagramPages.length > 0,
       pdfExtractedTextIsTruth: true,
       ocrIsHelperOnly: true,
       imageTextIsTruth: false,
-      pageImageUse: "visual_preview_layout_diagram_shape_only",
-      geminiVisionCanInspectSelectedPageImages: pageImages.length > 0,
-    },
-    metadata: {
-      pageImageCount: pageImages.length,
-      ocrBlockCount: ocrBlocks.length,
-      reliableOcrBlockCount: ocrBlocks.filter((x) => x.ocrReliable).length,
-      unreliableOcrBlockCount: ocrBlocks.filter((x) => !x.ocrReliable).length,
-      garbledOcrDetected: ocrBlocks.some((x) => x.ocrGarbled),
-      tableCount: tables.length,
-      figureCount: figures.length,
-      layoutBlockCount: layoutBlocks.length,
-      pageImagesIncluded: pageImages.length > 0,
-      ocrIncluded: ocrBlocks.length > 0,
-      tablesIncluded: tables.length > 0,
-      figuresIncluded: figures.length > 0,
-      layoutIncluded: layoutBlocks.length > 0,
-    },
-  };
-}
-
-function detectDiagramIntent({ selectedNode, selectedEvidence, samePageEvidence, visualContext }) {
-  const text = inlineText(
-    [
-      selectedNodeTitle(selectedNode),
-      selectedNodeText(selectedNode, [], ""),
-      ...safeArray(selectedEvidence).map((c) => `${c.heading} ${c.title} ${c.textPreview} ${c.text}`),
-      ...safeArray(samePageEvidence).map((c) => `${c.heading} ${c.title} ${c.textPreview}`),
-      JSON.stringify(safeObject(visualContext).entities || []),
-    ].join("\n"),
-    80000
-  ).toLowerCase();
-
-  const out = [];
-  const add = (type, reason, score) => out.push({ type, reason, score });
-
-  if (/\b(star schema|snowflake schema|galaxy schema|fact table|dimension table|warehouse|data mart)\b/.test(text)) {
-    add("schemaDiagram", "Database schema/warehouse terms detected.", 0.96);
-    add("comparisonTable", "Schema concepts benefit from comparison.", 0.78);
-  }
-
-  if (/\b(migration|rollback|deploy|ci\/cd|pipeline|workflow|step|process)\b/.test(text)) {
-    add("workflow", "Process/workflow terms detected.", 0.94);
-    add("timeline", "Evolution/deployment terms detected.", 0.72);
-  }
-
-  if (/\b(neuron|neural network|mlp|activation|weight|bias|layer|input layer|hidden layer|output layer)\b/.test(text)) {
-    add("neuralNetworkDiagram", "Neural network visual terms detected.", 0.98);
-    add("formulaFlow", "Neuron/activation explanation needs formula flow.", 0.82);
-  }
-
-  if (/\b(sequence|interaction|actor|client|server|request|response)\b/.test(text)) {
-    add("sequenceDiagram", "Interaction terms detected.", 0.82);
-  }
-
-  if (/\b(tree|hierarchy|parent|child|root|leaf)\b/.test(text)) {
-    add("tree", "Hierarchy terms detected.", 0.78);
-  }
-
-  if (/\b(table|row|column|attribute|field|key|measure|compare|comparison)\b/.test(text)) {
-    add("table", "Table/attribute terms detected.", 0.76);
-  }
-
-  if (!out.length) {
-    add("conceptMap", "Default source-grounded concept map.", 0.65);
-  }
-
-  return out.sort((a, b) => b.score - a.score).slice(0, 6);
-}
-
-function buildText2DiagramPlan({ selectedNode, sourceRefs, exactChunks, samePageChunks, relatedChunks, visualContext }) {
-  const intents = detectDiagramIntent({
-    selectedNode,
-    selectedEvidence: exactChunks,
-    samePageEvidence: samePageChunks,
-    visualContext,
-  });
-
-  const primary = intents[0];
-
-  return {
-    ok: true,
-    text2DiagramPlanUsed: true,
-    diagramIntent: {
-      primary: primary.type,
-      candidates: intents,
-    },
-    requestedVisuals: intents.map((x) => x.type),
-    sourceGrounding: {
-      selectedSourceRefs: sourceRefs,
-      selectedPages: dedupeBy(safeArray(exactChunks).map((c) => c.page), String),
-      pageImageAvailable: safeArray(visualContext.pageImages).length > 0,
-    },
-    rules: [
-      "Do not invent diagram facts.",
-      "Use selectedEvidence first.",
-      "Use samePageEvidence for support.",
-      "Use comparisonEvidence only in comparison block.",
-      "Use page image as visual/layout reference only.",
-      "Never show raw JSON on board.",
-    ],
-  };
-}
-
-function detectPrerequisites({ selectedNode, chunks, fullPdfSummary }) {
-  const text = inlineText(
-    [
-      selectedNodeTitle(selectedNode),
-      selectedNodeText(selectedNode, [], ""),
-      ...safeArray(chunks).map((c) => `${c.heading} ${c.title} ${c.textPreview}`),
-      safeObject(fullPdfSummary).summary,
-    ].join("\n"),
-    60000
-  ).toLowerCase();
-
-  const required = [];
-  const push = (concept, why) => {
-    if (!required.some((x) => x.concept === concept)) required.push({ concept, why });
-  };
-
-  if (/\bstar schema|snowflake schema|galaxy schema|fact table|dimension table\b/.test(text)) {
-    push("fact table", "Needed to understand warehouse schema structure.");
-    push("dimension table", "Needed to understand descriptive lookup tables.");
-    push("primary/foreign key", "Needed to understand joins between fact and dimension tables.");
-  }
-
-  if (/\bmigration|rollback|schema evolution|database change\b/.test(text)) {
-    push("database schema", "Needed to understand what changes.");
-    push("version control", "Needed to understand repeatable scripts and audit trail.");
-    push("rollback", "Needed to understand safe recovery.");
-  }
-
-  if (/\bneuron|neural network|activation|weight|bias\b/.test(text)) {
-    push("weighted sum", "Needed to understand artificial neuron computation.");
-    push("activation function", "Needed to understand output transformation.");
-    push("layers", "Needed to understand MLP structure.");
-  }
-
-  return {
-    ok: true,
-    required: required.slice(0, 8),
-    rule: "Prerequisites are explanation helpers only; selected evidence remains truth.",
-  };
-}
-
-function buildTeacherPromptPack({
-  selectedNode,
-  sourceRefs,
-  selectedEvidence,
-  samePageEvidence,
-  nearbyEvidence,
-  relatedEvidence,
-  comparisonEvidence,
-  pageContexts,
-  fullPdfOutline,
-  fullPdfSummary,
-  visualContext,
-  text2DiagramPlan,
-  prerequisites,
-  externalResources,
-}) {
-  return {
-    ok: true,
-    selectedNodeTitle: selectedNodeTitle(selectedNode),
-    instruction:
-      "Teach the selected node like a human teacher, but ground every main claim in selectedEvidence first. Do not mix comparison/external evidence into the main truth.",
-    strictEvidenceOrder: [
-      "selectedEvidence",
-      "samePageEvidence",
-      "nearbyEvidence",
-      "relatedEvidence",
-      "comparisonEvidence",
-      "externalEvidence",
-    ],
-    selectedEvidence,
-    samePageEvidence,
-    nearbyEvidence,
-    relatedEvidence,
-    comparisonEvidence,
-    externalEvidence: safeArray(externalResources?.externalEvidence),
-    sourceRefs,
-    pageContexts,
-    selectedPageFullText: pageContexts
-      .filter((p) => p.relation === "selected_or_same_page")
-      .map((p) => ({
-        page: p.page,
-        fullText: p.fullText,
-        ocrText: p.ocrText,
-        ocrReliable: p.ocrReliable,
-        pageImageUrl: p.pageImageUrl,
-        pageImagePath: p.pageImagePath,
-        tables: p.tables,
-        figures: p.figures,
-        layoutBlocks: p.layoutBlocks,
-      })),
-    fullPdfOutline,
-    fullPdfSummary,
-    visualContext,
-    text2DiagramPlan,
-    prerequisites,
-    rules: {
-      noFakeFallback: true,
-      selectedEvidenceIsTruth: true,
-      comparisonEvidenceOnlyWhenComparing: true,
-      externalEvidenceNeverMainTruth: true,
-      pdfExtractedTextIsTruth: true,
-      ocrHelperOnly: true,
-      pageImageForGeminiVisionAndDiagramLayout: true,
-      noRawJsonOnBoard: true,
-    },
-  };
-}
-
-function buildExternalQueries({ selectedNode, resource, prerequisites }) {
-  const title = selectedNodeTitle(selectedNode);
-  const resTitle = compactResource(resource).title;
-  const prereq = safeArray(prerequisites?.required).map((x) => x.concept).join(" ");
-  return dedupeBy(
-    [
-      `${title} explanation`,
-      `${title} ${resTitle}`,
-      `${title} tutorial source`,
-      `${title} ${prereq}`,
-    ].map((x) => inlineText(x, 180)).filter(Boolean),
-    String
-  ).slice(0, 4);
-}
-
-function externalSearchEnabled() {
-  return envTrue(["LIVE_TUTOR_ENABLE_EXTERNAL_RESOURCES", "GOOGLE_LIVE_TUTOR_EXTERNAL_RESOURCES"], false);
-}
-
-async function fetchExternalResources({ selectedNode, resource, prerequisites, enabled, maxItems = 4 }) {
-  const queries = buildExternalQueries({ selectedNode, resource, prerequisites });
-
-  if (!enabled) {
-    return {
-      ok: true,
-      externalResources: [],
-      externalEvidence: [],
-      queries,
-      metadata: {
-        enabled: false,
-        externalOnly: true,
-        fallbackUsed: false,
-      },
-      rule: "External resources disabled. PDF selectedEvidence remains truth.",
-    };
-  }
-
-  return {
-    ok: true,
-    externalResources: [],
-    externalEvidence: [],
-    queries,
-    metadata: {
-      enabled: true,
-      externalOnly: true,
       fallbackUsed: false,
-      note: "External fetch adapter not configured in Phase 1; keeping source-grounded PDF truth.",
+      usedSmartFallback: false,
     },
-    rule: "External resources are supplementary only and never main truth.",
   };
 }
 
-function contextBudgets(body = {}) {
-  return {
-    maxContextChunks: boundedInt(body.maxContextChunks, envNumber(["LIVE_TUTOR_MAX_CONTEXT_CHUNKS"], 1400), 100, 2500),
-    maxSelectedEvidence: boundedInt(body.maxSelectedEvidence, 12, 1, 40),
-    maxSamePageEvidence: boundedInt(body.maxSamePageEvidence, 20, 0, 80),
-    maxNearbyEvidence: boundedInt(body.maxNearbyEvidence, 20, 0, 80),
-    maxRelatedEvidence: boundedInt(body.maxRelatedEvidence, 28, 0, 100),
-    maxComparisonEvidence: boundedInt(body.maxComparisonEvidence, 12, 0, 80),
-    maxTeachingChunks: boundedInt(body.maxTeachingChunks, 80, 12, 180),
-    maxPages: boundedInt(body.maxPages, 18, 3, 60),
-    maxTextPerPage: boundedInt(body.maxTextPerPage, 38000, 6000, 80000),
-    maxOutlineItems: boundedInt(body.maxOutlineItems, 90, 20, 220),
-    maxFullPdfSummaryChars: boundedInt(body.maxFullPdfSummaryChars, 32000, 6000, 80000),
-    maxExternalResources: boundedInt(body.maxExternalResources, 4, 0, 12),
-  };
-}
 
-async function timedContextJob(name, fn) {
-  const started = Date.now();
-  try {
-    const value = await fn();
-    return { name, ok: true, value, ms: Date.now() - started };
-  } catch (error) {
-    return { name, ok: false, value: null, error: error?.message || String(error), ms: Date.now() - started };
-  }
-}
 
-function ownerKeyFromRequest({ body, resource }) {
-  return (
-    cleanText(body?.ownerKey, 260) ||
-    cleanText(body?.offlineUserId, 260) ||
-    cleanText(body?.deviceId, 260) ||
-    cleanText(resource?.ownerKey, 260) ||
-    cleanText(resource?.offlineUserId, 260) ||
-    cleanText(resource?.deviceId, 260)
+
+function selectExactChunks({ chunks, selectedNode, selectedRefs, selectedPages, maxExactChunks }) {
+  const exactByRef = safeArray(chunks).filter((chunk) => matchChunkBySourceRef(chunk, selectedRefs));
+  const exactByPage = safeArray(chunks).filter((chunk) => selectedPages.includes(Number(chunk.page || chunk.metadata?.page)));
+
+  const scored = dedupeBy([...exactByRef, ...exactByPage], (chunk) => {
+    const c = compactChunk(chunk, 8000);
+    return `${c.chunkId}|${c.page}|${c.chunkIndex}`;
+  })
+    .map((chunk) => ({
+      chunk,
+      score: scoreChunkForSelectedNode(chunk, selectedNode, selectedRefs, selectedPages),
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  return scored.slice(0, maxExactChunks).map(({ chunk }, index) =>
+    chunkToEvidence(chunk, index < exactByRef.length ? "selectedEvidence" : "selectedPageEvidence", 100 - index)
   );
 }
 
-async function buildSelectedNodeSourceContext({
-  resource,
-  selectedNode,
-  body = {},
-  question = "",
-  existingChunks = null,
-}) {
-  const totalStartedAt = Date.now();
-  const budgets = contextBudgets(body);
-  const compact = compactResource(resource);
+function selectSamePageChunks({ chunks, selectedPages, selectedEvidence, maxSamePageChunks }) {
+  const selectedChunkIds = new Set(safeArray(selectedEvidence).map((ev) => ev.chunkId).filter(Boolean));
 
-  const resourceId = cleanText(body.resourceId || compact.resourceId || resource?._id || resource?.id, 260);
-  const ownerKey = ownerKeyFromRequest({ body, resource });
+  return safeArray(chunks)
+    .filter((chunk) => selectedPages.includes(Number(chunk.page || chunk.metadata?.page)))
+    .filter((chunk) => !selectedChunkIds.has(compactChunk(chunk, 8000).chunkId))
+    .sort((a, b) => Number(a.chunkIndex || a.metadata?.chunkIndex || 0) - Number(b.chunkIndex || b.metadata?.chunkIndex || 0))
+    .slice(0, maxSamePageChunks)
+    .map((chunk, index) => chunkToEvidence(chunk, "samePageEvidence", 80 - index));
+}
 
-  if (!resourceId) {
-    throw new Error("sourceContextBuilder: resourceId is required.");
-  }
+function selectNearbyChunks({ chunksByPage, selectedPages, maxNearbyChunks }) {
+  const nearbyPages = dedupeBy(
+    safeArray(selectedPages)
+      .flatMap((page) => [Number(page) - 1, Number(page) + 1])
+      .filter((page) => page > 0),
+    String
+  ).sort((a, b) => a - b);
 
-  let allChunks = safeArray(existingChunks).length
-    ? safeArray(existingChunks)
-    : await loadAllChunks({ ownerKey, resourceId, limit: budgets.maxContextChunks });
+  const nearby = [];
 
-  allChunks = safeArray(allChunks).map((chunk) => {
-    const c = safeObject(chunk);
-    if (!c.resourceId) c.resourceId = resourceId;
-    return c;
-  });
-
-  if (!allChunks.length) {
-    throw new Error(`sourceContextBuilder: no chunks found for resourceId=${resourceId}. Refusing fake context.`);
-  }
-
-  let sourceRefs = sourceRefsFromNode(selectedNode);
-  const pageMap = buildPageMap(allChunks);
-
-  let selectedEvidence = pickExactChunks(allChunks, sourceRefs, selectedNode, question, budgets.maxSelectedEvidence);
-
-  if (!selectedEvidence.length) {
-    const richPages = getRichSourcePackPages(selectedNode);
-    if (richPages.length) {
-      selectedEvidence = safeArray(allChunks)
-        .map((c) => compactChunk(c))
-        .filter((c) => richPages.includes(Number(c.page)))
-        .slice(0, budgets.maxSelectedEvidence)
-        .map((c, i) => attachEvidenceRole(c, "selectedEvidence", 800 - i));
+  for (const page of nearbyPages) {
+    const pageChunks = safeArray(chunksByPage.get(page));
+    for (const chunk of pageChunks) {
+      nearby.push(chunkToEvidence(chunk, page < Math.min(...selectedPages) ? "previousPageEvidence" : "nextPageEvidence", 60));
+      if (nearby.length >= maxNearbyChunks) break;
     }
+    if (nearby.length >= maxNearbyChunks) break;
   }
 
-  if (!selectedEvidence.length) {
-    const scored = safeArray(allChunks)
-      .map((chunk) => ({
-        raw: chunk,
-        score: scoreChunkForNode(chunk, selectedNode, sourceRefs, question),
-      }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, Math.min(4, budgets.maxSelectedEvidence));
+  return nearby;
+}
 
-    selectedEvidence = scored.map((x) => attachEvidenceRole(x.raw, "selectedEvidence", x.score));
-  }
+function selectRelatedChunks({ chunks, selectedNode, selectedRefs, selectedPages, excludedChunkIds, maxRelatedChunks }) {
+  return safeArray(chunks)
+    .filter((chunk) => {
+      const c = compactChunk(chunk, 8000);
+      return !excludedChunkIds.has(c.chunkId) && !selectedPages.includes(Number(c.page));
+    })
+    .map((chunk) => ({
+      chunk,
+      score: scoreChunkForSelectedNode(chunk, selectedNode, selectedRefs, selectedPages),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxRelatedChunks)
+    .map(({ chunk }, index) => chunkToEvidence(chunk, "relatedEvidence", 40 - index));
+}
 
-  if (!selectedEvidence.length) {
-    throw new Error("sourceContextBuilder: selectedEvidence could not be built. Refusing fake board context.");
-  }
-
-  if (!sourceRefs.length) {
-    sourceRefs = selectedEvidence.map((chunk) => sourceRefFromChunk(chunk, 0.9));
-  }
-
-  const samePageEvidence = pickSamePageChunks(allChunks, selectedEvidence, budgets.maxSamePageEvidence);
-  const nearbyEvidence = pickNearbyChunks(allChunks, selectedEvidence, budgets.maxNearbyEvidence);
-  const comparisonEvidence = pickComparisonChunks(allChunks, selectedNode, sourceRefs, question, budgets.maxComparisonEvidence);
-
-  const usedChunkIds = new Set(
-    [...selectedEvidence, ...samePageEvidence, ...nearbyEvidence, ...comparisonEvidence].map((c) => c.chunkId)
-  );
-
-  const relatedEvidence = pickRelatedChunks(
-    allChunks,
-    selectedNode,
-    sourceRefs,
-    question,
-    usedChunkIds,
-    budgets.maxRelatedEvidence
-  );
-
-  const teachingChunks = mergeTeachingChunks({
-    selectedEvidence,
-    samePageEvidence,
-    nearbyEvidence,
-    relatedEvidence,
-    comparisonEvidence,
-    maxItems: budgets.maxTeachingChunks,
-  });
-
-  const pageContexts = buildPageContexts({
-    pageMap,
-    selectedEvidence,
-    samePageEvidence,
-    nearbyEvidence,
-    relatedEvidence,
-    comparisonEvidence,
-    maxPages: budgets.maxPages,
-    maxTextPerPage: budgets.maxTextPerPage,
-  });
-
-  const [outlineJob, summaryJob, visualJob, prerequisitesJob] = await Promise.all([
-    timedContextJob("fullPdfOutline", async () => buildPdfOutlineFromChunks(allChunks, resource, budgets.maxOutlineItems)),
-    timedContextJob("fullPdfSummary", async () => buildFullPdfSummary(allChunks, resource, budgets.maxFullPdfSummaryChars)),
-    timedContextJob("visualContext", async () =>
-      buildVisualContext({
-        resource,
-        selectedEvidence,
-        samePageEvidence,
-        nearbyEvidence,
-        relatedEvidence,
-        comparisonEvidence,
-        pageContexts,
-        sourceRefs,
+function buildSelectedPageFullText(pageContexts, selectedPages) {
+  const selectedSet = new Set(safeArray(selectedPages).map(Number));
+  return cleanText(
+    safeArray(pageContexts)
+      .filter((ctx) => selectedSet.has(Number(safeObject(ctx).page)))
+      .map((ctx) => {
+        const c = safeObject(ctx);
+        return [
+          `[[SELECTED PAGE ${c.page}]]`,
+          c.fullText || c.text || "",
+          c.ocrText ? `OCR:\n${c.ocrText}` : "",
+          safeArray(c.tables).length ? `TABLES:\n${safeArray(c.tables).join("\n\n")}` : "",
+          safeArray(c.figures).length ? `FIGURES:\n${safeArray(c.figures).join("\n\n")}` : "",
+          c.pageImageUrl || c.pageImagePath ? `FULL_PAGE_IMAGE: ${c.pageImageUrl || c.pageImagePath}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
       })
-    ),
-    timedContextJob("prerequisites", async () =>
-      detectPrerequisites({ selectedNode, chunks: teachingChunks, fullPdfSummary: null })
-    ),
-  ]);
+      .join("\n\n--- SELECTED PAGE BREAK ---\n\n"),
+    120000
+  );
+}
 
-  const fullPdfOutline = outlineJob.value || buildPdfOutlineFromChunks(allChunks, resource, budgets.maxOutlineItems);
-  const fullPdfSummary = summaryJob.value || buildFullPdfSummary(allChunks, resource, budgets.maxFullPdfSummaryChars);
-  const visualContext =
-    visualJob.value ||
-    buildVisualContext({
-      resource,
+function buildSamePageFullText(pageContexts, selectedPages) {
+  const selectedSet = new Set(safeArray(selectedPages).map(Number));
+  return cleanText(
+    safeArray(pageContexts)
+      .filter((ctx) => selectedSet.has(Number(safeObject(ctx).page)))
+      .map((ctx) => safeObject(ctx).fullText || safeObject(ctx).text || "")
+      .join("\n\n"),
+    90000
+  );
+}
+
+function buildNearbyPageText(pageContexts, selectedPages) {
+  const selectedSet = new Set(safeArray(selectedPages).map(Number));
+  return cleanText(
+    safeArray(pageContexts)
+      .filter((ctx) => !selectedSet.has(Number(safeObject(ctx).page)))
+      .map((ctx) => {
+        const c = safeObject(ctx);
+        return `[[${c.relation || "nearby"} PAGE ${c.page}]]\n${cleanText(c.fullText || c.text || "", 20000)}`;
+      })
+      .join("\n\n"),
+    90000
+  );
+}
+
+function createContextId() {
+  return `glt_source_context_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
+}
+
+function normalizeBuildInput(input = {}) {
+  const body = safeObject(input.body || input);
+  const context = safeObject(input.context);
+
+  return {
+    ownerKey: cleanText(input.ownerKey || body.ownerKey || context.ownerKey || body.offlineUserId || context.offlineUserId || "demo_user", 260),
+    resourceId: cleanText(input.resourceId || body.resourceId || context.resourceId || "", 260),
+    selectedNode: safeObject(input.selectedNode || body.selectedNode || body.node),
+    resource: safeObject(input.resource || body.resource || context.resource),
+    body,
+    context,
+  };
+}
+
+function assertSelectedNode(selectedNode) {
+  if (!safeObject(selectedNode) || (!selectedNodeTitle(selectedNode) && !selectedNodeId(selectedNode))) {
+    const error = new Error("sourceContextBuilder requires selectedNode from the roadmap tree.");
+    error.statusCode = 400;
+    error.metadata = {
+      fallbackUsed: false,
+      usedSmartFallback: false,
+    };
+    throw error;
+  }
+}
+
+function assertResourceId(resourceId) {
+  if (!resourceId) {
+    const error = new Error("sourceContextBuilder requires resourceId.");
+    error.statusCode = 400;
+    error.metadata = {
+      fallbackUsed: false,
+      usedSmartFallback: false,
+    };
+    throw error;
+  }
+}
+
+function buildDebugSummary(result) {
+  return {
+    contextId: result.contextId,
+    selectedNodeTitle: result.selectedNode?.title,
+    selectedNodeId: result.selectedNode?.nodeId,
+    selectedPages: result.selectedPages,
+    selectedEvidenceCount: safeArray(result.selectedEvidence).length,
+    samePageEvidenceCount: safeArray(result.samePageEvidence).length,
+    nearbyEvidenceCount: safeArray(result.nearbyEvidence).length,
+    relatedEvidenceCount: safeArray(result.relatedEvidence).length,
+    pageContextCount: safeArray(result.pageContexts).length,
+    pageImageCount: safeArray(result.pageImages).length,
+    visualContextPageImageCount: safeArray(result.visualContext?.pageImages).length,
+    hasSelectedPageFullText: Boolean(result.selectedPageFullText),
+    hasFullPdfSummary: Boolean(result.fullPdfSummary?.fullPdfSummary || result.fullPdfSummary),
+    hasFullPdfOutline: Boolean(result.fullPdfOutline?.modules?.length || result.fullPdfOutline?.fullPdfOutline),
+    geminiVisionPageImagesAvailable: Boolean(result.metadata?.geminiVisionPageImagesAvailable),
+  };
+}
+
+async function buildSourceContext(input = {}) {
+  const {
+    ownerKey,
+    resourceId,
+    selectedNode,
+    resource,
+    body,
+    context,
+  } = normalizeBuildInput(input);
+
+  assertResourceId(resourceId);
+  assertSelectedNode(selectedNode);
+
+  const maxChunks = boundedInt(
+    body.maxContextChunks || process.env.STAGE2_CONTEXT_MAX_CHUNKS,
+    1600,
+    100,
+    3000
+  );
+
+  const maxExactChunks = boundedInt(
+    body.maxExactChunks || process.env.STAGE2_CONTEXT_MAX_EXACT_CHUNKS,
+    12,
+    2,
+    60
+  );
+
+  const maxSamePageChunks = boundedInt(
+    body.maxSamePageChunks || process.env.STAGE2_CONTEXT_MAX_SAME_PAGE_CHUNKS,
+    24,
+    4,
+    100
+  );
+
+  const maxNearbyChunks = boundedInt(
+    body.maxNearbyChunks || process.env.STAGE2_CONTEXT_MAX_NEARBY_CHUNKS,
+    16,
+    2,
+    80
+  );
+
+  const maxRelatedChunks = boundedInt(
+    body.maxRelatedChunks || process.env.STAGE2_CONTEXT_MAX_RELATED_CHUNKS,
+    16,
+    0,
+    100
+  );
+
+  const chunks = await loadResourceChunks({
+    ownerKey,
+    resourceId,
+    limit: maxChunks,
+  });
+
+  const chunksByPage = groupChunksByPage(chunks);
+  const { refs: selectedRefs, pages: selectedPagesFromNode } = getAllNodeRefsAndPages(selectedNode);
+  const richPageImages = getRichSourcePackPageImages(selectedNode);
+
+  const richImagePages = safeArray(richPageImages)
+    .map((img) => Number(safeObject(img).page))
+    .filter(Boolean);
+
+  const selectedPages = dedupeBy(
+    [
+      ...selectedPagesFromNode,
+      ...richImagePages,
+    ],
+    String
+  ).sort((a, b) => a - b);
+
+  if (!selectedPages.length && !selectedRefs.length) {
+    const error = new Error("Selected node has no sourceRefs/pageRefs/richSourcePack pages. Cannot build grounded Stage2 context.");
+    error.statusCode = 422;
+    error.metadata = {
+      fallbackUsed: false,
+      usedSmartFallback: false,
+      selectedNodeId: selectedNodeId(selectedNode),
+      selectedNodeTitle: selectedNodeTitle(selectedNode),
+    };
+    throw error;
+  }
+
+  const selectedEvidenceRaw = selectExactChunks({
+    chunks,
+    selectedNode,
+    selectedRefs,
+    selectedPages,
+    maxExactChunks,
+  });
+
+  const selectedEvidence = hydrateEvidenceImagesFromRichSourcePack(selectedEvidenceRaw, richPageImages);
+
+  const samePageEvidenceRaw = selectSamePageChunks({
+    chunks,
+    selectedPages,
+    selectedEvidence,
+    maxSamePageChunks,
+  });
+
+  const samePageEvidence = hydrateEvidenceImagesFromRichSourcePack(samePageEvidenceRaw, richPageImages);
+
+  const nearbyEvidenceRaw = selectNearbyChunks({
+    chunksByPage,
+    selectedPages,
+    maxNearbyChunks,
+  });
+
+  const nearbyEvidence = hydrateEvidenceImagesFromRichSourcePack(nearbyEvidenceRaw, richPageImages);
+
+  const excludedChunkIds = new Set(
+    [...selectedEvidence, ...samePageEvidence, ...nearbyEvidence]
+      .map((ev) => safeObject(ev).chunkId)
+      .filter(Boolean)
+  );
+
+  const relatedEvidence = selectRelatedChunks({
+    chunks,
+    selectedNode,
+    selectedRefs,
+    selectedPages,
+    excludedChunkIds,
+    maxRelatedChunks,
+  });
+
+  const pageNumbersForContexts = dedupeBy(
+    [
+      ...selectedPages,
+      ...selectedPages.flatMap((page) => [Number(page) - 1, Number(page) + 1]).filter((page) => page > 0),
+    ],
+    String
+  ).sort((a, b) => a - b);
+
+  const pageContextsRaw = pageNumbersForContexts
+    .map((page) => {
+      const pageChunks = safeArray(chunksByPage.get(page));
+      if (!pageChunks.length) return null;
+      return buildPageContextFromChunks({
+        page,
+        chunks: pageChunks,
+        relation: selectedPages.includes(page) ? "selected_or_same_page" : page < Math.min(...selectedPages) ? "previous_page" : "next_page",
+        richPageImages,
+      });
+    })
+    .filter(Boolean);
+
+  const pageContexts = hydratePageContextsWithRichSourcePackImages(pageContextsRaw, richPageImages);
+
+  const visualContextRaw = buildVisualContext({
+    pageContexts,
+    selectedEvidence,
+    samePageEvidence,
+    nearbyEvidence,
+    richPageImages,
+    selectedNode,
+    resource,
+  });
+
+  const visualContext = mergeRichSourcePackImagesIntoVisualContext(
+    visualContextRaw,
+    richPageImages,
+    pageContexts,
+    selectedRefs
+  );
+
+  const pageImages = dedupeBy(
+    [
+      ...safeArray(visualContext.pageImages),
+      ...safeArray(richPageImages),
+      ...safeArray(pageContexts)
+        .filter((ctx) => safeObject(ctx).pageImageUrl || safeObject(ctx).pageImagePath)
+        .map((ctx) => ({
+          page: safeObject(ctx).page,
+          pageImageUrl: safeObject(ctx).pageImageUrl,
+          pageImagePath: safeObject(ctx).pageImagePath,
+          url: safeObject(ctx).pageImageUrl,
+          src: safeObject(ctx).pageImageUrl,
+          path: safeObject(ctx).pageImagePath,
+          evidenceRole: safeObject(ctx).relation === "selected_or_same_page" ? "selectedPageFullImage" : "nearbyPageFullImage",
+          sourceRefs: safeObject(ctx).sourceRefs,
+          fullPageImageAvailableForGeminiVision: true,
+          imageTextIsTruth: false,
+          pdfExtractedTextIsTruth: true,
+          ocrIsHelperOnly: true,
+        })),
+    ],
+    (img) => `${safeObject(img).page}|${safeObject(img).pageImageUrl || safeObject(img).url || ""}|${safeObject(img).pageImagePath || safeObject(img).path || ""}`
+  );
+
+  const treeMeta = selectedNodeTreeMetadata(selectedNode, resource);
+  const fullPdfSummary = treeMeta.fullPdfSummary || compactFullPdfSummary(resource, selectedNode);
+  const fullPdfOutline = treeMeta.fullPdfOutline || compactFullPdfOutline(resource, selectedNode);
+  const roadmapModules = treeMeta.roadmapModules.length ? treeMeta.roadmapModules : safeArray(fullPdfOutline.modules);
+
+  const selectedPageFullText = buildSelectedPageFullText(pageContexts, selectedPages);
+  const samePageFullText = buildSamePageFullText(pageContexts, selectedPages);
+  const nearbyPageText = buildNearbyPageText(pageContexts, selectedPages);
+
+  const selectedNodeContext = {
+    nodeId: selectedNodeId(selectedNode),
+    title: selectedNodeTitle(selectedNode),
+    definition: selectedNodeDefinition(selectedNode),
+    shortDefinition: selectedNodeDefinition(selectedNode),
+    pageRefs: selectedPages,
+    sourceRefs: selectedRefs,
+    richSourcePack: getRichSourcePack(selectedNode),
+    metadata: {
+      fallbackUsed: false,
+      usedSmartFallback: false,
+      sourceGrounded: true,
+      hasRichSourcePack: Boolean(Object.keys(getRichSourcePack(selectedNode)).length),
+      richSourcePackPageImageCount: richPageImages.length,
+      selectedNodeFullPageImagesAvailable: richPageImages.length > 0,
+      selectedNodeGeminiVisionReady: pageImages.length > 0,
+    },
+  };
+
+
+    const result = {
+    ok: true,
+    contextId: createContextId(),
+
+    ownerKey,
+    resourceId,
+
+    selectedNode: selectedNodeContext,
+    selectedNodeId: selectedNodeContext.nodeId,
+    selectedNodeTitle: selectedNodeContext.title,
+    selectedNodeDefinition: selectedNodeContext.definition,
+    selectedPages,
+
+    sourceRefs: selectedRefs,
+    selectedSourceRefs: selectedRefs,
+
+    selectedEvidence,
+    selectedNodeExactChunks: selectedEvidence,
+
+    samePageEvidence,
+    samePageChunks: samePageEvidence,
+
+    nearbyEvidence,
+    nearbyChunks: nearbyEvidence,
+    previousNextChunks: nearbyEvidence,
+
+    relatedEvidence,
+
+    comparisonEvidence: [],
+    externalEvidence: [],
+
+    pageContexts,
+    selectedPageFullText,
+    samePageFullText,
+    nearbyPageText,
+
+    fullPdfSummary,
+    fullPdfOutline,
+    roadmapModules,
+
+    pageImages,
+    visualContext,
+
+    ocrText: cleanText(
+      [
+        ...safeArray(selectedEvidence).map((ev) => safeObject(ev).ocrText),
+        ...safeArray(samePageEvidence).map((ev) => safeObject(ev).ocrText),
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+      80000
+    ),
+
+    tables: dedupeBy(
+      [
+        ...safeArray(selectedEvidence).flatMap((ev) =>
+          safeArray(safeObject(ev).tables).map((table) => ({
+            page: safeObject(ev).page,
+            text: table,
+            evidenceRole: safeObject(ev).evidenceRole || "selectedEvidence",
+          }))
+        ),
+        ...safeArray(samePageEvidence).flatMap((ev) =>
+          safeArray(safeObject(ev).tables).map((table) => ({
+            page: safeObject(ev).page,
+            text: table,
+            evidenceRole: safeObject(ev).evidenceRole || "samePageEvidence",
+          }))
+        ),
+        ...safeArray(nearbyEvidence).flatMap((ev) =>
+          safeArray(safeObject(ev).tables).map((table) => ({
+            page: safeObject(ev).page,
+            text: table,
+            evidenceRole: safeObject(ev).evidenceRole || "nearbyEvidence",
+          }))
+        ),
+      ],
+      (x) => `${safeObject(x).page}|${inlineText(safeObject(x).text, 180).toLowerCase()}`
+    ).slice(0, 160),
+
+    figures: dedupeBy(
+      [
+        ...safeArray(selectedEvidence).flatMap((ev) =>
+          safeArray(safeObject(ev).figures).map((figure) => ({
+            page: safeObject(ev).page,
+            text: figure,
+            evidenceRole: safeObject(ev).evidenceRole || "selectedEvidence",
+          }))
+        ),
+        ...safeArray(samePageEvidence).flatMap((ev) =>
+          safeArray(safeObject(ev).figures).map((figure) => ({
+            page: safeObject(ev).page,
+            text: figure,
+            evidenceRole: safeObject(ev).evidenceRole || "samePageEvidence",
+          }))
+        ),
+        ...safeArray(nearbyEvidence).flatMap((ev) =>
+          safeArray(safeObject(ev).figures).map((figure) => ({
+            page: safeObject(ev).page,
+            text: figure,
+            evidenceRole: safeObject(ev).evidenceRole || "nearbyEvidence",
+          }))
+        ),
+      ],
+      (x) => `${safeObject(x).page}|${inlineText(safeObject(x).text, 180).toLowerCase()}`
+    ).slice(0, 160),
+
+    layoutBlocks: [
+      ...safeArray(selectedEvidence).flatMap((ev) =>
+        safeArray(safeObject(ev).layoutBlocks).map((block) => ({
+          page: safeObject(ev).page,
+          evidenceRole: safeObject(ev).evidenceRole || "selectedEvidence",
+          ...safeObject(block),
+        }))
+      ),
+      ...safeArray(samePageEvidence).flatMap((ev) =>
+        safeArray(safeObject(ev).layoutBlocks).map((block) => ({
+          page: safeObject(ev).page,
+          evidenceRole: safeObject(ev).evidenceRole || "samePageEvidence",
+          ...safeObject(block),
+        }))
+      ),
+      ...safeArray(nearbyEvidence).flatMap((ev) =>
+        safeArray(safeObject(ev).layoutBlocks).map((block) => ({
+          page: safeObject(ev).page,
+          evidenceRole: safeObject(ev).evidenceRole || "nearbyEvidence",
+          ...safeObject(block),
+        }))
+      ),
+    ].slice(0, 500),
+
+    sourceTextPack: {
+      selectedEvidenceText: evidenceToSourceTextBlock(selectedEvidence, 16, 70000),
+      samePageEvidenceText: evidenceToSourceTextBlock(samePageEvidence, 24, 70000),
+      nearbyEvidenceText: evidenceToSourceTextBlock(nearbyEvidence, 18, 50000),
+      relatedEvidenceText: evidenceToSourceTextBlock(relatedEvidence, 18, 50000),
+      selectedPageFullText,
+      samePageFullText,
+      nearbyPageText,
+    },
+
+    contextForGemini: {
+      selectedNode: selectedNodeContext,
       selectedEvidence,
       samePageEvidence,
       nearbyEvidence,
       relatedEvidence,
-      comparisonEvidence,
       pageContexts,
-      sourceRefs,
-    });
-
-  let prerequisites = prerequisitesJob.value || detectPrerequisites({ selectedNode, chunks: teachingChunks, fullPdfSummary });
-  if (!safeArray(prerequisites.required).length) {
-    prerequisites = detectPrerequisites({ selectedNode, chunks: teachingChunks, fullPdfSummary });
-  }
-
-  const text2DiagramPlan = buildText2DiagramPlan({
-    selectedNode,
-    sourceRefs,
-    exactChunks: selectedEvidence,
-    samePageChunks: samePageEvidence,
-    relatedChunks: relatedEvidence,
-    visualContext,
-    prerequisites,
-  });
-
-  const externalJob = await timedContextJob("externalResources", async () =>
-    fetchExternalResources({
-      selectedNode,
-      resource,
-      prerequisites,
-      enabled: body.enableExternalResources !== undefined ? Boolean(body.enableExternalResources) : externalSearchEnabled(),
-      maxItems: budgets.maxExternalResources,
-    })
-  );
-
-  const externalResources =
-    externalJob.value || {
-      ok: true,
-      externalResources: [],
-      externalEvidence: [],
-      queries: [],
-      metadata: {
-        enabled: false,
-        error: externalJob.error,
-        fallbackUsed: false,
-        externalOnly: true,
+      selectedPageFullText,
+      samePageFullText,
+      nearbyPageText,
+      fullPdfSummary,
+      fullPdfOutline,
+      roadmapModules,
+      pageImages,
+      visualContext,
+      ocrText: cleanText(
+        [
+          ...safeArray(selectedEvidence).map((ev) => safeObject(ev).ocrText),
+          ...safeArray(samePageEvidence).map((ev) => safeObject(ev).ocrText),
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+        80000
+      ),
+      tables: safeArray(visualContext.tables),
+      figures: safeArray(visualContext.figures),
+      layoutBlocks: safeArray(visualContext.layoutBlocks),
+      truthRules: {
+        selectedEvidenceIsPrimaryTruth: true,
+        pdfExtractedTextIsTruth: true,
+        ocrIsHelperOnly: true,
+        imageTextIsTruth: false,
+        pageImagesForGeminiVision: true,
+        usePageImagesForDiagramLayoutShape: true,
+        recoverLabelsFromTextOcrChunks: true,
       },
-      rule: "External resources unavailable; PDF source evidence remains truth.",
-    };
-
-  const teacherPromptPack = buildTeacherPromptPack({
-    selectedNode,
-    sourceRefs,
-    selectedEvidence,
-    samePageEvidence,
-    nearbyEvidence,
-    relatedEvidence,
-    comparisonEvidence,
-    pageContexts,
-    fullPdfOutline,
-    fullPdfSummary,
-    visualContext,
-    text2DiagramPlan,
-    prerequisites,
-    externalResources,
-  });
-
-  const visualRules = {
-    pdfExtractedTextIsTruth: true,
-    selectedEvidenceIsMainTruth: true,
-    samePageEvidenceSupportsSelectedNode: true,
-    nearbyEvidenceSupportsOnly: true,
-    relatedEvidenceBackgroundOnly: true,
-    comparisonEvidenceOnlyForComparison: true,
-    externalEvidenceSupplementaryOnly: true,
-    pageImageIsVisualGuideOnly: true,
-    imageTextIsTruth: false,
-    ocrIsHelperOnly: true,
-    ignoreGarbledOcrText: true,
-    useImageForLayoutAndDiagramShapeOnly: true,
-    geminiVisionCanInspectSelectedPageImages: safeArray(visualContext.pageImages).length > 0,
-    redrawCleanDiagramsFromSourceTextAndVisualLayout: true,
-    noRawJsonOnBoard: true,
-  };
-
-  const selectedPageFullText = pageContexts
-    .filter((p) => p.relation === "selected_or_same_page")
-    .map((p) => ({
-      page: p.page,
-      pageTitle: p.pageTitle,
-      fullText: p.fullText,
-      ocrText: p.ocrText,
-      ocrReliable: p.ocrReliable,
-      ocrGarbled: p.ocrGarbled,
-      pdfExtractedTextIsTruth: true,
-      ocrIsHelperOnly: true,
-      imageTextIsTruth: false,
-      pageImageUse: "visual_preview_layout_diagram_shape_only",
-      tables: p.tables,
-      figures: p.figures,
-      layoutBlocks: p.layoutBlocks,
-      pageImageUrl: p.pageImageUrl,
-      pageImagePath: p.pageImagePath,
-      sourceRefs: p.sourceRefs,
-    }))
-    .slice(0, 10);
-
-  return {
-    ok: true,
-    fullPdfKnown: true,
-    deliveryMode: "phase1-selected-node-accurate-context-v12-fixed",
-    rule:
-      "Selected evidence is the primary truth. Same/nearby pages support it. Related evidence is background. Comparison evidence is comparison only. External evidence is supplementary only. PDF extracted text is truth; OCR/page image is helper/visual guide.",
-    resource: compactResource(resource),
-    selectedNodeSnapshot: safeObject(selectedNode),
-    selectedNodeTitle: selectedNodeTitle(selectedNode),
-    sourceRefs,
-    chunks: teachingChunks,
-    exactChunks: selectedEvidence,
-    selectedEvidence,
-    samePageChunks: samePageEvidence,
-    samePageEvidence,
-    nearbyChunks: nearbyEvidence,
-    nearbyEvidence,
-    relatedChunks: relatedEvidence,
-    relatedEvidence,
-    comparisonEvidence,
-    externalEvidence: safeArray(externalResources.externalEvidence),
-    neighborChunks: dedupeBy([...samePageEvidence, ...nearbyEvidence, ...relatedEvidence], (chunk) => chunk.chunkId || `${chunk.page}:${chunk.chunkIndex}`),
-    pageContexts,
-    selectedPageFullText,
-    fullPdfSummary,
-    pdfSummary: fullPdfSummary,
-    fullPdfOutline,
-    pdfOutline: fullPdfOutline,
-    outline: fullPdfOutline,
-    fullPdfOutlineText: fullPdfOutline.outlineText,
-    visualContext,
-    pageImages: visualContext.pageImages,
-    ocrBlocks: visualContext.ocrBlocks,
-    layoutBlocks: visualContext.layoutBlocks,
-    layoutTables: visualContext.tables,
-    tables: visualContext.tables,
-    figures: visualContext.figures,
-    entities: visualContext.entities,
-    visualRules,
-    prerequisites,
-    prerequisiteConcepts: safeArray(prerequisites.required),
-    text2DiagramPlan,
-    diagramIntent: text2DiagramPlan.diagramIntent,
-    requestedVisuals: text2DiagramPlan.requestedVisuals,
-    externalResources,
-    externalResourcePack: externalResources,
-    teacherPromptPack,
-    googleTtsTeacherVoicePlan: {
-      ok: true,
-      engine: "google-tts-ready-script",
-      voiceStyle: "human teacher explaining exact selected source evidence on board",
-      requirements: [
-        "explain selected source quote slowly",
-        "point to source-backed blocks",
-        "keep comparison separate",
-        "use page image as visual guide if present",
-        "sync with boardCommands/subtitles",
-      ],
     },
-    allChunkCount: allChunks.length,
+
     metadata: {
-      service: "sourceContextBuilder.service.js",
-      contextBuilderVersion: "phase1-selected-node-accurate-context-v12-fixed",
-      fullPdfKnown: true,
-      allChunkCount: allChunks.length,
-      sourceRefCount: sourceRefs.length,
-      exactChunkCount: selectedEvidence.length,
-      selectedEvidenceCount: selectedEvidence.length,
-      samePageChunkCount: samePageEvidence.length,
-      samePageEvidenceCount: samePageEvidence.length,
-      nearbyChunkCount: nearbyEvidence.length,
-      nearbyEvidenceCount: nearbyEvidence.length,
-      relatedChunkCount: relatedEvidence.length,
-      relatedEvidenceCount: relatedEvidence.length,
-      comparisonEvidenceCount: comparisonEvidence.length,
-      teachingChunkCount: teachingChunks.length,
-      pageContextCount: pageContexts.length,
-      selectedFullPageCount: selectedPageFullText.length,
-      outlineItemCount: safeArray(fullPdfOutline.outline).length,
-      fullPdfSummaryChars: cleanText(fullPdfSummary.summary, 999999).length,
-      prerequisiteCount: safeArray(prerequisites.required).length,
-      ocrIncluded: Boolean(visualContext.metadata.ocrIncluded),
-      pageImagesIncluded: Boolean(visualContext.metadata.pageImagesIncluded),
-      layoutIncluded: Boolean(visualContext.metadata.layoutIncluded),
-      tablesIncluded: Boolean(visualContext.metadata.tablesIncluded),
-      figuresIncluded: Boolean(visualContext.metadata.figuresIncluded),
-      pageImageCount: Number(visualContext.metadata.pageImageCount || 0),
-      ocrBlockCount: Number(visualContext.metadata.ocrBlockCount || 0),
-      reliableOcrBlockCount: Number(visualContext.metadata.reliableOcrBlockCount || 0),
-      unreliableOcrBlockCount: Number(visualContext.metadata.unreliableOcrBlockCount || 0),
-      garbledOcrDetected: Boolean(visualContext.metadata.garbledOcrDetected),
-      pdfExtractedTextIsTruth: true,
-      ocrIsHelperOnly: true,
-      imageTextIsTruth: false,
-      pageImageUse: "visual_preview_layout_diagram_shape_only",
-      geminiVisionPageImagesAvailable: Boolean(safeArray(visualContext.pageImages).length),
-      tableCount: Number(visualContext.metadata.tableCount || 0),
-      figureCount: Number(visualContext.metadata.figureCount || 0),
-      externalResourcesEnabled: Boolean(externalResources.metadata.enabled),
-      externalResourceCount: safeArray(externalResources.externalResources).length,
-      externalEvidenceSeparated: true,
-      selectedEvidenceSeparated: true,
-      samePageEvidenceSeparated: true,
-      nearbyEvidenceSeparated: true,
-      relatedEvidenceSeparated: true,
-      comparisonEvidenceSeparated: true,
-      comparisonOnlyPages: dedupeBy(comparisonEvidence.map((c) => c.page), (x) => String(x)),
-      selectedPages: dedupeBy(selectedEvidence.map((c) => c.page), (x) => String(x)),
-      text2DiagramPlanUsed: true,
-      text2DiagramPrimary: text2DiagramPlan.diagramIntent.primary,
-      text2DiagramRequested: text2DiagramPlan.requestedVisuals,
-      contextBudgets: budgets,
-      contextTimingMs: {
-        total: Date.now() - totalStartedAt,
-        fullPdfOutline: outlineJob.ms,
-        fullPdfSummary: summaryJob.ms,
-        visualContext: visualJob.ms,
-        prerequisites: prerequisitesJob.ms,
-        externalResources: externalJob.ms,
-      },
-      contextJobErrors: [outlineJob, summaryJob, visualJob, prerequisitesJob, externalJob]
-        .filter((job) => !job.ok)
-        .map((job) => ({ name: job.name, error: job.error })),
-      parallelContextBuilt: true,
-      visualRules,
       fallbackUsed: false,
       usedSmartFallback: false,
-      generatedAt: new Date().toISOString(),
+      sourceGrounded: true,
+      parallelContextBuilt: true,
+
+      selectedNodeContextBuilder: "sourceContextBuilder.service.js",
+      version: "v16-selected-node-rich-source-pack-page-image-bridge",
+
+      selectedNodeId: selectedNodeContext.nodeId,
+      selectedNodeTitle: selectedNodeContext.title,
+
+      selectedPageCount: selectedPages.length,
+      selectedPages,
+
+      selectedEvidenceCount: safeArray(selectedEvidence).length,
+      samePageEvidenceCount: safeArray(samePageEvidence).length,
+      nearbyEvidenceCount: safeArray(nearbyEvidence).length,
+      relatedEvidenceCount: safeArray(relatedEvidence).length,
+      pageContextCount: safeArray(pageContexts).length,
+
+      fullPdfSummaryIncluded: Boolean(fullPdfSummary?.fullPdfSummary || fullPdfSummary),
+      fullPdfOutlineIncluded: Boolean(fullPdfOutline?.modules?.length || fullPdfOutline?.fullPdfOutline),
+      roadmapModulesIncluded: safeArray(roadmapModules).length > 0,
+
+      selectedPageFullTextIncluded: Boolean(selectedPageFullText),
+      samePageFullTextIncluded: Boolean(samePageFullText),
+      nearbyPageTextIncluded: Boolean(nearbyPageText),
+
+      pageImagesIncluded: safeArray(pageImages).length > 0,
+      pageImageCount: safeArray(pageImages).length,
+      visualContextPageImageCount: safeArray(visualContext.pageImages).length,
+      richSourcePackPageImageCount: safeArray(richPageImages).length,
+      selectedNodeFullPageImagesAvailable: safeArray(richPageImages).length > 0,
+      geminiVisionPageImagesAvailable: safeArray(pageImages).length > 0,
+
+      ocrTextIncluded: Boolean(
+        safeArray(selectedEvidence).some((ev) => safeObject(ev).ocrText) ||
+          safeArray(samePageEvidence).some((ev) => safeObject(ev).ocrText)
+      ),
+      tablesIncluded: safeArray(visualContext.tables).length > 0,
+      figuresIncluded: safeArray(visualContext.figures).length > 0,
+      layoutBlocksIncluded: safeArray(visualContext.layoutBlocks).length > 0,
+      diagramCandidateIncluded: Boolean(visualContext.metadata?.hasDiagramCandidate),
+
+      pdfExtractedTextIsTruth: true,
+      ocrIsHelperOnly: true,
+      imageTextIsTruth: false,
+      pageImageUse: "gemini_vision_diagram_layout_shape_source_preview",
+
+      maxContextChunks: maxChunks,
+      maxExactChunks,
+      maxSamePageChunks,
+      maxNearbyChunks,
+      maxRelatedChunks,
+
+      debugSummaryAvailable: true,
     },
   };
-}
 
+  result.debugSummary = buildDebugSummary(result);
 
-/**
- * Compatibility wrapper:
- * v17 real builder = buildSelectedNodeSourceContext()
- * tests/controllers expected = buildSourceContext()
- */
-async function buildSourceContext(input = {}) {
-  const body = safeObject(input.body || input || {});
-  const context = safeObject(input.context);
-
-  const ownerKey = cleanText(
-    input.ownerKey ||
-      body.ownerKey ||
-      context.ownerKey ||
-      context.offlineUserId ||
-      body.offlineUserId ||
-      "demo_user",
-    260
-  );
-
-  const resourceId = cleanText(
-    input.resourceId ||
-      body.resourceId ||
-      input.resource?.resourceId ||
-      input.resource?.id ||
-      "",
-    260
-  );
-
-  const selectedNode = safeObject(input.selectedNode || body.selectedNode || body.node);
-
-  const resource = {
-    ...safeObject(input.resource),
-    resourceId,
-    ownerKey,
-  };
-
-  const result = await buildSelectedNodeSourceContext({
-    resource,
-    selectedNode,
-    body: {
-      ...body,
-      ownerKey,
-      resourceId,
-    },
-    context: {
-      ...context,
-      ownerKey,
-      resourceId,
-    },
-    question: cleanText(input.question || body.question || "", 2000),
-    existingChunks: input.existingChunks || null,
-  });
-
-  const richSourcePack = safeObject(
-    safeObject(selectedNode.metadata).richSourcePack ||
-      safeObject(selectedNode.data).richSourcePack ||
-      selectedNode.richSourcePack
-  );
-
-  const richPageImages = safeArray(
-    richSourcePack.pageImages ||
-      richSourcePack.images ||
-      richSourcePack.pdfPageImages
-  );
-
-  const pageImages = safeArray(
-    result.pageImages ||
-      result.visualContext?.pageImages ||
-      result.contextForGemini?.pageImages
-  );
-
-  const pageContexts = safeArray(result.pageContexts);
-  const selectedEvidence = safeArray(result.selectedEvidence);
-
-  const selectedPageFullTextIncluded = Boolean(
-    result.selectedPageFullText ||
-      pageContexts.some((pctx) => cleanText(pctx.fullText || pctx.text || "", 100).length) ||
-      selectedEvidence.some((ev) => cleanText(ev.text || "", 100).length)
-  );
-
-  const fullPdfSummaryIncluded = Boolean(
-    result.fullPdfSummary ||
-      result.pdfSummary ||
-      result.metadata?.fullPdfSummaryIncluded ||
-      result.metadata?.fullPdfSummaryChars > 0
-  );
-
-  const fullPdfOutlineIncluded = Boolean(
-    result.fullPdfOutline ||
-      result.pdfOutline ||
-      result.outline ||
-      result.metadata?.fullPdfOutlineIncluded ||
-      result.metadata?.pdfOutlineIncluded
-  );
-
-  const metadata = {
-    ...safeObject(result.metadata),
-
-    pageImagesIncluded: pageImages.length > 0,
-    richSourcePackPageImageCount: richPageImages.length,
-    selectedNodeFullPageImagesAvailable: richPageImages.length > 0,
-    geminiVisionPageImagesAvailable: pageImages.length > 0,
-
-    selectedPageFullTextIncluded,
-    fullPdfSummaryIncluded,
-    fullPdfOutlineIncluded,
-
-    tablesIncluded: Boolean(
-      result.metadata?.tablesIncluded ||
-        safeArray(result.tables).length ||
-        safeArray(result.visualContext?.tables).length
-    ),
-    figuresIncluded: Boolean(
-      result.metadata?.figuresIncluded ||
-        safeArray(result.figures).length ||
-        safeArray(result.visualContext?.figures).length
-    ),
-    layoutBlocksIncluded: Boolean(
-      result.metadata?.layoutBlocksIncluded ||
-        safeArray(result.layoutBlocks).length ||
-        safeArray(result.visualContext?.layoutBlocks).length
-    ),
-
-    fallbackUsed: false,
-    usedSmartFallback: false,
-
-    compatibilityWrapperUsed: true,
-    compatibilityWrapper: "buildSourceContext -> buildSelectedNodeSourceContext",
-    selectedNodeRichSourcePackRead: Boolean(Object.keys(richSourcePack).length),
-    selectedNodePageImagesFromTree: richPageImages.length,
-  };
-
-  return {
-    ...result,
-    selectedNode: result.selectedNode || result.selectedNodeSnapshot || selectedNode,
-    selectedNodeId: selectedNode.nodeId || selectedNode.id || result.selectedNodeId || "",
-    selectedNodeTitle:
-      selectedNode.title ||
-      selectedNode.label ||
-      result.selectedNodeTitle ||
-      selectedNodeId(selectedNode),
-    pageImages,
-    metadata,
-  };
+  return result;
 }
 
 async function buildSelectedNodeContext(input = {}) {
@@ -1604,16 +1704,47 @@ async function buildNodeSourceContext(input = {}) {
   return buildSourceContext(input);
 }
 
+function health() {
+  return {
+    ok: true,
+    service: "sourceContextBuilder.service.js",
+    role: "selected-node-context-bridge",
+    version: "v16-selected-node-rich-source-pack-page-image-bridge",
+    capabilities: {
+      selectedNodeTitleDefinition: true,
+      selectedNodeSourceRefs: true,
+      selectedNodeExactChunks: true,
+      selectedPageFullText: true,
+      samePageChunks: true,
+      previousNextPageChunks: true,
+      fullPdfSummary: true,
+      fullPdfOutline: true,
+      pageImagePathUrl: true,
+      ocrText: true,
+      tables: true,
+      figuresDiagramMetadata: true,
+      layoutBlocks: true,
+      richSourcePackPageImages: true,
+      visualContextPageImages: true,
+      geminiVisionReadyPageImages: true,
+      noFakeFallback: true,
+    },
+    metadata: {
+      fallbackUsed: false,
+      usedSmartFallback: false,
+      pdfExtractedTextIsTruth: true,
+      ocrIsHelperOnly: true,
+      imageTextIsTruth: false,
+    },
+  };
+}
 
 module.exports = {
   buildSourceContext,
   buildSelectedNodeContext,
   buildContextForStage2,
   buildNodeSourceContext,
-
-  // Keep old v17 API name safely as alias if needed by Stage2.
-  buildSelectedNodeSourceContext,
-  buildRichSourceContext: buildSelectedNodeSourceContext,
+  health,
 
   _internals: {
     safeString,
@@ -1621,16 +1752,80 @@ module.exports = {
     safeArray,
     cleanText,
     inlineText,
-    envTrue,
     envNumber,
+    envTrue,
     boundedInt,
     dedupeBy,
 
-    buildSourceContext,
-    buildSelectedNodeContext,
-    buildContextForStage2,
-    buildNodeSourceContext,
-    buildSelectedNodeSourceContext,
+    isGarbledText,
+    textReliability,
+    tableToText,
+    figureToText,
+    collectPageImage,
+
+    compactResource,
+    compactChunk,
+    loadResourceChunks,
+    attachEvidenceRole,
+    sourceRefFromChunk,
+    normalizeSourceRefs,
+    sourceRefsFromNode,
+
+    getRichSourcePack,
+    getRichSourcePackPages,
+    getRichSourcePackPageImages,
+    imageMapByPage,
+
+    hydrateEvidenceImagesFromRichSourcePack,
+    hydratePageContextsWithRichSourcePackImages,
+    mergeRichSourcePackImagesIntoVisualContext,
+
+    selectedNodeTitle,
+    selectedNodeId,
+    selectedNodeDefinition,
+    nodeSearchText,
+    getAllNodeRefsAndPages,
+
+    matchChunkBySourceRef,
+    tokenize,
+    scoreChunkForSelectedNode,
+    groupChunksByPage,
+    buildPageContextFromChunks,
+
+    evidenceToSourceTextBlock,
+    compactFullPdfSummary,
+    compactFullPdfOutline,
+    selectedNodeTreeMetadata,
+    buildVisualContext,
+
+    selectExactChunks,
+    selectSamePageChunks,
+    selectNearbyChunks,
+    selectRelatedChunks,
+
+    buildSelectedPageFullText,
+    buildSamePageFullText,
+    buildNearbyPageText,
+    createContextId,
+    normalizeBuildInput,
+    buildDebugSummary,
   },
 };
 
+
+/**
+ * ✅ node click করলে selectedNode title/definition যাবে
+✅ selectedNode sourceRefs যাবে
+✅ exact selected chunks যাবে
+✅ selected page full text যাবে
+✅ same page chunks যাবে
+✅ previous/next page chunks যাবে
+✅ fullPdfSummary যাবে
+✅ fullPdfOutline যাবে
+✅ richSourcePack.pageImages read হবে
+✅ selectedEvidence/samePageEvidence/pageContexts hydrate হবে
+✅ pageImagePath/pageImageUrl preserve হবে
+✅ visualContext.pageImages merge হবে
+✅ OCR/tables/figures/layoutBlocks যাবে
+✅ selected_page_vision_agent.py এখন actual page image পেতে পারবে
+ */

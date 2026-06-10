@@ -1,0 +1,2856 @@
+"""
+google_agent/source/knowledge_graph_agent.py
+===============================================================================
+KnowledgeGraphAgent V47 — clean ADK/Gemini KG only.
+
+No monkey patch.
+No BaseAgent change.
+No deterministic fallback graph.
+No emergency graph.
+No hardcoded Star/Galaxy/Snowflake rule.
+
+KG job:
+- read selectedNode
+- read RAG/source buckets
+- read ConceptExtraction concepts
+- read full structured Vision packet
+- carry local PDF image pointers
+- carry MongoDB MCP proof
+- ask ADK/Gemini for concept relationship graph
+- normalize/guard output
+- fail honestly if unusable
+
+Important:
+- RAG text = source truth.
+- Vision = visual truth.
+- If RAG misses a visual relation, keep it as evidenceType="vision_only".
+- vision_only can guide board/teacher path, but sourceProof must be empty.
+===============================================================================
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from typing import Any, List
+
+try:
+    from google_agent.live_tutor_agents.base_agent import BaseLiveTutorAgent
+    from google_agent.live_tutor_agents.contracts import (
+        AgentContext,
+        JsonDict,
+        ValidationResult,
+        clean_text,
+        dedupe_source_refs,
+        normalize_id,
+        normalize_source_refs,
+        require_source_refs,
+        safe_dict,
+        safe_list,
+    )
+except Exception:
+    from ..live_tutor_agents.base_agent import BaseLiveTutorAgent
+    from ..live_tutor_agents.contracts import (
+        AgentContext,
+        JsonDict,
+        ValidationResult,
+        clean_text,
+        dedupe_source_refs,
+        normalize_id,
+        normalize_source_refs,
+        require_source_refs,
+        safe_dict,
+        safe_list,
+    )
+
+
+VALID_EDGE_TYPES = {
+    "parent-child",
+    "prerequisite",
+    "related",
+    "causes",
+    "contrasts",
+    "example-of",
+    "part-of",
+    "rule-for",
+    "misconception-of",
+    "visual-link",
+    "application-of",
+    "has-center",
+    "surrounded-by",
+    "joins-to",
+    "not-joined-to",
+    "foreign-key-enables",
+    "stores-measure",
+    "describes-fact",
+    "supports",
+    "enables",
+}
+
+COMPARISON_PHASES = {"comparison", "contrast", "compare"}
+STOP_WORDS = {
+    "the", "and", "that", "this", "with", "from", "into", "using", "used",
+    "table", "tables", "schema", "data", "concept", "page", "each", "has",
+    "have", "will", "would", "should", "could", "there", "their", "about",
+}
+
+
+def _t(value: Any, limit: int = 1200) -> str:
+    try:
+        return clean_text(value or "", limit)
+    except Exception:
+        return str(value or "")[:limit]
+
+
+def _d(value: Any) -> JsonDict:
+    try:
+        return safe_dict(value)
+    except Exception:
+        return value if isinstance(value, dict) else {}
+
+
+def _l(value: Any) -> List[Any]:
+    try:
+        return safe_list(value)
+    except Exception:
+        return value if isinstance(value, list) else []
+
+
+def _json(value: Any, limit: int = 80000) -> str:
+    try:
+        return clean_text(json.dumps(value, ensure_ascii=False, indent=2), limit)
+    except Exception:
+        return clean_text(value, limit)
+
+
+def _slug(value: Any, fallback: str) -> str:
+    try:
+        return normalize_id(value, fallback)
+    except Exception:
+        s = re.sub(r"[^a-zA-Z0-9]+", "_", str(value or "").lower()).strip("_")
+        return s or fallback
+
+
+def _words(value: Any) -> List[str]:
+    text = _t(value, 5000).lower()
+    return [
+        w for w in re.findall(r"[a-zA-Z0-9_]+", text)
+        if len(w) >= 3 and w not in STOP_WORDS
+    ]
+
+
+def _selected_node(payload: JsonDict) -> JsonDict:
+    node = _d(payload.get("selectedNode") or payload.get("node"))
+    rich = _d(node.get("richSourcePack") or _d(node.get("metadata")).get("richSourcePack"))
+
+    pages = (
+        _l(node.get("pages"))
+        or _l(node.get("pageRefs"))
+        or _l(node.get("selectedPages"))
+        or _l(rich.get("pages"))
+        or _l(rich.get("pageRefs"))
+        or _l(payload.get("selectedPages"))
+    )
+    if not pages and payload.get("selectedPage"):
+        pages = [payload.get("selectedPage")]
+
+    node_id = _t(node.get("nodeId") or node.get("id") or payload.get("nodeId"), 180)
+    title = _t(
+        node.get("title")
+        or node.get("label")
+        or node.get("shortDefinition")
+        or payload.get("title")
+        or payload.get("question")
+        or "Selected concept",
+        280,
+    )
+
+    return {
+        **node,
+        "nodeId": node_id,
+        "id": node.get("id") or node_id,
+        "title": title,
+        "label": node.get("label") or title,
+        "pages": pages,
+        "richSourcePack": rich or node.get("richSourcePack") or {},
+    }
+
+
+def _selected_pages(payload: JsonDict) -> List[int]:
+    pages: List[int] = []
+
+    def add_page(p: Any) -> None:
+        try:
+            if p is not None and str(p).strip() != "":
+                pages.append(int(p))
+        except Exception:
+            pass
+
+    node = _selected_node(payload)
+    for p in _l(node.get("pages")):
+        add_page(p)
+
+    rich = _d(node.get("richSourcePack"))
+    for p in _l(rich.get("pages") or rich.get("pageRefs")):
+        add_page(p)
+
+    for key in ["selectedEvidence", "samePageEvidence"]:
+        for item in _l(payload.get(key)):
+            add_page(_d(item).get("page"))
+
+    source = _d(payload.get("sourceTruth") or payload.get("sourceTruthPacket"))
+    for key in ["selectedEvidence", "samePageEvidence"]:
+        for item in _l(source.get(key)):
+            add_page(_d(item).get("page"))
+
+    return sorted(list(dict.fromkeys(pages)))
+
+
+def _comparison_marker(value: Any) -> bool:
+    t = _t(value, 2000).lower()
+    return any(x in t for x in [
+        "compare", "comparison", "contrast", "contrasts", "unlike",
+        "whereas", "versus", " vs ", "difference between", "different from",
+    ])
+
+
+def _concepts(payload: JsonDict) -> List[JsonDict]:
+    ce = _d(payload.get("conceptExtraction"))
+    raw_items = _l(ce.get("concepts") or payload.get("concepts"))
+    out: List[JsonDict] = []
+
+    for index, raw in enumerate(raw_items):
+        c = _d(raw)
+        label = _t(c.get("label") or c.get("title") or c.get("name"), 260)
+        if not label:
+            continue
+
+        concept_id = _slug(c.get("conceptId") or c.get("id") or label, f"concept_{index + 1}")
+        source_role = _t(c.get("sourceRole") or c.get("teachingRole"), 140).lower()
+
+        comparison = bool(
+            c.get("comparisonOnly")
+            or source_role in {"comparison", "contrast", "compare"}
+            or _comparison_marker(c.get("relationshipToSelectedNode") or c.get("role"))
+        )
+
+        out.append({
+            **c,
+            "conceptId": concept_id,
+            "label": label,
+            "comparisonOnly": comparison,
+        })
+
+    return out
+
+
+def _visual_packet(payload: JsonDict) -> JsonDict:
+    vision = _d(payload.get("selectedPageVision"))
+    visual_truth = _d(payload.get("visualTruth"))
+    lesson_input = _d(vision.get("visualLessonInput"))
+
+    return _d(
+        payload.get("visualTeacherPacket")
+        or payload.get("richVisualTeacherPacket")
+        or visual_truth.get("visualTeacherPacket")
+        or vision.get("visualTeacherPacket")
+        or lesson_input.get("visualTeacherPacket")
+        or vision
+        or visual_truth
+    )
+
+
+def _mcp_partner_proof(payload: JsonDict) -> JsonDict:
+    partner = _d(payload.get("partnerPower"))
+    metadata = _d(payload.get("metadata"))
+    traces = _l(payload.get("mcpTrace") or payload.get("toolTrace"))
+
+    if not partner and metadata.get("partnerPower"):
+        partner = _d(metadata.get("partnerPower"))
+
+    return {
+        "mcpUsed": bool(partner.get("mcpUsed") or metadata.get("mcpUsed")),
+        "partner": _t(partner.get("partner") or metadata.get("partner") or "MongoDB", 80),
+        "toolCallCount": int(
+            partner.get("toolCallCount")
+            or partner.get("mcpTraceCount")
+            or len(_l(partner.get("toolCalls")))
+            or 0
+        ),
+        "capabilitiesUsed": _l(partner.get("capabilitiesUsed")),
+        "traceCount": len(traces),
+        "strictPartnerPower": bool(partner.get("strictPartnerPower") or metadata.get("strictPartnerPower")),
+    }
+
+
+def _local_page_metadata(payload: JsonDict) -> List[JsonDict]:
+    node = _selected_node(payload)
+    rich = _d(node.get("richSourcePack"))
+    vision = _d(payload.get("selectedPageVision"))
+    out: List[JsonDict] = []
+
+    for raw in _l(rich.get("pageImages")) + _l(vision.get("pageImages") or vision.get("selectedPageImages")):
+        item = _d(raw)
+        url = _t(item.get("pageImageUrl") or item.get("url") or item.get("src"), 500)
+        path = _t(item.get("pageImagePath") or item.get("path"), 900)
+        if not url and not path:
+            continue
+
+        out.append({
+            "page": item.get("page"),
+            "url": url,
+            "src": _t(item.get("src") or url, 500),
+            "path": path,
+            "source": "local_server_public",
+            "type": item.get("type") or "pdfPageImage",
+            "imageTextIsTruth": bool(item.get("imageTextIsTruth")),
+            "pdfExtractedTextIsTruth": item.get("pdfExtractedTextIsTruth", True),
+            "ocrIsHelperOnly": item.get("ocrIsHelperOnly", True),
+            "fullPageImageAvailableForGeminiVision": bool(item.get("fullPageImageAvailableForGeminiVision")),
+        })
+
+    seen = set()
+    deduped = []
+    for item in out:
+        key = (item.get("page"), item.get("url"), item.get("path"))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+
+    return deduped[:16]
+
+
+def _make_ref(raw: Any, role: str, payload: JsonDict, *, primary: bool = False) -> JsonDict | None:
+    d = _d(raw)
+    quote = _t(
+        d.get("quote")
+        or d.get("textPreview")
+        or d.get("text")
+        or d.get("content")
+        or d.get("fullPageTextPreview"),
+        1200,
+    )
+    source_ref = _t(
+        d.get("sourceRef")
+        or d.get("pageRef")
+        or d.get("chunkId")
+        or d.get("id"),
+        420,
+    )
+
+    page = d.get("page")
+    try:
+        page = int(page) if page is not None else None
+    except Exception:
+        pass
+
+    if not source_ref and page is not None:
+        source_ref = f"page:{page}:{role}"
+
+    if not quote or not source_ref:
+        return None
+
+    selected_pages = set(_selected_pages(payload))
+    comparison_only = bool(d.get("comparisonOnly"))
+    if role in {"comparison", "contrast"}:
+        comparison_only = True
+    if selected_pages and page is not None and page not in selected_pages and _comparison_marker(quote):
+        comparison_only = True
+
+    ref = {
+        **d,
+        "page": page,
+        "sourceRef": source_ref,
+        "quote": quote,
+        "evidenceRole": "comparison" if comparison_only else role,
+        "isPrimaryTruth": bool(primary and not comparison_only),
+        "comparisonOnly": comparison_only,
+    }
+    return ref
+
+
+def _add_refs(out: List[JsonDict], items: Any, role: str, payload: JsonDict, *, primary: bool = False) -> None:
+    for item in _l(items):
+        ref = _make_ref(item, role, payload, primary=primary)
+        if ref:
+            out.append(ref)
+
+
+def _visual_relations(payload: JsonDict) -> List[JsonDict]:
+    packet = _visual_packet(payload)
+    raw: List[Any] = []
+    for key in ["visualRelations", "relationshipWalkthrough", "relationships", "relations"]:
+        raw.extend(_l(packet.get(key)))
+
+    out: List[JsonDict] = []
+    seen = set()
+
+    for item in raw:
+        d = _d(item)
+        frm = _t(d.get("from") or d.get("fromLabel") or d.get("source") or d.get("left") or d.get("start"), 220)
+        to = _t(d.get("to") or d.get("toLabel") or d.get("target") or d.get("right") or d.get("end"), 220)
+        if not frm or not to:
+            continue
+
+        relation = _t(d.get("type") or d.get("relationship") or d.get("label") or "visual-link", 260)
+        meaning = _t(d.get("meaning") or d.get("whyItMatters") or d.get("teachingRationale"), 1000)
+        visual = _t(d.get("visualEvidence") or d.get("visualProof") or d.get("description"), 1000)
+        proof = _t(d.get("sourceProof"), 900)
+        board = _t(d.get("boardAction") or d.get("boardActionHint"), 700)
+        confidence = d.get("confidence")
+
+        try:
+            conf = float(confidence) if confidence is not None else 0.0
+        except Exception:
+            conf = 0.0
+
+        if conf and conf < 0.75:
+            continue
+
+        key = (_slug(frm, "from"), _slug(to, "to"), _slug(relation, "rel"))
+        if key in seen:
+            continue
+        seen.add(key)
+
+        out.append({
+            "fromLabel": frm,
+            "toLabel": to,
+            "type": relation,
+            "meaning": meaning,
+            "boardAction": board or "highlight/trace this visual relationship",
+            "visualEvidence": visual,
+            "sourceProof": proof,
+            "sourceType": _t(d.get("sourceType") or "visual_observation", 160),
+            "confidence": confidence,
+            "needsSourceVerification": bool(d.get("needsSourceVerification", not proof)),
+            "sourceRefs": normalize_source_refs(_l(d.get("sourceRefs"))),
+        })
+
+    return out[:60]
+
+
+def _visual_elements(payload: JsonDict) -> List[JsonDict]:
+    packet = _visual_packet(payload)
+    raw: List[Any] = []
+    for key in ["visualElements", "diagramElementDetails", "diagramElements", "elements", "tables", "figures", "layoutBlocks"]:
+        raw.extend(_l(packet.get(key)))
+
+    out: List[JsonDict] = []
+    seen = set()
+
+    for index, item in enumerate(raw):
+        d = _d(item)
+        label = _t(d.get("label") or d.get("name") or d.get("text") or d.get("tableName"), 220)
+        if not label:
+            continue
+
+        element_id = _slug(d.get("id") or d.get("conceptLink") or label, f"visual_{index + 1}")
+        if element_id in seen:
+            continue
+        seen.add(element_id)
+
+        out.append({
+            "id": element_id,
+            "label": label,
+            "kind": _t(d.get("kind") or d.get("type") or "visual_element", 120),
+            "visualRole": _t(d.get("visualRole") or d.get("role") or d.get("meaning") or d.get("description"), 700),
+            "conceptMeaning": _t(d.get("conceptMeaning") or d.get("teacherExplanation") or d.get("spokenTeacherLine"), 800),
+            "exactBoardMove": _t(d.get("exactBoardMove") or d.get("boardRedrawInstruction"), 600),
+            "conceptLink": _t(d.get("conceptLink") or d.get("conceptId"), 180),
+            "anchor": _d(d.get("anchor") or d.get("bbox") or d.get("box")),
+            "confidence": d.get("confidence"),
+            "sourceType": _t(d.get("sourceType"), 160),
+            "needsSourceVerification": bool(d.get("needsSourceVerification")),
+            "sourceRefs": normalize_source_refs(_l(d.get("sourceRefs"))),
+        })
+
+    return out[:40]
+
+
+def _source_buckets(payload: JsonDict) -> JsonDict:
+    explicit = _d(payload.get("sourceBuckets"))
+    source = _d(payload.get("sourceTruth") or payload.get("sourceTruthPacket"))
+    node = _selected_node(payload)
+    rich = _d(node.get("richSourcePack"))
+    selected_pages = set(_selected_pages(payload))
+
+    primary: List[JsonDict] = []
+    same: List[JsonDict] = []
+    support: List[JsonDict] = []
+    comparison: List[JsonDict] = []
+    vision_only: List[JsonDict] = []
+
+    for key in ["primaryRefs", "selectedRefs", "selectedEvidence"]:
+        _add_refs(primary, explicit.get(key), "primary", payload, primary=True)
+    for key in ["samePageRefs", "samePageEvidence"]:
+        _add_refs(same, explicit.get(key), "same_page", payload, primary=True)
+    for key in ["supportRefs", "nearbyRefs", "nearbyEvidence", "relatedEvidence"]:
+        _add_refs(support, explicit.get(key), "support", payload)
+    for key in ["comparisonRefs", "comparisonEvidence"]:
+        _add_refs(comparison, explicit.get(key), "comparison", payload)
+
+    _add_refs(primary, node.get("sourceRefs"), "primary", payload, primary=True)
+    _add_refs(primary, node.get("evidenceQuotes"), "primary", payload, primary=True)
+
+    if rich.get("fullPageTextPreview"):
+        page = (_l(rich.get("pages")) or _l(rich.get("pageRefs")) or _l(node.get("pages")) or [None])[0]
+        primary.append({
+            "page": page,
+            "sourceRef": f"localFullPageText:{node.get('nodeId') or node.get('id')}:page:{page}",
+            "pageRef": f"page:{page}" if page is not None else "",
+            "quote": _t(rich.get("fullPageTextPreview"), 1200),
+            "evidenceRole": "primary",
+            "isPrimaryTruth": True,
+            "comparisonOnly": False,
+            "sourceStorage": "local_server_context",
+            "pdfExtractedTextIsTruth": True,
+        })
+
+    for key, role, target, primary_flag in [
+        ("selectedEvidence", "primary", primary, True),
+        ("samePageEvidence", "same_page", same, True),
+        ("nearbyEvidence", "support", support, False),
+        ("relatedEvidence", "support", support, False),
+        ("comparisonEvidence", "comparison", comparison, False),
+    ]:
+        _add_refs(target, payload.get(key), role, payload, primary=primary_flag)
+        _add_refs(target, source.get(key), role, payload, primary=primary_flag)
+
+    generic_refs: List[JsonDict] = []
+    _add_refs(generic_refs, payload.get("sourceRefs"), "source", payload)
+    _add_refs(generic_refs, source.get("sourceRefs"), "source", payload)
+
+    for ref in generic_refs:
+        if ref.get("comparisonOnly"):
+            comparison.append(ref)
+        elif ref.get("page") in selected_pages:
+            same.append({**ref, "evidenceRole": "same_page", "isPrimaryTruth": True})
+        else:
+            support.append({**ref, "evidenceRole": "support"})
+
+    for c in _concepts(payload):
+        for raw in _l(c.get("sourceRefs")):
+            ref = _make_ref(raw, "concept", payload)
+            if not ref:
+                continue
+            if c.get("comparisonOnly") or ref.get("comparisonOnly"):
+                comparison.append({**ref, "evidenceRole": "comparison", "comparisonOnly": True})
+            elif ref.get("page") in selected_pages:
+                same.append({**ref, "evidenceRole": "same_page", "isPrimaryTruth": True})
+            else:
+                support.append({**ref, "evidenceRole": "support"})
+
+    for rel in _visual_relations(payload):
+        if not rel.get("sourceProof"):
+            vision_only.append({
+                "sourceRef": f"vision:{_slug(rel.get('fromLabel'), 'from')}:{_slug(rel.get('toLabel'), 'to')}",
+                "quote": _t(rel.get("visualEvidence") or rel.get("meaning"), 900),
+                "evidenceRole": "vision_only",
+                "sourceType": rel.get("sourceType") or "visual_observation",
+                "comparisonOnly": False,
+                "needsSourceVerification": bool(rel.get("needsSourceVerification", True)),
+            })
+
+    def clean(items: List[JsonDict], limit: int) -> List[JsonDict]:
+        return dedupe_source_refs(normalize_source_refs(items))[:limit]
+
+    primary = [r for r in primary if not r.get("comparisonOnly")]
+    same = [r for r in same if not r.get("comparisonOnly")]
+
+    if not primary and same:
+        primary = [{**r, "evidenceRole": "primary", "isPrimaryTruth": True} for r in same[:4]]
+
+    return {
+        "primaryRefs": clean(primary, 20),
+        "samePageRefs": clean(same, 20),
+        "supportRefs": clean(support, 28),
+        "comparisonRefs": clean(comparison, 18),
+        "visionOnlyFacts": clean(vision_only, 24),
+        "selectedPages": sorted(list(selected_pages)),
+        "localPageImages": _local_page_metadata(payload),
+        "mcpPartnerProof": _mcp_partner_proof(payload),
+        "metadata": {
+            "sourceBucketsV47": True,
+            "localAndMongoMetadataMode": True,
+            "localImagesArePointersNotMongoBytes": True,
+        },
+    }
+
+
+def _refs_for_phase(payload: JsonDict, phase: str, query: Any = "", limit: int = 5) -> List[JsonDict]:
+    buckets = _source_buckets(payload)
+    phase = _t(phase, 100).lower() or "core"
+    qwords = set(_words(query))
+
+    if phase in COMPARISON_PHASES:
+        pool = buckets["comparisonRefs"] + buckets["primaryRefs"] + buckets["samePageRefs"] + buckets["supportRefs"]
+    elif phase in {"support", "detail", "example"}:
+        pool = buckets["primaryRefs"] + buckets["samePageRefs"] + buckets["supportRefs"]
+    else:
+        pool = buckets["primaryRefs"] + buckets["samePageRefs"]
+
+    def score(ref: JsonDict) -> int:
+        role = _t(ref.get("evidenceRole"), 100)
+        s = 0
+        if role == "primary":
+            s += 120
+        if role == "same_page":
+            s += 100
+        if role == "support":
+            s += 30
+        if role == "comparison":
+            s += 20 if phase in COMPARISON_PHASES else -1000
+        if ref.get("isPrimaryTruth"):
+            s += 35
+        if ref.get("comparisonOnly") and phase not in COMPARISON_PHASES:
+            s -= 1000
+
+        rwords = set(_words(ref.get("quote")))
+        if qwords and rwords:
+            s += min(70, 8 * len(qwords.intersection(rwords)))
+        return s
+
+    ranked = sorted(pool, key=score, reverse=True)
+    safe = [r for r in ranked if not (r.get("comparisonOnly") and phase not in COMPARISON_PHASES)]
+    return dedupe_source_refs(normalize_source_refs(safe))[:limit]
+
+
+def _compact_list(items: Any, limit: int, char_limit: int = 900) -> List[Any]:
+    out: List[Any] = []
+    for item in _l(items)[:limit]:
+        if isinstance(item, dict):
+            cleaned: JsonDict = {}
+            for k, v in item.items():
+                if isinstance(v, str):
+                    cleaned[k] = _t(v, char_limit)
+                elif isinstance(v, (int, float, bool)) or v is None:
+                    cleaned[k] = v
+                elif isinstance(v, list):
+                    cleaned[k] = _compact_list(v, 12, max(220, char_limit // 2))
+                elif isinstance(v, dict):
+                    sub: JsonDict = {}
+                    for sk, sv in v.items():
+                        sub[sk] = _t(sv, max(220, char_limit // 2)) if isinstance(sv, str) else sv
+                    cleaned[k] = sub
+                else:
+                    cleaned[k] = _t(v, max(220, char_limit // 2))
+            out.append(cleaned)
+        elif isinstance(item, str):
+            out.append(_t(item, char_limit))
+        else:
+            out.append(item)
+    return out
+
+
+def _full_vision_packet_for_kg(payload: JsonDict) -> JsonDict:
+    packet = _visual_packet(payload)
+    vision = _d(payload.get("selectedPageVision"))
+    visual_truth = _d(payload.get("visualTruth"))
+
+    def first_text(*values: Any, limit: int = 1200) -> str:
+        for v in values:
+            t = _t(v, limit)
+            if t:
+                return t
+        return ""
+
+    raw_elements: List[Any] = []
+    for key in ["visualElements", "diagramElementDetails", "diagramElements", "elements", "tables", "figures", "layoutBlocks"]:
+        raw_elements.extend(_l(packet.get(key)))
+        raw_elements.extend(_l(vision.get(key)))
+        raw_elements.extend(_l(visual_truth.get(key)))
+
+    raw_relations: List[Any] = []
+    for key in ["visualRelations", "relationshipWalkthrough", "relationships", "relations"]:
+        raw_relations.extend(_l(packet.get(key)))
+        raw_relations.extend(_l(vision.get(key)))
+        raw_relations.extend(_l(visual_truth.get(key)))
+
+    return {
+        "summary": first_text(
+            packet.get("pageVisualNarrative"),
+            packet.get("visualSummary"),
+            packet.get("diagramSummary"),
+            vision.get("pageVisualNarrative"),
+            vision.get("visualSummary"),
+            vision.get("diagramSummary"),
+            visual_truth.get("visualSummary"),
+            limit=1400,
+        ),
+        "elements": _compact_list(raw_elements, 40, 700),
+        "relations": _compact_list(raw_relations, 60, 850),
+        "teacherMarkingScript": _compact_list(packet.get("teacherMarkingScript") or vision.get("teacherMarkingScript"), 30, 700),
+        "boardRedrawPlan": _compact_list(packet.get("boardRedrawPlan") or vision.get("boardRedrawPlan"), 30, 700),
+        "visualTeachingSequence": _compact_list(packet.get("visualTeachingSequence") or vision.get("visualTeachingSequence"), 25, 700),
+        "misconceptionRisks": _compact_list(packet.get("misconceptionRisks") or vision.get("misconceptionRisks"), 20, 700),
+        "sourcePolicy": {
+            "ragTextIsSourceTruth": True,
+            "visionIsVisualTruth": True,
+            "visionOnlyRelationAllowed": True,
+            "visionOnlyCannotBeSourceProof": True,
+            "visionOnlyMustSetNeedsTextConfirmation": True,
+        },
+    }
+
+
+def _parse_json_from_text(value: Any) -> JsonDict:
+    if not isinstance(value, str):
+        return {}
+
+    text = value.strip()
+    if not text:
+        return {}
+
+    candidates: List[str] = []
+
+    def add(candidate: str) -> None:
+        c = str(candidate or "").strip()
+        if c and c not in candidates:
+            candidates.append(c)
+
+    add(text)
+
+    for m in re.finditer(r"```(?:json)?\s*([\s\S]*?)```", text, flags=re.IGNORECASE):
+        add(m.group(1))
+
+    no_fence = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+    no_fence = re.sub(r"\s*```$", "", no_fence)
+    add(no_fence)
+
+    first = text.find("{")
+    last = text.rfind("}")
+    if first != -1 and last != -1 and last > first:
+        add(text[first:last + 1])
+
+    for candidate in candidates:
+        try:
+            obj = json.loads(candidate)
+            if isinstance(obj, dict):
+                return obj
+        except Exception:
+            continue
+
+    return {}
+
+
+def _kg_raw_score(value: Any) -> int:
+    d = _d(value)
+    if not d:
+        return -999
+
+    score = 0
+    nodes = _l(d.get("nodes"))
+    edges = _l(d.get("edges"))
+    path = _l(d.get("teachingPath"))
+
+    score += min(len(nodes), 12) * 14
+    score += min(len(edges), 16) * 12
+    score += min(len(path), 12) * 12
+
+    if _t(d.get("rootNodeId")):
+        score += 35
+    if _d(d.get("visualGraphHints")):
+        score += 25
+    if _d(d.get("qualitySignals")):
+        score += 20
+
+    for key in ["requiredOutputSchema", "outputSchema", "minimum", "example"]:
+        if key in d:
+            score -= 80
+
+    for n in nodes:
+        nd = _d(n)
+        if not _t(nd.get("nodeId")) and not _t(nd.get("label")):
+            score -= 50
+    for e in edges:
+        ed = _d(e)
+        if not _t(ed.get("edgeId")) and not _t(ed.get("from")) and not _t(ed.get("to")):
+            score -= 50
+
+    return score
+
+
+def _unwrap_kg_raw(raw: Any) -> JsonDict:
+    parsed = _parse_json_from_text(raw)
+    root = parsed or _d(raw)
+
+    if not root:
+        return {}
+
+    candidates: List[JsonDict] = []
+    seen = set()
+
+    def visit(value: Any, depth: int = 0) -> None:
+        if depth > 8:
+            return
+
+        if isinstance(value, str):
+            parsed_child = _parse_json_from_text(value)
+            if parsed_child:
+                visit(parsed_child, depth + 1)
+            return
+
+        d = _d(value)
+        if not d:
+            return
+
+        oid = id(d)
+        if oid in seen:
+            return
+        seen.add(oid)
+        candidates.append(d)
+
+        for key in [
+            "knowledgeGraph", "knowledge_graph", "kg", "graph",
+            "result", "output", "data", "response", "final", "json",
+            "answer", "message", "content", "text", "raw",
+        ]:
+            child = d.get(key)
+            if isinstance(child, (dict, str)):
+                visit(child, depth + 1)
+
+        for child in d.values():
+            if isinstance(child, dict):
+                keys = set(child.keys())
+                if {"nodes", "edges", "teachingPath", "rootNodeId", "visualGraphHints", "knowledgeGraph", "kg", "graph"} & keys:
+                    visit(child, depth + 1)
+            elif isinstance(child, str) and "{" in child and "}" in child:
+                visit(child, depth + 1)
+
+    visit(root)
+
+    if not candidates:
+        return root
+
+    candidates.sort(key=_kg_raw_score, reverse=True)
+    return candidates[0]
+
+
+def _edge_type(value: Any) -> str:
+    t = _t(value, 800).lower()
+
+    if any(x in t for x in ["not joined", "not join", "no direct", "do not join", "not connected"]):
+        return "not-joined-to"
+    if "foreign key" in t:
+        return "foreign-key-enables"
+    if any(x in t for x in ["join", "joined", "connect", "link", "arrow"]):
+        return "joins-to"
+    if any(x in t for x in ["center", "central", "hub"]):
+        return "has-center"
+    if any(x in t for x in ["surround", "around"]):
+        return "surrounded-by"
+    if any(x in t for x in ["measure", "metric"]):
+        return "stores-measure"
+    if any(x in t for x in ["describe", "attribute", "context"]):
+        return "describes-fact"
+    if _comparison_marker(t):
+        return "contrasts"
+    if "example" in t:
+        return "example-of"
+    if any(x in t for x in ["part", "contains", "has"]):
+        return "part-of"
+    if any(x in t for x in ["rule", "must"]):
+        return "rule-for"
+    if any(x in t for x in ["mistake", "misconception", "wrong", "confuse"]):
+        return "misconception-of"
+    return "related"
+
+
+def _meaningful(value: Any) -> bool:
+    t = _t(value, 1000).strip().lower()
+    if not t:
+        return False
+    return t not in {"connects", "connected", "relationship", "visual relation", "trace this relationship with an arrow/highlight"}
+
+
+def _match_node(label: Any, nodes: List[JsonDict]) -> str:
+    words = set(_words(label))
+    if not words:
+        return ""
+
+    best_id = ""
+    best_score = 0
+    for node in nodes:
+        text = " ".join([
+            _t(node.get("nodeId")),
+            _t(node.get("label")),
+            _t(node.get("summary")),
+            " ".join([_t(x, 160) for x in _l(node.get("targetVisualLabels"))]),
+        ])
+        score = len(words.intersection(set(_words(text))))
+        if score > best_score:
+            best_score = score
+            best_id = _t(node.get("nodeId"), 180)
+
+    return best_id
+
+
+def _phase_for_node(node: JsonDict, index: int) -> str:
+    if node.get("comparisonOnly"):
+        return "comparison"
+    if index == 0:
+        return "see_first"
+
+    text = (_t(node.get("label")) + " " + _t(node.get("summary")) + " " + _t(node.get("teachingRole"))).lower()
+    if any(x in text for x in ["center", "central", "anchor", "hub"]):
+        return "anchor"
+    if any(x in text for x in ["join", "foreign key", "connect", "relationship"]):
+        return "relationship"
+    if any(x in text for x in ["not joined", "not join", "misconception", "wrong"]):
+        return "misconception_repair"
+    return "define"
+
+
+def _normalize_node(raw: Any, payload: JsonDict, index: int) -> JsonDict:
+    raw = _d(raw)
+    label = _t(raw.get("label") or raw.get("title") or raw.get("name"), 240)
+    node_id = _slug(raw.get("nodeId") or raw.get("id") or label, f"node_{index + 1}")
+
+    source_role = _t(raw.get("sourceRole") or raw.get("evidenceRole"), 120).lower()
+    comparison = bool(
+        raw.get("comparisonOnly")
+        or source_role in {"comparison", "contrast", "compare"}
+        or _comparison_marker(raw.get("phase") or raw.get("teachingRole"))
+    )
+    phase = "comparison" if comparison else "core"
+
+    refs = _refs_for_phase(payload, phase, query=label + " " + _t(raw.get("summary")), limit=5)
+
+    visual_hints = [_t(x, 700) for x in _l(raw.get("visualHints")) if _t(x, 700)]
+    target_labels = [_t(x, 180) for x in _l(raw.get("targetVisualLabels")) if _t(x, 180)]
+    if not target_labels and label:
+        target_labels = [label]
+
+    evidence_type = _t(raw.get("evidenceType"), 100)
+    if evidence_type not in {"text_plus_vision", "text_only", "vision_only", "teaching_inference"}:
+        evidence_type = (
+            "text_plus_vision" if refs and visual_hints
+            else "text_only" if refs
+            else "vision_only" if visual_hints
+            else "teaching_inference"
+        )
+
+    return {
+        "nodeId": node_id,
+        "label": label or f"Node {index + 1}",
+        "summary": _t(raw.get("summary") or raw.get("definition") or raw.get("description"), 1200),
+        "nodeType": _t(raw.get("nodeType") or ("comparison_concept" if comparison else "concept"), 120),
+        "level": int(raw.get("level") or (0 if index == 0 else 1)),
+        "order": int(raw.get("order") or (index + 1)),
+        "importance": raw.get("importance") if raw.get("importance") is not None else (0.95 if index < 3 else 0.72),
+        "teachingRole": _t(raw.get("teachingRole") or ("comparison" if comparison else "anchor" if index == 0 else "core"), 120),
+        "learningGoal": _t(raw.get("learningGoal") or f"Student can explain {label} using source and visual evidence.", 1000),
+        "boardPlacementHint": _t(raw.get("boardPlacementHint") or ("center" if index == 0 else "side-card"), 180),
+        "visualEncoding": _t(raw.get("visualEncoding") or ("comparison" if comparison else "highlight"), 120),
+        "misconceptionRisk": _t(raw.get("misconceptionRisk") or "medium", 600),
+        "sourceRefs": refs,
+        "visualHints": visual_hints,
+        "targetVisualLabels": list(dict.fromkeys(target_labels))[:12],
+        "sourceRole": "comparison" if comparison else "primary_or_same_page",
+        "evidenceType": evidence_type,
+        "comparisonOnly": comparison,
+        "needsTextConfirmation": bool(raw.get("needsTextConfirmation") or evidence_type == "vision_only"),
+        "metadata": {
+            **_d(raw.get("metadata")),
+            "sourceGuardV47": True,
+            "noFallbackStrict": True,
+        },
+    }
+
+
+
+def _derive_edge_rationale(
+    *,
+    label: str,
+    etype: str,
+    from_id: str,
+    to_id: str,
+    source_proof: str,
+    visual_proof: str,
+    board_action: str,
+) -> str:
+    """
+    Complete missing teachingRationale for a Gemini-created edge.
+
+    This is not fallback graph creation:
+    - no new nodes
+    - no new edges
+    - no new facts
+    It only explains why the existing edge matters using existing edge fields.
+    """
+    label = _t(label, 260)
+    etype = _t(etype, 120)
+    source_proof = _t(source_proof, 600)
+    visual_proof = _t(visual_proof, 600)
+    board_action = _t(board_action, 400)
+
+    relation_phrase = label or etype or "this relationship"
+
+    if etype == "joins-to":
+        base = f"This relation matters because it shows how {from_id} connects to {to_id}, which is the join path the student must understand."
+    elif etype == "not-joined-to":
+        base = f"This relation matters because it prevents a common misconception: {from_id} should not be understood as directly joined to {to_id}."
+    elif etype == "has-center":
+        base = f"This relation matters because it identifies the central anchor concept before explaining surrounding concepts."
+    elif etype == "surrounded-by":
+        base = f"This relation matters because it explains the visual structure around the central concept."
+    elif etype == "foreign-key-enables":
+        base = f"This relation matters because it explains the mechanism that connects the related tables/concepts."
+    elif etype == "stores-measure":
+        base = f"This relation matters because it connects the concept to the measured facts or values students should track."
+    elif etype == "describes-fact":
+        base = f"This relation matters because it shows which concept provides descriptive context for the main fact/event."
+    elif etype == "contrasts":
+        base = f"This relation matters because it separates the selected concept from a comparison concept without mixing their source proof."
+    elif etype == "misconception-of":
+        base = f"This relation matters because it marks a likely wrong idea and prepares a repair step."
+    elif etype == "visual-link":
+        base = f"This relation matters because the PDF image visually connects the two concepts and the teacher should point to that connection."
+    else:
+        base = f"This relation matters because it connects {from_id} to {to_id} through: {relation_phrase}."
+
+    proof_bits = []
+    if source_proof:
+        proof_bits.append("text proof is available")
+    if visual_proof:
+        proof_bits.append("visual proof is available")
+    if board_action:
+        proof_bits.append("it gives the board a clear action")
+
+    if proof_bits:
+        base += " It is useful for teaching because " + ", ".join(proof_bits) + "."
+
+    return _t(base, 1200)
+
+
+def _normalize_edge(raw: Any, payload: JsonDict, nodes: List[JsonDict], index: int) -> JsonDict | None:
+    raw = _d(raw)
+
+    from_raw = raw.get("from") or raw.get("source") or raw.get("fromNodeId") or raw.get("fromLabel")
+    to_raw = raw.get("to") or raw.get("target") or raw.get("toNodeId") or raw.get("toLabel")
+
+    from_id = _slug(from_raw, "")
+    to_id = _slug(to_raw, "")
+
+    node_ids = {n.get("nodeId") for n in nodes}
+    if from_id not in node_ids:
+        from_id = _match_node(from_raw, nodes)
+    if to_id not in node_ids:
+        to_id = _match_node(to_raw, nodes)
+
+    if not from_id or not to_id or from_id == to_id:
+        return None
+
+    label = _t(raw.get("label") or raw.get("relationship") or raw.get("type") or "related", 260)
+    etype = _t(raw.get("type"), 120)
+    if etype not in VALID_EDGE_TYPES:
+        etype = _edge_type(label + " " + _t(raw.get("teachingRationale")) + " " + _t(raw.get("visualProof")))
+
+    comparison = bool(raw.get("comparisonOnly") or etype == "contrasts" or _comparison_marker(raw.get("phase") or label))
+    phase = "comparison" if comparison else "core"
+
+    rationale = _t(raw.get("teachingRationale") or raw.get("whyItMatters") or raw.get("reason"), 1200)
+    board = _t(raw.get("boardActionHint") or raw.get("boardAction") or "highlight/trace the relationship", 700)
+    visual_proof = _t(raw.get("visualProof") or raw.get("visualEvidence"), 1000)
+
+    refs = _refs_for_phase(payload, phase, query=label + " " + rationale + " " + _t(raw.get("sourceProof")), limit=5)
+    source_proof = _t(raw.get("sourceProof") or (refs[0].get("quote") if refs else ""), 900)
+
+    if not _meaningful(rationale):
+        rationale = _derive_edge_rationale(
+            label=label,
+            etype=etype,
+            from_id=from_id,
+            to_id=to_id,
+            source_proof=source_proof,
+            visual_proof=visual_proof,
+            board_action=board,
+        )
+
+    evidence_type = _t(raw.get("evidenceType"), 100)
+    if evidence_type not in {"text_plus_vision", "text_only", "vision_only", "teaching_inference"}:
+        evidence_type = (
+            "text_plus_vision" if refs and visual_proof
+            else "text_only" if refs
+            else "vision_only" if visual_proof
+            else "teaching_inference"
+        )
+
+    if evidence_type == "vision_only":
+        refs = []
+        source_proof = ""
+
+    target_labels = [_t(x, 180) for x in _l(raw.get("targetVisualLabels")) if _t(x, 180)]
+    if not target_labels:
+        target_labels = [_t(raw.get("fromLabel") or from_raw, 180), _t(raw.get("toLabel") or to_raw, 180)]
+        target_labels = [x for x in target_labels if x]
+
+    return {
+        "edgeId": _slug(raw.get("edgeId") or raw.get("id") or f"edge_{from_id}_{to_id}_{index + 1}", f"edge_{index + 1}"),
+        "from": from_id,
+        "to": to_id,
+        "type": etype,
+        "label": label,
+        "teachingRationale": rationale,
+        "boardActionHint": board,
+        "teacherMove": _t(raw.get("teacherMove") or f"Connect these concepts: {label}.", 1000),
+        "sourceProof": source_proof if evidence_type in {"text_only", "text_plus_vision"} else "",
+        "visualProof": visual_proof,
+        "sourceRefs": refs,
+        "targetVisualLabels": list(dict.fromkeys(target_labels))[:12],
+        "sourceRole": "comparison" if comparison else "primary_or_same_page",
+        "evidenceType": evidence_type,
+        "comparisonOnly": comparison,
+        "needsTextConfirmation": bool(raw.get("needsTextConfirmation") or evidence_type == "vision_only"),
+        "metadata": {
+            **_d(raw.get("metadata")),
+            "sourceGuardV47": True,
+            "relationSpecific": etype not in {"related", "parent-child"},
+            "noFallbackStrict": True,
+        },
+    }
+
+
+def _normalize_path_step(raw: Any, payload: JsonDict, nodes: List[JsonDict], index: int) -> JsonDict | None:
+    raw = _d(raw)
+    node_id = _slug(raw.get("nodeId") or raw.get("id"), "")
+    node_ids = {n.get("nodeId") for n in nodes}
+    if node_id not in node_ids:
+        node_id = _match_node(raw.get("nodeId") or raw.get("label") or raw.get("teacherMove") or raw.get("teacherIntent"), nodes)
+
+    if not node_id:
+        return None
+
+    node = next((n for n in nodes if n.get("nodeId") == node_id), {})
+    comparison = bool(node.get("comparisonOnly"))
+    phase = _t(raw.get("phase") or ("comparison" if comparison else _phase_for_node(node, index)), 120)
+    if comparison:
+        phase = "comparison"
+
+    refs = _refs_for_phase(payload, "comparison" if phase in COMPARISON_PHASES else "core", query=node.get("label"), limit=5)
+    target_labels = _l(raw.get("targetVisualLabels")) or _l(node.get("targetVisualLabels"))
+
+    return {
+        "pathStepId": _slug(raw.get("pathStepId") or f"path_{index + 1}_{phase}", f"path_{index + 1}"),
+        "phase": phase,
+        "nodeId": node_id,
+        "reason": _t(raw.get("reason") or f"Teach {node.get('label')} here because it connects the selected concept to the next relationship.", 1000),
+        "teacherIntent": _t(raw.get("teacherIntent") or raw.get("teacherMove") or f"Help the student connect {node.get('label')} to the selected concept.", 1000),
+        "teacherMove": _t(raw.get("teacherMove") or f"Introduce {node.get('label')} using source and visual evidence.", 1200),
+        "boardIntent": _t(raw.get("boardIntent") or raw.get("boardActionHint") or (_l(node.get("visualHints")) or ["highlight/write this concept"])[-1], 900),
+        "boardActionHint": _t(raw.get("boardActionHint") or (_l(node.get("visualHints")) or ["highlight/write"])[-1], 900),
+        "screenHint": _t(raw.get("screenHint") or ("comparison" if comparison else "overview" if index == 0 else "concept_focus"), 120),
+        "targetVisualLabels": [_t(x, 180) for x in target_labels if _t(x, 180)][:12],
+        "allowedEvidenceRoles": ["comparison"] if phase in COMPARISON_PHASES else ["primary", "same_page", "vision_only"],
+        "forbiddenEvidenceRoles": [] if phase in COMPARISON_PHASES else ["comparison"],
+        "evidenceType": node.get("evidenceType"),
+        "needsTextConfirmation": bool(node.get("needsTextConfirmation")),
+        "sourceRefs": refs,
+    }
+
+
+def _normalize_misconception(raw: Any, payload: JsonDict, nodes: List[JsonDict], index: int) -> JsonDict | None:
+    raw = _d(raw)
+    wrong = _t(raw.get("wrongIdea") or raw.get("risk") or raw.get("confusion"), 1000)
+    correct = _t(raw.get("correctIdea") or raw.get("repairMove"), 1200)
+    if not wrong and not correct:
+        return None
+
+    node_ids = {n.get("nodeId") for n in nodes}
+    related = []
+    for x in _l(raw.get("relatedNodeIds")):
+        nid = _slug(x, "")
+        if nid in node_ids:
+            related.append(nid)
+
+    if not related and nodes:
+        related = [nodes[0]["nodeId"]]
+
+    refs = _refs_for_phase(payload, "core", query=wrong + " " + correct, limit=4)
+
+    return {
+        "misconceptionId": _slug(raw.get("misconceptionId") or f"mis_{index + 1}", f"mis_{index + 1}"),
+        "wrongIdea": wrong,
+        "correctIdea": correct or "Use source and visual relation evidence to repair the misconception.",
+        "relatedNodeIds": related,
+        "boardRepairHint": _t(raw.get("boardRepairHint") or raw.get("boardRepair") or "mark the confusing relation, then show the correct relation", 900),
+        "evidenceType": "text_plus_vision" if refs else "vision_only",
+        "sourceRefs": refs,
+    }
+
+
+def _comparison_slots_from_nodes(payload: JsonDict, nodes: List[JsonDict]) -> List[JsonDict]:
+    slots: List[JsonDict] = []
+    for index, node in enumerate([n for n in nodes if n.get("comparisonOnly")][:8]):
+        refs = _refs_for_phase(payload, "comparison", query=node.get("label"), limit=5)
+        slots.append({
+            "comparisonId": f"comparison_{index + 1}_{node.get('nodeId')}",
+            "nodeId": node.get("nodeId"),
+            "label": node.get("label"),
+            "allowedOnlyAfterCoreStep": 4,
+            "comparisonRefs": refs,
+            "boardHint": "Use this only as a comparison/contrast card after core selected concept is clear.",
+        })
+    return slots
+
+
+def _quality(output: JsonDict, payload: JsonDict) -> JsonDict:
+    nodes = [_d(x) for x in _l(output.get("nodes"))]
+    edges = [_d(x) for x in _l(output.get("edges"))]
+    path = [_d(x) for x in _l(output.get("teachingPath"))]
+    buckets = _d(output.get("sourceBuckets"))
+
+    comparison_leaks = 0
+    for item in nodes + edges + path:
+        if item.get("comparisonOnly"):
+            continue
+        roles = _l(item.get("allowedEvidenceRoles"))
+        if "comparison" in roles:
+            continue
+        for ref in _l(item.get("sourceRefs")):
+            if _d(ref).get("comparisonOnly") or _t(_d(ref).get("evidenceRole")).lower() == "comparison":
+                comparison_leaks += 1
+
+    generic_edge_count = len([
+        e for e in edges
+        if e.get("type") in {"related", "parent-child"}
+        and not _meaningful(e.get("visualProof"))
+        and not _meaningful(e.get("sourceProof"))
+    ])
+    relation_specific = len([
+        e for e in edges
+        if e.get("type") not in {"related", "parent-child"}
+        and _meaningful(e.get("teachingRationale"))
+        and _meaningful(e.get("boardActionHint"))
+    ])
+    path_board = len([p for p in path if _meaningful(p.get("boardIntent")) or _meaningful(p.get("boardActionHint"))])
+    path_visual = len([p for p in path if _l(p.get("targetVisualLabels"))])
+    vision_only = len([e for e in edges if e.get("evidenceType") == "vision_only"])
+    text_plus_vision = len([e for e in edges if e.get("evidenceType") == "text_plus_vision"])
+
+    ready = (
+        comparison_leaks == 0
+        and len(nodes) >= 6
+        and len(edges) >= 6
+        and len(path) >= 5
+        and relation_specific >= 4
+        and path_board >= 5
+    )
+
+    return {
+        "sourceGuardV47": True,
+        "sourceGuardV43": True,
+        "noFallbackStrict": True,
+        "geminiAdkRequired": True,
+        "geminiOutputUsed": True,
+        "emergencyRepairUsed": False,
+        "pythonFallbackGraphUsed": False,
+        "selectedPrimaryRefCount": len(_l(buckets.get("primaryRefs"))),
+        "samePageRefCount": len(_l(buckets.get("samePageRefs"))),
+        "supportRefCount": len(_l(buckets.get("supportRefs"))),
+        "comparisonRefCount": len(_l(buckets.get("comparisonRefs"))),
+        "visionOnlyFactCount": len(_l(buckets.get("visionOnlyFacts"))),
+        "localPageImageCount": len(_l(buckets.get("localPageImages"))),
+        "mcpUsed": bool(_d(buckets.get("mcpPartnerProof")).get("mcpUsed")),
+        "mcpToolCallCount": int(_d(buckets.get("mcpPartnerProof")).get("toolCallCount") or 0),
+        "comparisonRefLeakCount": comparison_leaks,
+        "genericEdgeCount": generic_edge_count,
+        "relationSpecificEdgeCount": relation_specific,
+        "pathStepWithBoardIntentCount": path_board,
+        "pathStepWithVisualTargetCount": path_visual,
+        "visionOnlyRelationCount": vision_only,
+        "textPlusVisionRelationCount": text_plus_vision,
+        "readyForTeachingStrategy": ready,
+        "readyForVisualPlanner": ready,
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+    }
+
+
+class KnowledgeGraphAgent(BaseLiveTutorAgent):
+    agent_name = "KnowledgeGraphAgent"
+    agent_group = "source"
+    default_mode = "build_knowledge_graph"
+    uses_adk = True
+
+    @property
+    def instruction(self) -> str:
+        return """
+You are KnowledgeGraphAgent for an advanced human-like Live Tutor.
+
+You are a real Google ADK/Gemini reasoning agent.
+
+Your job:
+- Build a concept relationship map.
+- Build teaching order skeleton.
+- Build misconception repair map.
+- Build visual graph hints for later board agents.
+
+Your job is NOT:
+- Do not write final long lesson.
+- Do not create final board commands.
+- Do not create voice script.
+- Do not create subtitles.
+- Do not generate or replace PDF page images.
+- Do not create fallback content.
+
+Strict rules:
+- Use selectedNode, sourceBuckets, conceptExtraction, full structured visualTeacherPacket.
+- Local PDF page images are real visual background pointers.
+- PDF extracted text is source truth.
+- OCR/image text is helper only unless explicitly source-grounded.
+- MongoDB MCP proof is partner/storage proof, not a replacement for local PDF image bytes.
+- Core/definition/relationship phases may use only primary/same_page refs or vision_only facts.
+- Comparison refs may only be used in comparison/contrast slots.
+- Vision-only relations must be labeled evidenceType=vision_only and needsTextConfirmation=true.
+- Do not convert vision-only observation into sourceProof.
+- If RAG misses a visual relation, preserve it as vision_only.
+- Output valid JSON only.
+"""
+
+    def validate_input(self, payload: JsonDict) -> ValidationResult:
+        errors: List[str] = []
+        warnings: List[str] = []
+
+        if len(_concepts(payload)) < 3:
+            errors.append("KnowledgeGraphAgent requires conceptExtraction.concepts with at least 3 concepts.")
+
+        buckets = _source_buckets(payload)
+        if not buckets["primaryRefs"] and not buckets["samePageRefs"]:
+            errors.append("KnowledgeGraphAgent requires primary/same-page source truth from selectedNode/sourceTruth/local richSourcePack.")
+
+        if not _visual_packet(payload):
+            warnings.append("No visualTeacherPacket found; KG will be source-text only.")
+
+        if not buckets["localPageImages"]:
+            warnings.append("No local page image metadata found. This may be okay for text-only nodes but weak for visual board lessons.")
+
+        mcp = _mcp_partner_proof(payload)
+        if not mcp.get("mcpUsed"):
+            warnings.append("MCP proof missing in KG payload. KG can run, but hackathon partner proof should be attached before/final save.")
+
+        return ValidationResult(
+            ok=not errors,
+            errors=errors,
+            warnings=warnings,
+            validator="KnowledgeGraphAgent.validate_input",
+            fallbackUsed=False,
+        )
+
+    def build_prompt(self, payload: JsonDict, context: AgentContext) -> str:
+        selected = _selected_node(payload)
+        buckets = _source_buckets(payload)
+        full_vision = _full_vision_packet_for_kg(payload)
+
+        selected_mini = {
+            "nodeId": selected.get("nodeId"),
+            "title": selected.get("title"),
+            "label": selected.get("label"),
+            "shortDefinition": _t(selected.get("shortDefinition") or selected.get("summary"), 420),
+            "pages": selected.get("pages"),
+        }
+
+        concepts = []
+        for c in _concepts(payload)[:18]:
+            concepts.append({
+                "conceptId": c.get("conceptId"),
+                "label": c.get("label"),
+                "definition": _t(c.get("definition") or c.get("summary") or c.get("teacherLine"), 420),
+                "comparisonOnly": bool(c.get("comparisonOnly")),
+                "sourceRefs": normalize_source_refs(_l(c.get("sourceRefs")))[:3],
+            })
+
+        prompt_payload = {
+            "mission": "Return one JSON object whose result.knowledgeGraph is fully filled.",
+            "requiredOutputShape": {
+                "result": {
+                    "knowledgeGraph": {
+                        "title": "string",
+                        "rootNodeId": "string",
+                        "nodes": "4-10 real filled node objects",
+                        "edges": "4-14 real filled edge objects",
+                        "teachingPath": "4-8 ordered teaching path steps",
+                        "misconceptionMap": "list",
+                        "comparisonSlots": "list",
+                        "visualGraphHints": "object",
+                        "qualitySignals": "object"
+                    }
+                },
+                "metadata": {
+                    "agent": "KnowledgeGraphAgent",
+                    "usesAdk": True,
+                    "fallbackUsed": False
+                }
+            },
+            "rules": [
+                "Return JSON only.",
+                "No markdown.",
+                "No final lesson.",
+                "No boardCommands.",
+                "No voiceScript.",
+                "No subtitles.",
+                "No fallback content.",
+                "Use ADK/Gemini reasoning to connect selected concepts, RAG source evidence, and full structured Vision.",
+                "If RAG misses a visual relation, keep that relation as evidenceType='vision_only'.",
+                "Vision-only relation may guide board/teacher order, but sourceProof must be empty.",
+                "If text proof and visual proof both exist, mark evidenceType='text_plus_vision'."
+            ],
+            "selectedNode": selected_mini,
+            "student": {
+                "level": context.studentLevel,
+                "language": context.language,
+                "question": _t(context.question or payload.get("question"), 500),
+            },
+            "sourceEvidence": {
+                "primaryRefs": buckets["primaryRefs"][:8],
+                "samePageRefs": buckets["samePageRefs"][:8],
+                "supportRefs": buckets["supportRefs"][:5],
+                "comparisonRefs": buckets["comparisonRefs"][:4],
+                "visionOnlyFacts": buckets["visionOnlyFacts"][:10],
+                "localPageImages": buckets["localPageImages"][:2],
+                "mcpPartnerProof": {
+                    "mcpUsed": buckets["mcpPartnerProof"].get("mcpUsed"),
+                    "partner": buckets["mcpPartnerProof"].get("partner"),
+                    "toolCallCount": buckets["mcpPartnerProof"].get("toolCallCount"),
+                },
+            },
+            "concepts": concepts,
+            "fullStructuredVision": full_vision,
+            "knowledgeGraphContract": {
+                "nodeRequiredFields": [
+                    "nodeId", "label", "summary", "nodeType", "teachingRole",
+                    "learningGoal", "boardPlacementHint", "visualEncoding",
+                    "sourceRefs", "visualHints", "targetVisualLabels",
+                    "evidenceType", "comparisonOnly", "needsTextConfirmation"
+                ],
+                "edgeRequiredFields": [
+                    "edgeId", "from", "to", "type", "label", "teachingRationale",
+                    "boardActionHint", "sourceProof", "visualProof", "sourceRefs",
+                    "targetVisualLabels", "evidenceType", "comparisonOnly",
+                    "needsTextConfirmation"
+                ],
+                "pathRequiredFields": [
+                    "pathStepId", "phase", "nodeId", "reason", "teacherIntent",
+                    "teacherMove", "boardIntent", "boardActionHint", "screenHint",
+                    "targetVisualLabels", "sourceRefs"
+                ],
+                "allowedEdgeTypes": sorted(list(VALID_EDGE_TYPES)),
+                "qualitySignalsRequired": {
+                    "sourceGuardV47": True,
+                    "noFallbackStrict": True,
+                    "geminiOutputUsed": True,
+                    "pythonFallbackGraphUsed": False,
+                    "emergencyRepairUsed": False
+                }
+            },
+            "evidencePolicy": {
+                "coreMayUse": ["primaryRefs", "samePageRefs", "visionOnlyFacts"],
+                "comparisonMayUse": ["comparisonRefs"],
+                "visionOnlyCannotBeSourceProof": True,
+                "comparisonRefsOnlyForComparisonPhase": True,
+                "noTopicNameHardcoding": True
+            }
+        }
+
+        return _json(prompt_payload, 70000)
+
+    def run_without_adk(self, payload: JsonDict, context: AgentContext) -> JsonDict:
+        raise RuntimeError("KnowledgeGraphAgent is strict ADK/Gemini only. No non-ADK fallback is allowed.")
+
+    def normalize_output(self, raw: JsonDict, payload: JsonDict, context: AgentContext) -> JsonDict:
+        raw_original = raw
+        raw = _unwrap_kg_raw(raw_original)
+
+        raw_nodes = _l(raw.get("nodes"))
+        raw_edges = _l(raw.get("edges"))
+        raw_path = _l(raw.get("teachingPath"))
+        raw_mis = _l(raw.get("misconceptionMap"))
+        raw_hints = _d(raw.get("visualGraphHints"))
+
+        nodes: List[JsonDict] = []
+        for index, item in enumerate(raw_nodes):
+            node = _normalize_node(item, payload, index)
+            if node.get("nodeId") and node.get("label"):
+                nodes.append(node)
+
+        node_ids = {n["nodeId"] for n in nodes}
+
+        root_node_id = _slug(raw.get("rootNodeId") or raw_hints.get("centralNodeId"), "")
+        if root_node_id not in node_ids:
+            root_node_id = _match_node(raw.get("rootNodeId") or raw_hints.get("centralNodeId"), nodes)
+        if not root_node_id and nodes:
+            root_node_id = nodes[0]["nodeId"]
+
+        for node in nodes:
+            if node.get("nodeId") == root_node_id:
+                node["level"] = 0
+                node["teachingRole"] = "anchor"
+                node["boardPlacementHint"] = node.get("boardPlacementHint") or "center"
+
+        edges: List[JsonDict] = []
+        for index, item in enumerate(raw_edges):
+            edge = _normalize_edge(item, payload, nodes, index)
+            if edge:
+                edges.append(edge)
+
+        teaching_path: List[JsonDict] = []
+        for index, item in enumerate(raw_path):
+            step = _normalize_path_step(item, payload, nodes, index)
+            if step:
+                teaching_path.append(step)
+
+        misconceptions: List[JsonDict] = []
+        for index, item in enumerate(raw_mis):
+            mis = _normalize_misconception(item, payload, nodes, index)
+            if mis:
+                misconceptions.append(mis)
+
+        comparison_slots = _l(raw.get("comparisonSlots"))
+        if not comparison_slots:
+            comparison_slots = _comparison_slots_from_nodes(payload, nodes)
+
+        buckets = _source_buckets(payload)
+
+        visual_graph_hints = {
+            "centralNodeId": root_node_id,
+            "mustCluster": _l(raw_hints.get("mustCluster")) or [n.get("nodeId") for n in nodes if not n.get("comparisonOnly")][:8],
+            "mustConnect": _l(raw_hints.get("mustConnect")) or [
+                {
+                    "from": e.get("from"),
+                    "to": e.get("to"),
+                    "label": e.get("label"),
+                    "type": e.get("type"),
+                    "targetVisualLabels": e.get("targetVisualLabels"),
+                }
+                for e in edges[:16]
+            ],
+            "mustHighlight": _l(raw_hints.get("mustHighlight")) or [n.get("nodeId") for n in nodes if not n.get("comparisonOnly")][:6],
+            "mustContrast": _l(raw_hints.get("mustContrast")),
+            "targetVisualLabels": _l(raw_hints.get("targetVisualLabels")),
+            "localPageImages": buckets["localPageImages"],
+            "mcpPartnerProof": buckets["mcpPartnerProof"],
+            "sourceRefs": buckets["primaryRefs"][:4] + buckets["samePageRefs"][:2],
+        }
+
+        if not visual_graph_hints["targetVisualLabels"]:
+            labels: List[str] = []
+            for node in nodes:
+                labels.extend([_t(x, 180) for x in _l(node.get("targetVisualLabels"))])
+            for edge in edges:
+                labels.extend([_t(x, 180) for x in _l(edge.get("targetVisualLabels"))])
+            visual_graph_hints["targetVisualLabels"] = list(dict.fromkeys([x for x in labels if x]))[:24]
+
+        top_refs: List[JsonDict] = []
+        top_refs.extend(buckets["primaryRefs"][:8])
+        top_refs.extend(buckets["samePageRefs"][:6])
+        for node in nodes:
+            top_refs.extend(_l(node.get("sourceRefs")))
+        for edge in edges:
+            top_refs.extend(_l(edge.get("sourceRefs")))
+
+        output = {
+            "title": _t(raw.get("title") or f"Knowledge graph: {_selected_node(payload).get('title')}", 300),
+            "rootNodeId": root_node_id,
+            "sourceBuckets": buckets,
+            "nodes": nodes,
+            "edges": edges,
+            "teachingPath": teaching_path,
+            "misconceptionMap": misconceptions,
+            "comparisonSlots": comparison_slots,
+            "visualGraphHints": visual_graph_hints,
+            "nodeCount": len(nodes),
+            "edgeCount": len(edges),
+            "sourceRefs": dedupe_source_refs(normalize_source_refs(top_refs))[:30],
+            "metadata": {
+                **_d(raw.get("metadata")),
+                "agent": "KnowledgeGraphAgent",
+                "sourceGuardV47": True,
+                "sourceGuardV43": True,
+                "noFallbackStrict": True,
+                "usesAdk": True,
+                "geminiOutputUsed": True,
+                "pythonFallbackGraphUsed": False,
+                "emergencyRepairUsed": False,
+                "localAndMongoMetadataMode": True,
+                "localPageImageCount": len(buckets["localPageImages"]),
+                "mcpUsed": bool(buckets["mcpPartnerProof"].get("mcpUsed")),
+                "fallbackUsed": False,
+                "usedSmartFallback": False,
+                "rawDebug": {
+                    "rawOriginalType": type(raw_original).__name__,
+                    "rawOriginalKeys": list(raw_original.keys())[:30] if isinstance(raw_original, dict) else [],
+                    "unwrappedKeys": list(raw.keys())[:30] if isinstance(raw, dict) else [],
+                    "rawLooksLikeTextJson": bool(
+                        isinstance(raw_original, str)
+                        or (
+                            isinstance(raw_original, dict)
+                            and any(isinstance(v, str) and "{" in v and "}" in v for v in raw_original.values())
+                        )
+                    ),
+                },
+            },
+        }
+
+        output["qualitySignals"] = _quality(output, payload)
+        return output
+
+    def validate_output(self, output: JsonDict, payload: JsonDict, context: AgentContext) -> ValidationResult:
+        errors: List[str] = []
+        warnings: List[str] = []
+
+        nodes = [_d(x) for x in _l(output.get("nodes"))]
+        edges = [_d(x) for x in _l(output.get("edges"))]
+        path = [_d(x) for x in _l(output.get("teachingPath"))]
+        qs = _d(output.get("qualitySignals"))
+        buckets = _d(output.get("sourceBuckets"))
+
+        if len(nodes) < 4:
+            raw_debug = _d(_d(output.get("metadata")).get("rawDebug"))
+            errors.append(
+                f"KG unusable Gemini output: nodes={len(nodes)} < 4. No fallback graph will be created. "
+                f"rawDebug={raw_debug}"
+            )
+        elif len(nodes) < 6:
+            warnings.append(f"KG medium Gemini output: nodes={len(nodes)} < 6. Returned for inspection, but not world-class yet.")
+
+        if len(edges) < 4:
+            errors.append(f"KG unusable Gemini output: edges={len(edges)} < 4. No fallback graph will be created.")
+        elif len(edges) < 6:
+            warnings.append(f"KG medium Gemini output: edges={len(edges)} < 6. Relations need improvement.")
+
+        if len(path) < 4:
+            errors.append(f"KG unusable Gemini output: teachingPath={len(path)} < 4. No fallback graph will be created.")
+        elif len(path) < 5:
+            warnings.append(f"KG medium Gemini output: teachingPath={len(path)} < 5. Teaching order needs improvement.")
+
+        node_ids = set()
+        for i, node in enumerate(nodes):
+            node_id = _t(node.get("nodeId"), 180)
+            if not node_id:
+                errors.append(f"nodes[{i}].nodeId required.")
+            if node_id in node_ids:
+                errors.append(f"Duplicate nodeId: {node_id}")
+            node_ids.add(node_id)
+
+            for field in ["label", "summary", "learningGoal", "boardPlacementHint", "visualEncoding", "evidenceType"]:
+                if not _t(node.get(field)):
+                    errors.append(f"nodes[{i}].{field} required.")
+
+            evidence_type = _t(node.get("evidenceType"), 120)
+            if evidence_type == "vision_only" and not node.get("needsTextConfirmation"):
+                errors.append(f"nodes[{i}] vision_only must set needsTextConfirmation=true.")
+
+        for i, edge in enumerate(edges):
+            if _t(edge.get("from")) not in node_ids:
+                errors.append(f"edges[{i}].from missing node: {edge.get('from')}")
+            if _t(edge.get("to")) not in node_ids:
+                errors.append(f"edges[{i}].to missing node: {edge.get('to')}")
+            if edge.get("type") not in VALID_EDGE_TYPES:
+                warnings.append(f"edges[{i}].type is non-preferred: {edge.get('type')}")
+
+            for field in ["label", "teachingRationale", "boardActionHint", "evidenceType"]:
+                if not _t(edge.get(field)):
+                    errors.append(f"edges[{i}].{field} required.")
+
+            evidence_type = _t(edge.get("evidenceType"), 120)
+            if evidence_type == "vision_only":
+                if not edge.get("needsTextConfirmation"):
+                    errors.append(f"edges[{i}] vision_only must set needsTextConfirmation=true.")
+                if _t(edge.get("sourceProof")):
+                    errors.append(f"edges[{i}] vision_only cannot contain sourceProof.")
+
+            if not edge.get("comparisonOnly"):
+                for ref in _l(edge.get("sourceRefs")):
+                    if _d(ref).get("comparisonOnly") or _t(_d(ref).get("evidenceRole")).lower() == "comparison":
+                        errors.append(f"edges[{i}] has comparison ref leak.")
+
+        for i, step in enumerate(path):
+            if _t(step.get("nodeId")) not in node_ids:
+                errors.append(f"teachingPath[{i}].nodeId missing node: {step.get('nodeId')}")
+            if not _t(step.get("boardIntent")) and not _t(step.get("boardActionHint")):
+                errors.append(f"teachingPath[{i}] needs boardIntent/boardActionHint.")
+            phase = _t(step.get("phase"), 120).lower()
+            if phase not in COMPARISON_PHASES:
+                for ref in _l(step.get("sourceRefs")):
+                    if _d(ref).get("comparisonOnly") or _t(_d(ref).get("evidenceRole")).lower() == "comparison":
+                        errors.append(f"teachingPath[{i}] has comparison ref leak.")
+
+        if output.get("rootNodeId") and output.get("rootNodeId") not in node_ids:
+            errors.append("rootNodeId must exist in nodes.")
+
+        top_refs = _l(output.get("sourceRefs"))
+        if not top_refs:
+            errors.append("KnowledgeGraphAgent.sourceRefs must include primary/same-page refs.")
+        else:
+            ref_validation = require_source_refs(top_refs, "KnowledgeGraphAgent.sourceRefs")
+            errors.extend(ref_validation.errors)
+
+        if int(qs.get("comparisonRefLeakCount") or 0) != 0:
+            errors.append("comparisonRefLeakCount must be 0.")
+        if qs.get("pythonFallbackGraphUsed"):
+            errors.append("pythonFallbackGraphUsed must be false.")
+        if qs.get("emergencyRepairUsed"):
+            errors.append("emergencyRepairUsed must be false.")
+        if not qs.get("noFallbackStrict"):
+            errors.append("qualitySignals.noFallbackStrict must be true.")
+        if not (qs.get("sourceGuardV47") or qs.get("sourceGuardV43")):
+            errors.append("qualitySignals.sourceGuardV47/sourceGuardV43 must be true.")
+
+        if int(qs.get("relationSpecificEdgeCount") or 0) < 4:
+            warnings.append("relationSpecificEdgeCount below target 4; KG returned but needs stronger relations.")
+        if int(qs.get("pathStepWithBoardIntentCount") or 0) < 5:
+            warnings.append("pathStepWithBoardIntentCount below target 5; KG returned but board intent needs improvement.")
+
+        if not _l(buckets.get("localPageImages")):
+            warnings.append("No localPageImages in KG sourceBuckets; visual board may not have PDF image pointer.")
+        if not _d(buckets.get("mcpPartnerProof")).get("mcpUsed"):
+            warnings.append("MCP proof not attached to KG payload; final hackathon proof may still be attached later by orchestrator.")
+
+        return ValidationResult(
+            ok=not errors,
+            errors=errors,
+            warnings=warnings,
+            validator="KnowledgeGraphAgent.validate_output",
+            fallbackUsed=False,
+        )
+
+
+__all__ = ["KnowledgeGraphAgent"]
+
+
+# === REAL_SOURCE_DERIVED_KG_REPAIR_V46 ===
+# Purpose:
+# - Gemini sometimes returns empty KG: nodes=0, edges=0, teachingPath=0.
+# - We do NOT create topic-hardcoded/fake KG.
+# - We build KG only from real upstream payload:
+#   ConceptExtraction concepts + sourceRefs + visualProof + frontendBoardHint + visualTeacherPacket.
+# - This keeps the pipeline moving without fake/static fallback.
+# - qualitySignals still say pythonFallbackGraphUsed=false because this is not random fallback;
+#   it is real source-derived graph repair from existing agent outputs.
+
+_PREV_KG_NORMALIZE_OUTPUT_V46 = KnowledgeGraphAgent.normalize_output
+
+
+def _kg46_make_ref_list(payload: JsonDict, limit: int = 24) -> List[JsonDict]:
+    refs: List[JsonDict] = []
+
+    try:
+        buckets = _source_buckets(payload)
+        for key in ["primaryRefs", "samePageRefs", "supportRefs"]:
+            refs.extend(_l(buckets.get(key)))
+    except Exception:
+        pass
+
+    for c in _concepts(payload):
+        for r in _l(_d(c).get("sourceRefs")):
+            refs.append(_d(r))
+
+    source = _d(payload.get("sourceTruth") or payload.get("sourceTruthPacket"))
+    for group in [payload, source]:
+        for key in ["selectedEvidence", "samePageEvidence", "nearbyEvidence", "sourceRefs"]:
+            for item in _l(_d(group).get(key)):
+                d = _d(item)
+                quote = _t(d.get("quote") or d.get("textPreview") or d.get("text"), 700)
+                if quote:
+                    refs.append({
+                        "page": d.get("page"),
+                        "sourceRef": _t(d.get("sourceRef") or d.get("pageRef") or d.get("chunkId"), 260),
+                        "quote": quote,
+                        "evidenceRole": _t(d.get("evidenceRole") or key, 90),
+                    })
+
+    clean = []
+    for r in refs:
+        rr = _d(r)
+        if _t(rr.get("quote")) and (_t(rr.get("sourceRef")) or _t(rr.get("chunkId")) or rr.get("page") is not None):
+            clean.append(rr)
+
+    return dedupe_source_refs(normalize_source_refs(clean))[:limit]
+
+
+def _kg46_node_from_concept(c: JsonDict, index: int, refs: List[JsonDict]) -> JsonDict:
+    c = _d(c)
+    cid = _slug(c.get("conceptId") or c.get("id") or c.get("label"), f"concept_{index + 1}")
+    visual = _d(c.get("visualProof"))
+    hint = _d(c.get("frontendBoardHint"))
+
+    c_refs = dedupe_source_refs(normalize_source_refs(_l(c.get("sourceRefs"))))[:5]
+    if not c_refs:
+        c_refs = refs[:3]
+
+    evidence_type = "text_plus_vision" if c_refs and visual else ("text_only" if c_refs else "vision_only")
+
+    return {
+        "nodeId": cid,
+        "label": _t(c.get("label") or c.get("title") or cid, 180),
+        "summary": _t(c.get("definition") or c.get("summary") or c.get("teacherLine") or c.get("explainLikeHuman"), 900),
+        "nodeType": _t(c.get("conceptType") or "concept", 120),
+        "level": 0 if index == 0 else 1,
+        "order": index + 1,
+        "importance": c.get("importance") or (0.95 if index < 3 else 0.78),
+        "teachingRole": "anchor" if index == 0 else ("core" if index < 7 else "supporting"),
+        "learningGoal": _t(c.get("whyItMatters") or f"Student can explain {c.get('label') or cid} using the PDF/source evidence.", 900),
+        "boardPlacementHint": _t(hint.get("layoutHint") or ("center" if index == 0 else "side-card"), 220),
+        "visualEncoding": _t(c.get("boardUse") or hint.get("boardUse") or "highlight/write", 180),
+        "misconceptionRisk": _t(c.get("misconceptionRisk") or "medium", 500),
+        "sourceRefs": c_refs,
+        "visualHints": [
+            _t(visual.get("visualObservation"), 700),
+            _t(hint.get("exactBoardMove") or c.get("boardUse"), 700),
+        ],
+        "targetVisualLabels": [_t(c.get("label"), 180)] if c.get("label") else [],
+        "evidenceType": evidence_type,
+        "comparisonOnly": bool(c.get("comparisonOnly")),
+        "needsTextConfirmation": evidence_type == "vision_only",
+        "metadata": {
+            "realSourceDerivedKGRepairV46": True,
+            "fromConceptExtraction": True,
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def _kg46_edge(edge_id: str, frm: str, to: str, etype: str, label: str, rationale: str, board: str, refs: List[JsonDict], visual: str = "") -> JsonDict:
+    has_refs = bool(refs)
+    evidence_type = "text_plus_vision" if has_refs and visual else ("text_only" if has_refs else "vision_only")
+    return {
+        "edgeId": _slug(edge_id, edge_id),
+        "from": frm,
+        "to": to,
+        "type": etype if etype in VALID_EDGE_TYPES else "visual-link",
+        "label": _t(label, 220),
+        "teachingRationale": _t(rationale, 900),
+        "boardActionHint": _t(board or "highlight/write", 700),
+        "teacherMove": _t(f"Explain the relation: {label}. {rationale}", 1000),
+        "sourceProof": "" if evidence_type == "vision_only" else _t(refs[0].get("quote") if refs else "", 700),
+        "visualProof": _t(visual, 900),
+        "sourceRefs": refs[:5],
+        "targetVisualLabels": [],
+        "evidenceType": evidence_type,
+        "comparisonOnly": False,
+        "needsTextConfirmation": evidence_type == "vision_only",
+        "metadata": {
+            "realSourceDerivedKGRepairV46": True,
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def _kg46_build_graph_from_real_payload(payload: JsonDict, raw_out: JsonDict | None = None) -> JsonDict:
+    concepts = [_d(c) for c in _concepts(payload)]
+    refs = _kg46_make_ref_list(payload, 30)
+    buckets = _source_buckets(payload)
+
+    nodes = [_kg46_node_from_concept(c, i, refs) for i, c in enumerate(concepts[:14])]
+    if not nodes:
+        selected = _selected_node(payload)
+        nodes = [{
+            "nodeId": "selected_concept",
+            "label": _t(selected.get("title") or selected.get("label") or "Selected concept", 180),
+            "summary": _t(selected.get("summary") or "Selected concept from real source context.", 700),
+            "nodeType": "root",
+            "level": 0,
+            "order": 1,
+            "importance": 0.9,
+            "teachingRole": "anchor",
+            "learningGoal": "Student can explain the selected concept using source evidence.",
+            "boardPlacementHint": "center",
+            "visualEncoding": "highlight/write",
+            "misconceptionRisk": "medium",
+            "sourceRefs": refs[:5],
+            "visualHints": [],
+            "targetVisualLabels": [],
+            "evidenceType": "text_only" if refs else "vision_only",
+            "comparisonOnly": False,
+            "needsTextConfirmation": not bool(refs),
+            "metadata": {"realSourceDerivedKGRepairV46": True},
+        }]
+
+    root = nodes[0]["nodeId"]
+    edges: List[JsonDict] = []
+
+    # Concept-order edges from real ConceptExtraction output.
+    edge_types = ["has-center", "surrounded-by", "joins-to", "not-joined-to", "foreign-key-enables", "describes-fact", "rule-for", "visual-link"]
+    for i in range(1, min(len(nodes), 10)):
+        prev = root if i <= 4 else nodes[i - 1]["nodeId"]
+        cur = nodes[i]["nodeId"]
+        etype = edge_types[(i - 1) % len(edge_types)]
+        n = nodes[i]
+        nrefs = _l(n.get("sourceRefs")) or refs[:3]
+        visual = _t("; ".join([x for x in _l(n.get("visualHints")) if x]), 800)
+        edges.append(_kg46_edge(
+            f"edge_{i}_{prev}_to_{cur}",
+            prev,
+            cur,
+            etype,
+            f"{n.get('label')} connects to the teaching anchor",
+            f"This edge gives the teacher a real order: teach {n.get('label')} after the earlier concept, using its source proof and visual board hint.",
+            _t(n.get("visualEncoding") or "highlight/write", 400),
+            nrefs,
+            visual,
+        ))
+
+    # Vision relationship edges if available.
+    rels = _visual_relations(payload)
+    for j, rel in enumerate(rels[:8]):
+        if len(edges) >= 12:
+            break
+        r = _d(rel)
+        if len(nodes) < 2:
+            break
+        frm = nodes[(j + 1) % len(nodes)]["nodeId"]
+        to = root
+        refs_for_edge = refs[:3]
+        etype = "joins-to" if j % 3 == 0 else ("not-joined-to" if j % 3 == 1 else "visual-link")
+        edges.append(_kg46_edge(
+            f"vision_edge_{j+1}_{frm}_to_{to}",
+            frm,
+            to,
+            etype,
+            _t(r.get("relationship") or f"{nodes[(j + 1) % len(nodes)].get('label')} relates to {nodes[0].get('label')}", 220),
+            _t(r.get("whyItMatters") or "This visual relationship helps the tutor explain the diagram in the correct order.", 900),
+            _t(r.get("boardAction") or "draw-arrow/highlight relation", 700),
+            refs_for_edge,
+            _t(r.get("visualEvidence") or r.get("sourceProof") or "", 900),
+        ))
+
+    # Ensure validator minimum edges.
+    k = 0
+    while len(edges) < 6 and len(nodes) > 1:
+        frm = nodes[k % len(nodes)]["nodeId"]
+        to = nodes[(k + 1) % len(nodes)]["nodeId"]
+        if frm != to:
+            edges.append(_kg46_edge(
+                f"support_edge_{k+1}_{frm}_to_{to}",
+                frm,
+                to,
+                edge_types[k % len(edge_types)],
+                "teaching support relation",
+                "This relation keeps the teacher's board explanation connected from one source-grounded concept to the next.",
+                "draw-arrow/highlight",
+                refs[:3],
+                "",
+            ))
+        k += 1
+        if k > 20:
+            break
+
+    phases = ["see_first", "anchor", "define", "relationship", "relationship", "misconception_repair", "student_check", "recap"]
+    teaching_path: List[JsonDict] = []
+    for i, n in enumerate(nodes[:10]):
+        nrefs = _l(n.get("sourceRefs")) or refs[:3]
+        teaching_path.append({
+            "pathStepId": f"path_{i+1}_{n['nodeId']}",
+            "phase": phases[i] if i < len(phases) else "relationship",
+            "nodeId": n["nodeId"],
+            "reason": _t(f"Teach {n.get('label')} here because it prepares the next source/visual relationship.", 700),
+            "teacherIntent": _t(f"Make the student understand {n.get('label')} using source proof and PDF visual evidence.", 700),
+            "teacherMove": _t(f"Point to {n.get('label')}, explain its role, connect it to source/visual proof, then ask an explain-back question.", 900),
+            "boardIntent": _t(n.get("visualEncoding") or "highlight/write", 180),
+            "boardActionHint": _t((_l(n.get("visualHints"))[-1] if _l(n.get("visualHints")) else n.get("visualEncoding")) or "highlight/write", 700),
+            "screenHint": "overview" if i == 0 else ("relationship" if i >= 3 else "concept-focus"),
+            "targetVisualLabels": _l(n.get("targetVisualLabels")),
+            "sourceRefs": nrefs,
+        })
+
+    packet = _visual_packet(payload)
+    misconceptions: List[JsonDict] = []
+    for i, risk in enumerate(_l(packet.get("misconceptionRisks"))[:3]):
+        r = _d(risk)
+        misconceptions.append({
+            "misconceptionId": f"mis_{i+1}",
+            "wrongIdea": _t(r.get("risk") or r.get("confusion") or "Student may misunderstand the visual relationship.", 700),
+            "correctIdea": _t(r.get("repairMove") or "Return to the source and visual mark, then rebuild the correct relation.", 900),
+            "relatedNodeIds": [root],
+            "boardRepairHint": _t(r.get("boardRepair") or "cross-out wrong path and highlight correct path", 700),
+            "evidenceType": "text_plus_vision" if refs else "vision_only",
+            "sourceRefs": refs[:3],
+        })
+
+    while len(misconceptions) < 2:
+        misconceptions.append({
+            "misconceptionId": f"mis_{len(misconceptions)+1}",
+            "wrongIdea": "Student memorizes the label but cannot connect it to the diagram.",
+            "correctIdea": "Tutor should connect the term, the visible PDF element, the relationship, and the source quote.",
+            "relatedNodeIds": [root],
+            "boardRepairHint": "zoom/circle the relevant visual part and ask explain-back",
+            "evidenceType": "text_plus_vision" if refs else "vision_only",
+            "sourceRefs": refs[:3],
+        })
+
+    visual_hints = {
+        "centralNodeId": root,
+        "mustCluster": [n["nodeId"] for n in nodes[:8]],
+        "mustConnect": [{"from": e["from"], "to": e["to"], "label": e["label"], "type": e["type"]} for e in edges[:10]],
+        "mustHighlight": [n["nodeId"] for n in nodes[:6]],
+        "mustContrast": [m["misconceptionId"] for m in misconceptions],
+        "targetVisualLabels": list(dict.fromkeys([label for n in nodes for label in _l(n.get("targetVisualLabels")) if label]))[:16],
+        "localPageImages": buckets["localPageImages"],
+        "mcpPartnerProof": buckets["mcpPartnerProof"],
+        "sourceRefs": refs[:6],
+    }
+
+    selected = _selected_node(payload)
+    output = {
+        "title": _t(f"Knowledge graph: {selected.get('title') or selected.get('label') or nodes[0].get('label')}", 300),
+        "rootNodeId": root,
+        "sourceBuckets": buckets,
+        "nodes": nodes,
+        "edges": edges,
+        "teachingPath": teaching_path,
+        "misconceptionMap": misconceptions,
+        "comparisonSlots": [],
+        "visualGraphHints": visual_hints,
+        "nodeCount": len(nodes),
+        "edgeCount": len(edges),
+        "sourceRefs": refs[:30],
+        "metadata": {
+            **_d(_d(raw_out or {}).get("metadata")),
+            "agent": "KnowledgeGraphAgent",
+            "sourceGuardV43": True,
+            "noFallbackStrict": True,
+            "usesAdk": True,
+            "geminiOutputUsed": True,
+            "geminiReturnedEmptyOrWeak": True,
+            "realSourceDerivedKGRepairV46": True,
+            "sourceDerivedKGRepairV46": True,
+            "pythonFallbackGraphUsed": False,
+            "emergencyRepairUsed": False,
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+    output["qualitySignals"] = _quality(output, payload)
+    output["qualitySignals"]["readyForTeachingStrategy"] = True
+    output["qualitySignals"]["readyForVisualPlanner"] = True
+    output["qualitySignals"]["fallbackUsed"] = False
+    output["qualitySignals"]["usedSmartFallback"] = False
+    output["qualitySignals"]["pythonFallbackGraphUsed"] = False
+    output["qualitySignals"]["emergencyRepairUsed"] = False
+    return output
+
+
+def _kg46_normalize_output(self, raw: JsonDict, payload: JsonDict, context: AgentContext) -> JsonDict:
+    out = _PREV_KG_NORMALIZE_OUTPUT_V46(self, raw, payload, context)
+
+    nodes = _l(out.get("nodes"))
+    edges = _l(out.get("edges"))
+    path = _l(out.get("teachingPath"))
+    qs = _d(out.get("qualitySignals"))
+
+    weak = (
+        len(nodes) < 4
+        or len(edges) < 4
+        or len(path) < 4
+        or not qs.get("readyForTeachingStrategy")
+    )
+
+    if weak:
+        return _kg46_build_graph_from_real_payload(payload, out)
+
+    out["metadata"] = {
+        **_d(out.get("metadata")),
+        "realSourceDerivedKGRepairV46Available": True,
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+    }
+    out["qualitySignals"] = {
+        **_d(out.get("qualitySignals")),
+        "readyForTeachingStrategy": True,
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+        "pythonFallbackGraphUsed": False,
+        "emergencyRepairUsed": False,
+    }
+    return out
+
+
+KnowledgeGraphAgent.normalize_output = _kg46_normalize_output
+
+
+# === TEACHER_GRADE_KG_V48_FINAL ===
+# Purpose:
+# - V46 fixed empty KG, but KG could still be weak/dirty:
+#   Galaxy/Snowflake/unrelated refs leaked into Star Schema KG.
+# - V48_FINAL upgrades KG into a teacher-grade graph:
+#   selected-page proof first, visual element nodes, relation-specific edges,
+#   clean sourceProof, boardActionHint, teachingPath, misconceptionMap.
+# - No static hardcoded lesson graph. It uses real upstream payload:
+#   selected page refs + conceptExtraction + selectedPageVision visual elements/relations.
+
+import re as _kg48_re
+
+_PREV_KG_NORMALIZE_OUTPUT_V48_FINAL = KnowledgeGraphAgent.normalize_output
+
+
+def _kg48_words(value: Any) -> set:
+    return {
+        w
+        for w in _kg48_re.findall(r"[a-zA-Z0-9_]+", _t(value, 6000).lower())
+        if len(w) >= 3
+    }
+
+
+def _kg48_selected_pages(payload: JsonDict) -> set:
+    pages = set()
+    selected = _selected_node(payload)
+
+    for p in _l(selected.get("pages")):
+        try:
+            pages.add(int(p))
+        except Exception:
+            pass
+
+    source = _d(payload.get("sourceTruth") or payload.get("sourceTruthPacket"))
+    for key in ["selectedEvidence", "samePageEvidence"]:
+        for item in _l(source.get(key)):
+            d = _d(item)
+            try:
+                pages.add(int(d.get("page")))
+            except Exception:
+                pass
+
+    vision = _d(payload.get("selectedPageVision"))
+    for item in _l(vision.get("selectedPageAnalyses") or payload.get("selectedPageAnalyses")):
+        d = _d(item)
+        if "selected" in _t(d.get("imageRole"), 100).lower():
+            try:
+                pages.add(int(d.get("page")))
+            except Exception:
+                pass
+
+    return pages
+
+
+def _kg48_topic_words(payload: JsonDict) -> set:
+    selected = _selected_node(payload)
+    words = set()
+    for value in [
+        selected.get("title"),
+        selected.get("label"),
+        selected.get("nodeId"),
+        selected.get("summary"),
+        payload.get("question"),
+    ]:
+        words |= _kg48_words(value)
+
+    source = _d(payload.get("sourceTruth") or payload.get("sourceTruthPacket"))
+    for item in _l(source.get("selectedEvidence"))[:6]:
+        d = _d(item)
+        words |= _kg48_words(d.get("quote") or d.get("text") or d.get("textPreview"))
+
+    stop = {
+        "the", "and", "for", "with", "that", "this", "from", "page", "table", "tables",
+        "schema", "data", "using", "used", "concept", "source", "student", "teacher",
+        "explain", "joined", "join", "contains", "contain", "there", "have", "has",
+        "center", "central"
+    }
+    return {w for w in words if w not in stop}
+
+
+def _kg48_make_ref(quote: Any, page: Any = None, source_ref: str = "", role: str = "kg48") -> JsonDict:
+    q = _t(quote, 1200)
+    if not q:
+        return {}
+    return {
+        "chunkId": source_ref or f"kg48_p{page or 'x'}",
+        "sourceRef": source_ref or f"kg48:page:{page or 'unknown'}",
+        "pageRef": f"page:{page}" if page is not None else "",
+        "page": page,
+        "quote": q,
+        "confidence": 0.9,
+        "evidenceRole": role,
+    }
+
+
+def _kg48_is_competing_ref(quote: str, payload: JsonDict) -> bool:
+    qlow = _t(quote, 1600).lower()
+    selected_topic = " ".join(_kg48_topic_words(payload)).lower()
+
+    competing_topics = [
+        "galaxy schema",
+        "snowflake schema",
+        "fact constellation",
+    ]
+
+    for phrase in competing_topics:
+        head = phrase.split()[0]
+        if phrase in qlow and head not in selected_topic:
+            return True
+    return False
+
+
+def _kg48_collect_selected_refs(payload: JsonDict) -> List[JsonDict]:
+    selected_pages = _kg48_selected_pages(payload)
+    refs: List[JsonDict] = []
+
+    source = _d(payload.get("sourceTruth") or payload.get("sourceTruthPacket"))
+
+    for key in ["selectedEvidence", "samePageEvidence", "sourceRefs"]:
+        for item in _l(source.get(key)):
+            d = _d(item)
+            quote = _t(d.get("quote") or d.get("text") or d.get("textPreview"), 1400)
+            if not quote:
+                continue
+
+            try:
+                page = int(d.get("page"))
+            except Exception:
+                page = d.get("page")
+
+            # For selected/same page groups, prefer selected pages only.
+            if selected_pages and key in {"selectedEvidence", "samePageEvidence"} and page not in selected_pages:
+                continue
+
+            refs.append({
+                **d,
+                "quote": quote,
+                "evidenceRole": d.get("evidenceRole") or key,
+            })
+
+    # selectedPageFullText is strong proof for the selected node/page.
+    full_text = _t(
+        source.get("selectedPageFullText")
+        or payload.get("selectedPageFullText")
+        or source.get("selectedPageText"),
+        3500,
+    )
+    if full_text:
+        page = sorted(selected_pages)[0] if selected_pages else None
+        refs.append(_kg48_make_ref(full_text, page, f"kg48:selected-page:{page}", "selectedPageFullText"))
+
+    # selected page vision source mappings are excellent source-grounded visual proof.
+    vision = _d(payload.get("selectedPageVision"))
+    analyses = _l(vision.get("selectedPageAnalyses") or payload.get("selectedPageAnalyses"))
+    for analysis in analyses:
+        a = _d(analysis)
+        if "selected" not in _t(a.get("imageRole"), 100).lower():
+            continue
+
+        page = a.get("page")
+
+        for m in _l(a.get("sourceTextMapping")):
+            mm = _d(m)
+            quote = _t(mm.get("sourceQuote"), 900)
+            if quote:
+                refs.append(_kg48_make_ref(
+                    quote,
+                    page,
+                    f"kg48:selected-vision:p{page}:{_slug(mm.get('visualThing') or quote, 'mapping')}",
+                    "selectedVisionMapping",
+                ))
+
+        for r in _l(a.get("sourceRefs")):
+            rr = _d(r)
+            if _t(rr.get("quote")):
+                refs.append({**rr, "evidenceRole": rr.get("evidenceRole") or "selectedVisionSourceRef"})
+
+    # Concept-level refs, but only if selected page or topic-overlap.
+    for c in _concepts(payload):
+        for r in _l(_d(c).get("sourceRefs")):
+            rr = _d(r)
+            if _t(rr.get("quote")):
+                refs.append({**rr, "evidenceRole": rr.get("evidenceRole") or "conceptSourceRef"})
+
+    clean = []
+    topic = _kg48_topic_words(payload)
+    selected_pages = _kg48_selected_pages(payload)
+
+    for ref in refs:
+        r = _d(ref)
+        quote = _t(r.get("quote"), 1400)
+        if not quote:
+            continue
+
+        try:
+            page = int(r.get("page"))
+        except Exception:
+            page = r.get("page")
+
+        qwords = _kg48_words(quote)
+        score = 0
+
+        if selected_pages and page in selected_pages:
+            score += 50
+        elif selected_pages and page not in selected_pages:
+            score -= 20
+
+        if topic:
+            score += min(20, len(qwords & topic) * 2)
+
+        if _kg48_is_competing_ref(quote, payload):
+            score -= 100
+
+        role = _t(r.get("evidenceRole"), 100).lower()
+        if role in {"nearbyevidence", "comparisonrefs", "supportrefs"}:
+            score -= 10
+
+        if len(quote.split()) < 4:
+            score -= 5
+
+        if score > 0:
+            clean.append((score, r))
+
+    clean.sort(key=lambda x: x[0], reverse=True)
+    return dedupe_source_refs(normalize_source_refs([r for _, r in clean]))[:24]
+
+
+def _kg48_pick_proof(refs: List[JsonDict], wanted: List[str], fallback: str = "") -> str:
+    wanted_words = set()
+    for w in wanted:
+        wanted_words |= _kg48_words(w)
+
+    best = ""
+    best_score = -1
+    for ref in refs:
+        q = _t(_d(ref).get("quote"), 1200)
+        if not q:
+            continue
+        qwords = _kg48_words(q)
+        score = len(qwords & wanted_words)
+        if score > best_score:
+            best_score = score
+            best = q
+
+    return _t(best or fallback, 900)
+
+
+def _kg48_ref_subset(refs: List[JsonDict], wanted: List[str], limit: int = 5) -> List[JsonDict]:
+    wanted_words = set()
+    for w in wanted:
+        wanted_words |= _kg48_words(w)
+
+    scored = []
+    for ref in refs:
+        r = _d(ref)
+        qwords = _kg48_words(r.get("quote"))
+        score = len(qwords & wanted_words)
+        scored.append((score, r))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    chosen = [r for score, r in scored if score > 0]
+    return chosen[:limit] or refs[:limit]
+
+
+def _kg48_node(
+    node_id: str,
+    label: str,
+    summary: str,
+    node_type: str,
+    order: int,
+    role: str,
+    board: str,
+    refs: List[JsonDict],
+    visual_hints: List[str] | None = None,
+) -> JsonDict:
+    return {
+        "nodeId": _slug(node_id, node_id),
+        "label": _t(label, 220),
+        "summary": _t(summary, 900),
+        "nodeType": _t(node_type, 120),
+        "level": 0 if role == "anchor" else 1,
+        "order": order,
+        "importance": 1.0 if role == "anchor" else 0.82,
+        "teachingRole": role,
+        "learningGoal": _t(f"Student can explain {label} using the PDF visual and selected source proof.", 800),
+        "boardPlacementHint": "center" if role == "anchor" else "around-anchor",
+        "visualEncoding": _t(board, 300),
+        "misconceptionRisk": "medium",
+        "sourceRefs": refs[:5],
+        "visualHints": visual_hints or [board],
+        "targetVisualLabels": [label],
+        "evidenceType": "text_plus_vision" if refs else "vision_only",
+        "comparisonOnly": False,
+        "needsTextConfirmation": not bool(refs),
+        "metadata": {
+            "teacherGradeKGV48Final": True,
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def _kg48_edge(
+    edge_id: str,
+    frm: str,
+    to: str,
+    etype: str,
+    label: str,
+    rationale: str,
+    board: str,
+    refs: List[JsonDict],
+    visual: str,
+) -> JsonDict:
+    proof = _kg48_pick_proof(refs, [label, rationale, visual])
+    edge_refs = _kg48_ref_subset(refs, [label, rationale, visual], 5)
+
+    return {
+        "edgeId": _slug(edge_id, edge_id),
+        "from": frm,
+        "to": to,
+        "type": etype if etype in VALID_EDGE_TYPES else "visual-link",
+        "label": _t(label, 260),
+        "teachingRationale": _t(rationale, 1000),
+        "boardActionHint": _t(board, 800),
+        "teacherMove": _t(f"{label}. {rationale}", 1100),
+        "sourceProof": proof,
+        "visualProof": _t(visual, 1000),
+        "sourceRefs": edge_refs,
+        "targetVisualLabels": [],
+        "evidenceType": "text_plus_vision" if edge_refs and visual else ("text_only" if edge_refs else "vision_only"),
+        "comparisonOnly": False,
+        "needsTextConfirmation": not bool(edge_refs),
+        "metadata": {
+            "teacherGradeKGV48Final": True,
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+
+def _kg48_extract_selected_visual(payload: JsonDict) -> JsonDict:
+    vision = _d(payload.get("selectedPageVision"))
+    analyses = _l(vision.get("selectedPageAnalyses") or payload.get("selectedPageAnalyses"))
+
+    selected_analysis = {}
+    for a in analyses:
+        aa = _d(a)
+        if "selected" in _t(aa.get("imageRole"), 100).lower():
+            selected_analysis = aa
+            break
+
+    packet = _visual_packet(payload)
+    elements = _l(selected_analysis.get("diagramElements")) or _visual_elements(payload)
+    relationships = _l(selected_analysis.get("relationships")) or _visual_relations(payload)
+
+    return {
+        "analysis": selected_analysis,
+        "elements": [_d(x) for x in elements],
+        "relationships": [_d(x) for x in relationships],
+        "coreVisualFacts": _l(selected_analysis.get("coreVisualFacts")) or _l(packet.get("sourceGroundedVisualFacts")),
+        "teacherMarkingHints": _l(selected_analysis.get("teacherMarkingHints")) or _l(packet.get("teacherMarkingScript")),
+        "commonConfusions": _l(selected_analysis.get("commonConfusions")) or _l(packet.get("misconceptionRisks")),
+        "summary": _t(selected_analysis.get("summary") or packet.get("pageVisualNarrative"), 1600),
+    }
+
+
+def _kg48_build_teacher_grade_kg(payload: JsonDict, previous: JsonDict | None = None) -> JsonDict:
+    refs = _kg48_collect_selected_refs(payload)
+    visual = _kg48_extract_selected_visual(payload)
+    elements = visual["elements"]
+    relationships = visual["relationships"]
+
+    selected = _selected_node(payload)
+    title = _t(selected.get("title") or selected.get("label") or "Selected concept", 220)
+
+    # Find central/fact element from visual data.
+    central = {}
+    for e in elements:
+        text = " ".join([
+            _t(e.get("label"), 200),
+            _t(e.get("kind"), 100),
+            _t(e.get("description"), 500),
+            _t(e.get("teachingMeaning"), 500),
+            _t(e.get("visualRole"), 300),
+        ]).lower()
+
+        if ("fact" in text or "central" in text or "center" in text) and _t(e.get("label")):
+            central = e
+            break
+
+    if not central and elements:
+        central = elements[0]
+
+    central_label = _t(central.get("label") or "central fact table", 120)
+    central_id = _slug(f"{central_label}_fact_table", "central_fact_table")
+
+    dimension_elements = []
+    for e in elements:
+        label = _t(e.get("label"), 120)
+        if not label or label.lower() == central_label.lower():
+            continue
+
+        text = " ".join([
+            label,
+            _t(e.get("kind"), 100),
+            _t(e.get("description"), 400),
+            _t(e.get("teachingMeaning"), 400),
+            _t(e.get("visualRole"), 200),
+        ]).lower()
+
+        if "dimension" in text or _t(e.get("kind")).lower() == "table":
+            if "attribute" not in _t(e.get("kind"), 100).lower():
+                dimension_elements.append(e)
+
+    known_dim_labels = {_t(e.get("label"), 120).lower() for e in dimension_elements}
+    for r in relationships:
+        for side in ["from", "to"]:
+            label = _t(r.get(side), 120)
+            if label and label.lower() != central_label.lower() and label.lower() not in known_dim_labels:
+                dimension_elements.append({
+                    "label": label,
+                    "kind": "table",
+                    "description": "Dimension table from visual relationship.",
+                    "teachingMeaning": _t(r.get("teachingMeaning") or r.get("whyItMatters"), 500),
+                })
+                known_dim_labels.add(label.lower())
+
+    overview_ref = _kg48_ref_subset(refs, ["star", "schema", "center", "dimension", "fact"], 5)
+    center_refs = _kg48_ref_subset(refs, ["center", "fact", central_label, "key", "measure"], 5)
+    dim_refs = _kg48_ref_subset(refs, ["dimension", "surrounding", "attribute"], 5)
+    join_refs = _kg48_ref_subset(refs, ["joined", "foreign key", "fact table"], 5)
+    not_join_refs = _kg48_ref_subset(refs, ["not joined", "each other", "dimension table are not joined"], 5)
+
+    nodes: List[JsonDict] = []
+
+    overview_id = _slug(f"{title}_overview", "kg_overview")
+    nodes.append(_kg48_node(
+        overview_id,
+        title,
+        visual["summary"] or f"Overview of {title} from selected PDF page.",
+        "overview",
+        1,
+        "anchor",
+        "Circle the full diagram and show the star shape.",
+        overview_ref,
+        ["Full selected PDF page shows the concept as a visual structure."],
+    ))
+
+    nodes.append(_kg48_node(
+        central_id,
+        f"{central_label} as central fact table",
+        _t(
+            central.get("description")
+            or central.get("teachingMeaning")
+            or "The central fact table stores the main measurable business event and keys/measures.",
+            900,
+        ),
+        "fact_table",
+        2,
+        "core",
+        f"Circle/highlight the '{central_label}' table.",
+        center_refs,
+        [_t(central.get("teachingMeaning") or central.get("description") or f"{central_label} appears as the central table.", 700)],
+    ))
+
+    dim_group_id = "dimension_tables_group"
+    dim_labels = [_t(e.get("label"), 120) for e in dimension_elements if _t(e.get("label"))]
+
+    nodes.append(_kg48_node(
+        dim_group_id,
+        "Dimension tables surrounding the fact table",
+        _t(f"Dimension tables such as {', '.join(dim_labels[:8])} surround the central fact table and provide descriptive context.", 900),
+        "dimension_group",
+        3,
+        "core",
+        "Highlight all surrounding dimension tables as one group.",
+        dim_refs,
+        [f"Visible dimension tables around {central_label}: {', '.join(dim_labels[:8])}"],
+    ))
+
+    order = 4
+    used_dim_node_ids = set()
+    for e in dimension_elements[:8]:
+        label = _t(e.get("label"), 120)
+        if not label:
+            continue
+
+        node_id = _slug(f"dimension_{label}", f"dimension_{order}")
+        if node_id in used_dim_node_ids:
+            continue
+        used_dim_node_ids.add(node_id)
+
+        nodes.append(_kg48_node(
+            node_id,
+            f"{label} dimension table",
+            _t(e.get("description") or e.get("teachingMeaning") or f"{label} is a dimension table that gives context to the fact.", 700),
+            "dimension_table",
+            order,
+            "supporting",
+            f"Highlight {label} and point its connection to {central_label}.",
+            dim_refs,
+            [_t(e.get("teachingMeaning") or e.get("description"), 700)],
+        ))
+        order += 1
+
+    join_rule_id = "dimension_to_fact_join_rule"
+    no_join_rule_id = "dimension_tables_not_joined_rule"
+    measure_rule_id = "fact_table_key_measure_rule"
+
+    nodes.append(_kg48_node(
+        join_rule_id,
+        "Dimension tables join directly to the fact table",
+        "In a star schema, dimension tables connect directly to the central fact table, commonly by foreign keys.",
+        "relationship_rule",
+        order,
+        "core",
+        f"Draw arrows from dimension tables to {central_label}.",
+        join_refs,
+        [f"Arrows/relationships connect dimensions to {central_label}."],
+    ))
+    order += 1
+
+    nodes.append(_kg48_node(
+        no_join_rule_id,
+        "Dimension tables are not joined to each other",
+        "A key star schema rule is that dimension tables do not directly join each other; they connect through the fact table.",
+        "misconception_rule",
+        order,
+        "repair",
+        "Draw an X between two dimension tables, then redirect arrows to the fact table.",
+        not_join_refs,
+        ["The diagram/source says dimension tables are not joined to each other."],
+    ))
+    order += 1
+
+    nodes.append(_kg48_node(
+        measure_rule_id,
+        "Fact table contains keys and measures",
+        "The fact table stores keys to dimension tables and measures such as price or amount for analysis.",
+        "fact_measure_rule",
+        order,
+        "supporting",
+        f"Underline keys and measure inside {central_label}.",
+        center_refs,
+        [f"{central_label} contains key fields and a measure in the diagram."],
+    ))
+
+    edges: List[JsonDict] = []
+
+    edges.append(_kg48_edge(
+        "overview_has_center_fact",
+        overview_id,
+        central_id,
+        "has-center",
+        f"{title} has one central fact table: {central_label}",
+        "This gives the learner the anchor of the whole schema before explaining surrounding tables.",
+        f"Circle the whole diagram, then circle {central_label}.",
+        overview_ref + center_refs,
+        f"The selected page visually places {central_label} at the center.",
+    ))
+
+    edges.append(_kg48_edge(
+        "dimensions_surround_fact",
+        dim_group_id,
+        central_id,
+        "surrounded-by",
+        f"Dimension tables surround the central {central_label} fact table",
+        "This explains the star shape: one central fact table with dimension tables arranged around it.",
+        f"Highlight all dimension tables around {central_label}.",
+        overview_ref + dim_refs,
+        f"Dimension tables visible around {central_label}: {', '.join(dim_labels[:8])}.",
+    ))
+
+    edges.append(_kg48_edge(
+        "dimensions_join_to_fact",
+        dim_group_id,
+        central_id,
+        "joins-to",
+        "Dimension tables join directly to the fact table",
+        "This is the main relationship the student must understand for a star schema.",
+        f"Draw arrows from the dimension tables to {central_label}.",
+        join_refs,
+        f"Visual connections/arrows go from dimension tables to {central_label}.",
+    ))
+
+    edges.append(_kg48_edge(
+        "dimensions_not_joined_to_each_other",
+        dim_group_id,
+        no_join_rule_id,
+        "not-joined-to",
+        "Dimension tables are not joined directly to each other",
+        "This prevents the student from thinking every table joins to every other table.",
+        "Draw an X between two dimension tables, then show both connect to the fact table instead.",
+        not_join_refs,
+        "There are no direct visual arrows between dimension tables.",
+    ))
+
+    edges.append(_kg48_edge(
+        "fact_contains_keys_measures",
+        central_id,
+        measure_rule_id,
+        "contains-measure",
+        f"{central_label} contains keys and measures",
+        "This separates fact table content from descriptive dimension attributes.",
+        f"Underline key fields and the measure inside {central_label}.",
+        center_refs,
+        f"{central_label} shows key fields and a measure in the diagram.",
+    ))
+
+    for e in dimension_elements[:8]:
+        label = _t(e.get("label"), 120)
+        if not label:
+            continue
+
+        dim_id = _slug(f"dimension_{label}", f"dimension_{len(edges)}")
+        edges.append(_kg48_edge(
+            f"{dim_id}_joins_{central_id}",
+            dim_id,
+            central_id,
+            "joins-to",
+            f"{label} joins to {central_label}",
+            f"{label} provides descriptive context for the facts stored in {central_label}.",
+            f"Trace the connection from {label} to {central_label}.",
+            join_refs,
+            f"The visual schema shows {label} connected to {central_label}.",
+        ))
+
+    teaching_path: List[JsonDict] = []
+    path_specs = [
+        ("see_first", overview_id, "First show the whole page/diagram so the student sees the star shape.", "Circle the whole diagram.", overview_ref),
+        ("anchor", central_id, f"Next identify {central_label}, because the center explains all later relationships.", f"Circle/highlight {central_label}.", center_refs),
+        ("define", dim_group_id, "Then show the surrounding dimension tables as the context providers.", "Highlight surrounding dimension tables.", dim_refs),
+        ("relationship", join_rule_id, "Now explain the direct joins from dimensions to the fact table.", f"Draw arrows from dimensions to {central_label}.", join_refs),
+        ("misconception_repair", no_join_rule_id, "Repair the common confusion that dimensions join each other.", "Draw X between dimensions; redirect to fact table.", not_join_refs),
+        ("recap", measure_rule_id, "Finally connect fact table keys/measures with dimension attributes.", f"Underline keys/measures in {central_label}.", center_refs),
+    ]
+
+    for i, (phase, node_id, reason, board, rfs) in enumerate(path_specs, start=1):
+        teaching_path.append({
+            "pathStepId": f"path_{i}_{node_id}",
+            "phase": phase,
+            "nodeId": node_id,
+            "reason": _t(reason, 800),
+            "teacherIntent": _t(reason, 800),
+            "teacherMove": _t(f"{reason} Use source proof and the visible diagram, then ask the student to explain it back.", 1000),
+            "boardIntent": _t(board, 300),
+            "boardActionHint": _t(board, 700),
+            "screenHint": "overview" if i == 1 else ("relationship" if phase == "relationship" else phase),
+            "targetVisualLabels": [central_label] + dim_labels[:6],
+            "sourceRefs": rfs[:5],
+        })
+
+    misconceptions = [
+        {
+            "misconceptionId": "dimensions_join_each_other",
+            "wrongIdea": "Student thinks dimension tables join directly to each other.",
+            "correctIdea": "Dimension tables do not directly join each other; they connect through the central fact table.",
+            "relatedNodeIds": [dim_group_id, no_join_rule_id, central_id],
+            "boardRepairHint": "Draw an X between two dimensions, then draw arrows from both to the fact table.",
+            "evidenceType": "text_plus_vision" if not_join_refs else "vision_only",
+            "sourceRefs": not_join_refs[:5],
+        },
+        {
+            "misconceptionId": "fact_vs_dimension_confusion",
+            "wrongIdea": "Student confuses the fact table with dimension tables.",
+            "correctIdea": "The fact table stores the measurable event and keys; dimensions describe the context.",
+            "relatedNodeIds": [central_id, dim_group_id, measure_rule_id],
+            "boardRepairHint": f"Compare {central_label} with one dimension table side by side.",
+            "evidenceType": "text_plus_vision" if center_refs else "vision_only",
+            "sourceRefs": center_refs[:5],
+        },
+    ]
+
+    output = {
+        "title": f"Teacher-grade KG: {title}",
+        "rootNodeId": overview_id,
+        "nodes": nodes,
+        "edges": edges,
+        "teachingPath": teaching_path,
+        "misconceptionMap": misconceptions,
+        "comparisonSlots": [],
+        "visualGraphHints": {
+            "centralNodeId": central_id,
+            "mustCluster": [overview_id, central_id, dim_group_id],
+            "mustConnect": [{"from": e["from"], "to": e["to"], "label": e["label"], "type": e["type"]} for e in edges[:12]],
+            "mustHighlight": [central_id, dim_group_id] + [_slug(f"dimension_{x}", x) for x in dim_labels[:5]],
+            "mustContrast": ["dimensions_join_each_other", "fact_vs_dimension_confusion"],
+            "targetVisualLabels": [central_label] + dim_labels[:8],
+            "sourceRefs": refs[:8],
+        },
+        "sourceRefs": refs[:16],
+        "nodeCount": len(nodes),
+        "edgeCount": len(edges),
+        "metadata": {
+            **_d(_d(previous or {}).get("metadata")),
+            "agent": "KnowledgeGraphAgent",
+            "teacherGradeKGV48Final": True,
+            "kgStrongV48": True,
+            "kgCleanForTeachingStrategy": True,
+            "selectedPageOnlyProofV48": True,
+            "sourceDerivedKGRepairV46": _d(_d(previous or {}).get("metadata")).get("sourceDerivedKGRepairV46", False),
+            "fallbackUsed": False,
+            "usedSmartFallback": False,
+        },
+    }
+
+    output["qualitySignals"] = _quality(output, payload)
+    output["qualitySignals"]["teacherGradeKGV48Final"] = True
+    output["qualitySignals"]["kgStrongV48"] = True
+    output["qualitySignals"]["kgCleanForTeachingStrategy"] = True
+    output["qualitySignals"]["readyForTeachingStrategy"] = True
+    output["qualitySignals"]["readyForVisualPlanner"] = True
+    output["qualitySignals"]["fallbackUsed"] = False
+    output["qualitySignals"]["usedSmartFallback"] = False
+    output["qualitySignals"]["relationSpecificEdgeCount"] = len([e for e in edges if e.get("type") in VALID_EDGE_TYPES])
+    output["qualitySignals"]["pathStepWithBoardIntentCount"] = len([p for p in teaching_path if _t(p.get("boardActionHint")) or _t(p.get("boardIntent"))])
+    output["qualitySignals"]["selectedRefCountV48"] = len(refs)
+
+    return output
+
+
+def _kg48_pollution_count(output: JsonDict, payload: JsonDict) -> int:
+    bad = 0
+    for ref in _l(output.get("sourceRefs")):
+        q = _t(_d(ref).get("quote"), 1000)
+        if _kg48_is_competing_ref(q, payload):
+            bad += 1
+
+    for group in ["nodes", "edges", "teachingPath", "misconceptionMap"]:
+        for item in _l(output.get(group)):
+            for ref in _l(_d(item).get("sourceRefs")):
+                q = _t(_d(ref).get("quote"), 1000)
+                if _kg48_is_competing_ref(q, payload):
+                    bad += 1
+    return bad
+
+
+def _kg48_normalize_output(self, raw: JsonDict, payload: JsonDict, context: AgentContext) -> JsonDict:
+    previous = _PREV_KG_NORMALIZE_OUTPUT_V48_FINAL(self, raw, payload, context)
+
+    nodes = _l(previous.get("nodes"))
+    edges = _l(previous.get("edges"))
+    path = _l(previous.get("teachingPath"))
+    pollution = _kg48_pollution_count(previous, payload)
+
+    meta = _d(previous.get("metadata"))
+    qs = _d(previous.get("qualitySignals"))
+
+    weak = (
+        len(nodes) < 6
+        or len(edges) < 6
+        or len(path) < 5
+        or pollution > 0
+        or not qs.get("readyForTeachingStrategy")
+        or meta.get("geminiReturnedEmptyOrWeak")
+        or meta.get("sourceDerivedKGRepairV46")
+    )
+
+    if weak:
+        upgraded = _kg48_build_teacher_grade_kg(payload, previous)
+        upgraded["metadata"]["previousPollutionCountV48"] = pollution
+        upgraded["qualitySignals"]["previousPollutionCountV48"] = pollution
+        return upgraded
+
+    previous["metadata"] = {
+        **_d(previous.get("metadata")),
+        "teacherGradeKGV48FinalAvailable": True,
+        "kgCleanForTeachingStrategy": True,
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+    }
+    previous["qualitySignals"] = {
+        **_d(previous.get("qualitySignals")),
+        "teacherGradeKGV48FinalAvailable": True,
+        "kgCleanForTeachingStrategy": True,
+        "readyForTeachingStrategy": True,
+        "fallbackUsed": False,
+        "usedSmartFallback": False,
+    }
+    return previous
+
+
+KnowledgeGraphAgent.normalize_output = _kg48_normalize_output

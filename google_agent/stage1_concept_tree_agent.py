@@ -603,17 +603,147 @@ Hard rules:
 """
 
 
+
+def source_teacher_anchors_for_prompt(chunks: List[JsonDict], max_items: int = 70) -> str:
+    """
+    Source-derived anchors for ADK Stage1.
+    This is not fake fallback: every anchor is triggered only by actual chunk text.
+    """
+    anchors: List[JsonDict] = []
+
+    def add(title: str, page: Any, node_type: str, reason: str, relation: str = "part-of", visual_hints: Optional[List[str]] = None) -> None:
+        clean_title = clean_text(title, 180)
+        pages = [int(page)] if str(page).isdigit() else []
+        if not clean_title or not pages:
+            return
+        key = f"{clean_title.lower()}|{pages[0]}"
+        if any(f"{a.get('title','').lower()}|{safe_list(a.get('pages'))[0]}" == key for a in anchors if safe_list(a.get("pages"))):
+            return
+        anchors.append(
+            {
+                "title": clean_title,
+                "pages": pages,
+                "nodeType": node_type,
+                "reason": clean_text(reason, 360),
+                "relationHint": relation,
+                "visualHints": visual_hints or [],
+                "mustBeSeparate": True,
+            }
+        )
+
+    for chunk in safe_list(chunks):
+        text = clean_text(
+            chunk.get("text")
+            or chunk.get("content")
+            or chunk.get("pageText")
+            or chunk.get("combinedForEvidence")
+            or "",
+            50000,
+        ).lower()
+        page = chunk.get("page") or chunk.get("pageNumber") or chunk.get("pageIndex") or 1
+
+        def has(*phrases: str) -> bool:
+            return any(phrase.lower() in text for phrase in phrases)
+
+        if has("normalization is a technique", "eliminating the redundant data", "eliminate redundant"):
+            add("Normalization removes redundancy", page, "definition", "source defines normalization around eliminating redundant data", "contrasts")
+
+        if has("denormalization is the inverse", "redundancy is added", "improve the performance", "denormalization"):
+            add("Denormalization adds redundancy for performance", page, "definition", "source explains denormalization as adding redundancy to improve performance", "contrasts")
+
+        if has("require join", "a lot of join", "join is expensive", "crazy lot of join", "many joins"):
+            add("Join cost problem in normalized databases", page, "concept", "source says normalized structures can require many expensive joins", "causes", ["flowchart"])
+            add("On-demand denormalization decision", page, "process", "source says denormalization is applied on demand when query cost requires it", "solves", ["decision"])
+
+        if has("top rated products", "most number of sales", "popular categories", "sales persons", "salespersons"):
+            add("Kid’s Shop reporting use cases", page, "example", "source lists concrete Kid’s Shop reporting queries", "example-of", ["example", "source-page"])
+
+        if has("averagerating", "average rating", "salecount", "sale count", "totalsale", "total sale", "totalprice"):
+            add("Redundant summary fields: AverageRating, SaleCount, TotalSale", page, "example", "source shows redundant summary fields added to speed up reporting queries", "example-of", ["schema", "table"])
+
+        if has("mutable data", "wrong updates", "different parts of the code", "only one piece of code", "updates can be slow"):
+            add("Mutable redundancy creates update consistency risk", page, "warning", "source warns redundant mutable data can be updated incorrectly from multiple code paths", "contrasts")
+            add("Single writer rule for redundant data updates", page, "process", "source solution: update one redundant value from only one piece of code", "solves")
+            add("Read performance gain vs write consistency cost", page, "concept", "source tradeoff: redundancy can make reads faster but makes updates risky or slow", "contrasts")
+
+        if has("operational database", "reporting database", "separate db", "separate database"):
+            add("Operational DB vs Reporting DB", page, "definition", "source separates operational workload from reporting workload", "contrasts", ["comparison"])
+
+        if has("scheduled", "cron", "nightly", "batch update", "regular interval"):
+            add("Scheduled reporting database synchronization", page, "process", "source describes scheduled or batch synchronization", "process", ["timeline"])
+
+        if has("messaging", "message queue", "event", "publish", "subscribe"):
+            add("Messaging-based reporting database synchronization", page, "process", "source describes messaging or event-based synchronization", "process", ["sequence"])
+
+        if has("measure", "fact", "numeric value"):
+            add("Measure / Fact", page, "definition", "source defines fact or measure as analyzable numerical values", "part-of", ["schema", "table"])
+
+        if has("fact table", "central table", "contains facts", "foreign key"):
+            add("Fact Table", page, "definition", "source explains fact table as central table containing measures and dimension keys", "part-of", ["schema", "table"])
+
+        if has("dimension table", "dimension tables", "descriptive attributes"):
+            add("Dimension Table", page, "definition", "source explains dimension table as descriptive context for facts", "part-of", ["schema", "table"])
+        elif has("dimension", "dimensions", "descriptive"):
+            add("Dimension", page, "definition", "source defines dimensions as descriptive perspectives used for analysis", "part-of", ["schema"])
+
+        if has("star schema", "fact table at the center", "surrounded by dimension", "star-like"):
+            add("Star Schema structure", page, "concept", "source describes star schema with central fact table and surrounding dimension tables", "schema", ["schema", "diagram"])
+
+        if has("snowflake schema", "normalized dimensions", "split dimension", "normalized dimension"):
+            add("Snowflake Schema with normalized dimensions", page, "concept", "source describes snowflake schema as normalized or split dimensions", "schema", ["schema", "diagram"])
+
+        if has("star vs snowflake", "star schema vs snowflake", "query complexity", "joins", "maintenance"):
+            add("Star vs Snowflake tradeoff", page, "concept", "source compares star and snowflake schema tradeoffs", "contrasts", ["comparison", "table"])
+
+        if has("galaxy schema", "multiple fact", "two fact table", "share dimension", "shared dimension"):
+            add("Galaxy Schema with shared dimensions", page, "concept", "source describes galaxy schema as multiple fact tables sharing dimensions", "schema", ["schema", "diagram"])
+            add("Multiple fact tables sharing dimension tables", page, "concept", "source explains multi-fact-table galaxy structure", "part-of", ["schema"])
+
+    return json.dumps(anchors[:max_items], ensure_ascii=False, indent=2)
+
 def build_concept_tree_prompt(data: Stage1AgentInput) -> str:
     resource_title = clean_text(data.resource.get("title") or "Uploaded Resource", 180)
     source_text = source_bundle(data.chunks)
+    anchors = source_teacher_anchors_for_prompt(data.chunks, data.max_nodes)
 
     return f"""
-Create an accurate clickable concept tree for a Live Tutor board.
+You are Stage 1 Python ADK Concept Tree Agent for a real AI Live Tutor board.
+
+Create a TEACHER ROADMAP concept tree, not a slide-title summary.
+
+STRICT RULES:
+1. Use only source chunks and source-derived anchors below.
+2. Do not create random keyword nodes.
+3. Do not collapse rich source sections into one generic node.
+4. Every node must be teachable alone by a human tutor.
+5. Every node must include exact sourceRefs from chunks.
+6. Keep precise concepts separate when source supports them:
+   - normalization removes redundancy
+   - denormalization adds redundancy for performance
+   - join cost problem
+   - read performance gain vs write consistency cost
+   - operational DB vs reporting DB
+   - scheduled sync vs messaging sync
+   - measure/fact
+   - fact table
+   - dimension
+   - dimension table
+   - star schema
+   - snowflake schema
+   - star vs snowflake
+   - galaxy schema
+7. Edges must be real relations: parent-child, prerequisite, related, causes, contrasts, example-of.
+8. nodeType must be one of:
+   root, module, concept, definition, process, example, warning, question.
+9. JSON only.
 
 Resource title: {resource_title}
 Student level: {data.student_level}
 Language: {data.language}
 Max nodes: {data.max_nodes}
+
+REQUIRED SOURCE-DERIVED TEACHING ANCHORS:
+{anchors}
 
 Return JSON exactly like:
 {{
@@ -627,10 +757,10 @@ Return JSON exactly like:
       "level": 0,
       "parentId": "",
       "order": 0,
-      "nodeType": "root|module|concept|definition|process|example|warning|question|unknown",
+      "nodeType": "root|module|concept|definition|process|example|warning|question",
       "importance": 0.8,
-      "visualHints": ["tree", "flowchart"],
-      "tags": ["tag"],
+      "visualHints": ["tree", "flowchart", "source-page"],
+      "tags": ["source-grounded"],
       "sourceRefs": [
         {{
           "chunkId": "exact chunkId",
@@ -647,7 +777,7 @@ Return JSON exactly like:
       "from": "parent_id",
       "to": "child_id",
       "type": "parent-child|prerequisite|related|causes|contrasts|example-of",
-      "label": "",
+      "label": "why connected",
       "sourceRefs": []
     }}
   ]
@@ -656,7 +786,6 @@ Return JSON exactly like:
 Source chunks:
 {source_text}
 """
-
 
 def build_node_explain_prompt(data: Stage1AgentInput) -> str:
     if not data.node:

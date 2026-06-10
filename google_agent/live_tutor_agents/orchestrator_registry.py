@@ -1942,6 +1942,28 @@ async def run_teach_node_pipeline(payload: JsonDict) -> JsonDict:
     knowledge_result = output_result(knowledge)
     working["knowledgeGraph"] = knowledge_result
 
+    # === STOP_AFTER_KNOWLEDGE_GRAPH_CHECKPOINT_V46 ===
+    if bool(working.get("stopAfterKnowledgeGraph")):
+        return checkpoint_response(
+            "knowledge_graph",
+            working,
+            trace,
+            mission_trace,
+            selected_page_vision_result,
+            extra_result={"knowledgeGraph": knowledge_result},
+            extra_metadata={
+                "stoppedAfterKnowledgeGraph": True,
+                "kgNodeCount": len(safe_list(knowledge_result.get("nodes"))),
+                "kgEdgeCount": len(safe_list(knowledge_result.get("edges"))),
+                "kgTeachingPathCount": len(safe_list(knowledge_result.get("teachingPath"))),
+                "readyForTeachingStrategy": bool(
+                    safe_dict(knowledge_result.get("qualitySignals")).get("readyForTeachingStrategy")
+                ),
+                "fallbackUsed": False,
+                "usedSmartFallback": False,
+            },
+        )
+
     strategy_payload = {
         **build_teaching_brain_packet(
             working,

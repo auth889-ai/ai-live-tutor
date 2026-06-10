@@ -49,6 +49,7 @@
  *
  * Stage 2 Live Tutor:
  *   GET  /api/google-agent/live-tutor/stage2/health
+ *   GET  /api/google-agent/live-tutor/stage2/power-tools
  *   POST /api/google-agent/live-tutor/stage2/teach-node
  *   POST /api/google-agent/live-tutor/stage2/interrupt
  *   POST /api/google-agent/live-tutor/stage2/sessions/:sessionId/playback-state
@@ -65,6 +66,7 @@ const path = require("path");
 const googleLiveTutorAgent1Routes = require("./routes/googleLiveTutorAgent1.routes");
 const googleLiveTutorConceptTreeRoutes = require("./routes/googleLiveTutorConceptTree.routes");
 const googleLiveTutorStage2Routes = require("./routes/googleLiveTutorStage2.routes");
+const liveTutorAuthRoutes = require("./routes/liveTutorAuth.routes");
 
 const app = express();
 
@@ -249,6 +251,8 @@ app.get("/", (req, res) => {
 
       stage2Health:
         "/api/google-agent/live-tutor/stage2/health",
+      stage2PowerTools:
+        "/api/google-agent/live-tutor/stage2/power-tools",
       stage2TeachNode:
         "/api/google-agent/live-tutor/stage2/teach-node",
       stage2Interrupt:
@@ -349,6 +353,7 @@ app.get("/health", (req, res) => {
       fakeFallback: false,
       routes: {
         health: "/api/google-agent/live-tutor/stage2/health",
+        powerTools: "/api/google-agent/live-tutor/stage2/power-tools",
         teachNode: "/api/google-agent/live-tutor/stage2/teach-node",
         interrupt: "/api/google-agent/live-tutor/stage2/interrupt",
         savePlaybackState:
@@ -373,6 +378,20 @@ app.get("/api/health", (req, res) => {
       "/api/google-agent/live-tutor/stage2/health",
   });
 });
+
+/**
+ * Live Tutor Auth routes.
+ *
+ * Real backend auth:
+ *   POST /api/google-agent/live-tutor/auth/register
+ *   POST /api/google-agent/live-tutor/auth/login
+ *   GET  /api/google-agent/live-tutor/auth/me
+ *
+ * optionalLiveTutorAuthContext keeps old curl tests working unless
+ * LIVE_TUTOR_AUTH_REQUIRED=true.
+ */
+app.use("/api/google-agent/live-tutor/auth", liveTutorAuthRoutes.router);
+app.use("/api/google-agent/live-tutor", liveTutorAuthRoutes.optionalLiveTutorAuthContext);
 
 /**
  * Agent 1 routes.
@@ -430,6 +449,7 @@ app.use((req, res) => {
       "GET /api/google-agent/live-tutor/boards/:boardId",
 
       "GET /api/google-agent/live-tutor/stage2/health",
+      "GET /api/google-agent/live-tutor/stage2/power-tools",
       "POST /api/google-agent/live-tutor/stage2/teach-node",
       "POST /api/google-agent/live-tutor/stage2/interrupt",
       "POST /api/google-agent/live-tutor/stage2/sessions/:sessionId/playback-state",

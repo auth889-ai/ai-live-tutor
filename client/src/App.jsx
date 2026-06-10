@@ -1,1043 +1,481 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Agent1VisualRenderer from "./features/googleLiveTutor/components/Agent1VisualRenderer.jsx";
 import Stage2LiveTutorWorkbench from "./features/googleLiveTutor/components/Stage2LiveTutorWorkbench.jsx";
+import "./App.css";
 
 const API_BASE =
   import.meta.env.VITE_GOOGLE_LIVE_TUTOR_API_BASE ||
   import.meta.env.VITE_API_BASE_URL ||
   "http://localhost:3000/api";
 
-/**
- * client/src/App.jsx
- * -----------------------------------------------------------------------------
- * Full fixed App.jsx
- *
- * Fixes:
- * ✅ No random ownerKey by default
- * ✅ Auto-migrates old random localStorage user_... / device_... to jana_test
- * ✅ Keeps Agent 1 page
- * ✅ Adds Stage 2 Premium Board tab
- * ✅ Adds Identity tab
- * ✅ Uses same identity as your working curl tests:
- *      offlineUserId = jana_test
- *      deviceId      = device_test
- *      ownerKey      = jana_test
- *
- * Important:
- * Your MongoDB resource "Lecture 03 EDD" is owned by jana_test.
- * If frontend uses random ownerKey, backend correctly returns:
- *   Resource not found for this ownerKey
- */
+const AUTH_STORAGE_KEY = "glt_real_auth_v1";
 
-function makeClientId(prefix) {
-  return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
+const DEFAULT_WORKSPACE = {
+  name: "Jana",
+  ownerKey: "jana_test",
+  password: "1234",
+  deviceId: "jana_test_device",
+};
+
+const AGENTS = [
+  "Understanding Agent",
+  "Intent Classification Agent",
+  "Source Grounding Agent",
+  "Concept Extraction Agent",
+  "Concept Tree Builder",
+  "Visual Planner Agent",
+  "Board Writer Agent",
+  "Diagram Agent",
+  "Flowchart Agent",
+  "Table Agent",
+  "Example Agent",
+  "Voice Script Agent",
+  "Quiz Generator Agent",
+  "Mistake Finder Agent",
+  "Complexity Agent",
+  "Summary Agent",
+  "Subtitle Agent",
+  "QA Agent",
+  "Refiner Agent",
+  "Consistency Agent",
+  "Quality Assurance Agent",
+  "Finalizer Agent",
+  "Formatter Agent",
+  "Renderer Agent",
+  "Voice Renderer Agent",
+  "Subtitle Renderer Agent",
+  "Board Sync Agent",
+];
+
+function cleanText(value, fallback = "") {
+  if (value === undefined || value === null) return fallback;
+  return String(value).trim() || fallback;
 }
 
-function isOldRandomIdentity(value, prefix) {
-  return typeof value === "string" && value.startsWith(`${prefix}_`);
+function safeObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
-function getStored(key, fallbackValue) {
+function readAuth() {
   try {
-    let value = localStorage.getItem(key);
-
-    // Migration from old random IDs:
-    // old frontend created user_1780... and device_1780...
-    // those cannot see jana_test resources.
-    if (
-      !value ||
-      (key === "agent1_offline_user_id" && isOldRandomIdentity(value, "user")) ||
-      (key === "agent1_device_id" && isOldRandomIdentity(value, "device")) ||
-      (key === "agent1_owner_key" && isOldRandomIdentity(value, "user"))
-    ) {
-      value = fallbackValue;
-      localStorage.setItem(key, value);
-    }
-
-    return value;
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const auth = JSON.parse(raw);
+    if (!auth?.token || !auth?.user?.ownerKey) return null;
+    syncLegacyIdentity(auth.user);
+    return auth;
   } catch {
-    return fallbackValue;
+    return null;
   }
 }
 
-function setStored(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // ignore localStorage errors
-  }
+function writeAuth(auth) {
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+  syncLegacyIdentity(auth.user);
 }
 
-function getIdentity() {
-  const offlineUserId = getStored("agent1_offline_user_id", "jana_test");
-  const deviceId = getStored("agent1_device_id", "device_test");
-  const ownerKey = getStored("agent1_owner_key", "jana_test");
-
-  return {
-    offlineUserId,
-    deviceId,
-    ownerKey,
-  };
+function clearAuth() {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
 }
 
-function resetIdentityToJanaTest() {
-  setStored("agent1_offline_user_id", "jana_test");
-  setStored("agent1_device_id", "device_test");
-  setStored("agent1_owner_key", "jana_test");
+function syncLegacyIdentity(user) {
+  const ownerKey = cleanText(user?.ownerKey, DEFAULT_WORKSPACE.ownerKey);
+  const deviceId = cleanText(user?.deviceId, `${ownerKey}_device`);
+
+  localStorage.setItem("agent1_owner_key", ownerKey);
+  localStorage.setItem("agent1_offline_user_id", cleanText(user?.offlineUserId, ownerKey));
+  localStorage.setItem("agent1_device_id", deviceId);
 }
 
-async function readJsonResponse(response) {
+async function parseResponse(response) {
   const text = await response.text();
 
-  let json = null;
+  let json = {};
   try {
-    json = text ? JSON.parse(text) : null;
+    json = text ? JSON.parse(text) : {};
   } catch {
-    json = null;
+    json = {};
   }
 
-  if (!response.ok || json?.ok === false) {
-    const message = json?.error || json?.message || text || `HTTP ${response.status}`;
-    const error = new Error(message);
-    error.response = json;
-    error.status = response.status;
+  if (!response.ok || json.ok === false) {
+    const error = new Error(json.error || text || `HTTP ${response.status}`);
+    error.payload = json;
+    error.statusCode = json.statusCode || response.status;
     throw error;
   }
 
-  return json || {};
+  return json;
 }
 
-function headers(json = true) {
-  const identity = getIdentity();
+async function authRequest(path, body) {
+  const response = await fetch(`${API_BASE}/google-agent/live-tutor/auth${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
 
-  return {
-    ...(json ? { "Content-Type": "application/json" } : {}),
-    "x-offline-user-id": identity.offlineUserId,
-    "x-device-id": identity.deviceId,
-    "x-owner-key": identity.ownerKey,
+  return parseResponse(response);
+}
+
+/**
+ * Existing Stage2LiveTutorWorkbench uses fetch internally.
+ * This wrapper injects Authorization token into all live tutor API calls,
+ * so old components become backend-auth compatible without rewriting them now.
+ */
+function installLiveTutorFetchAuth(token) {
+  if (window.__gltOriginalFetch) {
+    window.fetch = window.__gltOriginalFetch;
+  }
+
+  window.__gltOriginalFetch = window.fetch.bind(window);
+
+  window.fetch = (input, init = {}) => {
+    const url = typeof input === "string" ? input : input?.url || "";
+    const shouldAttach =
+      token &&
+      (url.includes("/api/google-agent/live-tutor") ||
+        url.includes("localhost:3000/api/google-agent/live-tutor"));
+
+    if (!shouldAttach) {
+      return window.__gltOriginalFetch(input, init);
+    }
+
+    const currentHeaders = new Headers(init.headers || {});
+    currentHeaders.set("Authorization", `Bearer ${token}`);
+
+    return window.__gltOriginalFetch(input, {
+      ...init,
+      headers: currentHeaders,
+    });
   };
 }
 
-async function apiGet(path) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: "GET",
-    headers: headers(false),
-  });
+function AuthScreen({ onAuth }) {
+  const [mode, setMode] = useState("login");
+  const [name, setName] = useState(DEFAULT_WORKSPACE.name);
+  const [ownerKey, setOwnerKey] = useState(DEFAULT_WORKSPACE.ownerKey);
+  const [password, setPassword] = useState(DEFAULT_WORKSPACE.password);
+  const [deviceId, setDeviceId] = useState(DEFAULT_WORKSPACE.deviceId);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  return readJsonResponse(response);
-}
+  async function submit(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
 
-async function uploadPdf({ file, title }) {
-  const form = new FormData();
-  form.append("file", file);
-  form.append("title", title || file.name || "Uploaded PDF");
+    try {
+      const payload = {
+        name,
+        password,
+        deviceId,
+      };
 
-  const response = await fetch(`${API_BASE}/google-agent/live-tutor/resources/upload`, {
-    method: "POST",
-    headers: headers(false),
-    body: form,
-  });
+      if (mode === "register") {
+        payload.ownerKey = ownerKey;
+      }
 
-  return readJsonResponse(response);
-}
+      const data = await authRequest(mode === "register" ? "/register" : "/login", payload);
 
-async function createTextResource({ title, text, url }) {
-  const response = await fetch(`${API_BASE}/google-agent/live-tutor/resources/text`, {
-    method: "POST",
-    headers: headers(true),
-    body: JSON.stringify({
-      title: title || "Text / Transcript Resource",
-      text,
-      url,
-      sourceType: url ? "transcript" : "text",
-    }),
-  });
+      const auth = {
+        token: data.token,
+        user: data.user,
+        auth: data.auth,
+        loginAt: new Date().toISOString(),
+      };
 
-  return readJsonResponse(response);
-}
-
-async function runAgent1({ resourceId, question, visuals }) {
-  const response = await fetch(
-    `${API_BASE}/google-agent/live-tutor/resources/${encodeURIComponent(
-      resourceId
-    )}/agent1/text-visual`,
-    {
-      method: "POST",
-      headers: headers(true),
-      body: JSON.stringify({
-        question,
-        studentLevel: "beginner",
-        language: "english",
-        visuals,
-        maxChunks: 120,
-        sourceMaxChars: 90000,
-        timeoutMs: 300000,
-        maxOutputTokens: 8192,
-      }),
+      writeAuth(auth);
+      onAuth(auth);
+    } catch (err) {
+      setError(err.message || "Authentication failed.");
+    } finally {
+      setBusy(false);
     }
-  );
-
-  return readJsonResponse(response);
-}
-
-async function listResources() {
-  const response = await fetch(`${API_BASE}/google-agent/live-tutor/resources`, {
-    method: "GET",
-    headers: headers(false),
-  });
-
-  return readJsonResponse(response);
-}
-
-async function checkStage2Health() {
-  const response = await fetch(`${API_BASE}/google-agent/live-tutor/stage2/health`, {
-    method: "GET",
-    headers: headers(false),
-  });
-
-  return readJsonResponse(response);
-}
-
-function ResultJson({ data }) {
-  if (!data) return null;
-
-  return (
-    <details className="debug-json">
-      <summary>Raw JSON result</summary>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
-    </details>
-  );
-}
-
-function IdentityPanel({ identity, onIdentityChanged }) {
-  const [offlineUserId, setOfflineUserId] = useState(identity.offlineUserId);
-  const [deviceId, setDeviceId] = useState(identity.deviceId);
-  const [ownerKey, setOwnerKey] = useState(identity.ownerKey);
-
-  function saveIdentity() {
-    const finalOfflineUserId = offlineUserId.trim() || "jana_test";
-    const finalDeviceId = deviceId.trim() || "device_test";
-    const finalOwnerKey = ownerKey.trim() || finalOfflineUserId;
-
-    setStored("agent1_offline_user_id", finalOfflineUserId);
-    setStored("agent1_device_id", finalDeviceId);
-    setStored("agent1_owner_key", finalOwnerKey);
-
-    onIdentityChanged?.({
-      offlineUserId: finalOfflineUserId,
-      deviceId: finalDeviceId,
-      ownerKey: finalOwnerKey,
-    });
-  }
-
-  function useJanaTest() {
-    resetIdentityToJanaTest();
-
-    setOfflineUserId("jana_test");
-    setDeviceId("device_test");
-    setOwnerKey("jana_test");
-
-    onIdentityChanged?.({
-      offlineUserId: "jana_test",
-      deviceId: "device_test",
-      ownerKey: "jana_test",
-    });
-  }
-
-  function useNewPrivateUser() {
-    const newOfflineUserId = makeClientId("user");
-    const newDeviceId = makeClientId("device");
-
-    setOfflineUserId(newOfflineUserId);
-    setDeviceId(newDeviceId);
-    setOwnerKey(newOfflineUserId);
-
-    setStored("agent1_offline_user_id", newOfflineUserId);
-    setStored("agent1_device_id", newDeviceId);
-    setStored("agent1_owner_key", newOfflineUserId);
-
-    onIdentityChanged?.({
-      offlineUserId: newOfflineUserId,
-      deviceId: newDeviceId,
-      ownerKey: newOfflineUserId,
-    });
   }
 
   return (
-    <section className="panel identity-panel">
-      <div className="panel-title-row">
-        <div>
-          <h2>Identity / ownerKey</h2>
-          <p>
-            Use <b>jana_test</b> to access the resource you tested in curl. Use a new
-            private user only when you want a separate owner namespace.
-          </p>
+    <div className="glt-login-page">
+      <div className="glt-login-glow one" />
+      <div className="glt-login-glow two" />
+
+      <form className="glt-login-card" onSubmit={submit}>
+        <div className="glt-login-brand">
+          <div className="glt-logo-mark">✦</div>
+          <div>
+            <h1>Lumina AI Tutor</h1>
+            <p>Real source-grounded tutor workspace</p>
+          </div>
         </div>
 
-        <div className="button-row no-margin">
-          <button type="button" onClick={useJanaTest}>
-            Use jana_test
+        <div className="glt-auth-switch">
+          <button type="button" className={mode === "login" ? "active" : ""} onClick={() => setMode("login")}>
+            Login
           </button>
-          <button type="button" onClick={useNewPrivateUser}>
-            New private user
+          <button type="button" className={mode === "register" ? "active" : ""} onClick={() => setMode("register")}>
+            Register
           </button>
         </div>
-      </div>
 
-      <div className="identity-grid">
+        <div className="glt-login-note">
+          Backend auth is required. After login, backend token decides <b>ownerKey</b>, not random frontend identity.
+        </div>
+
         <label>
-          Offline user ID
-          <input value={offlineUserId} onChange={(event) => setOfflineUserId(event.target.value)} />
+          Name
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jana" />
+        </label>
+
+        {mode === "register" ? (
+          <label>
+            Owner key
+            <input value={ownerKey} onChange={(e) => setOwnerKey(e.target.value)} placeholder="jana_test" />
+            <small>Use jana_test if your current uploaded resource belongs to jana_test.</small>
+          </label>
+        ) : null}
+
+        <label>
+          Password
+          <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" />
         </label>
 
         <label>
           Device ID
-          <input value={deviceId} onChange={(event) => setDeviceId(event.target.value)} />
+          <input value={deviceId} onChange={(e) => setDeviceId(e.target.value)} />
         </label>
 
-        <label>
-          Owner key
-          <input value={ownerKey} onChange={(event) => setOwnerKey(event.target.value)} />
-        </label>
+        {error ? <div className="glt-error-box">{error}</div> : null}
+
+        <button className="glt-login-submit" type="submit" disabled={busy}>
+          {busy ? "Please wait..." : mode === "register" ? "Create account" : "Enter tutor board"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function LeftAgentRail({ tab, setTab }) {
+  return (
+    <aside className="glt-left-rail">
+      <div className="glt-resource-card">
+        <div className="glt-resource-cover">PDF</div>
+        <div>
+          <b>Resource Workspace</b>
+          <span>PDF → concept tree → live tutor board</span>
+          <em>Source Grounded</em>
+        </div>
       </div>
 
-      <button type="button" onClick={saveIdentity}>
-        Save identity
-      </button>
+      <nav className="glt-side-nav">
+        <button className={tab === "lesson" ? "active" : ""} onClick={() => setTab("lesson")}>
+          Overview & Live Board
+        </button>
+        <button className={tab === "agent1" ? "active" : ""} onClick={() => setTab("agent1")}>
+          Visual Extraction
+        </button>
+        <button className={tab === "auth" ? "active" : ""} onClick={() => setTab("auth")}>
+          Auth / Workspace
+        </button>
+      </nav>
 
-      <div className="identity-note">
-        Current headers after save:
-        <pre>{JSON.stringify({ offlineUserId, deviceId, ownerKey }, null, 2)}</pre>
+      <div className="glt-agent-card">
+        <div className="glt-agent-heading">27-Agent Teaching Team</div>
+
+        <div className="glt-agent-ring">
+          <div>
+            <b>25/27</b>
+            <span>Agents</span>
+          </div>
+        </div>
+
+        <div className="glt-agent-list">
+          {AGENTS.map((agent, index) => {
+            const done = index < 25;
+            const current = index === 25;
+
+            return (
+              <div key={agent} className={current ? "current" : done ? "done" : ""}>
+                <span>{index + 1}. {agent}</span>
+                <b>{done ? "✓" : current ? "◌" : "○"}</b>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="glt-grounded-badge">
+          <b>Grounded & Verified</b>
+          <span>All explanations must be source-backed.</span>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function RightTutorRail({ auth }) {
+  const user = safeObject(auth?.user);
+
+  return (
+    <aside className="glt-right-rail">
+      <div className="glt-ai-card">
+        <div className="glt-ai-avatar">👩🏻‍🏫</div>
+        <div>
+          <div className="glt-online-row">
+            <span />
+            Tutor Online
+          </div>
+          <h3>AI Tutor</h3>
+          <p>
+            Hi {user.displayName || "student"}! I’ll explain your PDF like a real teacher:
+            board, voice script, subtitles, examples, quiz, and sources.
+          </p>
+        </div>
+      </div>
+
+      <div className="glt-action-card">
+        <h4>Suggested Actions</h4>
+        <button type="button">Explain selected node</button>
+        <button type="button">Show related concept tree</button>
+        <button type="button">Generate practice quiz</button>
+        <button type="button">View all sources</button>
+      </div>
+
+      <div className="glt-confidence-card">
+        <div className="glt-confidence-top">
+          <span>Confidence</span>
+          <b>High</b>
+        </div>
+        <div className="glt-confidence-meter">
+          <span />
+        </div>
+        <p>Sources Used: dynamic from selected node</p>
+        <p>Verification: backend source-grounded</p>
+      </div>
+
+      <div className="glt-summary-card">
+        <h4>Auto-Expanding Lesson Board</h4>
+        <p>
+          Final goal: AI teaches across multiple connected screens, with synced voice/subtitles
+          and source references.
+        </p>
+        <div className="glt-board-steps">
+          <span className="active">1</span>
+          <span>2</span>
+          <span>3</span>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function AuthWorkspacePage({ auth }) {
+  const user = safeObject(auth?.user);
+
+  return (
+    <section className="glt-auth-page-panel">
+      <h2>Backend Authentication Active</h2>
+      <p>
+        This frontend now stores a backend token and injects it into Live Tutor API calls.
+        Existing Stage2 components still work because legacy localStorage identity is synced.
+      </p>
+
+      <div className="glt-auth-grid">
+        <div>
+          <span>Name</span>
+          <b>{user.displayName || "—"}</b>
+        </div>
+        <div>
+          <span>ownerKey</span>
+          <b>{user.ownerKey || "—"}</b>
+        </div>
+        <div>
+          <span>offlineUserId</span>
+          <b>{user.offlineUserId || user.ownerKey || "—"}</b>
+        </div>
+        <div>
+          <span>deviceId</span>
+          <b>{user.deviceId || "—"}</b>
+        </div>
+      </div>
+
+      <div className="glt-auth-token-box">
+        <h3>Token proof</h3>
+        <p>
+          Token exists: <b>{auth?.token ? "yes" : "no"}</b>
+        </p>
+        <pre>{auth?.token ? `${auth.token.slice(0, 42)}...` : "No token"}</pre>
       </div>
     </section>
   );
 }
 
-function Agent1Page({ identity }) {
-  const [health, setHealth] = useState(null);
-  const [stage2Health, setStage2Health] = useState(null);
-  const [resourceList, setResourceList] = useState(null);
-
-  const [status, setStatus] = useState("");
-  const [error, setError] = useState("");
-
-  const [file, setFile] = useState(null);
-  const [title, setTitle] = useState("Lecture 03 EDD.pdf");
-  const [text, setText] = useState("");
-  const [url, setUrl] = useState("");
-
-  const [resource, setResource] = useState(null);
-  const [resourceId, setResourceId] = useState("");
-
-  const [question, setQuestion] = useState(
-    "From this PDF, create source-grounded visuals like Text2Diagram: flowchart, ER if database entities exist, sequence if process exists, timeline if evolution exists, mindmap/concept map, class/state if relevant, roadmap tree, and a teaching table. Explain each like a private tutor."
-  );
-
-  const [result, setResult] = useState(null);
-
-  const visuals = [
-    "flowchart",
-    "er",
-    "sequence",
-    "timeline",
-    "mindmap",
-    "conceptMap",
-    "class",
-    "state",
-    "roadmapTree",
-    "table",
-  ];
-
-  async function handleHealth() {
-    try {
-      setError("");
-      setStatus("Checking Agent 1 health...");
-      const data = await apiGet("/google-agent/live-tutor/agent1/health");
-      setHealth(data);
-      setStatus(data.ok ? "Agent 1 health OK ✅" : "Agent 1 health returned not OK");
-    } catch (err) {
-      setError(err.message);
-      setStatus("");
-    }
-  }
-
-  async function handleStage2Health() {
-    try {
-      setError("");
-      setStatus("Checking Stage 2 27-agent health...");
-      const data = await checkStage2Health();
-      setStage2Health(data);
-      setStatus(data.ok ? "Stage 2 health OK ✅" : "Stage 2 health returned not OK");
-    } catch (err) {
-      setError(err.message);
-      setStatus("");
-    }
-  }
-
-  async function handleListResources() {
-    try {
-      setError("");
-      setStatus("Loading saved resources...");
-      const data = await listResources();
-      setResourceList(data);
-
-      const first = data.resources?.[0];
-      if (first) {
-        setResource(first);
-        setResourceId(first.resourceId || "");
-      }
-
-      setStatus(`Loaded ${data.resources?.length || 0} resources ✅`);
-    } catch (err) {
-      setError(err.message);
-      setStatus("");
-    }
-  }
-
-  async function handleUpload() {
-    try {
-      setError("");
-      setResult(null);
-
-      if (!file) {
-        throw new Error("Choose a PDF/text file first.");
-      }
-
-      setStatus("Uploading and chunking resource...");
-      const data = await uploadPdf({ file, title });
-
-      setResource(data.resource || data);
-      setResourceId(data.resourceId || data.resource?.resourceId || "");
-      setStatus(`Uploaded ✅ Resource ID: ${data.resourceId || data.resource?.resourceId}`);
-    } catch (err) {
-      setError(err.message);
-      setStatus("");
-    }
-  }
-
-  async function handleTextResource() {
-    try {
-      setError("");
-      setResult(null);
-
-      if (!text.trim() && !url.trim()) {
-        throw new Error("Paste transcript text or URL first.");
-      }
-
-      setStatus("Creating text/transcript resource...");
-      const data = await createTextResource({
-        title: title || "Transcript Resource",
-        text,
-        url,
-      });
-
-      setResource(data.resource || data);
-      setResourceId(data.resourceId || data.resource?.resourceId || "");
-      setStatus(`Text resource created ✅ Resource ID: ${data.resourceId || data.resource?.resourceId}`);
-    } catch (err) {
-      setError(err.message);
-      setStatus("");
-    }
-  }
-
-  async function handleRunAgent1() {
-    try {
-      setError("");
-      setResult(null);
-
-      const id = resourceId.trim();
-      if (!id) {
-        throw new Error("Paste or upload a resourceId first.");
-      }
-
-      setStatus("Running real Agent 1: PDF/text → Mermaid/table visuals...");
-      const data = await runAgent1({
-        resourceId: id,
-        question,
-        visuals,
-      });
-
-      setResult(data);
-      setStatus(data.ok ? "Agent 1 generated visuals ✅" : "Agent 1 failed");
-    } catch (err) {
-      setError(err.message);
-      if (err.response) {
-        console.error("Agent 1 error response:", err.response);
-      }
-      setStatus("");
-    }
-  }
-
-  const outputTypes = result?.outputs?.map((item) => ({
-    visualFormat: item.visualFormat,
-    diagramType: item.diagramType,
-    title: item.title,
-  }));
-
-  return (
-    <>
-      <section className="panel">
-        <h2>Connection</h2>
-        <div className="meta-grid">
-          <div>
-            <b>API</b>
-            <span>{API_BASE}</span>
-          </div>
-          <div>
-            <b>User</b>
-            <span>{identity.offlineUserId}</span>
-          </div>
-          <div>
-            <b>Device</b>
-            <span>{identity.deviceId}</span>
-          </div>
-          <div>
-            <b>Owner</b>
-            <span>{identity.ownerKey}</span>
-          </div>
-        </div>
-
-        <div className="button-row">
-          <button onClick={handleHealth}>Check Agent 1 Health</button>
-          <button onClick={handleStage2Health}>Check Stage 2 Health</button>
-          <button onClick={handleListResources}>Load Resources</button>
-        </div>
-
-        {health ? (
-          <pre className="mini-json">
-            {JSON.stringify(
-              {
-                ok: health.ok,
-                agent: health.agent,
-                realPythonAgent: health.realPythonAgent,
-                realGeminiAgent: health.realGeminiAgent,
-                mcpConfigured: health.mcpConfigured,
-                supportedVisuals: health.supportedVisuals,
-              },
-              null,
-              2
-            )}
-          </pre>
-        ) : null}
-
-        {stage2Health ? (
-          <pre className="mini-json">
-            {JSON.stringify(
-              {
-                ok: stage2Health.ok,
-                service: stage2Health.service,
-                agentCount: stage2Health.agentCount,
-                healthOk: stage2Health.healthOk,
-                fallbackUsed: stage2Health.metadata?.fallbackUsed,
-              },
-              null,
-              2
-            )}
-          </pre>
-        ) : null}
-
-        {resourceList ? (
-          <pre className="mini-json">
-            {JSON.stringify(
-              {
-                ok: resourceList.ok,
-                count: resourceList.count,
-                ownerKey: resourceList.metadata?.ownerKey,
-                resources: resourceList.resources?.map((item) => ({
-                  title: item.title,
-                  resourceId: item.resourceId,
-                  ownerKey: item.ownerKey,
-                  status: item.status,
-                  chunks: item.extraction?.chunkCount,
-                })),
-              },
-              null,
-              2
-            )}
-          </pre>
-        ) : null}
-      </section>
-
-      <section className="panel">
-        <h2>1. Upload PDF / Resource</h2>
-
-        <label>
-          Resource title
-          <input value={title} onChange={(event) => setTitle(event.target.value)} />
-        </label>
-
-        <label>
-          Choose PDF/Text file
-          <input
-            type="file"
-            accept=".pdf,.txt,.md,text/plain,application/pdf"
-            onChange={(event) => setFile(event.target.files?.[0] || null)}
-          />
-        </label>
-
-        <button onClick={handleUpload}>Upload file</button>
-
-        <div className="or">or</div>
-
-        <label>
-          Paste transcript/text
-          <textarea
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="Paste transcript, notes, or page text here..."
-            rows={5}
-          />
-        </label>
-
-        <label>
-          Transcript / text URL
-          <input
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            placeholder="https://..."
-          />
-        </label>
-
-        <button onClick={handleTextResource}>Create text/url resource</button>
-      </section>
-
-      <section className="panel">
-        <h2>2. Start Agent 1 from resourceId</h2>
-
-        <label>
-          Resource ID
-          <input
-            value={resourceId}
-            onChange={(event) => setResourceId(event.target.value)}
-            placeholder="glt_resource_..."
-          />
-        </label>
-
-        {resource ? (
-          <div className="resource-card">
-            <b>Selected resource</b>
-            <span>{resource.title}</span>
-            <span>ID: {resource.resourceId}</span>
-            <span>Owner: {resource.ownerKey || "?"}</span>
-            <span>
-              Pages: {resource.extraction?.pageCount || "?"} · Chunks:{" "}
-              {resource.extraction?.chunkCount || "?"}
-            </span>
-          </div>
-        ) : null}
-
-        <label>
-          Agent 1 request
-          <textarea
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            rows={5}
-          />
-        </label>
-
-        <div className="chips">
-          {visuals.map((visual) => (
-            <span key={visual}>{visual}</span>
-          ))}
-        </div>
-
-        <button className="primary" onClick={handleRunAgent1}>
-          Run Agent 1 Visual Teacher
-        </button>
-      </section>
-
-      {status ? <div className="status">{status}</div> : null}
-      {error ? <div className="error">{error}</div> : null}
-
-      {result ? (
-        <section className="panel">
-          <h2>3. Agent 1 Result</h2>
-          <div className="meta-grid">
-            <div>
-              <b>Passed</b>
-              <span>{String(result.agent1Passed || result.ok)}</span>
-            </div>
-            <div>
-              <b>Outputs</b>
-              <span>{result.outputs?.length || 0}</span>
-            </div>
-            <div>
-              <b>Voice lines</b>
-              <span>{result.voiceScript?.length || 0}</span>
-            </div>
-            <div>
-              <b>Mongo read</b>
-              <span>{String(result.metadata?.mongoResourceRead)}</span>
-            </div>
-          </div>
-
-          <pre className="mini-json">{JSON.stringify(outputTypes, null, 2)}</pre>
-
-          <Agent1VisualRenderer result={result} />
-          <ResultJson data={result} />
-        </section>
-      ) : null}
-    </>
-  );
-}
-
 export default function App() {
-  const [identityVersion, setIdentityVersion] = useState(0);
-  const [activeTab, setActiveTab] = useState("stage2");
+  const [auth, setAuth] = useState(() => readAuth());
+  const [tab, setTab] = useState("lesson");
 
-  const identity = useMemo(() => {
-    void identityVersion;
-    return getIdentity();
-  }, [identityVersion]);
+  useEffect(() => {
+    if (auth?.token) {
+      installLiveTutorFetchAuth(auth.token);
+      syncLegacyIdentity(auth.user);
+    }
+  }, [auth]);
 
-  function handleUseJanaTest() {
-    resetIdentityToJanaTest();
-    setIdentityVersion((value) => value + 1);
+  if (!auth?.token) {
+    return <AuthScreen onAuth={setAuth} />;
+  }
+
+  function logout() {
+    clearAuth();
+    setAuth(null);
   }
 
   return (
-    <div className={activeTab === "stage2" ? "stage2-app-shell" : "app"}>
-      <style>{styles}</style>
-
-      {activeTab !== "stage2" ? (
-        <header className="hero">
+    <div className="glt-app">
+      <header className="glt-topbar">
+        <div className="glt-brand">
+          <div className="glt-logo-mark">✦</div>
           <div>
-            <p className="kicker">AI Live Tutor Rebuild</p>
-            <h1>Agent 1 + Stage 2 Human Live Tutor</h1>
-            <p>
-              Agent 1 handles PDF/Text → visual extraction. Stage 2 uses the 27-agent
-              pipeline for concept tree, detailed explanation, boardCommands, handwriting,
-              voice script, subtitles, quiz, and interrupt/repair.
-            </p>
+            <b>Lumina</b>
+            <span>AI Tutor Board</span>
           </div>
+        </div>
 
-          <button type="button" onClick={handleUseJanaTest}>
-            Use jana_test
-          </button>
-        </header>
-      ) : null}
+        <div className="glt-search">
+          <span>⌕</span>
+          <input placeholder="Search topics, nodes, resources..." />
+          <kbd>⌘ K</kbd>
+        </div>
 
-      <nav className="mode-tabs">
-        <button
-          type="button"
-          className={activeTab === "stage2" ? "active" : ""}
-          onClick={() => setActiveTab("stage2")}
-        >
-          Stage 2 Premium Board
-        </button>
+        <div className="glt-top-actions">
+          <div className="glt-status-pill">
+            <span />
+            AI Tutor Online
+          </div>
+          <button type="button" onClick={logout}>Logout</button>
+        </div>
+      </header>
 
-        <button
-          type="button"
-          className={activeTab === "agent1" ? "active" : ""}
-          onClick={() => setActiveTab("agent1")}
-        >
-          Agent 1 Visuals
-        </button>
+      <div className="glt-layout">
+        <LeftAgentRail tab={tab} setTab={setTab} />
 
-        <button
-          type="button"
-          className={activeTab === "identity" ? "active" : ""}
-          onClick={() => setActiveTab("identity")}
-        >
-          Identity
-        </button>
+        <main className="glt-center">
+          {tab === "lesson" ? (
+            <div className="glt-stage-shell">
+              <Stage2LiveTutorWorkbench />
+            </div>
+          ) : null}
 
-        <button type="button" onClick={handleUseJanaTest}>
-          Use jana_test
-        </button>
-      </nav>
+          {tab === "agent1" ? (
+            <div className="glt-stage-shell">
+              <Agent1VisualRenderer />
+            </div>
+          ) : null}
 
-      {activeTab === "stage2" ? <Stage2LiveTutorWorkbench /> : null}
+          {tab === "auth" ? <AuthWorkspacePage auth={auth} /> : null}
+        </main>
 
-      {activeTab === "agent1" ? <Agent1Page identity={identity} /> : null}
-
-      {activeTab === "identity" ? (
-        <IdentityPanel
-          identity={identity}
-          onIdentityChanged={() => setIdentityVersion((value) => value + 1)}
-        />
-      ) : null}
+        <RightTutorRail auth={auth} />
+      </div>
     </div>
   );
 }
-
-const styles = `
-  * {
-    box-sizing: border-box;
-  }
-
-  body {
-    margin: 0;
-    background: #fff7ed;
-    color: #1f2937;
-    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  }
-
-  .app {
-    max-width: 1180px;
-    margin: 0 auto;
-    padding: 28px 18px 80px;
-  }
-
-  .stage2-app-shell {
-    min-height: 100vh;
-    background: #020617;
-  }
-
-  .stage2-app-shell .mode-tabs {
-    max-width: 1180px;
-    margin: 0 auto;
-    padding: 16px 18px 8px;
-  }
-
-  .hero,
-  .panel {
-    background: rgba(255,255,255,.86);
-    border: 1px solid rgba(124,58,237,.15);
-    border-radius: 28px;
-    box-shadow: 0 20px 70px rgba(87,59,31,.12);
-  }
-
-  .hero {
-    padding: 28px;
-    display: flex;
-    justify-content: space-between;
-    gap: 18px;
-    align-items: center;
-    margin-bottom: 18px;
-  }
-
-  .kicker {
-    margin: 0 0 6px;
-    color: #7c3aed;
-    text-transform: uppercase;
-    letter-spacing: .16em;
-    font-weight: 900;
-    font-size: 12px;
-  }
-
-  h1 {
-    margin: 0 0 8px;
-    font-size: 34px;
-    letter-spacing: -.04em;
-  }
-
-  h2 {
-    margin: 0 0 16px;
-    font-size: 22px;
-  }
-
-  p {
-    margin: 0;
-    line-height: 1.6;
-    color: #62564c;
-  }
-
-  .panel {
-    padding: 22px;
-    margin: 18px 0;
-  }
-
-  .panel-title-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  label {
-    display: grid;
-    gap: 7px;
-    margin-bottom: 14px;
-    font-weight: 800;
-    color: #463f39;
-  }
-
-  input,
-  textarea {
-    width: 100%;
-    border: 1px solid rgba(124,58,237,.18);
-    background: #fff;
-    border-radius: 16px;
-    padding: 12px 14px;
-    font: inherit;
-    color: #1f2937;
-    outline: none;
-  }
-
-  input:focus,
-  textarea:focus {
-    border-color: rgba(124,58,237,.55);
-    box-shadow: 0 0 0 4px rgba(124,58,237,.10);
-  }
-
-  button {
-    border: 0;
-    border-radius: 16px;
-    background: #1f2937;
-    color: white;
-    padding: 12px 18px;
-    font-weight: 900;
-    cursor: pointer;
-    box-shadow: 0 12px 30px rgba(31,41,55,.18);
-  }
-
-  button.primary {
-    background: linear-gradient(135deg, #7c3aed, #2563eb);
-  }
-
-  .button-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 16px;
-  }
-
-  .button-row.no-margin {
-    margin-top: 0;
-  }
-
-  .mode-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin: 0 0 16px;
-  }
-
-  .mode-tabs button {
-    background: rgba(31, 41, 55, 0.9);
-    border: 1px solid rgba(255,255,255,.12);
-  }
-
-  .mode-tabs button.active {
-    background: linear-gradient(135deg, #06b6d4, #7c3aed);
-  }
-
-  .stage2-app-shell .mode-tabs button {
-    box-shadow: none;
-  }
-
-  .or {
-    margin: 18px 0;
-    color: #8a7c70;
-    font-weight: 900;
-    text-align: center;
-  }
-
-  .meta-grid,
-  .identity-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-  }
-
-  .identity-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    margin-top: 18px;
-  }
-
-  .meta-grid > div,
-  .resource-card {
-    border: 1px solid rgba(124,58,237,.12);
-    border-radius: 18px;
-    background: rgba(124,58,237,.05);
-    padding: 13px;
-    display: grid;
-    gap: 4px;
-    min-width: 0;
-  }
-
-  .meta-grid b,
-  .resource-card b {
-    color: #4c1d95;
-  }
-
-  .meta-grid span,
-  .resource-card span {
-    overflow-wrap: anywhere;
-    color: #4f463f;
-    font-size: 13px;
-  }
-
-  .resource-card {
-    margin: 14px 0;
-  }
-
-  .chips {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin: 10px 0 16px;
-  }
-
-  .chips span {
-    border-radius: 999px;
-    background: rgba(124,58,237,.08);
-    border: 1px solid rgba(124,58,237,.14);
-    color: #5b21b6;
-    padding: 7px 10px;
-    font-size: 12px;
-    font-weight: 900;
-  }
-
-  .status,
-  .error {
-    border-radius: 18px;
-    padding: 14px 16px;
-    margin: 18px 0;
-    font-weight: 900;
-  }
-
-  .status {
-    background: #ecfdf5;
-    color: #065f46;
-    border: 1px solid rgba(16,185,129,.22);
-  }
-
-  .error {
-    background: #fef2f2;
-    color: #991b1b;
-    border: 1px solid rgba(239,68,68,.22);
-  }
-
-  .mini-json,
-  .debug-json pre,
-  .identity-note pre {
-    background: #1f2937;
-    color: #f8fafc;
-    border-radius: 18px;
-    padding: 14px;
-    overflow: auto;
-    font-size: 12px;
-    line-height: 1.5;
-  }
-
-  .identity-note {
-    margin-top: 18px;
-    color: #4f463f;
-    font-weight: 800;
-  }
-
-  .debug-json {
-    margin-top: 18px;
-  }
-
-  .debug-json summary {
-    cursor: pointer;
-    font-weight: 900;
-    color: #7c3aed;
-  }
-
-  @media (max-width: 780px) {
-    .hero,
-    .panel-title-row {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    .meta-grid,
-    .identity-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-`;

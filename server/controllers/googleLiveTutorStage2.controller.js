@@ -16,6 +16,9 @@
 
 const stage2Service = require("../services/googleAgent/stage2LiveTutor.service");
 const googleTtsVoiceService = require("../services/googleAgent/googleTtsVoice.service");
+const { buildSourceContext } = require("../services/googleAgent/sourceContext/sourceContextPipeline");
+const { teachNodeWithAdkPipeline } = require("../services/googleAgent/stage2/stage2LessonOrchestrator");
+const { buildPowerToolsReport } = require("../services/googleAgent/stage2/stage2PowerToolsConfig");
 
 function safeString(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
@@ -282,9 +285,16 @@ function sendError(res, error, context = {}) {
 async function health(req, res) {
   try {
     const result = await stage2Service.health();
+    const powerTools = buildPowerToolsReport();
 
     res.status(result.ok ? 200 : 503).json({
       ...result,
+      powerTools: {
+        readiness: powerTools.readiness,
+        missingRequired: powerTools.missingRequired,
+        missingForWorldBest: powerTools.missingForWorldBest,
+        selectedProviders: powerTools.selectedProviders,
+      },
       googleTts: {
         controllerIntegrated: true,
         synthesizeByDefault: envBool("STAGE2_SYNTHESIZE_TTS_BY_DEFAULT", true),
@@ -304,15 +314,53 @@ async function health(req, res) {
   }
 }
 
+async function powerTools(req, res) {
+  try {
+    res.status(200).json(buildPowerToolsReport());
+  } catch (error) {
+    sendError(res, error, {
+      endpoint: "powerTools",
+    });
+  }
+}
+
 async function teachNode(req, res) {
   try {
-    const context = getOwnerContext(req);
+    const context    = getOwnerContext(req);
+    const body       = safeObject(req.body);
+    const resourceId = safeString(body.resourceId);
+    const treeId     = safeString(body.treeId);
+    const nodeId     = safeString(body.nodeId || safeObject(body.selectedNode).nodeId);
 
-    const result = await stage2Service.teachNode({
-      ownerKey: context.ownerKey,
-      body: req.body || {},
-      context,
-    });
+    // Build rich source context
+    let enrichedBody = body;
+    if (resourceId && treeId && nodeId) {
+      try {
+        const sourceCtx = await buildSourceContext({ ownerKey: context.ownerKey, resourceId, treeId, nodeId });
+        enrichedBody = { ...body, ...sourceCtx, _sourceContextInjected: true };
+      } catch (ctxErr) {
+        console.warn("[teachNode] sourceContextPipeline failed, using original body:", ctxErr.message);
+      }
+    }
+
+    // Try new ADK pipeline first (all agents connected, preprocessing optional)
+    let result;
+    try {
+      result = await teachNodeWithAdkPipeline(enrichedBody, {
+        studentLevel: safeString(body.studentLevel, "beginner"),
+        lessonMode:   safeString(body.lessonMode, "masterclass"),
+        timeoutMs:    numberFromBody(body.timeoutMs || body.stage2TimeoutMs, 840000, 60000, 1800000),
+      });
+      result._pipeline = "adk_v2";
+    } catch (adkErr) {
+      console.warn("[teachNode] ADK pipeline failed, falling back to monolith:", adkErr.message);
+      result = await stage2Service.teachNode({
+        ownerKey: context.ownerKey,
+        body: enrichedBody,
+        context,
+      });
+      result._pipeline = "monolith_fallback";
+    }
 
     const withMissionFields = liftMissionFields(result);
     const withTts = await attachGoogleTts(withMissionFields, req, context);
@@ -396,6 +444,7 @@ async function getSession(req, res) {
 
 module.exports = {
   health,
+  powerTools,
   teachNode,
   interruptRepair,
   savePlaybackState,

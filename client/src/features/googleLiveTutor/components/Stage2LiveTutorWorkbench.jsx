@@ -395,6 +395,178 @@ function TreeQualityBox({ tree, selectedNode }) {
   );
 }
 
+function getNodePageRefs(node) {
+  const fromRefs = safeArray(node?.sourceRefs)
+    .map((ref) => Number(safeObject(ref).page))
+    .filter((page) => Number.isFinite(page) && page > 0);
+
+  const fromPageRefs = safeArray(node?.pageRefs)
+    .map((page) => Number(page))
+    .filter((page) => Number.isFinite(page) && page > 0);
+
+  return [...new Set([...fromPageRefs, ...fromRefs])].sort((a, b) => a - b);
+}
+
+function getNodeType(node) {
+  return cleanText(node?.nodeType || node?.conceptType || node?.data?.nodeType || "concept");
+}
+
+function getNodeId(node) {
+  return cleanText(node?.nodeId || node?.id || node?.data?.nodeId);
+}
+
+function getTreeChildrenMap(tree) {
+  const map = new Map();
+
+  for (const edge of safeArray(tree?.edges)) {
+    const from = cleanText(edge.from || edge.source);
+    const to = cleanText(edge.to || edge.target);
+
+    if (!from || !to) continue;
+    if (!map.has(from)) map.set(from, []);
+    map.get(from).push(to);
+  }
+
+  return map;
+}
+
+function getTreeDepths(tree) {
+  const nodes = safeArray(tree?.nodes);
+  const rootId =
+    cleanText(tree?.rootNodeId) ||
+    cleanText(nodes.find((node) => getNodeType(node) === "root")?.nodeId) ||
+    cleanText(nodes[0]?.nodeId);
+
+  const childrenMap = getTreeChildrenMap(tree);
+  const depths = new Map();
+  const queue = rootId ? [{ id: rootId, depth: 0 }] : [];
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current?.id || depths.has(current.id)) continue;
+
+    depths.set(current.id, current.depth);
+
+    for (const childId of childrenMap.get(current.id) || []) {
+      queue.push({ id: childId, depth: current.depth + 1 });
+    }
+  }
+
+  for (const node of nodes) {
+    const id = getNodeId(node);
+    if (id && !depths.has(id)) depths.set(id, Number(node.level || 1));
+  }
+
+  return depths;
+}
+
+function FullTreeNodeDirectory({ tree, selectedNode, onSelectNode }) {
+  const [query, setQuery] = useState("");
+  const nodes = safeArray(tree?.nodes);
+  const depths = useMemo(() => getTreeDepths(tree), [tree]);
+  const q = query.trim().toLowerCase();
+
+  const filteredNodes = nodes.filter((node) => {
+    if (!q) return true;
+
+    const haystack = [
+      getNodeTitle(node),
+      getNodeType(node),
+      getNodePageRefs(node).join(" "),
+      cleanText(node?.shortDefinition || node?.summary),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(q);
+  });
+
+  return (
+    <aside className="full-tree-directory">
+      <div className="full-tree-directory-head">
+        <b>All nodes</b>
+        <span>{filteredNodes.length}/{nodes.length}</span>
+      </div>
+
+      <input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search node, page, schema, sync..."
+      />
+
+      <div className="full-tree-node-list">
+        {filteredNodes.map((node) => {
+          const id = getNodeId(node);
+          const selected = id && id === getNodeId(selectedNode);
+          const pages = getNodePageRefs(node);
+          const depth = Math.min(Number(depths.get(id) || 0), 5);
+
+          return (
+            <button
+              type="button"
+              key={id || getNodeTitle(node)}
+              className={selected ? "selected" : ""}
+              onClick={() => onSelectNode(node)}
+              style={{ paddingLeft: 12 + depth * 14 }}
+            >
+              <strong>{getNodeTitle(node)}</strong>
+              <small>
+                {getNodeType(node)} · pages {pages.length ? pages.join(",") : "?"} · refs{" "}
+                {safeArray(node.sourceRefs).length}
+              </small>
+            </button>
+          );
+        })}
+      </div>
+    </aside>
+  );
+}
+
+function FullTreeSelectedNodeInspector({ selectedNode }) {
+  if (!selectedNode) {
+    return (
+      <section className="full-tree-inspector">
+        <b>No node selected</b>
+        <p>Select a node from the directory or tree canvas.</p>
+      </section>
+    );
+  }
+
+  const refs = safeArray(selectedNode.sourceRefs);
+  const quotes = safeArray(selectedNode.evidenceQuotes);
+  const pages = getNodePageRefs(selectedNode);
+  const pack = safeObject(safeObject(selectedNode.metadata).richSourcePack);
+
+  return (
+    <section className="full-tree-inspector">
+      <div>
+        <b>{getNodeTitle(selectedNode)}</b>
+        <span>
+          {getNodeType(selectedNode)} · pages {pages.length ? pages.join(", ") : "?"} · refs {refs.length}
+        </span>
+      </div>
+
+      <p>{cleanText(selectedNode.shortDefinition || selectedNode.summary, "No summary available.")}</p>
+
+      <div className="full-tree-inspector-pills">
+        <span>quotes {quotes.length}</span>
+        <span>page images {safeArray(pack.pageImages).length}</span>
+        <span>has text {cleanText(pack.selectedPageFullText || pack.fullPageTextPreview).length > 80 ? "yes" : "no"}</span>
+        <span>summary {cleanText(pack.fullPdfSummary).length > 80 ? "yes" : "no"}</span>
+        <span>outline {pack.fullPdfOutline ? "yes" : "no"}</span>
+      </div>
+
+      {quotes[0]?.quote ? (
+        <blockquote>
+          “{quotes[0].quote}”
+          <em>Page {quotes[0].page || pages[0] || "?"}</em>
+        </blockquote>
+      ) : null}
+    </section>
+  );
+}
+
+
 function LessonSummary({ lesson }) {
   if (!lesson) return null;
 
@@ -779,16 +951,27 @@ export default function Stage2LiveTutorWorkbench() {
 
         <section className="s2-panel full-tree-wrap">
           {tree ? (
-            <>
-              <TreeQualityBox tree={tree} selectedNode={selectedNode} />
-              <ConceptTreeDagreBoard
+            <div className="full-tree-layout">
+              <FullTreeNodeDirectory
                 tree={tree}
                 selectedNode={selectedNode}
                 onSelectNode={selectNode}
-                height="calc(100vh - 240px)"
-                showEvidencePanel={true}
               />
-            </>
+
+              <div className="full-tree-canvas-area">
+                <TreeQualityBox tree={tree} selectedNode={selectedNode} />
+
+                <ConceptTreeDagreBoard
+                  tree={tree}
+                  selectedNode={selectedNode}
+                  onSelectNode={selectNode}
+                  height="calc(100vh - 260px)"
+                  showEvidencePanel={true}
+                />
+
+                <FullTreeSelectedNodeInspector selectedNode={selectedNode} />
+              </div>
+            </div>
           ) : (
             <div className="s2-empty tall">No tree loaded.</div>
           )}
@@ -1468,6 +1651,185 @@ const styles = `
     font-size: 12px;
     line-height: 1.55;
   }
+
+
+  .full-tree-page {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    overflow: auto;
+    background: #fff8f1;
+    padding: 14px;
+  }
+
+  .full-tree-page .s2-hero.full {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    max-width: none;
+    margin: 0 0 12px;
+  }
+
+  .full-tree-page .full-tree-wrap {
+    max-width: none;
+    margin: 0;
+    padding: 12px;
+    min-height: calc(100vh - 138px);
+  }
+
+  .full-tree-layout {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: 12px;
+    align-items: stretch;
+    min-height: calc(100vh - 170px);
+  }
+
+  .full-tree-directory {
+    border: 1px solid #f0dfd2;
+    background: #fffdf9;
+    border-radius: 18px;
+    padding: 12px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .full-tree-directory-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .full-tree-directory-head b {
+    color: #8c3b27;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-size: 12px;
+  }
+
+  .full-tree-directory-head span {
+    background: #fff0e7;
+    color: #8c3b27;
+    border: 1px solid #f0c8b9;
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .full-tree-directory input {
+    margin-bottom: 10px;
+    padding: 11px 12px;
+    border-radius: 14px;
+  }
+
+  .full-tree-node-list {
+    display: grid;
+    gap: 7px;
+    overflow: auto;
+    max-height: calc(100vh - 270px);
+    padding-right: 4px;
+  }
+
+  .full-tree-node-list button {
+    background: #fff8f1;
+    color: #3d322b;
+    border: 1px solid #f0dfd2;
+    text-align: left;
+    border-radius: 14px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    display: grid;
+    gap: 3px;
+    box-shadow: none;
+  }
+
+  .full-tree-node-list button.selected {
+    background: #fff0e7;
+    border-color: #fb7b5c;
+    box-shadow: 0 0 0 3px rgba(251, 123, 92, .13);
+  }
+
+  .full-tree-node-list strong {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .full-tree-node-list small {
+    color: #7a6a5f;
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .full-tree-canvas-area {
+    min-width: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .full-tree-canvas-area .s2-quality {
+    margin-bottom: 0;
+  }
+
+  .full-tree-inspector {
+    border: 1px solid #f0dfd2;
+    background: #fffdf9;
+    border-radius: 18px;
+    padding: 12px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .full-tree-inspector b {
+    display: block;
+    font-size: 16px;
+    color: #3d322b;
+  }
+
+  .full-tree-inspector span,
+  .full-tree-inspector p {
+    color: #6e5e54;
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  .full-tree-inspector-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .full-tree-inspector-pills span {
+    background: #fff0e7;
+    border: 1px solid #f0c8b9;
+    color: #8c3b27;
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .full-tree-inspector blockquote {
+    margin: 0;
+    border-left: 4px solid #fb7b5c;
+    background: #fff8f1;
+    border-radius: 12px;
+    padding: 10px 12px;
+    color: #4b4038;
+  }
+
+  .full-tree-inspector blockquote em {
+    display: block;
+    margin-top: 5px;
+    color: #8c3b27;
+    font-style: normal;
+    font-weight: 900;
+  }
+
 
   @media (max-width: 1100px) {
     .s2-hero,

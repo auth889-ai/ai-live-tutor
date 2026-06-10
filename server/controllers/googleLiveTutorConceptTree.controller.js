@@ -21,6 +21,7 @@
  */
 
 const stage1ConceptTreeService = require("../services/googleAgent/stage1ConceptTree.service");
+const { buildTree: buildTreePipeline } = require("../services/googleAgent/stage1/stage1BuildPipeline");
 
 function safeString(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
@@ -136,12 +137,17 @@ async function buildConceptTree(req, res) {
       });
     }
 
-    const result = await stage1ConceptTreeService.buildConceptTree({
-      ownerKey: context.ownerKey,
-      resourceId,
-      body: req.body || {},
-      context,
-    });
+    let result;
+    try {
+      // New modular pipeline — uses all stage1/ small files
+      result = await buildTreePipeline({ ownerKey: context.ownerKey, resourceId, body: req.body || {} });
+    } catch (pipelineErr) {
+      // Fall back to existing monolith if new pipeline fails
+      console.warn("[buildConceptTree] pipeline failed, falling back to monolith:", pipelineErr.message);
+      result = await stage1ConceptTreeService.buildConceptTree({
+        ownerKey: context.ownerKey, resourceId, body: req.body || {}, context,
+      });
+    }
 
     return res.status(getStatusCodeFromResult(result)).json(result);
   } catch (error) {

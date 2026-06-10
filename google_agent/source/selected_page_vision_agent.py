@@ -345,7 +345,14 @@ def collect_images_from_context(context: JsonDict, max_images: int = 3) -> List[
         for raw in items:
             item = safe_dict(raw)
             candidates: List[JsonDict] = []
-            if item.get("pageImagePath") or item.get("pageImageUrl") or item.get("path") or item.get("url"):
+            if (
+                item.get("pageImagePath")
+                or item.get("pageImageUrl")
+                or item.get("imagePath")
+                or item.get("imageUrl")
+                or item.get("path")
+                or item.get("url")
+            ):
                 candidates.append(item)
             for nested_key in ["pageImage", "image", "pdfPageImage"]:
                 nested = safe_dict(item.get(nested_key))
@@ -363,6 +370,10 @@ def collect_images_from_context(context: JsonDict, max_images: int = 3) -> List[
                     image["page"] = safe_int(item.get("page"), 0)
                 if not image.get("sourceRefs"):
                     image["sourceRefs"] = [compact_source_ref(item)]
+                if not image.get("pageImagePath") and image.get("imagePath"):
+                    image["pageImagePath"] = image.get("imagePath")
+                if not image.get("pageImageUrl") and image.get("imageUrl"):
+                    image["pageImageUrl"] = image.get("imageUrl")
                 if not image.get("pageImagePath") and not image.get("pageImageUrl") and not image.get("resolvedLocalPath"):
                     continue
                 key = image_key(image)
@@ -889,16 +900,14 @@ class SelectedPageVisionAgent(BaseLiveTutorAgent):
 
     def validate_input(self, payload: JsonDict) -> ValidationResult:
         images = collect_images_from_context(safe_dict(payload), max_images=3)
+        warnings = [] if images else ["No selected page image found; agent will skip without fake fallback."]
+        if images:
+            warnings.append(f"SelectedPageVisionAgent received {len(images)} Gemini-ready page image(s).")
         return ValidationResult(
             ok=True,
-            warnings=[] if images else ["No selected page image found; agent will skip without fake fallback."],
-            metadata={
-                "selectedPageVisionUsed": bool(images),
-                "pageImageCount": len(images),
-                "geminiVisionReadyPageImages": bool(images),
-                "fallbackUsed": False,
-                "usedSmartFallback": False,
-            },
+            warnings=warnings,
+            validator="SelectedPageVisionAgent.validate_input",
+            fallbackUsed=False,
         )
 
     def build_prompt(self, payload: JsonDict, context: AgentContext) -> str:

@@ -4,10 +4,14 @@ client/node_modules/
 server/node_modules/
 
 # env / secrets
+
+.png
+*.png
 .env
 .env.*
 !.env.example
 secrets/
+OpenMAIC/
 *.pem
 *.key
 *.json.key

@@ -15,6 +15,8 @@ const router = express.Router();
 
 router.get("/health", controller.health);
 
+router.get("/power-tools", controller.powerTools);
+
 router.post("/teach-node", controller.teachNode);
 
 router.post("/interrupt", controller.interruptRepair);
