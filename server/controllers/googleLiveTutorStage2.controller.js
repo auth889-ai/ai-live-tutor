@@ -241,12 +241,31 @@ async function attachGoogleTts(result, req, context) {
     body,
   });
 
+  if (Array.isArray(voiceAudio.audioClips) && voiceAudio.audioClips.length) {
+    const byLineId = new Map();
+    voiceAudio.audioClips.forEach((clip, index) => {
+      const url = clip.dataUrl || clip.audioUrl;
+      if (!url) return;
+      if (clip.lineId) byLineId.set(clip.lineId, url);
+      if (clip.voiceId) byLineId.set(clip.voiceId, url);
+      byLineId.set(`__index_${index}`, url);
+    });
+
+    voiceScript.forEach((line, index) => {
+      const id = line?.lineId || line?.voiceId || line?.id;
+      const url = byLineId.get(id) || byLineId.get(`__index_${index}`);
+      if (url) line.audioUrl = url;
+    });
+  }
+
   return {
     ...normalized,
+    voiceScript,
     voiceAudio,
     googleTts: voiceAudio,
     result: {
       ...safeObject(normalized.result),
+      voiceScript,
       voiceAudio,
       googleTts: voiceAudio,
     },
@@ -456,8 +475,16 @@ async function startSession(req, res) {
     const resourceId = safeString(body.resourceId);
     const treeId     = safeString(body.treeId);
 
-    if (!resourceId && !nodeId) {
-      return res.status(400).json({ ok: false, error: "resourceId and nodeId are required" });
+    if (!resourceId || !treeId || !nodeId) {
+      return res.status(400).json({
+        ok: false,
+        error: "resourceId, treeId, and nodeId are required",
+        missing: {
+          resourceId: !resourceId,
+          treeId: !treeId,
+          nodeId: !nodeId,
+        },
+      });
     }
 
     // Create session record immediately
@@ -473,10 +500,11 @@ async function startSession(req, res) {
       title: safeString(body.title) || `Lesson: ${nodeTitle || nodeId}`,
     });
 
-    // Kick off background job
-    let jobQueued = false;
+    // Kick off background job. /sessions/start is only successful when Redis
+    // accepted the BullMQ job; the frontend must not fall back to /teach-node.
+    let job = null;
     try {
-      await backgroundJob.enqueueLesson({
+      job = await backgroundJob.enqueueLesson({
         sessionId:    session.sessionId,
         ownerKey:     context.ownerKey,
         resourceId,
@@ -486,19 +514,42 @@ async function startSession(req, res) {
         selectedNode: safeObject(body.selectedNode),
         body,
       });
-      jobQueued = true;
     } catch (queueErr) {
       console.error("[startSession] BullMQ enqueue failed:", queueErr.message);
+      await persistence.updateSessionStatus(session.sessionId, "failed", {
+        "metadata.errorMessage": `BullMQ enqueue failed: ${queueErr.message}`,
+        "metadata.failedAt": new Date().toISOString(),
+      }).catch(() => {});
+
+      return res.status(503).json({
+        ok: false,
+        sessionId: session.sessionId,
+        status: "failed",
+        jobQueued: false,
+        error: "Background lesson job could not be queued. Redis/BullMQ must be healthy before teaching starts.",
+        metadata: {
+          fallbackUsed: false,
+          enqueueError: queueErr.message,
+        },
+      });
     }
 
     res.status(201).json({
       ok:        true,
       sessionId: session.sessionId,
       status:    "created",
-      jobQueued,
+      jobQueued: true,
+      jobId:     job?.jobId || `lesson_${session.sessionId}`,
+      jobName:   job?.jobName || "teach_node",
+      queueName: job?.queueName || backgroundJob.QUEUE_NAME,
+      workerContractVersion: job?.workerContractVersion || backgroundJob.WORKER_CONTRACT_VERSION,
       streamUrl: `/api/google-agent/live-tutor/stage2/sessions/${session.sessionId}/stream`,
       statusUrl: `/api/google-agent/live-tutor/stage2/sessions/${session.sessionId}/status`,
-      metadata:  { fallbackUsed: false },
+      metadata:  {
+        fallbackUsed: false,
+        queueName: job?.queueName || backgroundJob.QUEUE_NAME,
+        workerContractVersion: job?.workerContractVersion || backgroundJob.WORKER_CONTRACT_VERSION,
+      },
     });
   } catch (error) {
     sendError(res, error, { endpoint: "startSession" });
@@ -519,6 +570,8 @@ async function getSessionStatus(req, res) {
       jobStatus = await backgroundJob.getJobStatus(sessionId);
     } catch (_) {}
 
+    const sessionMetadata = safeObject(statusDoc.metadata);
+
     res.status(200).json({
       ok: true,
       sessionId,
@@ -529,7 +582,15 @@ async function getSessionStatus(req, res) {
       resourceId: statusDoc.resourceId,
       lastSegmentIndex: (statusDoc.metadata || {}).lastSegmentIndex,
       jobStatus,
-      metadata: { fallbackUsed: false },
+      queueName: jobStatus?.queueName || backgroundJob.QUEUE_NAME,
+      workerContractVersion: jobStatus?.workerContractVersion || backgroundJob.WORKER_CONTRACT_VERSION,
+      sourceTruth: sessionMetadata.sourceTruth || jobStatus?.progress?.sourceTruth || null,
+      metadata: {
+        ...sessionMetadata,
+        fallbackUsed: false,
+        queueName: jobStatus?.queueName || backgroundJob.QUEUE_NAME,
+        workerContractVersion: jobStatus?.workerContractVersion || backgroundJob.WORKER_CONTRACT_VERSION,
+      },
     });
   } catch (error) {
     sendError(res, error, { endpoint: "getSessionStatus", sessionId: req.params.sessionId });
@@ -582,6 +643,7 @@ async function getBook(req, res) {
       title:   session.title || session.nodeTitle,
       nodeId:  session.nodeId,
       status:  session.status,
+      segments: session.segments || [],
       boardScreens:  session.boardScreens  || [],
       boardCommands: session.boardCommands || [],
       voiceScript:   session.voiceScript   || [],
@@ -591,6 +653,40 @@ async function getBook(req, res) {
     });
   } catch (error) {
     sendError(res, error, { endpoint: "getBook", sessionId: req.params.sessionId });
+  }
+}
+
+async function getSessionSegment(req, res) {
+  try {
+    const context = getOwnerContext(req);
+    const sessionId = safeString(req.params.sessionId);
+    const segmentIndex = Number(req.params.segmentIndex);
+
+    if (!Number.isInteger(segmentIndex) || segmentIndex < 0) {
+      return res.status(400).json({ ok: false, error: "segmentIndex must be a non-negative integer" });
+    }
+
+    const segment = await persistence.loadSessionSegment(sessionId, context.ownerKey, segmentIndex);
+    if (!segment) {
+      return res.status(404).json({ ok: false, error: "Segment not found", sessionId, segmentIndex });
+    }
+
+    res.status(200).json({
+      ok: true,
+      sessionId,
+      segmentIndex,
+      segment,
+      boardScreens: segment.boardScreens || segment.premiumBoardScreens || [],
+      boardCommands: segment.boardCommands || segment.commands || [],
+      voiceScript: segment.voiceScript || [],
+      subtitles: segment.subtitles || [],
+      metadata: { fallbackUsed: false },
+    });
+  } catch (error) {
+    sendError(res, error, {
+      endpoint: "getSessionSegment",
+      sessionId: req.params.sessionId,
+    });
   }
 }
 
@@ -606,4 +702,61 @@ module.exports = {
   getSessionStatus,
   streamSession,
   getBook,
+  getSessionSegment,
+  debugVisionScan,
 };
+
+/**
+ * STEP-3 CURL PROOF — POST /debug/vision-scan
+ * Body: { ownerKey, resourceId, treeId, nodeId }
+ * Runs the REAL chain: buildSourceContext → Python Vision Safety Net →
+ * returns the vision proof JSON (pagesScanned, regions with bbox, ...).
+ */
+async function debugVisionScan(req, res) {
+  const { spawn } = require("child_process");
+  const path = require("path");
+  try {
+    const { ownerKey, resourceId, treeId, nodeId } = req.body || {};
+    if (!resourceId || !nodeId) {
+      return res.status(400).json({ ok: false, error: "resourceId and nodeId required" });
+    }
+
+    const packet = await buildSourceContext({
+      ownerKey: ownerKey || "demo_user", resourceId, treeId, nodeId,
+    });
+    (packet.pageImages || []).forEach((i) => { delete i.base64; }); // paths suffice
+
+    const python =
+      process.env.GOOGLE_LIVE_TUTOR_PYTHON ||
+      "/Users/jannatulferdouseva/miniconda3/envs/live-tutor-adk/bin/python";
+    const script = path.resolve(__dirname, "../../google_agent/debug_vision_scan.py");
+
+    const child = spawn(python, [script], {
+      cwd: path.resolve(__dirname, "../.."),
+      env: process.env,
+    });
+    let out = "", errOut = "";
+    child.stdout.on("data", (d) => { out += d; });
+    child.stderr.on("data", (d) => { errOut += d; });
+    child.stdin.write(JSON.stringify(packet));
+    child.stdin.end();
+
+    const code = await new Promise((r) => child.on("close", r));
+    if (code !== 0) {
+      return res.status(500).json({ ok: false, error: errOut.slice(-600) });
+    }
+    const vision = JSON.parse(out);
+    return res.json({
+      ok: vision.ok,
+      step2: {
+        evidence: (packet.selectedEvidence || []).length,
+        sourceRefs: (packet.sourceRefs || []).length,
+        pageImages: (packet.pageImages || []).map((i) => i.page),
+        hasSummary: !!(packet.fullPdfSummary || {}).overview,
+      },
+      step3: vision,
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+}

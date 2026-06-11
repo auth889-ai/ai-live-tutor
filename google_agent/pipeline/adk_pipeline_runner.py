@@ -14,6 +14,7 @@ No single timeout kills the pipeline.
 """
 from __future__ import annotations
 import asyncio
+import json
 import sys
 from typing import Any, List
 
@@ -248,18 +249,198 @@ async def run_adk_pipeline(payload: dict) -> dict:
     refs = stable_refs(working, chunks)
     working["sourceRefs"] = refs
 
-    await asyncio.gather(run("SelectedPageVisionAgent"), run("ConceptExtractionAgent"))
-    await run("KnowledgeGraphAgent")
-    strategy_result, course_result = await asyncio.gather(run("TeachingStrategyAgent"), run("CoursePlannerAgent"))
-    course_plan = safe_dict(course_result.get("result") or {})
-    first_segment = safe_dict(safe_list(course_plan.get("segments"))[0] if safe_list(course_plan.get("segments")) else {})
-    await run("SegmentPlannerAgent", {
-        "mode": "plan_segment",
-        "coursePlan": course_plan,
-        "segment": first_segment,
-        "sourceRefs": refs,
-        "chunks": chunks,
-    })
+    # ── Vision Safety Net (W2.2) — scans ALL node pages regardless of
+    # sourceRefs, returns visionIndex with schema-REQUIRED bbox.
+    # Legacy SelectedPageVisionAgent remains the fallback if the net fails.
+    async def run_vision_safety_net() -> None:
+        try:
+            try:
+                from ..source.vision_safety_net import build_vision_index
+            except ImportError:
+                from google_agent.source.vision_safety_net import build_vision_index
+            net = await build_vision_index(working)
+            if net.get("ok") and safe_list(net.get("visionIndex")):
+                working["visionIndex"] = net["visionIndex"]
+                # Golden Rule #7: vision discoveries ADDED to evidence
+                discoveries = safe_list(net.get("visionEvidence"))
+                if discoveries:
+                    working["chunks"] = _dedupe_chunks(safe_list(working.get("chunks")) + discoveries)
+                    working["selectedEvidence"] = _dedupe_chunks(
+                        safe_list(working.get("selectedEvidence")) + discoveries
+                    )
+                outputs["VisionSafetyNet"] = {"ok": True, "result": net}
+                # Downstream packet builders (board scene/command) read the
+                # legacy slot — feed them the same visionIndex.
+                outputs["SelectedPageVisionAgent"] = {
+                    "ok": True,
+                    "result": {"visionIndex": net["visionIndex"],
+                               "regions": net["visionIndex"],
+                               "pagesScanned": net.get("pagesScanned"),
+                               "viaSafetyNet": True},
+                }
+                trace.append({"agent": "VisionSafetyNet", "ok": True,
+                              "ms": 0, "pages": net.get("pagesScanned")})
+                print(f"[pipeline] VisionSafetyNet: {len(net['visionIndex'])} regions "
+                      f"from {net.get('pagesScanned')} pages "
+                      f"({len(discoveries)} added as evidence)", file=sys.stderr)
+                return
+            trace.append({"agent": "VisionSafetyNet", "ok": False, "ms": 0,
+                          "warnings": safe_list(net.get("warnings"))[:3]})
+        except Exception as exc:
+            print(f"[pipeline] VisionSafetyNet failed: {str(exc)[:200]} — "
+                  f"falling back to legacy SelectedPageVisionAgent", file=sys.stderr)
+            trace.append({"agent": "VisionSafetyNet", "ok": False, "ms": 0})
+        # Fallback: legacy vision agent
+        await run("SelectedPageVisionAgent")
+
+    # ConceptExtraction + KnowledgeGraph absorbed by the Pedagogy layer below
+    # (keyConcepts + conceptRelations); they run only in the legacy fallback.
+    await run_vision_safety_net()
+    if safe_list(working.get("pageImages")) and not safe_list(working.get("visionIndex")):
+        raise RuntimeError(
+            "VisionIndex required: pageImages were provided but Gemini Vision produced no bbox regions. "
+            "Refusing to generate a text-only weak board lesson."
+        )
+    # ── PEDAGOGY LAYER (W2.3 + W2.4) — Golden Rule #9: pedagogy before pixels.
+    # DomainUnderstanding → PedagogyPlanner (Pro + Thinking) produce the
+    # Lesson Design Contract. Replaces 5 legacy agents (ConceptExtraction,
+    # KnowledgeGraph, TeachingStrategy, CoursePlanner, SegmentPlanner) —
+    # which remain ONLY as fallback when the pedagogy layer fails.
+    pedagogy_ok = False
+    try:
+        try:
+            from ..planning.domain_understanding_agent import understand_domain
+            from ..planning.pedagogy_planner_agent import plan_pedagogy
+        except ImportError:
+            from google_agent.planning.domain_understanding_agent import understand_domain
+            from google_agent.planning.pedagogy_planner_agent import plan_pedagogy
+
+        domain_profile = await understand_domain(working)
+        working["domainProfile"] = domain_profile
+        contract = await plan_pedagogy(working, domain_profile)
+        working["lessonDesignContract"] = contract
+
+        # Feed downstream agents through the slots they already read.
+        working["teachingStrategy"] = {
+            "approach": (contract.get("lessonIntroduction") or {}).get("hook", ""),
+            "learningObjectives": contract.get("learningObjectives"),
+            "keyConcepts": contract.get("keyConcepts"),
+            "misconceptions": contract.get("misconceptions"),
+            "screenCountTarget": contract.get("screenCountTarget"),
+            "screenMix": contract.get("screenMix"),
+            "instructionalProcedures": contract.get("instructionalProcedures"),
+            "differentiation": contract.get("differentiationStrategies"),
+            "viaPedagogyPlanner": True,
+        }
+        working["concepts"] = contract.get("keyConcepts") or []
+        working["knowledgeGraph"] = {"relations": contract.get("conceptRelations") or []}
+        course_plan = {
+            "segments": [
+                {"segmentId": i, "phase": p.get("phase"),
+                 "minutes": p.get("minutes"), "description": p.get("description"),
+                 "useRegionIds": p.get("useRegionIds") or []}
+                for i, p in enumerate(safe_list(contract.get("instructionalProcedures")))
+            ],
+            "screenCountTarget": contract.get("screenCountTarget"),
+        }
+        working["coursePlan"] = course_plan
+        outputs["TeachingStrategyAgent"] = {"ok": True, "result": working["teachingStrategy"]}
+        outputs["CoursePlannerAgent"] = {"ok": True, "result": course_plan}
+        outputs["PedagogyPlanner"] = {"ok": True, "result": contract}
+        trace.append({"agent": "DomainUnderstanding", "ok": True, "ms": 0})
+        trace.append({"agent": "PedagogyPlanner", "ok": True, "ms": 0,
+                      "screens": contract.get("screenCountTarget")})
+        strategy_result = outputs["TeachingStrategyAgent"]
+        pedagogy_ok = True
+        print(f"[pipeline] PedagogyPlanner CONTRACT: "
+              f"{contract.get('screenCountTarget')} screens, "
+              f"{len(safe_list(contract.get('instructionalProcedures')))} phases",
+              file=sys.stderr)
+    except Exception as exc:
+        print(f"[pipeline] Pedagogy layer failed: {str(exc)[:200]} — "
+              f"falling back to legacy planning agents", file=sys.stderr)
+        trace.append({"agent": "PedagogyPlanner", "ok": False, "ms": 0})
+
+    # ── W3 QUALITY-STACK GENERATION — the contract drives the lesson ─────────
+    # ground → anchor → generate → verify → critique → repair, per phase.
+    # Replaces the legacy generation chain (DetailedExplanation/BoardScene/
+    # VoiceScript/Diagram text-path) which remains below as fallback only.
+    if pedagogy_ok:
+        try:
+            try:
+                from ..generation.lesson_orchestrator import orchestrate_lesson
+            except ImportError:
+                from google_agent.generation.lesson_orchestrator import orchestrate_lesson
+
+            on_segment_ready = None
+            if working.get("_emitSegmentEvents"):
+                async def _emit_segment_ready(segment_index: int, segment: dict) -> None:
+                    event = {
+                        "type": "segment_ready",
+                        "segmentIndex": segment_index,
+                        "segment": segment,
+                    }
+                    print(
+                        "__LUMINA_SEGMENT_READY__" +
+                        json.dumps(event, ensure_ascii=False, separators=(",", ":")),
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                on_segment_ready = _emit_segment_ready
+
+            lesson = await orchestrate_lesson(
+                working, contract,
+                domain_profile=safe_dict(working.get("domainProfile")),
+                on_segment_ready=on_segment_ready,
+            )
+            if lesson.get("ok"):
+                trace.append({"agent": "QualityStackOrchestrator", "ok": True,
+                              "screens": lesson["metadata"].get("screenCount"),
+                              "avgQuality": lesson["qualityReport"].get("averageScore")})
+                lesson["selectedNode"] = selected_node(payload)
+                lesson["agentTrace"] = trace
+                lesson["agentOutputs"] = {
+                    "PedagogyPlanner": contract,
+                    "VisionSafetyNet": safe_dict(
+                        safe_dict(outputs.get("VisionSafetyNet")).get("result") or {}),
+                }
+                lesson["metadata"].update({"usesAdkPipelineV2": True,
+                                           "fallbackUsed": False})
+                print(f"[pipeline] QUALITY STACK lesson: "
+                      f"screens={lesson['metadata']['screenCount']} "
+                      f"cmds={lesson['metadata']['commandCount']} "
+                      f"avgQuality={lesson['qualityReport']['averageScore']}",
+                      file=sys.stderr)
+                return lesson
+            print(f"[pipeline] quality stack below ok-bar "
+                  f"({lesson['qualityReport']}) — legacy generation fallback",
+                  file=sys.stderr)
+            trace.append({"agent": "QualityStackOrchestrator", "ok": False})
+            raise RuntimeError(
+                "QualityStackOrchestrator below quality bar. Refusing legacy weak lesson fallback."
+            )
+        except Exception as exc:
+            print(f"[pipeline] quality stack failed: {str(exc)[:200]} — "
+                  f"refusing legacy weak lesson fallback", file=sys.stderr)
+            trace.append({"agent": "QualityStackOrchestrator", "ok": False})
+            raise
+
+    if not pedagogy_ok:
+        # LEGACY FALLBACK — the old 5-agent planning chain.
+        await run("ConceptExtractionAgent")
+        await run("KnowledgeGraphAgent")
+        strategy_result, course_result = await asyncio.gather(
+            run("TeachingStrategyAgent"), run("CoursePlannerAgent"))
+        course_plan = safe_dict(course_result.get("result") or {})
+        first_segment = safe_dict(safe_list(course_plan.get("segments"))[0]
+                                  if safe_list(course_plan.get("segments")) else {})
+        await run("SegmentPlannerAgent", {
+            "mode": "plan_segment",
+            "coursePlan": course_plan,
+            "segment": first_segment,
+            "sourceRefs": refs,
+            "chunks": chunks,
+        })
 
     # ── Stage B: Teaching content ────────────────────────────────────────────────
     exp_task   = run("DetailedExplanationAgent")
@@ -440,9 +621,14 @@ async def run_adk_pipeline(payload: dict) -> dict:
 
 async def run_pipeline_with_direct_fallback(payload: dict) -> dict:
     """
-    Primary entry point for Node.js bridge.
-    Tries direct_gemini_pipeline first (always works).
-    Falls back to ADK pipeline only if direct produces 0 screens.
+    Primary entry point for Node.js bridge — v3 order (GOLDEN RULE #2):
+
+      1. ADK multi-agent pipeline runs FIRST — it is the intelligence layer
+         (RAG, Vision, TeachingStrategy, BoardCommand, VoiceScript, ...).
+      2. direct_gemini (2 focused structured calls) is the EMERGENCY FALLBACK,
+         used only when ADK genuinely fails or returns too little to teach.
+      3. If both fail → raise honestly. NEVER placeholder content
+         (GOLDEN RULE #5 — _ensure_minimums fake-success is dead).
     """
     try:
         from .direct_gemini_pipeline import run_direct_pipeline
@@ -452,34 +638,49 @@ async def run_pipeline_with_direct_fallback(payload: dict) -> dict:
         except ImportError:
             run_direct_pipeline = None
 
-    # ── PRIMARY: direct Gemini pipeline ──────────────────────────────────────
-    if run_direct_pipeline is not None:
-        try:
-            direct_result = run_direct_pipeline(payload)
-            screens  = len(direct_result.get("boardScreens") or [])
-            commands = len(direct_result.get("boardCommands") or [])
-            if screens >= 10 and commands >= 20:
-                print(f"[pipeline] direct_gemini succeeded screens={screens} commands={commands}", file=sys.stderr)
-                direct_result.setdefault("metadata", {})["pipeline"] = "direct_gemini_primary"
-                return direct_result
-            else:
-                print(f"[pipeline] direct_gemini low output screens={screens} commands={commands} — trying ADK", file=sys.stderr)
-        except Exception as exc:
-            print(f"[pipeline] direct_gemini FAILED: {exc} — falling back to ADK", file=sys.stderr)
+    # Quality bar for "this is teachable": enough screens AND commands.
+    MIN_SCREENS, MIN_COMMANDS = 10, 30
+    adk_error: Exception | None = None
 
-    # ── FALLBACK: ADK 28-agent pipeline ──────────────────────────────────────
+    # ── PRIMARY: ADK multi-agent pipeline ─────────────────────────────────────
     try:
         result = await run_adk_pipeline(payload)
         screens  = len(result.get("boardScreens") or [])
         commands = len(result.get("boardCommands") or [])
-        print(f"[pipeline] ADK pipeline screens={screens} commands={commands}", file=sys.stderr)
-        result.setdefault("metadata", {})["pipeline"] = "adk_28_agents"
-        return result
-    except Exception as exc:
-        print(f"[pipeline] ADK pipeline FAILED: {exc}", file=sys.stderr)
-        # Last resort: minimal recovery via direct pipeline
-        if run_direct_pipeline is not None:
-            result = run_direct_pipeline(payload)
-            result.setdefault("metadata", {})["pipeline"] = "direct_gemini_last_resort"
+        voice    = len(result.get("voiceScript") or [])
+        if screens >= MIN_SCREENS and commands >= MIN_COMMANDS and voice > 0:
+            print(f"[pipeline] ADK PRIMARY succeeded screens={screens} "
+                  f"commands={commands} voice={voice}", file=sys.stderr)
+            result.setdefault("metadata", {})["pipeline"] = "adk_agents_primary"
             return result
-        raise
+        print(f"[pipeline] ADK output below quality bar (screens={screens} "
+              f"commands={commands} voice={voice}) — using direct fallback",
+              file=sys.stderr)
+    except Exception as exc:
+        adk_error = exc
+        hard_failure = (
+            "VisionIndex required" in str(exc)
+            or "QualityStackOrchestrator below quality bar" in str(exc)
+            or "refusing legacy weak lesson fallback" in str(exc)
+        )
+        if hard_failure:
+            print(f"[pipeline] ADK PRIMARY hard-failed: {exc}. "
+                  f"No direct fallback because that would create weak text-only content.",
+                  file=sys.stderr)
+            raise
+        print(f"[pipeline] ADK PRIMARY failed: {exc} — using direct fallback",
+              file=sys.stderr)
+
+    # ── FALLBACK: direct structured pipeline (2 focused calls) ────────────────
+    if run_direct_pipeline is not None:
+        result = run_direct_pipeline(payload)  # raises DirectPipelineError honestly
+        result.setdefault("metadata", {})["pipeline"] = "direct_gemini_fallback"
+        if adk_error is not None:
+            result["metadata"]["adkError"] = str(adk_error)[:300]
+        return result
+
+    # ── Both unavailable → honest failure ─────────────────────────────────────
+    raise RuntimeError(
+        f"Both pipelines failed. ADK error: {adk_error}. "
+        f"direct_gemini unavailable. No fake content will be returned."
+    )

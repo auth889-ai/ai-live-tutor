@@ -1,0 +1,27 @@
+Step-2 packet: pageImages = 0 | pages: []
+keys available: ['step', 'goal', 'compactProofOutput', 'latestRealCurlProof', 'workflowUnderTest', 'outputsSavedAndReturned', 'dynamicCoverageRules', 'filesCovered', 'codeChanges', 'verification', 'notYetTested', 'nextWorkflow']
+feeding Vision: 2 real page images, pages [1, 22]
+
+═══ STEP 3 LIVE PROOF (real packet → real Gemini Vision) ═══
+ok: True | step: step3_gemini_vision
+pagesScanned: 2 | failed: 0
+regionCount: 8 | allRegionsHaveBbox: True
+discoveries→evidence: 7
+  p1_r1     [title     |high  ] bbox=(0.093,0.5027,0.4,0.0667)
+            Main title of the slide, indicating the topic 'Database Denorm'.
+  p1_r2     [text_block|low   ] bbox=(0.093,0.72,0.38,0.0267)
+            Course code and title for context.
+  p1_r3     [diagram   |high  ] bbox=(0.49,0.52,0.41,0.48)
+            An Entity-Relationship Diagram (ERD) illustrating a database schema with si
+  p22_r1    [title     |high  ] bbox=(0.0719,0.1389,0.2656,0.0833)
+            Main title of the page, 'Galaxy Schema'.
+  p22_r2    [text_block|high  ] bbox=(0.0195,0.2639,0.5469,0.0347)
+            Introductory sentence defining a Galaxy Schema.
+  p22_r3    [text_block|high  ] bbox=(0.0195,0.3542,0.3125,0.0347)
+            Heading for the list of characteristics of Galaxy Schema.
+  p22_r4    [list      |high  ] bbox=(0.0195,0.4028,0.4688,0.4861)
+            Bulleted list outlining the characteristics of a Galaxy Schema, including h
+  p22_r5    [diagram   |high  ] bbox=(0.2656,0.6111,0.6562,0.3472)
+            A diagram illustrating the structure of a Galaxy Schema, showing two centra
+
+proof saved → agent_output/stage2_step3_vision_proof.json

@@ -375,6 +375,15 @@ class BaseLiveTutorAgent(ABC):
     default_mode: str = "run"
     uses_adk: bool = True
 
+    # ── Structured Output (v3 GOLDEN RULE #3) ─────────────────────────────────
+    # When an agent defines response_schema (OpenAPI-subset dict), its Gemini
+    # call bypasses the ADK text path and uses response_schema enforcement:
+    # guaranteed valid JSON, no truncation, no regex repair.
+    response_schema: Optional[JsonDict] = None
+    # Deep-reasoning agents (PedagogyPlanner, TeachingStrategy, RepairConfusion)
+    # set use_thinking = True to enable the Gemini 2.5 thinking budget.
+    use_thinking: bool = False
+
     def __init__(self, model: Optional[str] = None) -> None:
         self.model = model or model_name()
 
@@ -432,6 +441,34 @@ class BaseLiveTutorAgent(ABC):
                 "fallbackUsed": False,
             },
         )
+
+    async def run_structured_json(self, prompt: str, context: AgentContext) -> JsonDict:
+        """
+        Structured-output Gemini call (response_schema enforced).
+        Used automatically by run() when the agent defines response_schema.
+        Returns a dict guaranteed to match the schema — or raises honestly.
+        """
+        try:
+            from ..pipeline.gemini_structured import generate_structured_async
+        except ImportError:
+            from google_agent.pipeline.gemini_structured import generate_structured_async
+
+        result = await generate_structured_async(
+            prompt,
+            self.response_schema,
+            model=self.model,
+            system_instruction=self.instruction,
+            thinking=self.use_thinking,
+        )
+        if isinstance(result, list):
+            return _wrap_top_level_array(result)
+        return safe_dict(result)
+
+    async def _generate_json(self, prompt: str, context: AgentContext) -> JsonDict:
+        """Route to structured output when a schema is defined, else ADK text path."""
+        if self.response_schema is not None:
+            return await self.run_structured_json(prompt, context)
+        return await self.run_adk_json(prompt, context)
 
     async def run_adk_json(self, prompt: str, context: AgentContext) -> JsonDict:
         if ADK_IMPORT_ERROR is not None:
@@ -514,8 +551,8 @@ class BaseLiveTutorAgent(ABC):
         try:
             prompt = self.build_prompt(payload, context)
 
-            if self.uses_adk:
-                raw = await self.run_adk_json(prompt, context)
+            if self.uses_adk or self.response_schema is not None:
+                raw = await self._generate_json(prompt, context)
             else:
                 raw = self.run_without_adk(payload, context)
 
@@ -524,7 +561,7 @@ class BaseLiveTutorAgent(ABC):
 
             repair_history: List[JsonDict] = []
 
-            if self.uses_adk and not output_validation.ok and repair_attempts > 0:
+            if (self.uses_adk or self.response_schema is not None) and not output_validation.ok and repair_attempts > 0:
                 for attempt in range(repair_attempts):
                     repair_history.append(
                         {
@@ -543,7 +580,7 @@ class BaseLiveTutorAgent(ABC):
                         attempt=attempt,
                     )
 
-                    raw = await self.run_adk_json(repair_prompt, context)
+                    raw = await self._generate_json(repair_prompt, context)
                     normalized = self.normalize_output(raw, payload, context)
                     output_validation = self.validate_output(normalized, payload, context)
 

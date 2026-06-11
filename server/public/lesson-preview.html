@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lumina — OpenMAIC-style Lesson Preview</title>
+<style>
+  :root {
+    --ink:#2d2a26;
+    --accent:#ff6b35;
+    --paper:#faf6f0;
+    --card:#fff;
+    --line:#eadfce;
+  }
+
+  * { box-sizing:border-box; }
+
+  body {
+    margin:0;
+    font-family:Georgia,'Times New Roman',serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+
+  header {
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:10px 18px;
+    background:var(--card);
+    border-bottom:2px solid var(--line);
+    position:sticky;
+    top:0;
+    z-index:50;
+  }
+
+  header h1 {
+    font-size:16px;
+    margin:0;
+    color:var(--accent);
+  }
+
+  header .meta {
+    font-size:12px;
+    color:#8a8378;
+  }
+
+  button {
+    font:inherit;
+    padding:6px 14px;
+    border:1.5px solid var(--accent);
+    background:#fff;
+    color:var(--accent);
+    border-radius:8px;
+    cursor:pointer;
+  }
+
+  button:hover {
+    background:var(--accent);
+    color:#fff;
+  }
+
+  #stage {
+    max-width:1180px;
+    margin:18px auto 94px;
+    padding:0 16px;
+  }
+
+  .board {
+    position:relative;
+    background:var(--card);
+    border:2px solid var(--line);
+    border-radius:14px;
+    box-shadow:0 6px 24px rgba(80,60,20,.08);
+    min-height:640px;
+    padding:22px 26px 100px;
+    overflow:hidden;
+  }
+
+  .stype {
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:#b3a78f;
+  }
+
+  h2.title {
+    margin:4px 0 2px;
+    font-size:26px;
+  }
+
+  .subtitle {
+    color:#8a8378;
+    font-style:italic;
+    margin-bottom:10px;
+  }
+
+  .blocks {
+    max-width:45%;
+  }
+
+  .blk {
+    margin:10px 0;
+    line-height:1.45;
+    opacity:0;
+    transform:translateY(6px);
+    transition:opacity .5s, transform .5s;
+  }
+
+  .blk.show {
+    opacity:1;
+    transform:none;
+  }
+
+  .blk.heading {
+    font-size:19px;
+    font-weight:bold;
+  }
+
+  .blk.code {
+    font-family:ui-monospace,Menlo,monospace;
+    background:#f4f1e8;
+    border:1px solid #e3dccb;
+    padding:10px 12px;
+    border-radius:8px;
+    font-size:13.5px;
+    white-space:pre-wrap;
+  }
+
+  .blk.quote_from_source {
+    border-left:4px solid var(--accent);
+    padding:6px 12px;
+    background:#fff8f2;
+    font-style:italic;
+  }
+
+  .blk.quote_from_source::before {
+    content:"📖 SOURCE — ";
+    font-style:normal;
+    color:var(--accent);
+    font-size:12px;
+  }
+
+  .blk.warning {
+    background:#fff3ec;
+    border:1.5px dashed var(--accent);
+    padding:8px 12px;
+    border-radius:8px;
+  }
+
+  .blk.warning::before {
+    content:"⚠ ";
+  }
+
+  .blk.key_term {
+    background:#f1f7ee;
+    border:1px solid #cfe3c8;
+    padding:8px 12px;
+    border-radius:8px;
+  }
+
+  .blk.step::before {
+    content:"▸ ";
+    color:var(--accent);
+    font-weight:bold;
+  }
+
+  .blk.annotation {
+    font-size:13px;
+    color:#7c7468;
+    border-top:1px dotted #cabfa8;
+    padding-top:6px;
+  }
+
+  .canvas {
+    position:absolute;
+    top:78px;
+    right:20px;
+    width:50%;
+    height:76%;
+    border-radius:12px;
+  }
+
+  .el {
+    position:absolute;
+    opacity:0;
+    transition:opacity .5s, transform .65s ease;
+    font-size:12.5px;
+  }
+
+  .el.show {
+    opacity:1;
+  }
+
+  .el.box {
+    border:2px solid var(--ink);
+    border-radius:6px;
+    background:#fff;
+    padding:6px 8px;
+    font-weight:bold;
+    text-align:center;
+    box-shadow:2px 3px 0 #e7ddc8;
+  }
+
+  .el.label {
+    color:#5b5347;
+  }
+
+  .el.code_line {
+    font-family:ui-monospace,Menlo,monospace;
+    background:#f4f1e8;
+    border:1px solid #e3dccb;
+    padding:3px 8px;
+    border-radius:5px;
+    white-space:nowrap;
+    overflow:hidden;
+  }
+
+  .el.table_drawing {
+    border:2px solid var(--ink);
+    border-radius:6px;
+    background:#fff;
+    font-family:ui-monospace,Menlo,monospace;
+    font-size:11.5px;
+    white-space:pre;
+    padding:6px 9px;
+    box-shadow:2px 3px 0 #e7ddc8;
+  }
+
+  .el.arrow {
+    color:var(--accent);
+    font-size:22px;
+    font-weight:bold;
+  }
+
+  .el.highlight_zone {
+    background:rgba(255,213,79,.35);
+    border:1.5px dashed #f9a825;
+    border-radius:6px;
+  }
+
+  .el.teacher_redraw {
+    border:1.5px solid #f3c7af;
+    border-radius:12px;
+    background:#fff9f5;
+    padding:10px;
+    white-space:pre-wrap;
+    box-shadow:0 8px 22px rgba(255,107,53,.08);
+  }
+
+  /* OpenMAIC-style full page source element */
+  .el.pdf_page {
+    border:2px solid #b9aa8c;
+    border-radius:10px;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:2px 3px 0 #e7ddc8;
+  }
+
+  .el.pdf_page .pageViewport {
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    background:#fff;
+  }
+
+  .el.pdf_page img {
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    display:block;
+    transition:transform 650ms ease;
+  }
+
+  .el.pdf_page .tag {
+    position:absolute;
+    top:4px;
+    left:6px;
+    background:var(--accent);
+    color:#fff;
+    font-size:10px;
+    padding:1px 7px;
+    border-radius:7px;
+    z-index:3;
+  }
+
+  .el.pdf_page .regionOverlay {
+    position:absolute;
+    border:4px solid var(--accent);
+    border-radius:18px;
+    box-shadow:0 0 0 6px rgba(255,107,53,.18), 0 0 28px rgba(255,107,53,.45);
+    pointer-events:none;
+    opacity:0;
+    transition:all .55s ease;
+    z-index:4;
+  }
+
+  /* Legacy crop becomes debug thumbnail only */
+  .el.pdf_crop {
+    border:1.5px dashed #b9aa8c;
+    border-radius:8px;
+    overflow:hidden;
+    background:#fff;
+  }
+
+  .el.pdf_crop img {
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    display:block;
+    opacity:.85;
+  }
+
+  .el.pdf_crop .tag {
+    position:absolute;
+    top:4px;
+    left:6px;
+    background:#8a8378;
+    color:#fff;
+    font-size:10px;
+    padding:1px 7px;
+    border-radius:7px;
+  }
+
+  #pointer {
+    position:fixed;
+    width:46px;
+    height:46px;
+    border:4px solid var(--accent);
+    border-radius:50%;
+    pointer-events:none;
+    z-index:99;
+    opacity:0;
+    transform:translate(-50%,-50%);
+    transition:left .7s cubic-bezier(.5,1.4,.4,1), top .7s cubic-bezier(.5,1.4,.4,1), width .6s, height .6s, opacity .4s;
+    box-shadow:0 0 0 6px rgba(255,107,53,.22), 0 0 26px rgba(255,107,53,.5);
+  }
+
+  #voicebar {
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(45,42,38,.94);
+    color:#fdf6ea;
+    font-size:16px;
+    padding:13px 26px;
+    line-height:1.4;
+    min-height:52px;
+    z-index:100;
+  }
+
+  #voicebar b {
+    color:var(--accent);
+  }
+
+  #check {
+    margin-top:14px;
+    background:#eef4fb;
+    border:1.5px solid #bcd2ea;
+    border-radius:9px;
+    padding:9px 13px;
+  }
+
+  #check::before {
+    content:"❓ CHECK — ";
+    color:#3a6ea5;
+    font-weight:bold;
+  }
+
+  #srcref {
+    position:absolute;
+    bottom:60px;
+    left:26px;
+    font-size:12px;
+    color:#9a8f7d;
+    max-width:80%;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>⬤ LUMINA — OpenMAIC-style Lesson Preview</h1>
+  <button id="prev">◀ Prev</button>
+  <span class="meta" id="counter">…</span>
+  <button id="next">Next ▶</button>
+  <button id="replay">↻ Replay screen</button>
+  <span class="meta" id="quality"></span>
+</header>
+
+<div id="stage">
+  <div class="board" id="board"></div>
+</div>
+
+<div id="pointer"></div>
+<div id="voicebar">loading lesson…</div>
+
+<script>
+let lesson;
+let screens = [];
+let idx = 0;
+let timers = [];
+
+const board = document.getElementById("board");
+const pointer = document.getElementById("pointer");
+const voicebar = document.getElementById("voicebar");
+
+fetch("lesson-preview-data.json")
+  .then(r => r.json())
+  .then(data => {
+    lesson = data;
+    screens = data.boardScreens || data.premiumBoardScreens || [];
+
+    document.getElementById("quality").textContent =
+      "avg quality " + ((data.qualityReport || {}).averageScore ?? "—") +
+      " · " + screens.length + " screens · " +
+      ((data.boardCommands || data.commands || []).length) + " commands";
+
+    show(0);
+  })
+  .catch(err => {
+    voicebar.textContent = "Failed to load lesson-preview-data.json: " + err.message;
+  });
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"]/g, c => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    "\"":"&quot;"
+  }[c]));
+}
+
+function resourceId() {
+  const qs = new URLSearchParams(location.search);
+
+  return qs.get("resourceId")
+    || lesson?.resourceId
+    || lesson?.metadata?.resourceId
+    || lesson?.sourcePack?.resourceId
+    || lesson?.request?.resourceId
+    || "glt_resource_1780558985921_5f1ea0e3";
+}
+
+function clear() {
+  timers.forEach(clearTimeout);
+  timers = [];
+  pointer.style.opacity = 0;
+}
+
+function allVisionRegions() {
+  return lesson?.visionIndex
+    || lesson?.agentOutputs?.VisionSafetyNet?.visionIndex
+    || lesson?.metadata?.visionIndex
+    || lesson?.visualContext?.visionIndex
+    || lesson?.sourceTruthPacket?.visionIndex
+    || [];
+}
+
+function visionRegion(regionId) {
+  return allVisionRegions().find(r => String(r.regionId) === String(regionId));
+}
+
+function pageImageUrl(page) {
+  const pad = String(page || 1).padStart(2, "0");
+  return `/live-tutor-page-images/${resourceId()}/page-${pad}.png`;
+}
+
+function ensurePdfPageElement(screen, visualElements) {
+  const actions = screen.boardActions || [];
+  const regionIds = new Set();
+
+  actions.forEach(a => {
+    if (a.regionId) regionIds.add(a.regionId);
+  });
+
+  visualElements.forEach(el => {
+    if (el.regionId) regionIds.add(el.regionId);
+  });
+
+  if (screen.sourceRef?.regionId) {
+    regionIds.add(screen.sourceRef.regionId);
+  }
+
+  for (const rid of regionIds) {
+    const r = visionRegion(rid);
+    if (!r?.page) continue;
+
+    const id = `pdf_page_${r.page}`;
+
+    if (!visualElements.some(e => e.elementId === id || e.id === id)) {
+      visualElements.push({
+        elementId: id,
+        kind: "pdf_page",
+        content: `Real PDF page ${r.page}`,
+        pageNumber: r.page,
+        pageImageUrl: pageImageUrl(r.page),
+        sourceMode: "full_page_with_focus",
+        style: "source",
+        position: {
+          x: 0.05,
+          y: 0.02,
+          w: 0.90,
+          h: 0.92
+        },
+      });
+    }
+
+    actions.forEach(a => {
+      if (a.regionId === rid && !a.parentElementId) {
+        a.parentElementId = id;
+      }
+    });
+  }
+}
+
+function show(i) {
+  clear();
+
+  idx = Math.max(0, Math.min(screens.length - 1, i));
+  const s = screens[idx];
+
+  document.getElementById("counter").textContent =
+    `screen ${idx + 1} / ${screens.length} — seg${s.segmentIndex ?? "?"}`;
+
+  board.innerHTML = "";
+
+  const visualElements = JSON.parse(JSON.stringify(s.visualElements || []));
+  ensurePdfPageElement(s, visualElements);
+
+  const head = document.createElement("div");
+  head.innerHTML =
+    `<div class="stype">${esc(s.screenType || "")}</div>` +
+    `<h2 class="title">${esc(s.title || "")}</h2>` +
+    (s.subtitle ? `<div class="subtitle">${esc(s.subtitle)}</div>` : "");
+
+  board.appendChild(head);
+
+  const blocksDiv = document.createElement("div");
+  blocksDiv.className = "blocks";
+
+  (s.blocks || []).forEach(b => {
+    const d = document.createElement("div");
+    d.className = "blk " + (b.type || "body");
+    d.textContent = b.content || "";
+    blocksDiv.appendChild(d);
+  });
+
+  if (s.checkQuestion) {
+    const c = document.createElement("div");
+    c.id = "check";
+    c.textContent = s.checkQuestion;
+    c.style.opacity = 0;
+    blocksDiv.appendChild(c);
+  }
+
+  board.appendChild(blocksDiv);
+
+  const canvas = document.createElement("div");
+  canvas.className = "canvas";
+  visualElements.forEach(el => renderElement(el, canvas));
+  board.appendChild(canvas);
+
+  const ref = s.sourceRef || {};
+  const src = document.createElement("div");
+  src.id = "srcref";
+  src.textContent =
+    `📄 source: page ${ref.page ?? "?"} — “${(ref.quote || "").slice(0, 100)}”`;
+
+  board.appendChild(src);
+
+  playTimeline(s);
+}
+
+function renderElement(el, canvas) {
+  const d = document.createElement("div");
+  const kind = el.kind || el.type || "label";
+  const elementId =
+    el.elementId || el.id || `el_${Math.random().toString(36).slice(2)}`;
+
+  d.className = "el " + kind;
+  d.dataset.eid = elementId;
+
+  const p = el.position || { x: 0.05, y: 0.05, w: 0.45, h: 0.45 };
+
+  d.style.left = ((p.x || 0) * 100) + "%";
+  d.style.top = ((p.y || 0) * 100) + "%";
+
+  if (kind !== "arrow") {
+    d.style.width = Math.max((p.w || 0.1) * 100, 8) + "%";
+  }
+
+  if ([
+    "box",
+    "table_drawing",
+    "pdf_crop",
+    "pdf_page",
+    "teacher_redraw",
+    "highlight_zone"
+  ].includes(kind)) {
+    d.style.height = Math.max((p.h || 0.08) * 100, 5) + "%";
+  }
+
+  if (kind === "pdf_page") {
+    const page = el.pageNumber || Number(String(elementId).replace(/\D/g, "")) || 1;
+    d.innerHTML =
+      `<span class="tag">REAL PDF p.${page}</span>` +
+      `<div class="pageViewport">` +
+      `<img src="${el.pageImageUrl || pageImageUrl(page)}" draggable="false" />` +
+      `</div>` +
+      `<div class="regionOverlay"></div>`;
+  } else if (kind === "pdf_crop") {
+    const region = visionRegion(el.regionId);
+    const page = region?.page || el.pageNumber || 1;
+    d.innerHTML =
+      `<span class="tag">DEBUG CROP p.${page}</span>` +
+      `<img src="${el.cropUrl || el.pageImageUrl || pageImageUrl(page)}" draggable="false" />`;
+  } else if (kind === "arrow") {
+    d.textContent = "➜";
+    d.title = el.content || "";
+  } else {
+    d.textContent = el.content || "";
+  }
+
+  canvas.appendChild(d);
+}
+
+function playTimeline(s) {
+  const vo =
+    s.voiceover ||
+    (s.voiceLines || []).map(v => v.text).join(" ") ||
+    "";
+
+  voicebar.innerHTML = "<b>TEACHER ▸</b> ";
+
+  vo.split(" ").forEach((word, wi) => {
+    timers.push(setTimeout(() => {
+      voicebar.innerHTML += word + " ";
+    }, 180 * wi));
+  });
+
+  const blocks = board.querySelectorAll(".blk");
+
+  blocks.forEach((b, bi) => {
+    timers.push(setTimeout(() => {
+      b.classList.add("show");
+    }, 600 * bi + 250));
+  });
+
+  const check = board.querySelector("#check");
+
+  if (check) {
+    timers.push(setTimeout(() => {
+      check.style.opacity = 1;
+    }, 600 * blocks.length + 600));
+  }
+
+  const actions = [];
+
+  (s.boardActions || []).forEach(a => actions.push(a));
+
+  (s.voiceLines || []).forEach(v => {
+    (v.actions || []).forEach(a => {
+      actions.push({
+        ...a,
+        atMs: (v.startMs || 0) + (a.atMs || 0),
+        voiceLineId: v.lineId,
+      });
+    });
+  });
+
+  const screenStart = Math.min(...(actions.length ? actions.map(a => a.atMs || 0) : [0]));
+
+  actions
+    .sort((a, b) => (a.atMs || 0) - (b.atMs || 0))
+    .forEach(a => {
+      const delay = Math.max(0, (a.atMs || 0) - screenStart);
+      timers.push(setTimeout(() => fireAction(a), delay));
+    });
+}
+
+function fireAction(a) {
+  const actionName = a.action || a.type || "";
+
+  // 1) OpenMAIC-style PDF region targeting:
+  // parent page DOM rect + bbox fractions.
+  if (a.regionId) {
+    const region = visionRegion(a.regionId);
+    const parentId = a.parentElementId || (region?.page ? `pdf_page_${region.page}` : "");
+    const pageEl = board.querySelector(`[data-eid="${CSS.escape(parentId)}"]`);
+
+    if (pageEl && region?.bbox) {
+      pageEl.classList.add("show");
+
+      const b = region.bbox;
+      const r = pageEl.getBoundingClientRect();
+
+      const left = r.left + b.x * r.width;
+      const top = r.top + b.y * r.height;
+      const width = b.w * r.width;
+      const height = b.h * r.height;
+
+      pointer.style.opacity = 1;
+      pointer.style.left = (left + width / 2) + "px";
+      pointer.style.top = (top + height / 2) + "px";
+      pointer.style.width = Math.min(Math.max(width, 46), 360) + "px";
+      pointer.style.height = Math.min(Math.max(height, 46), 300) + "px";
+
+      const overlay = pageEl.querySelector(".regionOverlay");
+
+      if (overlay) {
+        overlay.style.opacity = 1;
+        overlay.style.left = `${b.x * 100}%`;
+        overlay.style.top = `${b.y * 100}%`;
+        overlay.style.width = `${b.w * 100}%`;
+        overlay.style.height = `${b.h * 100}%`;
+      }
+
+      if (["zoomRegion", "zoomToRegion", "panToRegion"].includes(actionName)) {
+        const img = pageEl.querySelector("img");
+
+        if (img) {
+          const cx = (b.x + b.w / 2) * 100;
+          const cy = (b.y + b.h / 2) * 100;
+          img.style.transformOrigin = `${cx}% ${cy}%`;
+          img.style.transform = "scale(1.7)";
+        }
+      }
+
+      return;
+    }
+  }
+
+  // 2) Legacy elementId targeting.
+  const target = a.targetElementId || a.elementId;
+  if (!target) return;
+
+  const el = board.querySelector(`[data-eid="${CSS.escape(target)}"]`);
+  if (!el) return;
+
+  el.classList.add("show");
+
+  const r = el.getBoundingClientRect();
+
+  pointer.style.opacity = 1;
+  pointer.style.left = (r.left + r.width / 2) + "px";
+  pointer.style.top = (r.top + r.height / 2) + "px";
+  pointer.style.width = Math.min(Math.max(r.width * 0.7, 46), 260) + "px";
+  pointer.style.height = Math.min(Math.max(r.height * 0.7, 46), 200) + "px";
+}
+
+document.getElementById("prev").onclick = () => show(idx - 1);
+document.getElementById("next").onclick = () => show(idx + 1);
+document.getElementById("replay").onclick = () => show(idx);
+</script>
+</body>
+</html>

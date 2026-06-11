@@ -1310,6 +1310,20 @@ async function createResource({ file, body = {}, context = {} }) {
   resource.extraction.chunkCount = chunkDocs.length;
   await resource.save();
 
+  // Phase 0.7 — embed every chunk for Atlas $vectorSearch (hybrid RAG).
+  // Phase 0.9 — full PDF summary + outline (attached to every agent payload).
+  // Both run async after response: upload stays fast.
+  setImmediate(() => {
+    const { embedResourceChunks } = require("./chunkEmbedding.service");
+    embedResourceChunks(resourceId).catch((err) =>
+      console.error(`[agent1Resource] embedding failed for ${resourceId}:`, err.message)
+    );
+    const { generatePdfSummaryOutline } = require("./pdfSummaryOutline.service");
+    generatePdfSummaryOutline(resourceId).catch((err) =>
+      console.error(`[agent1Resource] summary/outline failed for ${resourceId}:`, err.message)
+    );
+  });
+
   return {
     ok: true,
     resource: resource.toObject ? resource.toObject() : resource,

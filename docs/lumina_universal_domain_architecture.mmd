@@ -1,0 +1,60 @@
+flowchart LR
+  %% Lumina AI Tutor - universal domain architecture
+  %% Content is never hardcoded. Domain only selects capabilities.
+
+  U["Student clicks concept-tree node"]
+  S["SourceTruthPacket<br/>all node pages + adjacent pages<br/>chunks + full text + page images<br/>hybrid RAG + PDF summary/outline"]
+  V["VisionSafetyNet<br/>Gemini Vision scans real PDF page images<br/>outputs visionIndex regions + bbox"]
+  D["DomainUnderstandingAgent<br/>classifies material from source + vision<br/>outputs domainProfile + contentAssets"]
+
+  subgraph DOMAINS["Domain families covered by registry aliases"]
+    SQL["SQL / Database<br/>schemas, joins, ERD, star schema"]
+    CODE["Programming<br/>code, dry-run, variables, complexity"]
+    MATH["Math + Physics<br/>formulas, derivations, graphs, calculations"]
+    BIO["Biology + Science<br/>real figures, processes, experiments"]
+    FIN["Finance + Economics<br/>charts, cashflows, scenarios, risk"]
+    HIST["History + Law<br/>sources, timelines, cases, arguments"]
+    GEN["General / Unknown<br/>universal explanation path"]
+  end
+
+  R["lesson_registries.py<br/>154 screen capabilities + 12 command capabilities<br/>universal categories always available"]
+  P["PedagogyPlannerAgent<br/>Pro + Thinking<br/>Lesson Design Contract before pixels<br/>objectives, hook, 10-phase plan, misconceptions,<br/>screenCountTarget, screenMix, assessment, differentiation"]
+  B["LessonBook / Segment Plan<br/>split long lesson into small segments<br/>beginner 80-140 screens, intermediate 40-70, advanced 20-35"]
+  G["SegmentGenerator<br/>one focused structured call per segment<br/>uses source, visionIndex, contract, domain screen types"]
+  Q["Quality Stack<br/>grounding verifier + segment critic<br/>source quote check, bbox target check,<br/>timing check, pedagogy rubric >= 7"]
+  C["BoardCommand + Voice<br/>every voice line maps to commandId<br/>every look-here command maps to targetRegionId + bbox"]
+  T["TTS + Subtitles<br/>Google TTS audioUrl per line<br/>Deepgram timing alignment when enabled"]
+  F["Frontend Playback<br/>SSE segment_ready<br/>real PDF crops, pointer, circle, highlight,<br/>voice, subtitles, quiz, flipbook"]
+  I["Interrupt Loop<br/>Deepgram STT -> repair job priority 1<br/>3 repair screens -> resume original lesson"]
+
+  U --> S --> V --> D
+  D --> SQL
+  D --> CODE
+  D --> MATH
+  D --> BIO
+  D --> FIN
+  D --> HIST
+  D --> GEN
+  SQL --> R
+  CODE --> R
+  MATH --> R
+  BIO --> R
+  FIN --> R
+  HIST --> R
+  GEN --> R
+  R --> P --> B --> G --> Q
+  Q -- pass --> C --> T --> F
+  Q -- fail --> G
+  F --> I --> G
+
+  classDef source fill:#eef7ff,stroke:#2374a8,color:#12263a;
+  classDef intelligence fill:#f4f0ff,stroke:#7157c8,color:#241b42;
+  classDef domain fill:#f2fbef,stroke:#478a3d,color:#173815;
+  classDef quality fill:#fff4e6,stroke:#c97918,color:#402204;
+  classDef playback fill:#fff0f0,stroke:#c84646,color:#4a1717;
+
+  class S,V source;
+  class D,R,P,B,G intelligence;
+  class SQL,CODE,MATH,BIO,FIN,HIST,GEN domain;
+  class Q,C,T quality;
+  class F,I playback;

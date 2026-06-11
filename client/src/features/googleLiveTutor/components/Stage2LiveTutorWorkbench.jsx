@@ -252,6 +252,119 @@ async function apiPost(path, body, requestIdentity = null, options = {}) {
   }
 }
 
+function apiPath(path) {
+  const value = cleanText(path);
+  if (!value) return "";
+  return value.replace(/^\/api(?=\/)/, "");
+}
+
+function apiUrl(path) {
+  return `${API_BASE}${apiPath(path)}`;
+}
+
+async function waitForSessionLesson(session, requestIdentity, onStatus, onPartialLesson) {
+  const sessionId = cleanText(session?.sessionId);
+  if (!sessionId) throw new Error("Session start did not return a sessionId.");
+
+  const streamPath = apiPath(session.streamUrl || `/google-agent/live-tutor/stage2/sessions/${sessionId}/stream`);
+  const statusPath = apiPath(session.statusUrl || `/google-agent/live-tutor/stage2/sessions/${sessionId}/status`);
+  const bookPath = `/google-agent/live-tutor/stage2/sessions/${sessionId}/book`;
+
+  return new Promise((resolve, reject) => {
+    let done = false;
+    let eventSource = null;
+
+    const cleanup = () => {
+      done = true;
+      if (eventSource) eventSource.close();
+      window.clearTimeout(timeout);
+      window.clearInterval(poll);
+    };
+
+    const finish = async () => {
+      if (done) return;
+      cleanup();
+      try {
+        resolve(await apiGet(bookPath, requestIdentity));
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    const fail = (message) => {
+      if (done) return;
+      cleanup();
+      reject(new Error(message));
+    };
+
+    const timeout = window.setTimeout(() => {
+      fail(`Tutor session ${sessionId} did not finish before ${formatDuration(STAGE2_TIMEOUT_POLICY.totalMs)}.`);
+    }, STAGE2_TIMEOUT_POLICY.totalMs + 10000);
+
+    const poll = window.setInterval(async () => {
+      try {
+        const status = await apiGet(statusPath, requestIdentity);
+        onStatus?.(status);
+        if (status.status === "completed") await finish();
+        if (status.status === "failed") fail(status?.metadata?.errorMessage || "Tutor session failed.");
+      } catch (_) {
+        // SSE is primary; polling is best-effort.
+      }
+    }, 5000);
+
+    if (typeof window.EventSource === "function") {
+      eventSource = new window.EventSource(apiUrl(streamPath));
+
+      eventSource.addEventListener("status", (event) => {
+        try {
+          const data = JSON.parse(event.data || "{}");
+          onStatus?.(data);
+        } catch {
+          // Ignore malformed progress events.
+        }
+      });
+
+      eventSource.addEventListener("lesson_ready", () => {
+        finish();
+      });
+
+      eventSource.addEventListener("segment_ready", async (event) => {
+        try {
+          const data = JSON.parse(event.data || "{}");
+          const segmentPath = apiPath(
+            data.segmentUrl ||
+              `/google-agent/live-tutor/stage2/sessions/${sessionId}/segments/${data.segmentIndex || 0}`
+          );
+          const segment = await apiGet(segmentPath, requestIdentity);
+          onPartialLesson?.({
+            ...segment,
+            sessionId,
+            status: "running",
+            partial: true,
+            segments: [segment.segment || segment],
+            metadata: {
+              ...safeObject(segment.metadata),
+              streamingPartial: true,
+              segmentIndex: data.segmentIndex || 0,
+            },
+          });
+        } catch (error) {
+          console.warn("[Stage2] failed to load streamed segment:", error.message);
+        }
+      });
+
+      eventSource.addEventListener("failed", (event) => {
+        try {
+          const data = JSON.parse(event.data || "{}");
+          fail(data.error || "Tutor session failed.");
+        } catch {
+          fail("Tutor session failed.");
+        }
+      });
+    }
+  });
+}
+
 async function apiUploadPdf(file, title) {
   const form = new FormData();
   form.append("file", file);
@@ -275,7 +388,14 @@ function normalizeLesson(raw) {
     sessionId: cleanText(outer.sessionId || inner.sessionId),
     segmentId: cleanText(outer.segmentId || inner.segmentId),
 
-    boardSections: safeArray(outer.boardSections || inner.boardSections),
+    boardSections: safeArray(
+      outer.boardSections ||
+        inner.boardSections ||
+        outer.boardScreens ||
+        inner.boardScreens ||
+        outer.premiumBoardScreens ||
+        inner.premiumBoardScreens
+    ),
     diagramArtifacts: safeObject(outer.diagramArtifacts || inner.diagramArtifacts),
     compiledDiagrams: safeArray(outer.compiledDiagrams || inner.compiledDiagrams),
     htmlPreviews: safeArray(outer.htmlPreviews || inner.htmlPreviews),
@@ -844,14 +964,14 @@ export default function Stage2LiveTutorWorkbench() {
       }
 
       setLoading(
-        `Running 27-agent teach-node pipeline. Fast target: 20–90 sec; safety ceiling: ${formatDuration(
+        `Starting live tutor session. Fast target: 20-90 sec; safety ceiling: ${formatDuration(
           STAGE2_TIMEOUT_POLICY.totalMs
         )}. Context/external/TTS are separately capped.`
       );
 
       const requestIdentity = identityForResource(selectedResource, identity);
 
-      const result = await apiPost("/google-agent/live-tutor/stage2/teach-node", {
+      const teachBody = {
         resourceId: selectedResource.resourceId,
         treeId: tree.treeId,
         boardId: tree.boardId,
@@ -893,7 +1013,46 @@ export default function Stage2LiveTutorWorkbench() {
         ownerKey: requestIdentity.ownerKey,
         offlineUserId: requestIdentity.offlineUserId,
         deviceId: requestIdentity.deviceId,
-      }, requestIdentity, { timeoutMs: STAGE2_TIMEOUT_POLICY.totalMs });
+      };
+
+      let result = null;
+      const session = await apiPost(
+        "/google-agent/live-tutor/stage2/sessions/start",
+        teachBody,
+        requestIdentity,
+        { timeoutMs: STAGE2_TIMEOUT_POLICY.contextMs }
+      );
+
+      if (!session.jobQueued) {
+        throw new Error("Tutor session was created but the background job was not queued. Redis/BullMQ must be healthy before teaching starts.");
+      }
+
+      setLoading(
+        `Tutor session started (${session.sessionId})${session.jobId ? ` · job ${session.jobId}` : ""}. Reading PDF, vision regions, pedagogy plan, and board screens...`
+      );
+      result = await waitForSessionLesson(
+        session,
+        requestIdentity,
+        (status) => {
+          const statusText = cleanText(status.status || status.step || "working");
+          const counts = safeObject(status.counts);
+          const commandCount = counts.boardCommands || status.commands || 0;
+          const screenCount = counts.premiumBoardScreens || status.screens || 0;
+          setLoading(
+            `Tutor session ${statusText}: ${screenCount || 0} screens · ${commandCount || 0} commands`
+          );
+        },
+        (partialLesson) => {
+          const normalizedPartial = normalizeLesson(partialLesson);
+          if (normalizedPartial.boardCommands.length || normalizedPartial.boardSections.length) {
+            setLastResponse(partialLesson);
+            setLesson(partialLesson);
+            setLoading(
+              `First segment ready: ${normalizedPartial.boardCommands.length} commands · ${normalizedPartial.boardSections.length} sections. Continuing the rest in background...`
+            );
+          }
+        }
+      );
 
       const normalized = normalizeLesson(result);
       setLastResponse(result);

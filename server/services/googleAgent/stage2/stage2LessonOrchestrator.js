@@ -25,7 +25,9 @@ function getPython() {
 function safeObj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
 function safeArr(v) { return Array.isArray(v) ? v : []; }
 
-async function runAdkOrchestrator(payload, { timeoutMs = 600000 } = {}) {
+const SEGMENT_EVENT_PREFIX = "__LUMINA_SEGMENT_READY__";
+
+async function runAdkOrchestrator(payload, { timeoutMs = 600000, onSegmentReady = null } = {}) {
   if (!fs.existsSync(NEW_SCRIPT)) {
     throw Object.assign(new Error(`ADK orchestrator not found: ${NEW_SCRIPT}`), { code: "SCRIPT_MISSING" });
   }
@@ -35,6 +37,8 @@ async function runAdkOrchestrator(payload, { timeoutMs = 600000 } = {}) {
       env: { ...process.env, PYTHONUNBUFFERED: "1" },
     });
     let stdout = "", stderr = "";
+    let stderrLineBuffer = "";
+    const pendingSegmentCallbacks = [];
     const timer = setTimeout(() => {
       child.kill("SIGTERM");
       reject(Object.assign(new Error(`ADK orchestrator timed out after ${timeoutMs}ms`), { code: "ADK_TIMEOUT" }));
@@ -42,9 +46,36 @@ async function runAdkOrchestrator(payload, { timeoutMs = 600000 } = {}) {
     child.stdin.write(JSON.stringify(payload));
     child.stdin.end();
     child.stdout.on("data", (d) => { stdout += d; });
-    child.stderr.on("data", (d) => { stderr += d; });
-    child.on("close", (code) => {
+    child.stderr.on("data", (d) => {
+      stderrLineBuffer += d.toString();
+      const lines = stderrLineBuffer.split(/\r?\n/);
+      stderrLineBuffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith(SEGMENT_EVENT_PREFIX)) {
+          try {
+            const event = JSON.parse(line.slice(SEGMENT_EVENT_PREFIX.length));
+            if (typeof onSegmentReady === "function") {
+              const pending = Promise.resolve(onSegmentReady(event.segmentIndex, safeObj(event.segment)))
+                .catch((err) => console.warn("[stage2LessonOrchestrator] onSegmentReady failed:", err.message));
+              pendingSegmentCallbacks.push(pending);
+            }
+          } catch (err) {
+            console.warn("[stage2LessonOrchestrator] bad segment event:", err.message);
+          }
+        } else {
+          stderr += line + "\n";
+        }
+      }
+    });
+    child.on("close", async (code) => {
       clearTimeout(timer);
+      if (stderrLineBuffer && !stderrLineBuffer.startsWith(SEGMENT_EVENT_PREFIX)) {
+        stderr += stderrLineBuffer;
+      }
+      if (pendingSegmentCallbacks.length) {
+        await Promise.allSettled(pendingSegmentCallbacks);
+      }
       try {
         const result = JSON.parse(stdout.trim());
         if (!result.ok && !result.boardCommands) {
@@ -63,6 +94,7 @@ async function teachNodeWithAdkPipeline(sourceContext, options = {}) {
   const payload = {
     mode:                "teach_node_pipeline",
     ...sourceContext,
+    _emitSegmentEvents:  Boolean(options.onSegmentReady),
     studentLevel:        options.studentLevel || "beginner",
     lessonMode:          options.lessonMode   || "masterclass",
     maxSelectedPageVisionImages: Number(options.maxSelectedPageVisionImages || 1),
@@ -94,7 +126,10 @@ async function teachNodeWithAdkPipeline(sourceContext, options = {}) {
     },
     metadata: { fallbackUsed: false, usesAdkPipelineV2: true },
   };
-  return runAdkOrchestrator(payload, { timeoutMs: options.timeoutMs || 840000 });
+  return runAdkOrchestrator(payload, {
+    timeoutMs: options.timeoutMs || 840000,
+    onSegmentReady: options.onSegmentReady,
+  });
 }
 
 module.exports = { teachNodeWithAdkPipeline, runAdkOrchestrator };

@@ -111,13 +111,15 @@ function commandScreenNo(command) {
 
 function commandText(command) {
   const p = payloadOf(command);
-  return cleanText(command?.text || command?.body || p.text || p.body || p.title || command?.type || "");
+  return cleanText(command?.text || command?.body || command?.narrationCue || p.text || p.body || p.title || p.narrationCue || command?.type || "");
 }
 
 function getCurrentVoice(voiceScript, command, screenNo) {
   const id = commandId(command);
+  const voiceLineId = cleanText(command?.voiceLineId || payloadOf(command).voiceLineId);
   return (
     safeArray(voiceScript).find((v) => cleanText(v.commandId) === id) ||
+    safeArray(voiceScript).find((v) => cleanText(v.lineId || v.voiceLineId) === voiceLineId) ||
     safeArray(voiceScript).find((v) => number(v.screenNo) === number(screenNo)) ||
     safeArray(voiceScript)[0] ||
     null
@@ -376,6 +378,155 @@ function SourcePreviewBlock({ block, imagePreviews }) {
   return <img className="lt-source-image" src={src} alt={blockTitle(block)} />;
 }
 
+function bboxStyle(box, fallback = {}) {
+  const raw = safeObject(box);
+  const x = number(raw.x, NaN);
+  const y = number(raw.y, NaN);
+  const w = number(raw.w, NaN);
+  const h = number(raw.h, NaN);
+  if (![x, y, w, h].every(Number.isFinite)) return fallback;
+  const isFraction = Math.max(Math.abs(x), Math.abs(y), Math.abs(w), Math.abs(h)) <= 1.5;
+  if (isFraction) {
+    return {
+      left: `${x * 100}%`,
+      top: `${y * 100}%`,
+      width: `${w * 100}%`,
+      height: `${h * 100}%`,
+    };
+  }
+  return { left: x, top: y, width: w, height: h };
+}
+
+function elementId(element, index = 0) {
+  return cleanText(element?.elementId || element?.id || `element_${index + 1}`);
+}
+
+function elementKind(element) {
+  return cleanText(element?.kind || element?.type || "box");
+}
+
+function elementContent(element) {
+  return cleanText(element?.content || element?.text || element?.label || "");
+}
+
+function imageForPage(page, imagePreviews) {
+  const match = safeArray(imagePreviews).find((img) => number(img.page || img.pageNumber) === number(page));
+  return cleanText(match?.pageImageUrl || match?.imageUrl || match?.url || match?.src || match?.imageRef || match?.path);
+}
+
+function BoardElement({ element, index, imagePreviews, focusRegions }) {
+  const id = elementId(element, index);
+  const kind = elementKind(element);
+  const page = number(element.pageNumber || element.page, 0);
+  const src = cleanText(element.pageImageUrl || element.imageUrl || element.url || element.src) || imageForPage(page, imagePreviews);
+  const regions = safeArray(focusRegions).filter((region) => {
+    const parent = cleanText(region.parentElementId || region.parentId);
+    return parent === id || (!parent && number(region.page || region.pageNumber) === page && page);
+  });
+  const style = bboxStyle(element.position || element.bbox, {
+    left: `${8 + (index % 3) * 30}%`,
+    top: `${8 + Math.floor(index / 3) * 24}%`,
+    width: "28%",
+    height: "20%",
+  });
+
+  if (kind === "pdf_page" || kind === "pdf_crop") {
+    return (
+      <div
+        className={`lt-visual-element kind-${kind}`}
+        data-element-id={id}
+        data-block-id={id}
+        data-region-id={cleanText(element.regionId)}
+        style={style}
+      >
+        {src ? (
+          <img src={src} alt={elementContent(element) || `PDF page ${page || ""}`} />
+        ) : (
+          <div className="lt-pdf-missing">PDF page image missing{page ? ` · Pg. ${page}` : ""}</div>
+        )}
+        {regions.map((region, regionIndex) => (
+          <span
+            key={region.regionId || regionIndex}
+            className="lt-focus-region"
+            data-region-id={cleanText(region.regionId || region.id)}
+            style={bboxStyle(region.bbox || region.position)}
+            title={cleanText(region.label || region.description)}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`lt-visual-element kind-${kind} style-${cleanText(element.style || "normal")}`}
+      data-element-id={id}
+      data-block-id={id}
+      data-region-id={cleanText(element.regionId)}
+      style={style}
+    >
+      <b>{elementContent(element)}</b>
+    </div>
+  );
+}
+
+function VisualStage({ screen, imagePreviews }) {
+  const elements = safeArray(screen.visualElements);
+  if (!elements.length) return null;
+  return (
+    <div className={`lt-visual-stage layout-${cleanText(screen.layout || "full")}`}>
+      {elements.map((element, index) => (
+        <BoardElement
+          key={elementId(element, index)}
+          element={element}
+          index={index}
+          imagePreviews={imagePreviews}
+          focusRegions={safeArray(screen.focusRegions)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ScreenTeachingNotes({ screen }) {
+  const keyPoints = safeArray(screen.keyPoints);
+  const dryRun = safeArray(screen.dryRun);
+  const note = cleanText(screen.boardWriting || screen.teacherNote || screen.voiceover);
+  const check = safeObject(screen.checkQuestion);
+
+  if (!note && !keyPoints.length && !dryRun.length && !cleanText(check.question)) return null;
+
+  return (
+    <div className="lt-generated-notes">
+      {note ? <p>{note}</p> : null}
+      {keyPoints.length ? (
+        <ul>
+          {keyPoints.slice(0, 6).map((point, index) => (
+            <li key={`${index}_${cleanText(point)}`}>{cleanText(point)}</li>
+          ))}
+        </ul>
+      ) : null}
+      {dryRun.length ? (
+        <div className="lt-dry-run">
+          {dryRun.slice(0, 5).map((step, index) => (
+            <div key={`${index}_${cleanText(step.codeLine)}`}>
+              <b>{cleanText(step.codeLine || `Step ${step.step || index + 1}`)}</b>
+              <span>{cleanText(step.whatHappens)}</span>
+              <em>{cleanText(step.stateAfter)}</em>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {cleanText(check.question) ? (
+        <div className="lt-inline-check">
+          <b>{cleanText(check.question)}</b>
+          <span>{cleanText(check.expectedAnswer || check.answer || "Think, then reveal with the teacher.")}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function QuizBlock({ block, quiz }) {
   const questions = safeArray(block.questions || payloadOf(block).questions || quiz?.questions);
   const q = safeObject(questions[0]);
@@ -409,7 +560,7 @@ function BoardBlock({ block, index, active, compiledDiagrams, imagePreviews, qui
   else if (type === "htmlPreviewCard") content = <HtmlPreviewBlock block={block} />;
   else if (type === "sourcePagePreview") content = <SourcePreviewBlock block={block} imagePreviews={imagePreviews} />;
   else if (type === "quizCheckpoint") content = <QuizBlock block={block} quiz={quiz} />;
-  else content = <p>{blockBody(block) || "No text sent for this block."}</p>;
+  else content = <p>{blockBody(block) || cleanText(block.content) || "No text sent for this block."}</p>;
 
   const role = cleanText(block.role || "main");
   const className = [
@@ -552,6 +703,7 @@ export default function LiveTutorBoardPlayer({
   const [currentCommandIndex, setCurrentCommandIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const boardRef = useRef(null);
+  const audioRef = useRef(null);
 
   const screenList = safeArray(screens);
   const commands = safeArray(boardCommands);
@@ -571,7 +723,8 @@ export default function LiveTutorBoardPlayer({
     if (!playing || !commands.length) return undefined;
 
     const current = commands[currentCommandIndex];
-    const duration = Math.max(900, Math.min(2600, number(current?.durationMs, 1400)));
+    const span = number(current?.endMs, 0) - number(current?.startMs, 0);
+    const duration = Math.max(900, Math.min(12000, number(current?.durationMs || span, 1800)));
 
     const timer = window.setTimeout(() => {
       setCurrentCommandIndex((old) => {
@@ -585,6 +738,28 @@ export default function LiveTutorBoardPlayer({
 
     return () => window.clearTimeout(timer);
   }, [playing, currentCommandIndex, commands]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return undefined;
+
+    const url = cleanText(voiceLine?.audioUrl);
+    if (!playing || !url) {
+      audio.pause();
+      return undefined;
+    }
+
+    if (audio.src !== url) {
+      audio.src = url;
+      audio.currentTime = 0;
+    }
+
+    audio.play().catch(() => {});
+
+    return () => {
+      audio.pause();
+    };
+  }, [playing, voiceLine]);
 
   function goScreen(index) {
     const screen = screenList[index];
@@ -613,7 +788,10 @@ export default function LiveTutorBoardPlayer({
       currentCommandId: commandId(currentCommand),
       currentScreenNo: activeScreenNo,
       currentBlockId: activeBlockId,
-      visibleBlockIds: safeArray(activeScreen.blocks).map((b, i) => blockId(b, i)),
+      visibleBlockIds: [
+        ...safeArray(activeScreen.blocks).map((b, i) => blockId(b, i)),
+        ...safeArray(activeScreen.visualElements).map((element, i) => elementId(element, i)),
+      ],
       currentVoiceText: cleanText(voiceLine?.text),
     });
   }
@@ -639,8 +817,6 @@ export default function LiveTutorBoardPlayer({
       </header>
 
       <div className="lt-layout">
-        <AgentRail agentTrace={agentTrace} />
-
         <main className="lt-main">
           <div className="lt-board-toolbar">
             <button>Fit to view</button>
@@ -660,6 +836,9 @@ export default function LiveTutorBoardPlayer({
               <h1>{cleanText(activeScreen.title || title)}</h1>
               <p>{cleanText(activeScreen.goal || activeScreen.subtitle || "Source-grounded dynamic tutor lesson.")}</p>
             </div>
+
+            <VisualStage screen={activeScreen} imagePreviews={imagePreviews} />
+            <ScreenTeachingNotes screen={activeScreen} />
 
             <div className="lt-board-grid">
               {safeArray(activeScreen.blocks).map((block, index) => (
@@ -691,18 +870,11 @@ export default function LiveTutorBoardPlayer({
             ))}
           </nav>
         </main>
-
-        <TutorPanel
-          voiceLine={voiceLine}
-          subtitleLine={subtitleLine}
-          sourceRefs={allRefs}
-          quiz={quiz}
-          activeScreen={activeScreen}
-          externalResources={externalResources}
-        />
       </div>
 
       <footer className="lt-bottom">
+        <audio ref={audioRef} preload="auto" />
+
         <div>
           <small>Current Step</small>
           <b>{commandText(currentCommand) || cleanText(activeScreen.title)}</b>
@@ -785,9 +957,11 @@ const styles = `
 
 .lt-layout {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr) 320px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
   padding: 18px 20px 118px;
+  max-width: 1760px;
+  margin: 0 auto;
 }
 
 .lt-left,
@@ -989,6 +1163,146 @@ const styles = `
   font-size: 18px;
   line-height: 1.55;
   max-width: 920px;
+}
+
+.lt-visual-stage {
+  position: relative;
+  min-height: 520px;
+  border: 1px solid #ead8ca;
+  background: rgba(255, 253, 249, .82);
+  border-radius: 18px;
+  margin: 0 0 18px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.55);
+}
+
+.lt-visual-element {
+  position: absolute;
+  border: 1px solid #ead8ca;
+  background: #fffdf9;
+  border-radius: 14px;
+  padding: 12px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(91, 57, 35, .07);
+}
+
+.lt-visual-element b {
+  display: block;
+  color: #3d3029;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
+.lt-visual-element.kind-pdf_page,
+.lt-visual-element.kind-pdf_crop {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: white;
+  border-color: #cde0ec;
+}
+
+.lt-visual-element.kind-pdf_page img,
+.lt-visual-element.kind-pdf_crop img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.lt-visual-element.kind-teacher_redraw,
+.lt-visual-element.kind-box,
+.lt-visual-element.kind-label {
+  background: linear-gradient(180deg, #fffdf9, #fff5ed);
+}
+
+.lt-visual-element.style-danger {
+  border-color: #f49b84;
+  background: #fff1ec;
+}
+
+.lt-visual-element.style-success {
+  border-color: #b9dfad;
+  background: #f5fff1;
+}
+
+.lt-visual-element.style-source {
+  border-color: #b8d8ec;
+  background: #f6fbff;
+}
+
+.lt-focus-region {
+  position: absolute;
+  border: 2px solid rgba(37, 116, 168, .78);
+  background: rgba(37, 116, 168, .08);
+  border-radius: 8px;
+}
+
+.lt-pdf-missing {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 160px;
+  color: #8c3b27;
+  background: #fff8f1;
+  font-weight: 850;
+}
+
+.lt-generated-notes {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #ecd8ca;
+  background: rgba(255, 253, 249, .9);
+  border-radius: 18px;
+  padding: 16px;
+  margin: 0 0 18px;
+}
+
+.lt-generated-notes p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.55;
+  color: #4d3f37;
+}
+
+.lt-generated-notes ul {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.lt-generated-notes li {
+  color: #4d3f37;
+  font-weight: 760;
+}
+
+.lt-dry-run {
+  display: grid;
+  gap: 8px;
+}
+
+.lt-dry-run div,
+.lt-inline-check {
+  border: 1px solid #ead8ca;
+  background: #fff8f1;
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.lt-dry-run b {
+  color: #8c3b27;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.lt-dry-run span,
+.lt-dry-run em,
+.lt-inline-check span {
+  color: #5f4e45;
+  font-style: normal;
 }
 
 .lt-board-grid {

@@ -1,0 +1,55 @@
+{
+  "step": "Step 1: Fix Node Click Starting Point",
+  "goal": "Node click starts a non-blocking tutor session instead of using /teach-node as the main path.",
+  "expectedFlow": [
+    "student clicks one concept node",
+    "frontend POSTs /api/google-agent/live-tutor/stage2/sessions/start",
+    "backend creates Stage 2 session immediately",
+    "backend enqueues BullMQ job named teach_node",
+    "backend returns sessionId, jobId, streamUrl, and statusUrl",
+    "frontend opens SSE stream and polls status",
+    "frontend renders first streamed segment when segment_ready arrives",
+    "frontend does not call /teach-node if the session path fails"
+  ],
+  "filesCovered": [
+    "client/src/features/googleLiveTutor/components/Stage2LiveTutorWorkbench.jsx",
+    "server/routes/googleLiveTutorStage2.routes.js",
+    "server/controllers/googleLiveTutorStage2.controller.js",
+    "server/services/googleAgent/stage2/stage2BackgroundJob.service.js",
+    "tests/server/integration/stage2StartSessionFlow.test.js"
+  ],
+  "testCommand": "cd server && npm test -- --watchman=false --runTestsByPath ../tests/server/integration/stage2StartSessionFlow.test.js",
+  "lastVerification": {
+    "date": "2026-06-12",
+    "command": "cd server && npm test -- --watchman=false --runTestsByPath ../tests/server/integration/stage2StartSessionFlow.test.js",
+    "result": "passed",
+    "testSuites": "1 passed, 1 total",
+    "tests": "4 passed, 4 total",
+    "note": "Ran unsandboxed because sandbox blocks Watchman/local Supertest listen."
+  },
+  "workerContractVerification": {
+    "date": "2026-06-12",
+    "command": "cd server && npm test -- --watchman=false --runTestsByPath ../tests/server/unit/stage2WorkerContract.test.js",
+    "result": "passed",
+    "testSuites": "1 passed, 1 total",
+    "tests": "2 passed, 2 total",
+    "proves": [
+      "worker runs source context and pipeline boundary",
+      "session status moves to running",
+      "job progress updates for running/source_ready/generating/segment_ready/pipeline_done/completed",
+      "segment_ready SSE is emitted",
+      "segment 0 payload is saved with board screens, commands, voice, subtitles, and audioUrl",
+      "full lesson is reloaded after save before lesson_ready",
+      "empty persisted lesson throws so BullMQ will fail instead of completing empty"
+    ]
+  },
+  "assertions": {
+    "sessionIdReturned": true,
+    "jobQueuedRequiredFor201": true,
+    "jobIdReturned": true,
+    "sseUrlReturned": true,
+    "blockingTeachNodeNotCalledByStartSession": true,
+    "frontendTeachSelectedNodeHasNoTeachNodeFallback": true,
+    "queueFailureFailsHonestly": true
+  }
+}

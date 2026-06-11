@@ -10,10 +10,14 @@ async function ensureMongo() {
   await mongoose.connect(uri, { dbName: process.env.MONGODB_DATABASE, serverSelectionTimeoutMS: 20000 });
 }
 
-async function loadChunksByResource(resourceId, { limit = 1200 } = {}) {
+async function loadChunksByResource(resourceId, { limit = 0 } = {}) {
   await ensureMongo();
-  const chunks = await GoogleLiveTutorResourceChunk.find({ resourceId })
-    .sort({ page: 1, chunkIndex: 1 }).limit(limit).lean();
+  let query = GoogleLiveTutorResourceChunk.find({ resourceId })
+    .sort({ page: 1, chunkIndex: 1 });
+  if (Number.isFinite(Number(limit)) && Number(limit) > 0) {
+    query = query.limit(Number(limit));
+  }
+  const chunks = await query.lean();
   if (!chunks.length) {
     const err = new Error(`No chunks found for resource "${resourceId}". Run PDF extraction first.`);
     err.statusCode = 404;

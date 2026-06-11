@@ -44,6 +44,44 @@ function blockPayload(block) {
   return safeObject(block?.payload || block?.visualPayload || block?.diagram || {});
 }
 
+function normalizeElement(element, index, screenNo) {
+  const raw = safeObject(element);
+  const elementId = cleanText(
+    raw.elementId ||
+      raw.id ||
+      raw.targetElementId ||
+      `screen_${screenNo}_element_${index + 1}`
+  );
+
+  return {
+    ...raw,
+    elementId,
+    id: elementId,
+    kind: cleanText(raw.kind || raw.type || "box"),
+    content: cleanText(raw.content || raw.text || raw.label || ""),
+    style: cleanText(raw.style || "normal"),
+    position: safeObject(raw.position || raw.bbox),
+    bbox: safeObject(raw.bbox || raw.position),
+    pageNumber: num(raw.pageNumber || raw.page, 0),
+    pageImageUrl: cleanText(raw.pageImageUrl || raw.imageUrl || raw.url || raw.src || ""),
+    parentElementId: cleanText(raw.parentElementId || ""),
+    regionId: cleanText(raw.regionId || raw.targetRegionId || ""),
+    sourceMode: cleanText(raw.sourceMode || ""),
+  };
+}
+
+function normalizeFocusRegion(region, index) {
+  const raw = safeObject(region);
+  return {
+    ...raw,
+    regionId: cleanText(raw.regionId || raw.id || `region_${index + 1}`),
+    parentElementId: cleanText(raw.parentElementId || raw.parentId || ""),
+    label: cleanText(raw.label || raw.description || raw.type || ""),
+    type: cleanText(raw.type || "source_region"),
+    bbox: safeObject(raw.bbox || raw.position),
+  };
+}
+
 function normalizeBlock(block, index, screenNo) {
   const raw = safeObject(block);
   const payload = blockPayload(raw);
@@ -72,8 +110,9 @@ function normalizeBlock(block, index, screenNo) {
     type: cleanText(raw.type || raw.blockType || payload.type || "heroDefinition"),
     title: cleanText(raw.title || payload.title || `Block ${index + 1}`),
     body: cleanText(
-      raw.body ||
+        raw.body ||
         raw.text ||
+        raw.content ||
         raw.teacherNotes ||
         payload.body ||
         payload.content ||
@@ -112,6 +151,10 @@ function normalizeScreen(screen, index) {
   const raw = safeObject(screen);
   const screenNo = num(raw.screenNo || raw.screenNumber || raw.screenIndex, index + 1);
   const screenId = cleanText(raw.screenId || raw.id || `screen_${screenNo}`);
+  const visualElements = safeArray(raw.visualElements).map((element, elementIndex) =>
+    normalizeElement(element, elementIndex, screenNo)
+  );
+  const focusRegions = safeArray(raw.focusRegions).map(normalizeFocusRegion);
 
   return {
     ...raw,
@@ -124,7 +167,18 @@ function normalizeScreen(screen, index) {
     goal: cleanText(raw.goal || raw.tutorGoal || raw.subtitle || raw.voiceHint || ""),
     subtitle: cleanText(raw.subtitle || raw.goal || raw.tutorGoal || ""),
     voiceHint: cleanText(raw.voiceHint || ""),
-    sourceRefs: safeArray(raw.sourceRefs),
+    sourceRefs: firstArray(raw.sourceRefs, raw.sourceRef ? [raw.sourceRef] : []),
+    sourceRef: safeObject(raw.sourceRef),
+    visualElements,
+    focusRegions,
+    boardActions: safeArray(raw.boardActions),
+    voiceover: cleanText(raw.voiceover || ""),
+    voiceLines: safeArray(raw.voiceLines),
+    teacherNote: cleanText(raw.teacherNote || ""),
+    boardWriting: cleanText(raw.boardWriting || ""),
+    keyPoints: safeArray(raw.keyPoints),
+    dryRun: safeArray(raw.dryRun),
+    pageElement: safeObject(raw.pageElement),
     blocks: safeArray(raw.blocks).map((block, blockIndex) => normalizeBlock(block, blockIndex, screenNo)),
     layout: {
       ...safeObject(raw.layout),
@@ -171,14 +225,18 @@ function normalizeCommand(command, index, screens) {
     raw.blockId ||
       raw.targetBlockId ||
       raw.targetId ||
+      raw.targetElementId ||
+      raw.parentElementId ||
       payload.blockId ||
       payload.targetBlockId ||
       payload.targetId ||
+      payload.targetElementId ||
+      payload.parentElementId ||
       ""
   );
 
   const commandId = cleanText(raw.commandId || raw.id || `cmd_${index + 1}`);
-  const durationMs = Math.max(500, num(raw.durationMs, 1200));
+  const durationMs = Math.max(500, num(raw.durationMs || (num(raw.endMs, 0) - num(raw.startMs, 0)), 1200));
 
   return {
     ...raw,
@@ -191,15 +249,26 @@ function normalizeCommand(command, index, screens) {
     endMs: num(raw.endMs, index * durationMs + durationMs),
     screenNo,
     screenId: cleanText(raw.screenId || payload.screenId || ""),
+    voiceLineId: cleanText(raw.voiceLineId || payload.voiceLineId || ""),
+    targetElementId: cleanText(raw.targetElementId || payload.targetElementId || blockId),
+    parentElementId: cleanText(raw.parentElementId || payload.parentElementId || ""),
+    targetRegionId: cleanText(raw.targetRegionId || raw.regionId || payload.targetRegionId || payload.regionId || ""),
+    regionId: cleanText(raw.regionId || raw.targetRegionId || payload.regionId || payload.targetRegionId || ""),
+    bbox: safeObject(raw.bbox || payload.bbox),
     blockId,
     targetBlockId: blockId,
-    sourceRefs: safeArray(raw.sourceRefs || payload.sourceRefs),
+    sourceRefs: firstArray(raw.sourceRefs, payload.sourceRefs, raw.sourceRef ? [raw.sourceRef] : []),
     payload: {
       ...payload,
       screenNo,
       blockId,
       targetBlockId: blockId,
-      sourceRefs: safeArray(raw.sourceRefs || payload.sourceRefs),
+      targetElementId: cleanText(raw.targetElementId || payload.targetElementId || blockId),
+      parentElementId: cleanText(raw.parentElementId || payload.parentElementId || ""),
+      targetRegionId: cleanText(raw.targetRegionId || raw.regionId || payload.targetRegionId || payload.regionId || ""),
+      regionId: cleanText(raw.regionId || raw.targetRegionId || payload.regionId || payload.targetRegionId || ""),
+      bbox: safeObject(raw.bbox || payload.bbox),
+      sourceRefs: firstArray(raw.sourceRefs, payload.sourceRefs, raw.sourceRef ? [raw.sourceRef] : []),
     },
   };
 }
@@ -233,7 +302,10 @@ function normalizeVoiceLine(line, index, commands, screens) {
     text: cleanText(raw.text || raw.voiceText || raw.line || ""),
     startMs: num(raw.startMs, index * 4200),
     endMs: num(raw.endMs, index * 4200 + 4200),
-    sourceRefs: safeArray(raw.sourceRefs),
+    audioUrl: cleanText(raw.audioUrl || raw.dataUrl || raw.url || ""),
+    screenId: cleanText(raw.screenId || ""),
+    lineId: cleanText(raw.lineId || raw.id || raw.voiceId || `voice_${index + 1}`),
+    sourceRefs: firstArray(raw.sourceRefs, raw.sourceRef ? [raw.sourceRef] : []),
   };
 }
 
@@ -267,12 +339,16 @@ function extractData(props) {
   const diagramArtifactsRaw = safeObject(props.diagramArtifacts || root.diagramArtifacts || nested.diagramArtifacts);
 
   const rawScreens = firstArray(
+    props.boardSections,
     props.premiumBoardScreens,
     props.boardScreens,
+    root.boardSections,
     root.premiumBoardScreens,
     root.boardScreens,
+    nested.boardSections,
     nested.premiumBoardScreens,
     nested.boardScreens,
+    visualPlan.boardSections,
     visualPlan.premiumBoardScreens,
     visualPlan.boardScreens
   );

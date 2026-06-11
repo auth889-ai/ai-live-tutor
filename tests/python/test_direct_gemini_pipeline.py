@@ -307,105 +307,139 @@ class TestPromptBuilder:
 
 
 # ══════════════════════════════════════════════════════════════════
-# FULL PIPELINE TESTS (mocked Gemini)
+# FULL PIPELINE TESTS — v3 honest contract (2 structured calls)
+# GOLDEN RULES: no fake padding · fail loudly · bbox on every command
 # ══════════════════════════════════════════════════════════════════
+
+from google_agent.pipeline.direct_gemini_pipeline import DirectPipelineError
+
+_STRUCTURED = "google_agent.pipeline.direct_gemini_pipeline._call_gemini_structured"
+
+
+def _mock_call_a(screen_count=20):
+    return {
+        "lessonTitle": "Database Denormalization",
+        "boardScreens": [
+            {"screenId": f"screen_{i:03d}", "screenType": "definition_term_card",
+             "title": f"Screen {i}", "blocks": [{"type": "text", "content": f"Real content {i}"}],
+             "sourceRef": {"page": 5, "chunkId": "chunk_a"}}
+            for i in range(screen_count)
+        ],
+        "voiceScript": [
+            {"lineId": f"vl_{i:03d}", "screenId": f"screen_{i:03d}",
+             "text": f"Teacher explains screen {i}.",
+             "sourceRef": {"page": 5, "chunkId": "chunk_a"}}
+            for i in range(screen_count)
+        ],
+    }
+
+
+def _mock_call_b(screen_count=20, per_screen=5):
+    return {
+        "boardCommands": [
+            {"commandId": f"cmd_{i:03d}_{j}", "screenId": f"screen_{i:03d}",
+             "commandType": "writeText",
+             "bbox": {"x": 0.1, "y": 0.1 * j, "w": 0.8, "h": 0.08},
+             "startMs": (i * per_screen + j) * 2000,
+             "endMs": (i * per_screen + j) * 2000 + 1800,
+             "voiceLineId": f"vl_{i:03d}"}
+            for i in range(screen_count) for j in range(per_screen)
+        ],
+    }
+
+
+def _patch_both(call_a=None, call_b=None):
+    """Patch the structured client: 1st call → screens+voice, 2nd → commands."""
+    return patch(_STRUCTURED, side_effect=[call_a or _mock_call_a(),
+                                           call_b or _mock_call_b()])
+
 
 class TestRunDirectPipeline:
 
-    def test_pipeline_returns_dict(self, database_node_payload, mock_gemini_response_database):
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.return_value = mock_gemini_response_database
+    def test_pipeline_returns_dict(self, database_node_payload):
+        with _patch_both():
             result = run_direct_pipeline(database_node_payload)
         assert isinstance(result, dict)
 
-    def test_pipeline_min_20_screens(self, database_node_payload, mock_gemini_response_database):
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.return_value = mock_gemini_response_database
+    def test_pipeline_returns_real_screens_from_call_a(self, database_node_payload):
+        with _patch_both():
             result = run_direct_pipeline(database_node_payload)
-        assert len(result["boardScreens"]) >= 20
+        assert len(result["boardScreens"]) == 20
+        assert result["boardScreens"][0]["blocks"][0]["content"] == "Real content 0"
 
-    def test_pipeline_min_100_commands(self, database_node_payload, mock_gemini_response_database):
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.return_value = mock_gemini_response_database
+    def test_pipeline_returns_commands_from_call_b(self, database_node_payload):
+        with _patch_both():
             result = run_direct_pipeline(database_node_payload)
-        assert len(result["boardCommands"]) >= 100
+        assert len(result["boardCommands"]) == 100
 
-    def test_pipeline_min_20_voice_lines(self, database_node_payload, mock_gemini_response_database):
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.return_value = mock_gemini_response_database
+    def test_every_command_has_bbox(self, database_node_payload):
+        """GOLDEN RULE: bbox required on every command via schema."""
+        with _patch_both():
             result = run_direct_pipeline(database_node_payload)
-        assert len(result["voiceScript"]) >= 20
+        for cmd in result["boardCommands"]:
+            assert "bbox" in cmd
+            for k in ("x", "y", "w", "h"):
+                assert k in cmd["bbox"]
 
-    def test_fallback_used_false(self, database_node_payload, mock_gemini_response_database):
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.return_value = mock_gemini_response_database
+    def test_fallback_used_false(self, database_node_payload):
+        with _patch_both():
             result = run_direct_pipeline(database_node_payload)
         assert result["metadata"]["fallbackUsed"] is False
 
-    def test_pipeline_works_with_gemini_failure(self, database_node_payload):
-        """Even when Gemini fails completely, pipeline returns valid structure."""
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.side_effect = RuntimeError("Gemini API error")
-            result = run_direct_pipeline(database_node_payload)
-        assert isinstance(result, dict)
-        assert len(result.get("boardScreens", [])) >= 20
-        assert result["metadata"]["fallbackUsed"] is False
+    def test_gemini_failure_raises_honestly(self, database_node_payload):
+        """GOLDEN RULE #5: no placeholder padding — real failure raises."""
+        with patch(_STRUCTURED, side_effect=RuntimeError("Gemini API error")):
+            with pytest.raises(DirectPipelineError):
+                run_direct_pipeline(database_node_payload)
 
-    def test_pipeline_works_with_malformed_json(self, database_node_payload):
-        """Pipeline recovers from malformed Gemini JSON response."""
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.return_value = '{"boardScreens": [{"screenId": "s1"}, BROKEN JSON HERE'
-            result = run_direct_pipeline(database_node_payload)
-        assert isinstance(result, dict)
-        assert len(result.get("boardScreens", [])) >= 20
+    def test_too_few_screens_raises_honestly(self, database_node_payload):
+        """Call A returning almost nothing must NOT be padded to 20 screens."""
+        with patch(_STRUCTURED, side_effect=[_mock_call_a(screen_count=2),
+                                             _mock_call_b()]):
+            with pytest.raises(DirectPipelineError, match="too little content"):
+                run_direct_pipeline(database_node_payload)
 
-    def test_pipeline_detects_correct_subject(self, database_node_payload, mock_gemini_response_database):
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.return_value = mock_gemini_response_database
+    def test_too_few_commands_raises_honestly(self, database_node_payload):
+        with patch(_STRUCTURED, side_effect=[_mock_call_a(20),
+                                             {"boardCommands": []}]):
+            with pytest.raises(DirectPipelineError, match="too few"):
+                run_direct_pipeline(database_node_payload)
+
+    def test_pipeline_detects_correct_subject(self, database_node_payload):
+        with _patch_both():
             result = run_direct_pipeline(database_node_payload)
         assert result["metadata"]["subject"] == "database"
 
-    def test_pipeline_works_for_code_topic(self, code_node_payload, mock_gemini_response_database):
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.return_value = mock_gemini_response_database
+    def test_pipeline_works_for_code_topic(self, code_node_payload):
+        with _patch_both():
             result = run_direct_pipeline(code_node_payload)
         assert result["metadata"]["subject"] == "code"
 
-    def test_pipeline_includes_metadata(self, database_node_payload, mock_gemini_response_database):
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.return_value = mock_gemini_response_database
+    def test_pipeline_includes_metadata(self, database_node_payload):
+        with _patch_both():
             result = run_direct_pipeline(database_node_payload)
         meta = result["metadata"]
-        assert "pipeline" in meta
+        assert meta["pipeline"] == "direct_gemini_structured_v3"
         assert "subject" in meta
         assert "screenCount" in meta
         assert "commandCount" in meta
 
-    def test_pipeline_empty_payload_does_not_crash(self):
-        """Pipeline never crashes, even with empty input."""
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.side_effect = RuntimeError("no API key")
-            result = run_direct_pipeline({})
-        assert isinstance(result, dict)
-        assert "boardScreens" in result
+    def test_makes_exactly_two_structured_calls(self, database_node_payload):
+        """GOLDEN RULE #1: focused calls — screens+voice, then commands."""
+        with patch(_STRUCTURED, side_effect=[_mock_call_a(), _mock_call_b()]) as m:
+            run_direct_pipeline(database_node_payload)
+        assert m.call_count == 2
 
-    def test_pipeline_strips_markdown_fences(self, database_node_payload):
-        """Gemini sometimes wraps JSON in ```json ... ``` fences."""
-        wrapped = '```json\n{"boardScreens": [], "boardCommands": [], "voiceScript": [], "subtitles": []}\n```'
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.return_value = wrapped
+    def test_subtitles_built_from_voice(self, database_node_payload):
+        with _patch_both():
             result = run_direct_pipeline(database_node_payload)
-        assert isinstance(result, dict)
+        assert len(result["subtitles"]) == len(result["voiceScript"])
 
-    def test_all_commands_have_required_fields(self, database_node_payload, mock_gemini_response_database):
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.return_value = mock_gemini_response_database
+    def test_source_refs_collected_from_screens(self, database_node_payload):
+        with _patch_both():
             result = run_direct_pipeline(database_node_payload)
-        for cmd in result["boardCommands"]:
-            assert "commandId" in cmd
-            assert "commandType" in cmd
-            assert "startMs" in cmd
-            assert "endMs" in cmd
+        assert len(result["sourceRefs"]) > 0
+        assert result["sourceRefs"][0]["page"] == 5
 
     def test_all_screens_have_required_fields(self, database_node_payload, mock_gemini_response_database):
         with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:

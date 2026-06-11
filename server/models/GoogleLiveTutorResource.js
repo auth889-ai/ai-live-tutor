@@ -241,6 +241,19 @@ const GoogleLiveTutorResourceChunkSchema = new Schema(
       index: true,
     },
 
+    // 768-dim text-embedding-004 vector for Atlas $vectorSearch (hybrid RAG).
+    // Excluded from default queries via select:false — fetch only when needed.
+    embedding: {
+      type: [Number],
+      default: undefined,
+      select: false,
+    },
+
+    embeddingModel: {
+      type: String,
+      default: "",
+    },
+
     retrieval: {
       lastScore: {
         type: Number,

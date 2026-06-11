@@ -237,6 +237,16 @@ def _call_gemini(prompt: str, model: str = FLASH_MODEL, temperature: float = 0.4
     return response.text or ""
 
 
+def _call_gemini_structured(prompt: str, schema: dict, model: str = FLASH_MODEL,
+                            temperature: float = 0.4) -> dict:
+    """Structured-output call — guaranteed valid JSON matching schema."""
+    try:
+        from .gemini_structured import generate_structured
+    except ImportError:
+        from google_agent.pipeline.gemini_structured import generate_structured
+    return generate_structured(prompt, schema, model=model, temperature=temperature)
+
+
 # ── Prompt builders ───────────────────────────────────────────────────────────
 
 def _build_lesson_prompt(payload: dict, subject: str, screen_types: list[str]) -> str:
@@ -462,9 +472,111 @@ def _ensure_minimums(result: dict, screen_types: list[str]) -> dict:
     return result
 
 
+# ── Structured-output schemas (v3 — guaranteed valid JSON, no truncation) ─────
+
+_SOURCE_REF_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "page": {"type": "integer"},
+        "chunkId": {"type": "string"},
+    },
+}
+
+_SCHEMA_SCREENS_VOICE = {
+    "type": "object",
+    "properties": {
+        "lessonTitle": {"type": "string"},
+        "boardScreens": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "screenId": {"type": "string"},
+                    "screenType": {"type": "string"},
+                    "title": {"type": "string"},
+                    "blocks": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "type": {"type": "string"},
+                                "content": {"type": "string"},
+                            },
+                            "required": ["type", "content"],
+                        },
+                    },
+                    "sourceRef": _SOURCE_REF_SCHEMA,
+                },
+                "required": ["screenId", "screenType", "title", "blocks"],
+            },
+        },
+        "voiceScript": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "lineId": {"type": "string"},
+                    "screenId": {"type": "string"},
+                    "text": {"type": "string"},
+                    "sourceRef": _SOURCE_REF_SCHEMA,
+                },
+                "required": ["lineId", "screenId", "text"],
+            },
+        },
+    },
+    "required": ["lessonTitle", "boardScreens", "voiceScript"],
+}
+
+_SCHEMA_COMMANDS = {
+    "type": "object",
+    "properties": {
+        "boardCommands": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "commandId": {"type": "string"},
+                    "screenId": {"type": "string"},
+                    "commandType": {"type": "string"},
+                    "targetRegionId": {"type": "string"},
+                    "bbox": {
+                        "type": "object",
+                        "properties": {
+                            "x": {"type": "number"},
+                            "y": {"type": "number"},
+                            "w": {"type": "number"},
+                            "h": {"type": "number"},
+                        },
+                        "required": ["x", "y", "w", "h"],
+                    },
+                    "startMs": {"type": "integer"},
+                    "endMs": {"type": "integer"},
+                    "voiceLineId": {"type": "string"},
+                },
+                "required": ["commandId", "screenId", "commandType", "bbox",
+                             "startMs", "endMs"],
+            },
+        },
+    },
+    "required": ["boardCommands"],
+}
+
+
+class DirectPipelineError(RuntimeError):
+    """Honest failure — the direct pipeline could not produce a real lesson.
+    GOLDEN RULE #5: never fake success with placeholder content."""
+
+
 # ── Main pipeline ─────────────────────────────────────────────────────────────
 
 def run_direct_pipeline(payload: dict) -> dict:
+    """
+    EMERGENCY FALLBACK pipeline (GOLDEN RULE #2 — ADK agents are primary).
+    Two focused structured calls, never one giant call (GOLDEN RULE #1):
+      Call A → boardScreens + voiceScript
+      Call B → boardCommands (bbox required by schema)
+    Raises DirectPipelineError on real failure — NO placeholder padding.
+    """
     node_id    = payload.get("nodeId") or payload.get("selectedNodeId") or "unknown"
     node_title = payload.get("nodeTitle") or node_id.replace("_", " ").title()
 
@@ -478,64 +590,91 @@ def run_direct_pipeline(payload: dict) -> dict:
     subject      = detect_subject(node_title, text_ctx)
     screen_types = _SCREEN_CATALOG.get(subject, _SCREEN_CATALOG["general"])
 
-    print(f"[direct_gemini] node={node_id}  subject={subject}  model={FLASH_MODEL}", file=sys.stderr)
+    print(f"[direct_gemini] node={node_id}  subject={subject}  model={FLASH_MODEL} "
+          f"(2 structured calls)", file=sys.stderr)
 
-    prompt = _build_lesson_prompt(payload, subject, screen_types)
+    base_prompt = _build_lesson_prompt(payload, subject, screen_types)
 
-    raw_json = ""
+    # ── CALL A: screens + voice (focused, schema-enforced) ────────────────────
+    prompt_a = (
+        base_prompt
+        + "\n\nIn THIS response produce ONLY boardScreens and voiceScript "
+          "(plus lessonTitle). At least 20 screens, one voice line per screen. "
+          "Every screen's content must come from the source evidence above — "
+          "real quotes, real page numbers. NO placeholder text."
+    )
     try:
-        raw_json = _call_gemini(prompt, model=FLASH_MODEL, temperature=0.4)
+        part_a = _call_gemini_structured(prompt_a, _SCHEMA_SCREENS_VOICE,
+                                         model=FLASH_MODEL, temperature=0.4)
     except Exception as e:
-        print(f"[direct_gemini] Gemini call failed: {e}", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        # Return minimal viable structure so pipeline doesn't crash
-        return _ensure_minimums({
-            "lessonTitle": node_title,
-            "subject": subject,
-            "nodeId": node_id,
-            "boardScreens": [],
-            "boardCommands": [],
-            "voiceScript": [],
-            "subtitles": [],
-            "sourceRefs": [],
-            "visionIndex": {},
-            "lessonMetadata": {"fallbackUsed": False, "error": str(e)},
-            "metadata": {"fallbackUsed": False, "pipeline": "direct_gemini_minimal_recovery"},
-        }, screen_types)
+        raise DirectPipelineError(f"Call A (screens+voice) failed: {e}") from e
 
-    # Parse JSON — strip markdown fences if present
-    raw_json = raw_json.strip()
-    if raw_json.startswith("```"):
-        raw_json = re.sub(r"^```[a-z]*\n?", "", raw_json)
-        raw_json = re.sub(r"\n?```$", "", raw_json)
+    screens = part_a.get("boardScreens") or []
+    voice   = part_a.get("voiceScript") or []
+    if len(screens) < 5 or not voice:
+        raise DirectPipelineError(
+            f"Call A returned too little content: {len(screens)} screens, "
+            f"{len(voice)} voice lines — refusing to fake the rest."
+        )
 
+    # ── CALL B: commands for those screens (bbox required by schema) ──────────
+    screen_summary = json.dumps(
+        [{"screenId": s.get("screenId"), "title": s.get("title"),
+          "screenType": s.get("screenType")} for s in screens],
+        ensure_ascii=False,
+    )
+    prompt_b = (
+        f"You are generating teacher board commands for this lesson on "
+        f"\"{node_title}\" ({subject}).\n\nSCREENS:\n{screen_summary}\n\n"
+        f"VOICE LINES:\n"
+        + json.dumps([{"lineId": v.get("lineId"), "screenId": v.get("screenId"),
+                       "text": (v.get("text") or "")[:160]} for v in voice],
+                     ensure_ascii=False)
+        + "\n\nGenerate 4-6 commands per screen. Command types: "
+          + ", ".join(_COMMAND_TYPES_POOL)
+        + ". bbox uses fractions 0.0-1.0 of the screen (x,y = top-left of the "
+          "region, w,h = size). Timing: startMs/endMs monotonically increasing "
+          "within each screen, aligned to its voice line (voiceLineId)."
+    )
     try:
-        result = json.loads(raw_json)
-    except json.JSONDecodeError as e:
-        print(f"[direct_gemini] JSON parse failed at char {e.pos}: {e.msg}", file=sys.stderr)
-        # Try to salvage partial arrays from the response
-        result = _repair_partial_json(raw_json)
+        part_b = _call_gemini_structured(prompt_b, _SCHEMA_COMMANDS,
+                                         model=FLASH_MODEL, temperature=0.3)
+    except Exception as e:
+        raise DirectPipelineError(f"Call B (commands) failed: {e}") from e
 
-    # Guarantee minimums
-    result = _ensure_minimums(result, screen_types)
+    commands = part_b.get("boardCommands") or []
+    if len(commands) < len(screens):
+        raise DirectPipelineError(
+            f"Call B returned {len(commands)} commands for {len(screens)} "
+            f"screens — too few to teach with."
+        )
 
-    # Stamp metadata
-    if "metadata" not in result:
-        result["metadata"] = {}
-    result["metadata"].update({
-        "fallbackUsed": False,
-        "pipeline": "direct_gemini",
+    result = {
+        "lessonTitle": part_a.get("lessonTitle") or node_title,
         "subject": subject,
-        "model": FLASH_MODEL,
-        "screenCount": len(result["boardScreens"]),
-        "commandCount": len(result["boardCommands"]),
-    })
+        "nodeId": node_id,
+        "boardScreens": screens,
+        "boardCommands": commands,
+        "voiceScript": voice,
+        "subtitles": [
+            {"lineId": v.get("lineId"), "screenId": v.get("screenId"),
+             "text": v.get("text")} for v in voice
+        ],
+        "sourceRefs": [
+            s.get("sourceRef") for s in screens if isinstance(s.get("sourceRef"), dict)
+        ],
+        "metadata": {
+            "fallbackUsed": False,
+            "pipeline": "direct_gemini_structured_v3",
+            "subject": subject,
+            "model": FLASH_MODEL,
+            "screenCount": len(screens),
+            "commandCount": len(commands),
+        },
+    }
 
-    screens  = len(result["boardScreens"])
-    commands = len(result["boardCommands"])
-    voice    = len(result["voiceScript"])
-    print(f"[direct_gemini] DONE screens={screens} commands={commands} voice={voice}", file=sys.stderr)
-
+    print(f"[direct_gemini] DONE screens={len(screens)} commands={len(commands)} "
+          f"voice={len(voice)}", file=sys.stderr)
     return result
 
 

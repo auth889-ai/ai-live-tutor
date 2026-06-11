@@ -15,6 +15,7 @@ const dotenv = require("dotenv");
 function loadEnvHard() {
   const serverDir = __dirname;
   const projectRoot = path.resolve(serverDir, "..");
+  const requestedPort = process.env.PORT;
 
   const candidates = [
     path.join(projectRoot, ".env"),
@@ -36,6 +37,12 @@ function loadEnvHard() {
         error: result.error ? result.error.message : "",
       });
     }
+  }
+
+  // Keep explicit CLI/runtime port overrides usable for local testing.
+  // dotenv override is still used for API keys and DB config.
+  if (requestedPort) {
+    process.env.PORT = requestedPort;
   }
 
   function mask(v) {

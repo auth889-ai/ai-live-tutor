@@ -142,7 +142,7 @@ describe("POST /api/google-agent/live-tutor/stage2/sessions/start", () => {
   test("201 — returns status created", async () => {
     const res = await request(app)
       .post(endpoint)
-      .send({ nodeId: "database_denorm", resourceId: "res_001" });
+      .send({ nodeId: "database_denorm", resourceId: "res_001", treeId: "tree_001" });
 
     expect(res.body.status).toBe("created");
   });
@@ -150,7 +150,7 @@ describe("POST /api/google-agent/live-tutor/stage2/sessions/start", () => {
   test("201 — returns streamUrl", async () => {
     const res = await request(app)
       .post(endpoint)
-      .send({ nodeId: "database_denorm", resourceId: "res_001" });
+      .send({ nodeId: "database_denorm", resourceId: "res_001", treeId: "tree_001" });
 
     expect(res.body).toHaveProperty("streamUrl");
     expect(res.body.streamUrl).toContain("/stream");
@@ -159,7 +159,7 @@ describe("POST /api/google-agent/live-tutor/stage2/sessions/start", () => {
   test("201 — returns statusUrl", async () => {
     const res = await request(app)
       .post(endpoint)
-      .send({ nodeId: "database_denorm", resourceId: "res_001" });
+      .send({ nodeId: "database_denorm", resourceId: "res_001", treeId: "tree_001" });
 
     expect(res.body).toHaveProperty("statusUrl");
     expect(res.body.statusUrl).toContain("/status");
@@ -177,14 +177,14 @@ describe("POST /api/google-agent/live-tutor/stage2/sessions/start", () => {
   test("ok:true in response", async () => {
     const res = await request(app)
       .post(endpoint)
-      .send({ nodeId: "node_a", resourceId: "res_001" });
+      .send({ nodeId: "node_a", resourceId: "res_001", treeId: "tree_001" });
     expect(res.body.ok).toBe(true);
   });
 
   test("response never has fallbackUsed:true", async () => {
     const res = await request(app)
       .post(endpoint)
-      .send({ nodeId: "database_denorm", resourceId: "res_001" });
+      .send({ nodeId: "database_denorm", resourceId: "res_001", treeId: "tree_001" });
     expect(res.body?.metadata?.fallbackUsed).not.toBe(true);
   });
 });
@@ -282,13 +282,33 @@ describe("GET /api/google-agent/live-tutor/stage2/health", () => {
 // ══════════════════════════════════════════════════════════════════
 
 describe("GET /sessions/:id/stream (SSE)", () => {
-  test("returns 200 with text/event-stream content type", async () => {
-    const res = await request(app)
-      .get("/api/google-agent/live-tutor/stage2/sessions/s2_sse_test/stream")
-      .buffer(false)
-      .timeout({ response: 500 })
-      .catch(() => null);  // SSE never closes, so timeout is expected
-    // The response headers should indicate SSE
-    // Just check the endpoint doesn't 404
-  }, 2000);
+  test("registers SSE client and sets event-stream headers", async () => {
+    // SSE responses never end, so use raw http and destroy the socket
+    // cleanly after verifying headers + client registration.
+    const http = require("http");
+    const bgJob = require("../../../server/services/googleAgent/stage2/stage2BackgroundJob.service");
+    bgJob.sseRegister.mockClear();
+
+    const server = app.listen(0);
+    const port = server.address().port;
+
+    const headers = await new Promise((resolve, reject) => {
+      const req = http.get(
+        { port, path: "/api/google-agent/live-tutor/stage2/sessions/s2_sse_test/stream" },
+        (res) => {
+          res.on("error", () => {});      // socket teardown is expected
+          resolve({ status: res.statusCode, type: res.headers["content-type"] });
+          res.destroy();
+        }
+      );
+      req.on("error", () => {});          // swallow ECONNRESET from destroy
+      req.setTimeout(3000, () => reject(new Error("SSE request timed out")));
+    });
+
+    expect(headers.status).toBe(200);
+    expect(headers.type).toContain("text/event-stream");
+    expect(bgJob.sseRegister).toHaveBeenCalledWith("s2_sse_test", expect.anything());
+
+    await new Promise((r) => server.close(r));
+  }, 5000);
 });

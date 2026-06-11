@@ -1,0 +1,56 @@
+{
+  "ok": true,
+  "step": "step2_source_truth_packet_curl_fixed",
+  "resourceId": "glt_resource_1780558985921_5f1ea0e3",
+  "treeId": "tree_1781042787991_f29ae235",
+  "nodeId": "example_sales_reports",
+  "sessionId": "s2_1781216184195_ylhr5w5",
+  "jobId": "lesson_s2_1781216184195_ylhr5w5",
+  "jobName": "teach_node",
+  "queueName": "lumina_lesson_generation_stage2_v2",
+  "workerContractVersion": "stage2_source_truth_worker_v2",
+  "sessionStatus": "running",
+  "jobState": "active",
+  "jobProgress": {
+    "status": "generating",
+    "step": "adk_pipeline",
+    "percent": 35,
+    "queueName": "lumina_lesson_generation_stage2_v2",
+    "workerContractVersion": "stage2_source_truth_worker_v2",
+    "sourceTruth": {
+      "sourceContextInjected": true,
+      "selectedEvidenceCount": 23,
+      "sourceRefsCount": 23,
+      "selectedPageFullTextIncluded": true,
+      "selectedPageFullTextLength": 1785,
+      "pageImagesCount": 2,
+      "selectedNodePages": [
+        5,
+        6
+      ],
+      "pageImagesCoverSelectedPages": true,
+      "fullPdfSummaryIncluded": true,
+      "fullPdfOutlineIncluded": true,
+      "fallbackUsed": false
+    }
+  },
+  "sourceContextInjected": true,
+  "selectedEvidenceCount": 23,
+  "sourceRefsCount": 23,
+  "selectedPageFullTextIncluded": true,
+  "selectedPageFullTextLength": 1785,
+  "pageImagesCount": 2,
+  "selectedNodePages": [
+    5,
+    6
+  ],
+  "pageImagesCoverSelectedPages": true,
+  "fullPdfSummaryIncluded": true,
+  "fullPdfOutlineIncluded": true,
+  "fallbackUsed": false,
+  "rawOutputFiles": [
+    "agent_output/manual_stage2_fixed2_health_response.json",
+    "agent_output/manual_stage2_fixed2_start_response.json",
+    "agent_output/manual_stage2_fixed2_status_after_3s.json"
+  ]
+}

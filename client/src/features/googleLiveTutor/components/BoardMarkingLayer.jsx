@@ -35,11 +35,38 @@ function commandScreenNo(command) {
 
 function commandBlockId(command) {
   const p = payloadOf(command);
-  return cleanText(command?.blockId || command?.targetBlockId || command?.targetId || p.blockId || p.targetBlockId || p.targetId);
+  return cleanText(
+    command?.blockId ||
+      command?.targetBlockId ||
+      command?.targetId ||
+      command?.targetElementId ||
+      command?.parentElementId ||
+      p.blockId ||
+      p.targetBlockId ||
+      p.targetId ||
+      p.targetElementId ||
+      p.parentElementId
+  );
+}
+
+function commandRegionId(command) {
+  const p = payloadOf(command);
+  return cleanText(command?.targetRegionId || command?.regionId || p.targetRegionId || p.regionId);
+}
+
+function commandBbox(command) {
+  const p = payloadOf(command);
+  const box = safeObject(command?.bbox || p.bbox);
+  const x = number(box.x, NaN);
+  const y = number(box.y, NaN);
+  const w = number(box.w, NaN);
+  const h = number(box.h, NaN);
+  if (![x, y, w, h].every(Number.isFinite)) return null;
+  return { x, y, w, h };
 }
 
 function commandType(command) {
-  return cleanText(command?.type || command?.action || payloadOf(command).action || "highlight");
+  return cleanText(command?.commandType || command?.type || command?.action || payloadOf(command).action || "highlight");
 }
 
 function commandText(command) {
@@ -63,6 +90,17 @@ function shouldShow(type) {
     "writeText",
     "showQuiz",
     "showHtmlPreview",
+    "movePointer",
+    "showFullPage",
+    "showPdfPage",
+    "showPdfCrop",
+    "zoomRegion",
+    "circleRegion",
+    "highlightRegion",
+    "spotlightRegion",
+    "zoomToRegion",
+    "panToRegion",
+    "pointToRegion",
   ].includes(type);
 }
 
@@ -76,7 +114,46 @@ function rectForBlock(layer, command) {
   if (!canvas) return null;
 
   const id = commandBlockId(command);
+  const regionId = commandRegionId(command);
+  const bbox = commandBbox(command);
   const canvasRect = canvas.getBoundingClientRect();
+
+  if (regionId) {
+    const region = canvas.querySelector(`[data-region-id="${CSS.escape(regionId)}"]`);
+    if (region) {
+      const rect = region.getBoundingClientRect();
+      return {
+        x: rect.left - canvasRect.left,
+        y: rect.top - canvasRect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+    }
+  }
+
+  if (bbox && id) {
+    const parent =
+      canvas.querySelector(`[data-element-id="${CSS.escape(id)}"]`) ||
+      canvas.querySelector(`[data-block-id="${CSS.escape(id)}"]`);
+    if (parent) {
+      const rect = parent.getBoundingClientRect();
+      return {
+        x: rect.left - canvasRect.left + rect.width * bbox.x,
+        y: rect.top - canvasRect.top + rect.height * bbox.y,
+        width: rect.width * bbox.w,
+        height: rect.height * bbox.h,
+      };
+    }
+  }
+
+  if (bbox) {
+    return {
+      x: canvasRect.width * bbox.x,
+      y: canvasRect.height * bbox.y,
+      width: canvasRect.width * bbox.w,
+      height: canvasRect.height * bbox.h,
+    };
+  }
 
   if (!id) {
     return {
@@ -87,8 +164,9 @@ function rectForBlock(layer, command) {
     };
   }
 
-  const selector = `[data-block-id="${CSS.escape(id)}"]`;
-  const target = canvas.querySelector(selector);
+  const target =
+    canvas.querySelector(`[data-block-id="${CSS.escape(id)}"]`) ||
+    canvas.querySelector(`[data-element-id="${CSS.escape(id)}"]`);
 
   if (!target) {
     return {
@@ -161,8 +239,8 @@ export default function BoardMarkingLayer({
   const label = commandText(command).slice(0, 78);
   const isArrow = type === "drawArrow" || type === "drawFlowchart" || type === "drawTree";
   const isUnderline = type === "underline" || type === "writeText";
-  const isCircle = type === "drawCircle" || type === "circle";
-  const isSource = type === "showSourceBadge";
+  const isCircle = type === "drawCircle" || type === "circle" || type === "circleRegion" || type === "spotlightRegion";
+  const isSource = type === "showSourceBadge" || type === "showPdfCrop" || type === "showPdfPage" || type === "showFullPage" || Boolean(commandRegionId(command));
   const isBox = !isArrow && !isUnderline && !isCircle;
 
   const pad = 10;

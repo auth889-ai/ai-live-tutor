@@ -41,14 +41,16 @@ function assembleRichSourcePack(resource, node, chunkData, imageData) {
   const samePage = safeArr(chunks.samePage || chunks.samePageChunks || []);
   const prevPage = safeArr(chunks.prevPage || chunks.previousPageChunks || []);
   const nextPage = safeArr(chunks.nextPage || chunks.nextPageChunks || []);
+  const semantic = safeArr(chunks.semanticChunks || []);
   const rspEv    = safeArr(rsp.selectedEvidence || n.evidence || chunks.selectedEvidence || []);
 
-  // Combine ALL nearby chunks as evidence — ADK agents need ≥3 items
-  // Priority: same-page chunks first (most relevant), then prev/next, then stored refs
-  const allEvidence = dedupeChunks([...samePage, ...rspEv, ...prevPage, ...nextPage])
+  // SourceTruthPacket (POWERFUL_WORKFLOW 2.5/2.6): the node gets EVERYTHING.
+  // Priority: same-page → semantic hits (vector+fulltext, from ANYWHERE in
+  // the PDF) → stored refs → prev/next pages.  NO CAP — sourceRefs are a
+  // starting point, never a fence. Gemini context windows handle it easily.
+  const allEvidence = dedupeChunks([...samePage, ...semantic, ...rspEv, ...prevPage, ...nextPage])
     .map((c) => normalizeChunk(c, rid))
-    .filter((c) => c.text.length > 10)
-    .slice(0, 16);
+    .filter((c) => c.text.length > 10);
 
   const pageImages = safeArr(images.pageImages || images.images || []).map((img) => ({
     page:      Number(img.page || 1),
@@ -75,21 +77,22 @@ function assembleRichSourcePack(resource, node, chunkData, imageData) {
     selectedNode:          n,
     selectedNodeTitle:     trimText(n.label || n.title || "", 360),
 
-    // Rich evidence — all nearby chunks combined (ADK agents need ≥3)
+    // Rich evidence — UNCAPPED SourceTruthPacket (vision-first sourcing)
     selectedEvidence:      allEvidence,
     exactChunks:           allEvidence,          // alias used by some ADK agents
     chunks:                allEvidence,           // alias used by RagRetrievalAgent
+    semanticChunks:        semantic.map((c) => normalizeChunk(c, rid)),
 
     selectedPageFullText:  fullText,
-    samePageChunks:        samePage.map((c) => normalizeChunk(c, rid)).slice(0, 10),
-    previousPageChunks:    prevPage.map((c) => normalizeChunk(c, rid)).slice(0, 8),
-    nextPageChunks:        nextPage.map((c) => normalizeChunk(c, rid)).slice(0, 8),
+    samePageChunks:        samePage.map((c) => normalizeChunk(c, rid)),
+    previousPageChunks:    prevPage.map((c) => normalizeChunk(c, rid)),
+    nextPageChunks:        nextPage.map((c) => normalizeChunk(c, rid)),
 
-    pageImages:            pageImages.slice(0, 8),
+    pageImages:            pageImages,            // ALL node pages — no cap
     fullPdfSummary:        safeObj(resMeta.fullPdfSummary || {}),
     fullPdfOutline:        safeObj(resMeta.fullPdfOutline || {}),
     roadmapModules:        safeArr(resMeta.roadmapModules || []),
-    sourceRefs:            sourceRefs.slice(0, 60),
+    sourceRefs:            sourceRefs,
 
     proof: {
       hasText:      fullText.length > 40,
@@ -100,7 +103,7 @@ function assembleRichSourcePack(resource, node, chunkData, imageData) {
       evidenceCount: allEvidence.length,
       chunkCount:   allEvidence.length,
       imageCount:   pageImages.length,
-      meetsMinimum: allEvidence.length >= 3,   // ADK agents require ≥3
+      meetsMinimum: Boolean(fullText.length > 40 && pageImages.length > 0 && allEvidence.length > 0),
     },
   };
 }

@@ -239,21 +239,10 @@ class TestSourceEvidenceGates:
 
 
 # ══════════════════════════════════════════════════════════════════
-# ENSURE_MINIMUMS APPLIED TO PIPELINE OUTPUT
+# HONEST PIPELINE CONTRACT (v3 — 2 structured calls, no fake padding)
 # ══════════════════════════════════════════════════════════════════
 
-class TestPipelineWithEnsureMinimums:
-
-    def test_real_pipeline_always_passes_gates(self, database_node_payload, mock_gemini_response_database):
-        with patch("google_agent.pipeline.direct_gemini_pipeline._call_gemini") as mock_call:
-            mock_call.return_value = mock_gemini_response_database
-            result = run_direct_pipeline(database_node_payload)
-
-        # All quality gates
-        assert len(result["boardScreens"]) >= 20
-        assert len(result["boardCommands"]) >= 100
-        assert len(result["voiceScript"]) >= 20
-        assert result["metadata"]["fallbackUsed"] is False
+class TestPipelineHonestContract:
 
     @pytest.fixture
     def database_node_payload(self):
@@ -263,20 +252,50 @@ class TestPipelineWithEnsureMinimums:
             "selectedEvidence": [{"chunkId": "c1", "text": "Denormalization adds redundancy.", "page": 5}],
         }
 
-    @pytest.fixture
-    def mock_gemini_response_database(self):
-        """Minimal valid Gemini response."""
-        import json
-        screens = [{"screenId": f"s{i}", "screenType": "title_concept_card", "title": f"T{i}",
-                    "blocks": [{"blockId": f"b{i}", "type": "body", "content": "content"}],
-                    "sourceRef": "[Page 5]", "teacherNote": "note"} for i in range(25)]
-        cmds = [{"commandId": f"c{i}", "screenId": f"s{i//5}", "voiceLineId": f"v{i//5}",
-                 "commandType": "writeText", "content": "text", "startMs": i*1000, "endMs": (i+1)*1000,
-                 "targetRegionId": None, "bbox": None, "sourceRef": ""} for i in range(125)]
-        voice = [{"lineId": f"v{i}", "screenId": f"s{i}", "text": f"Teaching section {i} content here.",
-                  "startMs": 0, "endMs": 10000, "words": []} for i in range(25)]
-        return json.dumps({
-            "boardScreens": screens, "boardCommands": cmds, "voiceScript": voice,
-            "subtitles": [], "sourceRefs": [{"chunkId": "c1", "page": 5}],
-            "metadata": {"fallbackUsed": False}, "lessonMetadata": {"fallbackUsed": False},
-        })
+    def _call_a(self, n=25):
+        return {
+            "lessonTitle": "Database Denormalization",
+            "boardScreens": [
+                {"screenId": f"s{i}", "screenType": "title_concept_card", "title": f"T{i}",
+                 "blocks": [{"type": "body", "content": "real content"}],
+                 "sourceRef": {"page": 5, "chunkId": "c1"}} for i in range(n)
+            ],
+            "voiceScript": [
+                {"lineId": f"v{i}", "screenId": f"s{i}",
+                 "text": f"Teaching section {i} content here."} for i in range(n)
+            ],
+        }
+
+    def _call_b(self, n=25, per=5):
+        return {
+            "boardCommands": [
+                {"commandId": f"c{i}_{j}", "screenId": f"s{i}", "commandType": "writeText",
+                 "bbox": {"x": 0.1, "y": 0.1, "w": 0.8, "h": 0.1},
+                 "startMs": (i * per + j) * 1000, "endMs": (i * per + j) * 1000 + 900,
+                 "voiceLineId": f"v{i}"} for i in range(n) for j in range(per)
+            ],
+        }
+
+    def test_real_pipeline_passes_gates_with_real_content(self, database_node_payload):
+        with patch(
+            "google_agent.pipeline.direct_gemini_pipeline._call_gemini_structured",
+            side_effect=[self._call_a(), self._call_b()],
+        ):
+            result = run_direct_pipeline(database_node_payload)
+
+        assert len(result["boardScreens"]) >= 20
+        assert len(result["boardCommands"]) >= 100
+        assert len(result["voiceScript"]) >= 20
+        assert result["metadata"]["fallbackUsed"] is False
+        # every command carries bbox — schema-enforced
+        assert all("bbox" in c for c in result["boardCommands"])
+
+    def test_pipeline_failure_is_honest_not_padded(self, database_node_payload):
+        """GOLDEN RULE #5: Gemini failure raises — NEVER padded to 20 screens."""
+        from google_agent.pipeline.direct_gemini_pipeline import DirectPipelineError
+        with patch(
+            "google_agent.pipeline.direct_gemini_pipeline._call_gemini_structured",
+            side_effect=RuntimeError("API down"),
+        ):
+            with pytest.raises(DirectPipelineError):
+                run_direct_pipeline(database_node_payload)

@@ -1,0 +1,25 @@
+platform darwin -- Python 3.11.15, pytest-9.0.3, pluggy-1.6.0 -- /Users/jannatulferdouseva/miniconda3/envs/live-tutor-adk/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/jannatulferdouseva/good-content-reach/ai-live-tutor-rebuild/tests/python
+configfile: pytest.ini
+plugins: asyncio-1.4.0, anyio-4.13.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 15 items
+
+tests/python/test_vision_safety_net.py::TestSchema::test_bbox_is_required PASSED [  6%]
+tests/python/test_vision_safety_net.py::TestSchema::test_all_teaching_fields_required PASSED [ 13%]
+tests/python/test_vision_safety_net.py::TestScanPageImage::test_regions_get_page_prefix_and_page_number PASSED [ 20%]
+tests/python/test_vision_safety_net.py::TestScanPageImage::test_bbox_clamped_to_page PASSED [ 26%]
+tests/python/test_vision_safety_net.py::TestBuildVisionIndex::test_step3_contract_scans_real_page_images_and_returns_bbox_regions PASSED [ 33%]
+tests/python/test_vision_safety_net.py::TestBuildVisionIndex::test_scans_all_pages_regardless_of_sourcerefs PASSED [ 40%]
+tests/python/test_vision_safety_net.py::TestBuildVisionIndex::test_duplicate_pages_scanned_once PASSED [ 46%]
+tests/python/test_vision_safety_net.py::TestBuildVisionIndex::test_one_page_failure_does_not_kill_others PASSED [ 53%]
+tests/python/test_vision_safety_net.py::TestBuildVisionIndex::test_no_images_is_honest_not_fake PASSED [ 60%]
+tests/python/test_vision_safety_net.py::TestBuildVisionIndex::test_scanned_images_with_no_regions_is_not_ok PASSED [ 66%]
+tests/python/test_vision_safety_net.py::TestBuildVisionIndex::test_discoveries_become_evidence PASSED [ 73%]
+tests/python/test_vision_safety_net.py::TestBuildVisionIndex::test_unresolvable_image_warns_and_continues PASSED [ 80%]
+tests/python/test_vision_safety_net.py::TestLoadImageBytes::test_base64_with_data_url_prefix PASSED [ 86%]
+tests/python/test_vision_safety_net.py::TestLoadImageBytes::test_plain_base64 PASSED [ 93%]
+tests/python/test_vision_safety_net.py::TestLoadImageBytes::test_nothing_resolvable_returns_none PASSED [100%]
+
+============================== 15 passed in 1.00s ==============================

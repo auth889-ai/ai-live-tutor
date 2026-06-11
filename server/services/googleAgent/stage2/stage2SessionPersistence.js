@@ -180,16 +180,32 @@ async function loadSessionWithArtifacts(sessionId, ownerKey) {
   ).lean();
 
   const artifactMap = {};
+  const segments = [];
   for (const a of artifacts) {
-    artifactMap[a.type] = a.items || a.payload;
+    if (/^segment_\d+$/.test(a.type)) {
+      const segmentIndex = Number(a.type.replace("segment_", ""));
+      segments.push({
+        segmentIndex,
+        ...(a.payload || (a.items && a.items[0]) || {}),
+      });
+    } else {
+      artifactMap[a.type] = a.items || a.payload;
+    }
   }
+  segments.sort((a, b) => a.segmentIndex - b.segmentIndex);
+
+  const streamedScreens = segments.flatMap((s) => s.boardScreens || s.premiumBoardScreens || []);
+  const streamedCommands = segments.flatMap((s) => s.boardCommands || s.commands || []);
+  const streamedVoice = segments.flatMap((s) => s.voiceScript || []);
+  const streamedSubtitles = segments.flatMap((s) => s.subtitles || []);
 
   return {
     ...session,
-    boardScreens: artifactMap.boardScreens || [],
-    boardCommands: artifactMap.boardCommands || [],
-    voiceScript: artifactMap.voiceScript || [],
-    subtitles: artifactMap.subtitles || [],
+    segments,
+    boardScreens: artifactMap.boardScreens || streamedScreens,
+    boardCommands: artifactMap.boardCommands || streamedCommands,
+    voiceScript: artifactMap.voiceScript || streamedVoice,
+    subtitles: artifactMap.subtitles || streamedSubtitles,
     _artifactsLoaded: true,
   };
 }

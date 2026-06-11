@@ -31,9 +31,11 @@ async function getNearbyPageContext(resourceId, selectedPages = [], allChunks = 
     .slice(0, 24000);
 
   return {
-    samePage:             samePage.slice(0, 10),
-    prevPage:             prevPage.slice(0, 8),
-    nextPage:             nextPage.slice(0, 8),
+    // UNCAPPED — every chunk on the node's pages and adjacent pages.
+    // Semantic search (hybridSearch.service) covers the rest of the PDF.
+    samePage,
+    prevPage,
+    nextPage,
     selectedPageFullText,
   };
 }
