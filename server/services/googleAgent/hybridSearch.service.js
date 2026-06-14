@@ -111,8 +111,8 @@ function rrfMerge(vectorHits, textHits) {
 async function hybridSearchChunks({
   resourceId,
   query,
-  vectorLimit = 15,
-  textLimit = 10,
+  vectorLimit = 60,   // return far more relevant chunks — do not starve grounding
+  textLimit = 40,
 }) {
   const cleanQuery = String(query || "").trim();
   if (!resourceId || !cleanQuery) {

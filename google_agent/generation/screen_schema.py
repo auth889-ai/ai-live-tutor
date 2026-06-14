@@ -1,7 +1,7 @@
 """
 google_agent/generation/screen_schema.py
 ===============================================================================
-THE W3 BOARD SCREEN CONTRACT — OpenMAIC-style source focus patch.
+THE W3 BOARD SCREEN CONTRACT — action-based source focus patch.
 
 Core fix:
   - Real PDF source is a full rendered page element: kind="pdf_page".
@@ -73,7 +73,7 @@ ACTIONS = [
     "saveBookPage",
     "drawDiagram",
 
-    # OpenMAIC-style region actions
+    # action-based region actions
     "showFullPage",
     "showPdfPage",
     "circleRegion",
@@ -118,7 +118,7 @@ _ACTION_SCHEMA = {
         # legacy element targeting
         "targetElementId": {"type": "string"},
 
-        # OpenMAIC-style source-region targeting
+        # action-based source-region targeting
         "regionId": {"type": "string"},
         "parentElementId": {"type": "string"},
         "voiceLineId": {"type": "string"},

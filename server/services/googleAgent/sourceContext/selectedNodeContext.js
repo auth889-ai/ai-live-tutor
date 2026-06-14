@@ -42,7 +42,7 @@ function buildNodeContext(node, resourceId) {
     evidenceQuotes:   arr(node.evidenceQuotes || []),
     richSourcePack:   rsp,
     pageImages:       arr(rsp.pageImages       || []),
-    selectedEvidence: arr(rsp.selectedEvidence || refs).slice(0, 16),
+    selectedEvidence: arr(rsp.selectedEvidence || refs),   // keep ALL evidence — never cut
     hasCodeExample:   Boolean(node.hasCodeExample),
     hasDiagram:       Boolean(node.hasDiagram),
     complexity:       s(node.complexity || "medium"),

@@ -71,7 +71,9 @@ function assembleRichSourcePack(resource, node, chunkData, imageData) {
   }));
 
   const resMeta    = safeObj(res.metadata || {});
-  const fullText   = trimText(chunks.selectedPageFullText || rsp.selectedPageFullText || "");
+  // Keep the node's COMPLETE page text — do not cut. Large ceiling only as a
+  // pathological-input safety bound, not a real trim for normal PDFs.
+  const fullText   = trimText(chunks.selectedPageFullText || rsp.selectedPageFullText || "", 500000);
 
   return {
     selectedNode:          n,

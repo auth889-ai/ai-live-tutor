@@ -14,6 +14,7 @@ from google_agent.source.vision_safety_net import (
     VISION_INDEX_SCHEMA,
     build_vision_index,
     scan_page_image,
+    analyze_page_image,
     _load_image_bytes,
 )
 
@@ -101,22 +102,37 @@ class TestBuildVisionIndex:
         }
         scanned = []
 
-        async def fake_scan(page, image_bytes, *, model=None):
+        async def fake_analyze(page, image_bytes, **kw):
             scanned.append({"page": page, "bytes": image_bytes})
-            return [
-                {
-                    "regionId": f"p{page}_r1",
-                    "page": page,
-                    "type": "table" if page == 5 else "diagram",
-                    "description": f"Teaching region on page {page}",
-                    "content": f"Visible content on page {page}",
-                    "contains": ["sales", "report"],
-                    "bbox": {"x": 0.12, "y": 0.22, "w": 0.68, "h": 0.31},
-                    "teachingValue": "high",
-                }
-            ]
+            return {
+                "page": page,
+                "pageTitle": f"Page {page} topic",
+                "pageSummary": f"Detailed understanding of page {page}.",
+                "conceptsCovered": ["sales reporting"],
+                "prerequisiteConcepts": [],
+                "teachingNarrative": [f"Step 1 on page {page}", f"Step 2 on page {page}"],
+                "readingOrder": [f"p{page}_r1"],
+                "regions": [
+                    {
+                        "regionId": f"p{page}_r1",
+                        "page": page,
+                        "type": "table" if page == 5 else "diagram",
+                        "title": f"Region on page {page}",
+                        "description": f"Teaching region on page {page}",
+                        "content": f"Visible content on page {page}",
+                        "contains": ["sales", "report"],
+                        "conceptExplanation": f"What page {page} means",
+                        "relationships": ["links to the next table"],
+                        "bbox": {"x": 0.12, "y": 0.22, "w": 0.68, "h": 0.31},
+                        "teachingValue": "high",
+                        "teachingNote": "Point at the header first, then the rows.",
+                        "suggestedActions": ["movePointer", "highlight"],
+                        "commonMisconception": "",
+                    }
+                ],
+            }
 
-        with patch(f"{_MODULE}.scan_page_image", side_effect=fake_scan):
+        with patch(f"{_MODULE}.analyze_page_image", side_effect=fake_analyze):
             result = await build_vision_index(payload)
 
         assert result["ok"] is True
@@ -125,16 +141,21 @@ class TestBuildVisionIndex:
         assert result["selectedNodePages"] == [5, 6]
         assert result["regionCount"] == 2
         assert len(result["regions"]) == 2
+        assert len(result["pages"]) == 2          # NEW: page-level understanding captured
         assert result["allRegionsHaveBbox"] is True
         assert result["fallbackUsed"] is False
         assert [call["page"] for call in scanned] == [5, 6]
         assert scanned[0]["bytes"] == page5.read_bytes()
         assert scanned[1]["bytes"] == page6.read_bytes()
+        # page-level richness is real, not empty
+        assert all(p["pageTitle"] and p["teachingNarrative"] for p in result["pages"])
         for region in result["regions"]:
             assert region["regionId"].startswith(f"p{region['page']}_")
             assert region["page"] in (5, 6)
             assert region["type"]
             assert region["description"]
+            assert region["conceptExplanation"]   # NEW: concept understanding per region
+            assert region["teachingNote"]          # NEW: how to teach it
             assert set(region["bbox"]) == {"x", "y", "w", "h"}
 
     @pytest.mark.asyncio
@@ -202,10 +223,14 @@ class TestBuildVisionIndex:
             ],
         }
 
-        async def fake_scan(page, image_bytes, *, model=None):
-            return []
+        async def fake_analyze(page, image_bytes, **kw):
+            return {
+                "page": page, "pageTitle": "", "pageSummary": "",
+                "conceptsCovered": [], "prerequisiteConcepts": [],
+                "teachingNarrative": [], "readingOrder": [], "regions": [],
+            }
 
-        with patch(f"{_MODULE}.scan_page_image", side_effect=fake_scan):
+        with patch(f"{_MODULE}.analyze_page_image", side_effect=fake_analyze):
             result = await build_vision_index(payload)
 
         assert result["ok"] is False

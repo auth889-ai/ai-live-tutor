@@ -1,0 +1,12 @@
+{
+  "domain": "sql_database",
+  "confidence": 1.0,
+  "reasoning": "The node title 'Database Schema Changes' and multiple text snippets explicitly discuss database schemas, schema changes, adding tables and columns, and specific SQL commands like 'ALTER TABLE'. The visual regions include an Entity-Relationship Diagram (ERD) and a 'Galaxy Schema' diagram, both fundamental concepts in database design and management. These elements are all central to the 'sql_databas",
+  "signals": [
+    "Database Schema Changes",
+    "Entity-Relationship Diagram (ERD)",
+    "Galaxy Schema",
+    "ALTER TABLE users ADD COLUMN preferred_language VARCHAR(10) NULL;",
+    "Changing the database schema"
+  ]
+}

@@ -22,11 +22,13 @@ from typing import Any, Dict, List, Optional
 
 try:
     from ..pipeline.gemini_structured import generate_structured_async, FLASH_MODEL
+    from ..pipeline.model_router import route_structured
     from .teaching_principles import CRITIC_RUBRIC, rubric_prompt_block
     from .grounding_verifier import verify_segment
 except ImportError:  # pragma: no cover
     from google_agent.pipeline.gemini_structured import (  # type: ignore
         generate_structured_async, FLASH_MODEL)
+    from google_agent.pipeline.model_router import route_structured  # type: ignore
     from google_agent.generation.teaching_principles import (  # type: ignore
         CRITIC_RUBRIC, rubric_prompt_block)
     from google_agent.generation.grounding_verifier import verify_segment  # type: ignore
@@ -111,15 +113,17 @@ double — a wrong fact ruins a beautiful lesson).
 topDefects: the few SPECIFIC fixes that would most raise the score —
 name the screenId and exactly what to change. Empty if genuinely excellent."""
 
-    result = await generate_structured_async(
-        prompt, CRITIQUE_SCHEMA,
-        model=model or FLASH_MODEL,
-        temperature=0.2,
-        thinking=True,
-    )
+    # DESIGN v4: the critic is an INDEPENDENT model family (role="critic"
+    # → OpenAI primary, Gemini/OpenRouter fallback) — a judge from a
+    # different family cannot share the generator's blind spots.
+    routed = await route_structured(
+        "critic", prompt, CRITIQUE_SCHEMA, temperature=0.2)
+    result = routed["result"]
     score = float(result.get("overallScore") or 0)
     print(f"[segment_critic] {phase.get('phase')}: score={score:.1f} "
-          f"defects={len(result.get('topDefects') or [])}", file=sys.stderr)
+          f"defects={len(result.get('topDefects') or [])} "
+          f"judge={routed['provider']}", file=sys.stderr)
+    result["criticProvider"] = routed["provider"]
     return result
 
 

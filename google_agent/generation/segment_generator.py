@@ -1,269 +1,427 @@
 """
 google_agent/generation/segment_generator.py
 ===============================================================================
-SEGMENT GENERATOR — quality-stack stages 2-4.
+SEGMENT GENERATOR — Stage C (content). MULTIMODAL, fully dynamic, no hardcode.
 
-OpenMAIC-style patch:
-  - Real PDF source is rendered as a full pdf_page element.
-  - Actions target regionId + parentElementId.
-  - pdf_crop is optional/debug only.
-  - Every visual teaching phrase must have a target.
+The domain teacher produced a LessonContract (the PLAN). This agent turns ONE
+segment of that plan into the ACTUAL detailed board content the student sees:
+
+  - It SEES the real PDF page images for the segment (images come FROM the PDF).
+  - It reads the exhaustive vision reading of those pages.
+  - For EVERY planned screen it fills EVERY element with REAL content drawn from
+    the page (actual bullets, real table rows, the real code, the dry-run plan,
+    the source quote, the notes) — never a placeholder, never invented facts.
+  - It writes the teacher's DETAILED, step-by-step spoken voice lines that
+    explain everything on the pages, bound to the region being pointed at.
+  - It generates MANY scenario-based Q&A WITH worked answers, grounded in the
+    page text and images.
+
+Nothing is hardcoded: elementType is whatever the AI chose in the plan, and the
+content is generated dynamically from the real pages. The frontend renders any
+element type via its renderer registry (with a generic fallback).
+
+No fake fallback: if the model returns too little, we retry once without
+thinking (more output budget) then raise honestly.
 ===============================================================================
 """
 
 from __future__ import annotations
 
+import re
 import sys
 from typing import Any, Dict, List, Optional
 
 try:
-    from ..pipeline.gemini_structured import generate_structured_async, PRO_MODEL, FLASH_MODEL
-    from ..registry.lesson_registries import screen_types_for_domain, CATEGORY_COMMAND_HINTS
-    from .screen_schema import SEGMENT_SCHEMA
-    from .gold_exemplars import pick_exemplar
-    from .teaching_principles import EXPLANATION_PRINCIPLES
+    from ..pipeline.gemini_structured import (
+        generate_structured_async, FLASH_MODEL, GeminiStructuredError,
+    )
+    from ..live_tutor_agents.contracts import clean_text, safe_dict, safe_list
+    from ..source.vision_safety_net import _load_image_bytes
 except ImportError:  # pragma: no cover
     from google_agent.pipeline.gemini_structured import (  # type: ignore
-        generate_structured_async,
-        PRO_MODEL,
-        FLASH_MODEL,
+        generate_structured_async, FLASH_MODEL, GeminiStructuredError,
     )
-    from google_agent.registry.lesson_registries import (  # type: ignore
-        screen_types_for_domain,
-        CATEGORY_COMMAND_HINTS,
-    )
-    from google_agent.generation.screen_schema import SEGMENT_SCHEMA  # type: ignore
-    from google_agent.generation.gold_exemplars import pick_exemplar  # type: ignore
-    from google_agent.generation.teaching_principles import EXPLANATION_PRINCIPLES  # type: ignore
+    from google_agent.live_tutor_agents.contracts import clean_text, safe_dict, safe_list  # type: ignore
+    from google_agent.source.vision_safety_net import _load_image_bytes  # type: ignore
+
+try:
+    from google.genai import types as genai_types
+    _GENAI_OK = True
+except ImportError:  # pragma: no cover
+    genai_types = None
+    _GENAI_OK = False
 
 
 class SegmentGenerationError(RuntimeError):
-    """Honest failure — never fake screens."""
+    """Honest failure — never fake content."""
 
 
-def _ground_evidence(
-    payload: Dict[str, Any],
-    region_ids: List[str],
-    max_chunks: int = 14,
-) -> str:
-    """
-    Curate ONLY what this segment needs.
-    Verbatim text — quotes will be verified downstream.
-    """
-    chunks = payload.get("selectedEvidence") or payload.get("chunks") or []
-    regions = {r.get("regionId"): r for r in (payload.get("visionIndex") or [])}
-    region_pages = {regions[rid]["page"] for rid in region_ids if rid in regions}
+# ─────────────────────────────────────────────────────────────────────────────
+# Content schema (flexible container — the AI fills what each element needs).
+# This is a DATA CONTRACT, not hardcoded content. elementType is dynamic.
+# ─────────────────────────────────────────────────────────────────────────────
 
-    prioritized = sorted(
-        chunks,
-        key=lambda c: (0 if c.get("page") in region_pages else 1, c.get("page", 0)),
-    )[:max_chunks]
+_ELEMENT_CONTENT = {
+    "type": "object",
+    "properties": {
+        "elementId":   {"type": "string"},
+        "elementType": {"type": "string", "description": "the element type from the plan (dynamic)"},
+        "title":       {"type": "string"},
+        "regionId":    {"type": "string", "description": "real PDF region this element shows/points at"},
+        "pageNumber":  {"type": "number"},
+        "sourceRef":   {"type": "string"},
+        "body":        {"type": "string", "description": "the full, detailed written content of this element"},
+        "bullets":     {"type": "array", "items": {"type": "string"}},
+        "table":       {"type": "object", "properties": {
+                            "columns": {"type": "array", "items": {"type": "string"}},
+                            "rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}}}},
+        "code":        {"type": "object", "properties": {
+                            "language": {"type": "string"}, "content": {"type": "string"}}},
+        "dryRun":      {"type": "array", "items": {"type": "object", "properties": {
+                            "step": {"type": "number"}, "action": {"type": "string"},
+                            "result": {"type": "string"}}},
+                        "description": "step-by-step execution plan; real trace produced by the sandbox in C+"},
+        "diagramSpec": {"type": "string", "description": "text spec (e.g. mermaid) for a redrawn diagram"},
+        "needsSandbox":{"type": "boolean"},
+    },
+    "required": ["elementId", "elementType"],
+}
 
-    return "\n".join(
-        f"[p.{c.get('page', '?')}|{(c.get('chunkId') or '')[:28]}] "
-        f"{(c.get('text') or c.get('textPreview') or '')[:500]}"
-        for c in prioritized
-        if (c.get("text") or c.get("textPreview"))
-    ) or "(no evidence)"
+_VOICE_LINE = {
+    "type": "object",
+    "properties": {
+        "lineId":          {"type": "string"},
+        "text":            {"type": "string", "description": "the ACTUAL detailed spoken sentence (atomic, human)"},
+        "targetRegionId":  {"type": "string"},
+        "targetElementId": {"type": "string"},
+        "boardActions":    {"type": "array", "items": {"type": "string"},
+                            "description": "what the teacher does on the board as this is spoken (dynamic verbs)"},
+    },
+    "required": ["lineId", "text"],
+}
+
+_SCREEN_CONTENT = {
+    "type": "object",
+    "properties": {
+        "screenId":   {"type": "string"},
+        "mode":       {"type": "string"},
+        "template":   {"type": "string"},
+        "title":      {"type": "string"},
+        "pages":      {"type": "array", "items": {"type": "number"},
+                       "description": "PDF page numbers this screen shows"},
+        "elements":   {"type": "array", "items": _ELEMENT_CONTENT},
+        "voiceLines": {"type": "array", "items": _VOICE_LINE},
+    },
+    "required": ["screenId", "title", "elements", "voiceLines"],
+}
+
+SEGMENT_CONTENT_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "segmentId": {"type": "string"},
+        "title":     {"type": "string"},
+        "summary":   {"type": "string"},
+        "screens":   {"type": "array", "items": _SCREEN_CONTENT},
+        "scenarioQuestions": {"type": "array", "items": {"type": "object", "properties": {
+            "question":   {"type": "string"},
+            "answer":     {"type": "string", "description": "the full worked answer"},
+            "difficulty": {"type": "string"},
+            "type":       {"type": "string", "description": "recall | apply | scenario | challenge"},
+            "sourceRef":  {"type": "string"},
+        }}, "description": "MANY scenario-based questions with worked answers, grounded in the pages"},
+    },
+    "required": ["segmentId", "screens", "scenarioQuestions"],
+}
 
 
-def _ground_regions(payload: Dict[str, Any], region_ids: List[str]) -> str:
-    """
-    Vision regions this segment must point at.
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers — which pages this segment uses, and their vision reading + images
+# ─────────────────────────────────────────────────────────────────────────────
 
-    OpenMAIC-style rule:
-      render FULL PDF page as pdf_page element,
-      then use regionId + parentElementId for pointer/circle/highlight/zoom.
-    """
-    regions = {r.get("regionId"): r for r in (payload.get("visionIndex") or [])}
-    lines = []
+_PAGE_RE = re.compile(r"p(\d+)_")
 
-    for rid in region_ids:
-        r = regions.get(rid)
-        if not r:
+
+def _pages_for_segment(segment: Dict[str, Any], payload: Dict[str, Any]) -> List[int]:
+    pages: set[int] = set()
+    for sc in safe_list(segment.get("screenPlan")):
+        sc = safe_dict(sc)
+        for rid in safe_list(sc.get("requiredRegionIds")):
+            m = _PAGE_RE.match(str(rid))
+            if m:
+                pages.add(int(m.group(1)))
+        for el in safe_list(sc.get("elements")):
+            rid = safe_dict(el).get("regionId")
+            m = _PAGE_RE.match(str(rid or ""))
+            if m:
+                pages.add(int(m.group(1)))
+    # fall back to all node pages if the plan didn't bind regions
+    if not pages:
+        for pg in safe_list(payload.get("visionPages")):
+            p = safe_dict(pg).get("page")
+            if p:
+                pages.add(int(p))
+    return sorted(pages)
+
+
+def _vision_reading_for(payload: Dict[str, Any], pages: List[int]) -> str:
+    out: List[str] = []
+    for pg in safe_list(payload.get("visionPages")):
+        pg = safe_dict(pg)
+        if int(pg.get("page") or 0) not in pages:
             continue
-
-        b = r.get("bbox") or {}
-        contains = ", ".join((r.get("contains") or [])[:12])
-        parent = f"pdf_page_{r.get('page')}"
-        lines.append(
-            f"- {rid} parentElementId={parent} "
-            f"[page {r.get('page')}|{r.get('type')}] "
-            f"bbox=({b.get('x')},{b.get('y')},{b.get('w')},{b.get('h')}) "
-            f"contains=[{contains}] "
-            f"{(r.get('description') or '')[:180]}"
-        )
-
-    return "\n".join(lines) or "(no regions assigned to this phase)"
-
-
-def _level_style(level: str) -> str:
-    return {
-        "beginner": (
-            "Analogy BEFORE every new term. Each concept explained 3 ways "
-            "(definition, analogy, example). One cognitive step per screen. "
-            "Never jump. Warm, patient voice that repeats key terms."
-        ),
-        "intermediate": (
-            "Build on prior knowledge, brief bridges instead of full analogies, "
-            "focus on nuance and edge cases."
-        ),
-        "advanced": (
-            "Skip basics. Focus on tradeoffs, edge cases, comparisons with "
-            "alternatives. Dense, precise voice."
-        ),
-    }.get((level or "beginner").lower(), "")
+        out.append(f"\n=== PAGE {pg.get('page')} — {clean_text(pg.get('pageTitle'), 160)} ===")
+        out.append(f"SUMMARY: {clean_text(pg.get('pageSummary'), 2000)}")
+        narr = safe_list(pg.get("teachingNarrative"))
+        if narr:
+            out.append("TEACHING NARRATIVE:")
+            for i, s in enumerate(narr, 1):
+                out.append(f"  {i}. {clean_text(s, 900)}")
+        out.append("REGIONS (use these regionIds; transcribe their content into elements):")
+        for r in safe_list(pg.get("regions")):
+            r = safe_dict(r)
+            out.append(f"  [{r.get('regionId')}] ({r.get('type')}) {clean_text(r.get('title'), 120)}")
+            out.append(f"      content: {clean_text(r.get('content') or r.get('exactContent'), 1400)}")
+            if r.get("conceptExplanation"):
+                out.append(f"      concept: {clean_text(r.get('conceptExplanation'), 800)}")
+            rels = safe_list(r.get("relationships"))
+            if rels:
+                out.append("      relationships: " + "; ".join(clean_text(x, 200) for x in rels[:16]))
+    return "\n".join(out) or "(no vision reading for these pages)"
 
 
-async def generate_segment(
-    payload: Dict[str, Any],
-    contract: Dict[str, Any],
-    phase: Dict[str, Any],
-    segment_index: int,
-    *,
-    screens_target: int,
-    previous_summaries: Optional[List[str]] = None,
-    domain_profile: Optional[Dict[str, Any]] = None,
-    model: Optional[str] = None,
-    extra_instructions: str = "",
-) -> Dict[str, Any]:
+def _image_parts(payload: Dict[str, Any], pages: List[int]) -> List[Any]:
+    parts: List[Any] = []
+    for img in safe_list(payload.get("pageImages")):
+        img = safe_dict(img)
+        try:
+            p = int(img.get("page") or 0)
+        except Exception:
+            p = 0
+        if pages and p not in pages:
+            continue
+        data = _load_image_bytes(img)
+        if data is not None:
+            parts.append(genai_types.Part.from_bytes(data=data, mime_type="image/png"))
+    return parts
+
+
+def _plan_text(segment: Dict[str, Any]) -> str:
+    """Render this segment's plan (screens + their element briefs) so the generator fills them."""
+    out: List[str] = []
+    for sc in safe_list(segment.get("screenPlan")):
+        sc = safe_dict(sc)
+        out.append(f"\nSCREEN {sc.get('screenId')} — mode={sc.get('mode')} template={sc.get('template')}")
+        out.append(f"  mainIdea: {clean_text(sc.get('mainIdea'), 300)}")
+        out.append(f"  regions: {safe_list(sc.get('requiredRegionIds'))}")
+        lc = safe_dict(sc.get("levelCoverage"))
+        if lc:
+            out.append(f"  levelCoverage: weak='{clean_text(lc.get('weak'),160)}' "
+                       f"core='{clean_text(lc.get('core'),160)}' stretch='{clean_text(lc.get('stretch'),160)}'")
+        out.append("  elements to fill with REAL content:")
+        for el in safe_list(sc.get("elements")):
+            el = safe_dict(el)
+            sb = " [needsSandbox]" if el.get("needsSandbox") else ""
+            out.append(f"    - {el.get('elementType')}{sb}: {clean_text(el.get('contentBrief'), 300)} "
+                       f"(regionId={el.get('regionId') or ''})")
+    return "\n".join(out)
+
+
+_VISUAL_ONLY = ("pdf_page", "image", "spotlight", "pointer", "laser", "highlight_region", "zoom")
+
+
+def _written_depth(result: Dict[str, Any]) -> tuple[int, int]:
     """
-    Generate ONE segment for ONE contract phase.
-    Returns { segmentSummary, screens[] } matching SEGMENT_SCHEMA.
+    Count how many EXPLANATORY elements carry detailed written content.
+    Purely-visual elements (pdf page, spotlight, pointer) are excluded — they
+    legitimately have little body. Returns (richCount, totalContentElements).
     """
-    level = contract.get("studentLevel") or payload.get("studentLevel") or "beginner"
-    domain = (domain_profile or {}).get("domain") or "general"
-    region_ids = phase.get("useRegionIds") or []
-    allowed_types = screen_types_for_domain(domain)
-    node_title = (
-        payload.get("nodeTitle")
-        or (payload.get("selectedNode") or {}).get("title")
-        or ""
-    )
+    rich = total = 0
+    for sc in safe_list(result.get("screens")):
+        for el in safe_list(safe_dict(sc).get("elements")):
+            el = safe_dict(el)
+            etype = str(el.get("elementType") or "").lower()
+            if any(v in etype for v in _VISUAL_ONLY):
+                continue
+            total += 1
+            body = clean_text(el.get("body"), 100000)
+            is_rich = (
+                len(body) >= 140
+                or len(safe_list(el.get("bullets"))) >= 3
+                or bool(safe_dict(el.get("table")).get("rows"))
+                or bool(safe_dict(el.get("code")).get("content"))
+                or len(safe_list(el.get("dryRun"))) >= 2
+                or len(clean_text(el.get("diagramSpec"), 100000)) >= 60
+            )
+            if is_rich:
+                rich += 1
+    return rich, total
 
-    continuity = ""
-    if previous_summaries:
-        continuity = (
-            "WHAT PREVIOUS SEGMENTS ALREADY TAUGHT "
-            "(do not re-explain, build on it):\n"
-            + "\n".join(f"- {s}" for s in previous_summaries[-4:])
-        )
 
-    board_plan = next(
-        (
-            p.get("commandTypes")
-            for p in contract.get("smartBoardInteractionPlan") or []
-            if p.get("phase") == phase.get("phase")
-        ),
-        None,
-    )
+# ─────────────────────────────────────────────────────────────────────────────
+# The generator
+# ─────────────────────────────────────────────────────────────────────────────
 
-    exemplar = pick_exemplar(phase.get("phase", ""), allowed_types)
+_PROMPT = """You are a WORLD-CLASS teacher writing the ACTUAL board content for ONE segment of a
+lesson. You SEE the real PDF page images (attached) and a detailed vision reading of them.
 
-    prompt = f"""You are a world-best teacher producing board screens for ONE lesson segment.
+Your job: produce the REAL, DETAILED content the student will see and hear — not a plan, not
+placeholders. Explain EVERYTHING on these pages (every line of text AND every diagram/table/
+formula/code), step by step, so a weak, average, AND strong student all fully understand.
 
-LESSON: {node_title}   STUDENT LEVEL: {level}   DOMAIN: {domain}
-SEGMENT {segment_index}: phase = {phase.get('phase')} ({phase.get('minutes')} minutes)
+NODE: {node_title}
+SEGMENT: {seg_title}   (goal: {goal})
+STUDENT LEVEL: {level}
+PAGES IN THIS SEGMENT: {pages}
 
-PHASE PLAN:
-  {phase.get('description')}
-  STUDENT ACTIVITY: {phase.get('studentActivity')}
+THE PLAN FOR THIS SEGMENT (fill every screen and every element with real content):
+{plan}
 
-LEARNING OBJECTIVES:
-{chr(10).join('- ' + o for o in (contract.get('learningObjectives') or [])[:5])}
+VISION READING OF THESE PAGES (transcribe this into the elements — it is the truth):
+{vision}
 
-MISCONCEPTIONS:
-{chr(10).join('- ' + m for m in (contract.get('misconceptions') or [])[:4])}
+THE TWO THINGS THAT MUST BOTH BE DETAILED:
+  (1) THE WRITTEN LESSON ON THE BOARD (what the student SEES) — and
+  (2) THE TEACHER'S VOICE (what the student HEARS).
+A student who only READS the board (no audio) must still fully learn the concept. So the
+written content is NOT labels or one-liners — it is a complete, detailed, step-by-step
+written lesson, like a master teacher's filled board + notes.
 
-{continuity}
+HOW TO PRODUCE THE WRITTEN CONTENT (fill EVERY element with DEEP real content):
+- Every explanatory element MUST have a rich, multi-sentence `body` that fully explains its
+  point step by step (definition in simple words, then precise meaning, then why it matters,
+  with a concrete example from the page). Do NOT leave `body` short or empty for content
+  elements. Aim for several sentences per element — a real written explanation, not a caption.
+- key_points / checklist -> real `bullets` (each bullet a full, clear statement, not 2 words).
+- table / comparison_table -> real `table.columns` + `table.rows` with actual values from the page.
+- code / sql -> the real `code.content` (+ language); if it should run, set needsSandbox=true and
+  give a `dryRun` step plan (the sandbox produces the real trace).
+- diagram redraw -> a `diagramSpec` (e.g. mermaid) AND a pdf_page_image element pointing at the
+  real diagram regionId; in `body`, explain the diagram part by part.
+- source_quote_highlight -> the EXACT sentence + a `body` that explains what it means.
+- notes_panel / teacher_redraw / any HANDWRITTEN element -> the `body` is the FULL text the
+  teacher writes on the board, detailed and step by step (this is the handwriting — it must be
+  detailed, not a heading).
+- Bind every visual element to its real regionId. Images come FROM the PDF — never generate them.
 
-PDF REGIONS THIS PHASE MUST SHOW/POINT AT. Use their EXACT regionId.
+TEACHER VOICE (also detailed):
+- voiceLines: detailed, step-by-step, ATOMIC spoken sentences that NARRATE and EXPAND the written
+  content on screen. Each voice line names what the teacher does (boardActions) and the
+  region/element it targets. Go slow; cover every point on the board; repeat key terms.
+- Serve all students: weak-student scaffold, the core, and a stretch where planned.
 
-OpenMAIC-style source focus contract:
-- Render the FULL PDF page as kind="pdf_page" with elementId="pdf_page_<page>".
-- Use pageNumber=<page> and sourceMode="full_page_with_focus".
-- Board actions must target regionId + parentElementId.
-- Example action:
-  {{"action":"circleRegion", "regionId":"p6_r3", "parentElementId":"pdf_page_6"}}
-- Use pdf_crop only as optional/debug thumbnail, NEVER as the main source visual.
-- Do not invent source images. If a source visual is needed, use the real page image.
+STABLE IDs (needed for the timeline/playback step):
+- Every screen has a stable `screenId`, every element a stable `elementId`, every voice line a
+  stable `lineId`. Make them descriptive and unique (e.g. "s2_e3_factTable_definition",
+  "s2_vl4"). Voice lines reference the elementId/regionId they point at.
 
-{_ground_regions(payload, region_ids)}
+PRACTICE — A LOT, scenario-based:
+- Produce MANY scenarioQuestions (6+ for this segment) WITH full worked answers, grounded in this
+  segment's pages: recall, apply, scenario, challenge. Give the complete answer, not just a key.
 
-SOURCE EVIDENCE:
-Every sourceRef.quote must be VERBATIM text from here. It will be machine-verified.
-
-{_ground_evidence(payload, region_ids)}
-
-LEVEL STYLE:
-{_level_style(level)}
-
-{('BOARD COMMAND PALETTE for this phase: ' + ', '.join(board_plan)) if board_plan else ''}
-
-{EXPLANATION_PRINCIPLES}
-
-GOLD EXEMPLAR:
-Match this depth and shape. Your content must come from the evidence above.
-
-{exemplar}
-
-PRODUCE exactly {screens_target} screens for this segment.
-
-Rules:
-- screenType must be one of: {', '.join(allowed_types[:60])}
-- One cognitive step per screen.
-- Build realizations: safe case -> trap -> proof -> rule.
-- Never produce shallow slide bullets.
-- DENSITY MINIMUMS per content screen:
-  at least 4 blocks AND at least 3 visualElements.
-- table_drawing elements must contain REAL example rows.
-- Labeled arrows must point at specific things.
-- Add an annotation or teacher-note element near the bottom.
-- Procedural content must have dryRun steps with whatHappens + stateAfter.
-- boardActions must be timed with atMs ascending.
-- For normal drawn elements, targetElementId must exist.
-- For PDF/source regions, use regionId + parentElementId.
-- 4-7 actions per screen.
-- For every screen that uses PDF/source evidence, create:
-    visualElement kind="pdf_page"
-    elementId="pdf_page_<page>"
-    pageNumber=<page>
-    sourceMode="full_page_with_focus"
-- Use pdf_crop ONLY for optional/debug thumbnail.
-- Every phrase like "look at", "notice", "here", "this part" must have a matching boardAction target.
-- voiceover must narrate the boardActions in order.
-- Also include voiceLines when possible:
-    lineId/startMs/endMs/text/actions.
-  The frontend will run actions from audio.currentTime.
-- segmentSummary must be 2-3 sentences.
-- {extra_instructions}
+HARD RULES:
+- Ground everything in the real pages (you see the images + the vision reading). Never invent
+  facts. Use the exact names/numbers/labels from the pages.
+- Be LARGE and detailed in BOTH the written board content and the voice. Do not be terse.
+- Output ONLY valid JSON matching the schema. No markdown, no prose outside JSON.
 """
 
-    use_pro = level == "beginner" and phase.get("phase") in (
-        "teacher_model_1",
-        "teacher_model_2",
-        "check_repair",
-    )
-    chosen_model = model or (PRO_MODEL if use_pro else FLASH_MODEL)
 
-    result = await generate_structured_async(
-        prompt,
-        SEGMENT_SCHEMA,
-        model=chosen_model,
-        temperature=0.5,
-        max_output_tokens=65536,
+async def generate_segment_content(
+    payload: Dict[str, Any],
+    segment: Dict[str, Any],
+    *,
+    contract: Optional[Dict[str, Any]] = None,
+    model: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Turn ONE LessonContract segment into the actual detailed board content.
+    Multimodal: sees the segment's PDF page images. No fake fallback.
+    """
+    if not _GENAI_OK:
+        raise SegmentGenerationError("google.genai not available for multimodal content generation")
+
+    payload = safe_dict(payload)
+    segment = safe_dict(segment)
+    contract = safe_dict(contract)
+
+    node_title = clean_text(
+        safe_dict(payload.get("selectedNode")).get("title") or payload.get("nodeTitle")
+        or contract.get("title"), 160)
+    level = clean_text(contract.get("studentLevel") or payload.get("studentLevel") or "beginner", 20)
+    pages = _pages_for_segment(segment, payload)
+
+    prompt = _PROMPT.format(
+        node_title=node_title,
+        seg_title=clean_text(segment.get("title"), 160),
+        goal=clean_text(segment.get("learningGoal"), 300),
+        level=level,
+        pages=pages,
+        plan=_plan_text(segment),
+        vision=_vision_reading_for(payload, pages),
     )
 
-    screens = (result or {}).get("screens") or []
-    if len(screens) < max(2, screens_target // 2):
-        raise SegmentGenerationError(
-            f"segment {segment_index} ({phase.get('phase')}): got {len(screens)} "
-            f"screens, needed about {screens_target}. refusing to fake the rest."
+    async def _call(extra: str, thinking: bool) -> Dict[str, Any]:
+        return safe_dict(await generate_structured_async(
+            prompt="",
+            schema=SEGMENT_CONTENT_SCHEMA,
+            model=model or FLASH_MODEL,
+            temperature=0.4,
+            max_output_tokens=65536,
+            thinking=thinking,
+            contents=(_image_parts(payload, pages) + [prompt + extra]),
+        ))
+
+    try:
+        result = await _call("", False)
+    except GeminiStructuredError as exc:
+        # retry once (transient/truncation) — still honest, no fake content
+        print(f"[segment_generator] {segment.get('segmentId')}: {str(exc)[:100]} — retrying",
+              file=sys.stderr)
+        result = await _call("", False)
+
+    # DEPTH GATE: the WRITTEN board content must be detailed (a student reading the
+    # board alone must learn it). If too many content elements are thin, re-prompt
+    # ONCE to deepen the writing. No fake fallback — we ask the model to do better.
+    rich, total = _written_depth(result)
+    if total and rich / total < 0.6:
+        print(f"[segment_generator] {segment.get('segmentId')}: written content thin "
+              f"({rich}/{total} rich) — re-prompting to deepen", file=sys.stderr)
+        deepen = (
+            "\n\n────────── DEEPEN ──────────\n"
+            "Your written board content was too thin. Rewrite the FULL segment so that EVERY "
+            "explanatory element's `body` is a detailed, multi-sentence, step-by-step written "
+            "explanation (definition → meaning → why it matters → concrete example from the page). "
+            "Handwritten/notes elements must contain the full detailed text the teacher writes. "
+            "Keep the same screens/elements/ids; only make the written content much deeper. "
+            "A student reading the board with no audio must fully learn the concept."
         )
+        try:
+            deeper = await _call(deepen, False)
+            if _written_depth(deeper)[0] >= rich and safe_list(deeper.get("screens")):
+                result = deeper
+        except GeminiStructuredError:
+            pass
 
-    print(
-        f"[segment_generator] seg{segment_index} {phase.get('phase')}: "
-        f"{len(screens)} screens via {chosen_model}",
-        file=sys.stderr,
-    )
+    result.setdefault("segmentId", segment.get("segmentId"))
+    result.setdefault("title", segment.get("title"))
+
+    screens = safe_list(result.get("screens"))
+    if not screens:
+        raise SegmentGenerationError(
+            f"segment {segment.get('segmentId')}: model produced no screens — refusing to fake content")
+
+    n_elements = sum(len(safe_list(safe_dict(s).get("elements"))) for s in screens)
+    n_voice = sum(len(safe_list(safe_dict(s).get("voiceLines"))) for s in screens)
+    n_qa = len(safe_list(result.get("scenarioQuestions")))
+    print(f"[segment_generator] {segment.get('segmentId')}: {len(screens)} screens, "
+          f"{n_elements} elements, {n_voice} voice lines, {n_qa} scenario Q&A "
+          f"(pages {pages})", file=sys.stderr)
     return result
+
+
+# ── back-compat shim so segment_graph imports keep working ───────────────────
+async def generate_segment(payload: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
+    """Legacy entry point. The current LangGraph wiring is being migrated to
+    generate_segment_content; this adapts a payload carrying currentPhasePlan."""
+    segment = safe_dict(payload.get("currentPhasePlan") or payload.get("segment"))
+    return await generate_segment_content(payload, segment, model=kwargs.get("model"))

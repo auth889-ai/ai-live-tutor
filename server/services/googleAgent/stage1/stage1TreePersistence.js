@@ -31,7 +31,7 @@ function sanitizeNodeForMongo(n) {
     order:           typeof n.readOrder === "number" ? n.readOrder : 0,
     nodeType:        VALID_NODE_TYPES.has(n.nodeType) ? n.nodeType : "concept",
     importance:      0.75,
-    sourceRefs:      (Array.isArray(n.sourceRefs) ? n.sourceRefs : []).slice(0, 12),
+    sourceRefs:      (Array.isArray(n.sourceRefs) ? n.sourceRefs : []),   // keep ALL sourceRefs — never cut
     tags:            [],
     visualHints:     Array.isArray(n.visualHints) ? n.visualHints : [],
     metadata: {

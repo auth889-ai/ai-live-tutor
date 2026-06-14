@@ -254,44 +254,48 @@ async def run_adk_pipeline(payload: dict) -> dict:
     # Legacy SelectedPageVisionAgent remains the fallback if the net fails.
     async def run_vision_safety_net() -> None:
         try:
-            try:
-                from ..source.vision_safety_net import build_vision_index
-            except ImportError:
-                from google_agent.source.vision_safety_net import build_vision_index
-            net = await build_vision_index(working)
-            if net.get("ok") and safe_list(net.get("visionIndex")):
-                working["visionIndex"] = net["visionIndex"]
-                # Golden Rule #7: vision discoveries ADDED to evidence
-                discoveries = safe_list(net.get("visionEvidence"))
-                if discoveries:
-                    working["chunks"] = _dedupe_chunks(safe_list(working.get("chunks")) + discoveries)
-                    working["selectedEvidence"] = _dedupe_chunks(
-                        safe_list(working.get("selectedEvidence")) + discoveries
-                    )
-                outputs["VisionSafetyNet"] = {"ok": True, "result": net}
-                # Downstream packet builders (board scene/command) read the
-                # legacy slot — feed them the same visionIndex.
-                outputs["SelectedPageVisionAgent"] = {
-                    "ok": True,
-                    "result": {"visionIndex": net["visionIndex"],
-                               "regions": net["visionIndex"],
-                               "pagesScanned": net.get("pagesScanned"),
-                               "viaSafetyNet": True},
-                }
-                trace.append({"agent": "VisionSafetyNet", "ok": True,
-                              "ms": 0, "pages": net.get("pagesScanned")})
-                print(f"[pipeline] VisionSafetyNet: {len(net['visionIndex'])} regions "
-                      f"from {net.get('pagesScanned')} pages "
-                      f"({len(discoveries)} added as evidence)", file=sys.stderr)
-                return
-            trace.append({"agent": "VisionSafetyNet", "ok": False, "ms": 0,
+            from ..source.vision_safety_net import build_vision_index
+        except ImportError:
+            from google_agent.source.vision_safety_net import build_vision_index
+
+        net = await build_vision_index(working)
+
+        # NO FAKE FALLBACK: vision must really see the pages and produce regions,
+        # or the pipeline fails honestly. The old legacy SelectedPageVisionAgent
+        # fallback is removed.
+        if not (net.get("ok") and safe_list(net.get("visionIndex"))):
+            trace.append({"agent": "VisionAgent", "ok": False, "ms": 0,
                           "warnings": safe_list(net.get("warnings"))[:3]})
-        except Exception as exc:
-            print(f"[pipeline] VisionSafetyNet failed: {str(exc)[:200]} — "
-                  f"falling back to legacy SelectedPageVisionAgent", file=sys.stderr)
-            trace.append({"agent": "VisionSafetyNet", "ok": False, "ms": 0})
-        # Fallback: legacy vision agent
-        await run("SelectedPageVisionAgent")
+            raise RuntimeError(
+                "VisionAgent produced no usable visionIndex (no fake fallback). "
+                f"warnings={safe_list(net.get('warnings'))[:3]}"
+            )
+
+        working["visionIndex"] = net["visionIndex"]
+        # rich per-page understanding (pages[]) carried downstream for the teacher
+        working["visionPages"] = safe_list(net.get("pages"))
+        # Golden Rule #7: vision discoveries ADDED to evidence
+        discoveries = safe_list(net.get("visionEvidence"))
+        if discoveries:
+            working["chunks"] = _dedupe_chunks(safe_list(working.get("chunks")) + discoveries)
+            working["selectedEvidence"] = _dedupe_chunks(
+                safe_list(working.get("selectedEvidence")) + discoveries
+            )
+        outputs["VisionSafetyNet"] = {"ok": True, "result": net}
+        # Downstream packet builders read the legacy slot — feed them the same data.
+        outputs["SelectedPageVisionAgent"] = {
+            "ok": True,
+            "result": {"visionIndex": net["visionIndex"],
+                       "regions": net["visionIndex"],
+                       "pages": safe_list(net.get("pages")),
+                       "pagesScanned": net.get("pagesScanned"),
+                       "viaSafetyNet": True},
+        }
+        trace.append({"agent": "VisionAgent", "ok": True,
+                      "ms": 0, "pages": net.get("pagesScanned")})
+        print(f"[pipeline] VisionAgent: {len(net['visionIndex'])} regions "
+              f"from {net.get('pagesScanned')} pages "
+              f"({len(discoveries)} added as evidence)", file=sys.stderr)
 
     # ConceptExtraction + KnowledgeGraph absorbed by the Pedagogy layer below
     # (keyConcepts + conceptRelations); they run only in the legacy fallback.
@@ -301,65 +305,63 @@ async def run_adk_pipeline(payload: dict) -> dict:
             "VisionIndex required: pageImages were provided but Gemini Vision produced no bbox regions. "
             "Refusing to generate a text-only weak board lesson."
         )
-    # ── PEDAGOGY LAYER (W2.3 + W2.4) — Golden Rule #9: pedagogy before pixels.
-    # DomainUnderstanding → PedagogyPlanner (Pro + Thinking) produce the
-    # Lesson Design Contract. Replaces 5 legacy agents (ConceptExtraction,
-    # KnowledgeGraph, TeachingStrategy, CoursePlanner, SegmentPlanner) —
-    # which remain ONLY as fallback when the pedagogy layer fails.
-    pedagogy_ok = False
+    # ── STEP 4: Domain Router → picks the specialist teacher agent ───────────
     try:
-        try:
-            from ..planning.domain_understanding_agent import understand_domain
-            from ..planning.pedagogy_planner_agent import plan_pedagogy
-        except ImportError:
-            from google_agent.planning.domain_understanding_agent import understand_domain
-            from google_agent.planning.pedagogy_planner_agent import plan_pedagogy
+        from ..planning.domain_router import route_domain
+        from ..planning.teachers import get_teacher
+    except ImportError:
+        from google_agent.planning.domain_router import route_domain  # type: ignore
+        from google_agent.planning.teachers import get_teacher  # type: ignore
 
-        domain_profile = await understand_domain(working)
-        working["domainProfile"] = domain_profile
-        contract = await plan_pedagogy(working, domain_profile)
-        working["lessonDesignContract"] = contract
+    domain_route = await route_domain(working)
+    working["domainProfile"] = domain_route
+    domain = domain_route["domain"]
+    trace.append({"agent": "DomainRouterAgent", "ok": True, "ms": 0,
+                  "domain": domain, "confidence": domain_route.get("confidence")})
+    print(f"[pipeline] DomainRouterAgent → {domain} "
+          f"(confidence={domain_route.get('confidence'):.2f})", file=sys.stderr)
 
-        # Feed downstream agents through the slots they already read.
-        working["teachingStrategy"] = {
-            "approach": (contract.get("lessonIntroduction") or {}).get("hook", ""),
-            "learningObjectives": contract.get("learningObjectives"),
-            "keyConcepts": contract.get("keyConcepts"),
-            "misconceptions": contract.get("misconceptions"),
-            "screenCountTarget": contract.get("screenCountTarget"),
-            "screenMix": contract.get("screenMix"),
-            "instructionalProcedures": contract.get("instructionalProcedures"),
-            "differentiation": contract.get("differentiationStrategies"),
-            "viaPedagogyPlanner": True,
-        }
-        working["concepts"] = contract.get("keyConcepts") or []
-        working["knowledgeGraph"] = {"relations": contract.get("conceptRelations") or []}
-        course_plan = {
-            "segments": [
-                {"segmentId": i, "phase": p.get("phase"),
-                 "minutes": p.get("minutes"), "description": p.get("description"),
-                 "useRegionIds": p.get("useRegionIds") or []}
-                for i, p in enumerate(safe_list(contract.get("instructionalProcedures")))
-            ],
-            "screenCountTarget": contract.get("screenCountTarget"),
-        }
-        working["coursePlan"] = course_plan
-        outputs["TeachingStrategyAgent"] = {"ok": True, "result": working["teachingStrategy"]}
-        outputs["CoursePlannerAgent"] = {"ok": True, "result": course_plan}
-        outputs["PedagogyPlanner"] = {"ok": True, "result": contract}
-        trace.append({"agent": "DomainUnderstanding", "ok": True, "ms": 0})
-        trace.append({"agent": "PedagogyPlanner", "ok": True, "ms": 0,
-                      "screens": contract.get("screenCountTarget")})
-        strategy_result = outputs["TeachingStrategyAgent"]
-        pedagogy_ok = True
-        print(f"[pipeline] PedagogyPlanner CONTRACT: "
-              f"{contract.get('screenCountTarget')} screens, "
-              f"{len(safe_list(contract.get('instructionalProcedures')))} phases",
-              file=sys.stderr)
-    except Exception as exc:
-        print(f"[pipeline] Pedagogy layer failed: {str(exc)[:200]} — "
-              f"falling back to legacy planning agents", file=sys.stderr)
-        trace.append({"agent": "PedagogyPlanner", "ok": False, "ms": 0})
+    # ── STEP 5: Specialist domain teacher → LessonDesignContract ─────────────
+    teacher = get_teacher(domain)
+    contract = await teacher.run(working)
+    if not contract.ok:
+        raise RuntimeError(
+            f"{teacher.agent_name} failed: {contract.errors}. "
+            "Cannot generate lesson without a Lesson Design Contract."
+        )
+    contract = contract.result
+    working["lessonDesignContract"] = contract
+
+    phases = safe_list(contract.get("instructionalProcedures"))
+    working["teachingStrategy"] = {
+        "approach":              contract.get("hook", ""),
+        "learningObjectives":    contract.get("learningObjectives"),
+        "keyConcepts":           contract.get("keyConcepts"),
+        "misconceptions":        contract.get("misconceptions"),
+        "screenCountTarget":     contract.get("screenCountTarget"),
+        "screenFamilies":        contract.get("screenFamilies"),
+        "instructionalProcedures": phases,
+        "differentiation":       contract.get("differentiationStrategies"),
+        "domainTeacher":         teacher.agent_name,
+    }
+    working["concepts"] = contract.get("keyConcepts") or []
+    working["coursePlan"] = {
+        "segments": [
+            {"segmentId": i, "phase": p.get("phase"), "minutes": p.get("minutes"),
+             "description": p.get("description"), "useRegionIds": p.get("useRegionIds") or [],
+             "screenCount": p.get("screenCount"), "screenTypes": p.get("screenTypes") or []}
+            for i, p in enumerate(phases)
+        ],
+        "screenCountTarget": contract.get("screenCountTarget"),
+    }
+    outputs["DomainRouterAgent"] = {"ok": True, "result": domain_route}
+    outputs[teacher.agent_name] = {"ok": True, "result": contract}
+    trace.append({"agent": teacher.agent_name, "ok": True, "ms": 0,
+                  "screens": contract.get("screenCountTarget"), "phases": len(phases)})
+    print(f"[pipeline] {teacher.agent_name} CONTRACT: "
+          f"{contract.get('screenCountTarget')} screens, {len(phases)} phases",
+          file=sys.stderr)
+    pedagogy_ok = True
 
     # ── W3 QUALITY-STACK GENERATION — the contract drives the lesson ─────────
     # ground → anchor → generate → verify → critique → repair, per phase.
@@ -425,24 +427,7 @@ async def run_adk_pipeline(payload: dict) -> dict:
             trace.append({"agent": "QualityStackOrchestrator", "ok": False})
             raise
 
-    if not pedagogy_ok:
-        # LEGACY FALLBACK — the old 5-agent planning chain.
-        await run("ConceptExtractionAgent")
-        await run("KnowledgeGraphAgent")
-        strategy_result, course_result = await asyncio.gather(
-            run("TeachingStrategyAgent"), run("CoursePlannerAgent"))
-        course_plan = safe_dict(course_result.get("result") or {})
-        first_segment = safe_dict(safe_list(course_plan.get("segments"))[0]
-                                  if safe_list(course_plan.get("segments")) else {})
-        await run("SegmentPlannerAgent", {
-            "mode": "plan_segment",
-            "coursePlan": course_plan,
-            "segment": first_segment,
-            "sourceRefs": refs,
-            "chunks": chunks,
-        })
-
-    # ── Stage B: Teaching content ────────────────────────────────────────────────
+    # ── Stage B: Teaching content (legacy path — only reached if quality stack fails above) ─
     exp_task   = run("DetailedExplanationAgent")
     anal_task  = run("AnalogyExampleAgent")
     quiz_task  = run("AssessmentQuizAgent", {
@@ -621,66 +606,15 @@ async def run_adk_pipeline(payload: dict) -> dict:
 
 async def run_pipeline_with_direct_fallback(payload: dict) -> dict:
     """
-    Primary entry point for Node.js bridge — v3 order (GOLDEN RULE #2):
-
-      1. ADK multi-agent pipeline runs FIRST — it is the intelligence layer
-         (RAG, Vision, TeachingStrategy, BoardCommand, VoiceScript, ...).
-      2. direct_gemini (2 focused structured calls) is the EMERGENCY FALLBACK,
-         used only when ADK genuinely fails or returns too little to teach.
-      3. If both fail → raise honestly. NEVER placeholder content
-         (GOLDEN RULE #5 — _ensure_minimums fake-success is dead).
+    Primary entry point for Node.js bridge.
+    Runs the full ADK multi-agent pipeline.
+    No fallback — if the pipeline fails, raises honestly.
     """
-    try:
-        from .direct_gemini_pipeline import run_direct_pipeline
-    except ImportError:
-        try:
-            from google_agent.pipeline.direct_gemini_pipeline import run_direct_pipeline
-        except ImportError:
-            run_direct_pipeline = None
-
-    # Quality bar for "this is teachable": enough screens AND commands.
-    MIN_SCREENS, MIN_COMMANDS = 10, 30
-    adk_error: Exception | None = None
-
-    # ── PRIMARY: ADK multi-agent pipeline ─────────────────────────────────────
-    try:
-        result = await run_adk_pipeline(payload)
-        screens  = len(result.get("boardScreens") or [])
-        commands = len(result.get("boardCommands") or [])
-        voice    = len(result.get("voiceScript") or [])
-        if screens >= MIN_SCREENS and commands >= MIN_COMMANDS and voice > 0:
-            print(f"[pipeline] ADK PRIMARY succeeded screens={screens} "
-                  f"commands={commands} voice={voice}", file=sys.stderr)
-            result.setdefault("metadata", {})["pipeline"] = "adk_agents_primary"
-            return result
-        print(f"[pipeline] ADK output below quality bar (screens={screens} "
-              f"commands={commands} voice={voice}) — using direct fallback",
-              file=sys.stderr)
-    except Exception as exc:
-        adk_error = exc
-        hard_failure = (
-            "VisionIndex required" in str(exc)
-            or "QualityStackOrchestrator below quality bar" in str(exc)
-            or "refusing legacy weak lesson fallback" in str(exc)
-        )
-        if hard_failure:
-            print(f"[pipeline] ADK PRIMARY hard-failed: {exc}. "
-                  f"No direct fallback because that would create weak text-only content.",
-                  file=sys.stderr)
-            raise
-        print(f"[pipeline] ADK PRIMARY failed: {exc} — using direct fallback",
-              file=sys.stderr)
-
-    # ── FALLBACK: direct structured pipeline (2 focused calls) ────────────────
-    if run_direct_pipeline is not None:
-        result = run_direct_pipeline(payload)  # raises DirectPipelineError honestly
-        result.setdefault("metadata", {})["pipeline"] = "direct_gemini_fallback"
-        if adk_error is not None:
-            result["metadata"]["adkError"] = str(adk_error)[:300]
-        return result
-
-    # ── Both unavailable → honest failure ─────────────────────────────────────
-    raise RuntimeError(
-        f"Both pipelines failed. ADK error: {adk_error}. "
-        f"direct_gemini unavailable. No fake content will be returned."
-    )
+    result = await run_adk_pipeline(payload)
+    screens  = len(result.get("boardScreens") or [])
+    commands = len(result.get("boardCommands") or [])
+    voice    = len(result.get("voiceScript") or [])
+    print(f"[pipeline] ADK pipeline done: screens={screens} "
+          f"commands={commands} voice={voice}", file=sys.stderr)
+    result.setdefault("metadata", {})["pipeline"] = "adk_domain_teacher_v3"
+    return result

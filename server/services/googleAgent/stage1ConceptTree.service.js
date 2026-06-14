@@ -322,8 +322,20 @@ function getPageAssetsFromResource(resource) {
   });
 }
 
-function buildPagePackets({ resource, chunks }) {
+function buildPagePackets({ resource, chunks, resourceId }) {
   const assetMap = new Map(getPageAssetsFromResource(resource).map((p) => [Number(p.page), p]));
+  // A concept can come from a page's TEXT or its PICTURE. Image-only pages
+  // (diagram/schema slides with little text) still have a PNG on disk — the page
+  // image IS the evidence (vision = truth). Include every page that has an image
+  // so no concept the AI found gets deleted for lacking a text quote.
+  const rid = resourceId || resource.resourceId || resource.id || resource._id;
+  let diskImageMap = new Map();
+  try {
+    const { getAllPageImages } = require("./sourceContext/pageImageContext");
+    diskImageMap = new Map(
+      getAllPageImages(rid, { includeBase64: false }).map((i) => [Number(i.page), i])
+    );
+  } catch (_) { /* page-image dir optional */ }
   const byPage = new Map();
 
   for (const raw of chunks) {
@@ -332,7 +344,7 @@ function buildPagePackets({ resource, chunks }) {
     byPage.get(c.page).push(c);
   }
 
-  const pages = [...new Set([...assetMap.keys(), ...byPage.keys()])].sort((a, b) => a - b);
+  const pages = [...new Set([...assetMap.keys(), ...byPage.keys(), ...diskImageMap.keys()])].sort((a, b) => a - b);
 
   return pages
     .map((pageNo) => {
@@ -366,11 +378,12 @@ function buildPagePackets({ resource, chunks }) {
         ...pageChunks.flatMap((c) => c.layoutBlocks),
       ].slice(0, 240);
 
+      const diskImg = diskImageMap.get(pageNo) || {};
       const pageImageUrl =
-        cleanText(asset.pageImageUrl || pageChunks.find((c) => c.pageImageUrl)?.pageImageUrl || "", 1400);
+        cleanText(asset.pageImageUrl || pageChunks.find((c) => c.pageImageUrl)?.pageImageUrl || diskImg.imageUrl || "", 1400);
 
       const pageImagePath =
-        cleanText(asset.pageImagePath || pageChunks.find((c) => c.pageImagePath)?.pageImagePath || "", 1400);
+        cleanText(asset.pageImagePath || pageChunks.find((c) => c.pageImagePath)?.pageImagePath || diskImg.imagePath || "", 1400);
 
       const combinedForEvidence = cleanText(
         [
@@ -1968,6 +1981,9 @@ STRICT TEACHER-ROADMAP RULES:
 10. nodeType choices only: module, concept, definition, process, example, warning, question. Never use diagram/table as nodeType; use visualHints instead.
 11. JSON only. No markdown.
 12. Maximum nodes is a ceiling, not a target. Use enough nodes to teach the full PDF accurately.
+13. YOU CAN SEE THE ACTUAL PAGE IMAGES. The full page images of this PDF are attached after this prompt, in page order (1st image = page 1, 2nd image = page 2, and so on). READ every page image yourself — including diagrams, tables, figures, and slides whose text extraction is weak or missing. Find every real concept and subconcept from what you SEE on the pages, not only from the supplied text. The text is a helper; the page images are the truth.
+14. FULL PAGE COVERAGE IS MANDATORY. Every page number of the PDF must appear in at least one node's pageRefs. Do not skip any page. Walk page 1 to the last page in order; for each page, identify the concept(s)/subconcept(s) it introduces and create accurate teachable nodes for them. A page may map to several concept nodes, and one concept may span several pages — assign pageRefs to match what the pages actually show. Never fabricate a concept that is not on the pages, and never drop a page that clearly teaches something.
+15. A complete teacher roadmap also needs, grounded in the real pages: (a) at least one "question" node (nodeType: "question") per major module — a genuine check-for-understanding question about that module's concepts; (b) "example" nodes wherever the pages show a worked example or case study; (c) "warning" nodes wherever the pages show a risk, pitfall, or common mistake. Only create these where the pages actually support them — never invent.
 
 Resource title: ${cleanText(resource.title || resource.originalFilename || "Uploaded PDF", 220)}
 Student level: ${studentLevel}
@@ -2159,7 +2175,7 @@ function extractJsonObject(raw) {
   return parseJsonWithRepairs(candidate.slice(first, last + 1));
 }
 
-async function callGeminiJson({ prompt }) {
+async function callGeminiJson({ prompt, images = [] }) {
   const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
@@ -2182,11 +2198,23 @@ async function callGeminiJson({ prompt }) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      contents: [{
+        role: "user",
+        parts: [
+          { text: prompt },
+          // MULTIMODAL: attach the actual page images (page order) so the model
+          // SEES every page — including diagram/table pages text extraction misses.
+          ...safeArray(images)
+            .filter((img) => img && img.base64)
+            .map((img) => ({
+              inlineData: { mimeType: img.mimeType || "image/png", data: img.base64 },
+            })),
+        ],
+      }],
       generationConfig: {
         temperature: 0.12,
         topP: 0.8,
-        maxOutputTokens: Number(process.env.STAGE1_TREE_MAX_OUTPUT_TOKENS || 32000),
+        maxOutputTokens: Number(process.env.STAGE1_TREE_MAX_OUTPUT_TOKENS || 65536),
         responseMimeType: "application/json",
       },
     }),
@@ -2299,6 +2327,31 @@ function pickSourceRefs({ resourceId, rawNode, pagePackets }) {
     );
   }
 
+  // VISION = TRUTH: the model SAW every page image, so its own pageRefs are valid
+  // evidence even when a page has little/no extractable text (diagram-only slides).
+  // Union the model's claimed pages in, so image-only pages are NEVER dropped from
+  // coverage. The page is real and the model read it — this is not fabrication.
+  const coveredPages = new Set(refs.map((r) => Number(r.page)));
+  for (const p of safeArray(rawNode.pageRefs).map((x) => Number(x)).filter(Boolean)) {
+    if (coveredPages.has(p)) continue;
+    const page = pagePackets.find((pp) => Number(pp.page) === p);
+    if (!page) continue;
+    coveredPages.add(p);
+    // Page image is the evidence. If the page has little/no text, ground the ref
+    // in the AI's own concept description (what it read off the slide image).
+    const visionQuote =
+      bestQuoteFromPage(page, `${title} ${definition}`, 1000) ||
+      inlineText(definition || title, 1000);
+    refs.push(
+      sourceRefFromPage({
+        resourceId,
+        pagePacket: page,
+        quote: visionQuote,
+        confidence: 0.76,
+      })
+    );
+  }
+
   if (!refs.length) {
     const pageRefs = safeArray(rawNode.pageRefs).map((p) => Number(p)).filter(Boolean);
 
@@ -2320,7 +2373,7 @@ function pickSourceRefs({ resourceId, rawNode, pagePackets }) {
     }
   }
 
-  return uniqueBy(refs, (r) => `${r.page}|${r.chunkId}|${r.quote.slice(0, 90)}`).slice(0, 8);
+  return uniqueBy(refs, (r) => `${r.page}|${r.chunkId}|${r.quote.slice(0, 90)}`).slice(0, 14);
 }
 
 function richSourcePackForNode({ refs, pagePackets }) {
@@ -3016,7 +3069,7 @@ async function health() {
 async function buildConceptTree({ ownerKey, resourceId, body = {}, context = {} }) {
   const resource = await getOwnedResource({ ownerKey, resourceId });
   const chunks = await getResourceChunks({ ownerKey, resourceId });
-  const pagePackets = buildPagePackets({ resource, chunks });
+  const pagePackets = buildPagePackets({ resource, chunks, resourceId });
 
   if (!pagePackets.length) {
     const error = new Error("No page-wise text/OCR/table/figure/image packets found. Refusing fake concept tree.");
@@ -3056,17 +3109,143 @@ async function buildConceptTree({ ownerKey, resourceId, body = {}, context = {} 
     roadmapModules,
   });
 
-  const json = await callGeminiJson({ prompt });
+  // MULTIMODAL TREE CREATION: the agent must SEE every page image so it finds
+  // every concept/subconcept accurately. Text extraction alone misses pages
+  // (diagram/table-heavy slides), which is why earlier trees skipped pages.
+  const { getAllPageImages } = require("./sourceContext/pageImageContext");
+  const treePageImages = getAllPageImages(resourceId, { includeBase64: true })
+    .filter((img) => img && img.base64)
+    .sort((a, b) => a.page - b.page);
 
-  const { rootNodeId, nodes, edges, sourceCoverage, warnings, roadmapExpansion } = normalizeGeminiTree({
-    json,
-    resource,
-    pagePackets,
-    body,
-    fullPdfSummary,
-    fullPdfOutline,
-    roadmapModules,
-  });
+  if (!treePageImages.length) {
+    console.warn(
+      `[stage1ConceptTree] no page images found on disk for ${resourceId} — ` +
+        `tree will be built from text only (less accurate). Run the page-image renderer.`
+    );
+  } else {
+    console.log(
+      `[stage1ConceptTree] sending ${treePageImages.length} page images to the tree model ` +
+        `(pages ${treePageImages[0].page}-${treePageImages[treePageImages.length - 1].page})`
+    );
+  }
+
+  const allPdfPages = [
+    ...new Set([
+      ...pagePackets.map((p) => Number(p.page)).filter(Boolean),
+      ...treePageImages.map((p) => Number(p.page)).filter(Boolean),
+    ]),
+  ].sort((a, b) => a - b);
+
+  const json = await callGeminiJson({ prompt, images: treePageImages });
+
+  // NORMALIZED-COVERAGE REPAIR: the tree that actually gets SAVED is the
+  // NORMALIZED one, and normalization can drop nodes. So we check coverage/types
+  // on the normalized result (not the raw model JSON), re-prompt for whatever is
+  // still missing, merge, and RE-NORMALIZE. Loop until complete or attempts run
+  // out. This is deterministic — it fixes the real saved tree, not the raw draft.
+  const runNormalize = () =>
+    normalizeGeminiTree({
+      json,
+      resource,
+      pagePackets,
+      body,
+      fullPdfSummary,
+      fullPdfOutline,
+      roadmapModules,
+    });
+
+  let normalizedTree = runNormalize();
+  const hasType = (ns, t) => ns.some((n) => n.nodeType === t);
+  const maxRepairs = Number(process.env.STAGE1_TREE_COVERAGE_REPAIRS || 3);
+
+  for (let attempt = 0; attempt < maxRepairs; attempt++) {
+    const ns = normalizedTree.nodes;
+    const covered = new Set(ns.flatMap((n) => safeArray(n.pageRefs).map(Number).filter(Boolean)));
+    const missing = allPdfPages.filter((p) => !covered.has(p));
+    const needQuestion = ns.length >= 18 && !hasType(ns, "question");
+    const needExample = ns.length >= 14 && !hasType(ns, "example");
+    const needWarning = ns.length >= 18 && !hasType(ns, "warning");
+
+    if (!missing.length && !needQuestion && !needExample && !needWarning) break;
+
+    const wants = [];
+    if (missing.length) wants.push(`concept/subconcept nodes covering MISSED pages [${missing.join(", ")}]`);
+    if (needQuestion) wants.push(`at least 2 "question" nodes (real check-for-understanding questions tied to key concepts)`);
+    if (needExample) wants.push(`"example" node(s) for any worked example / case study the pages show`);
+    if (needWarning) wants.push(`"warning" node(s) for any risk / pitfall / common mistake the pages show`);
+
+    console.log(`[stage1ConceptTree] tree repair ${attempt + 1}: needs ${wants.join("; ")} — re-prompting`);
+
+    const imagesToSend = missing.length
+      ? treePageImages.filter((img) => missing.includes(Number(img.page)))
+      : treePageImages;
+    const imageOrder = imagesToSend.map((i) => i.page).join(", ");
+    const existingModules = ns
+      .filter((n) => n.nodeType === "module")
+      .map((n) => `${n.nodeId} :: ${n.title}`)
+      .join("\n");
+
+    const repairPrompt = `You earlier built a concept tree for this PDF. It still needs:
+${wants.map((w) => `- ${w}`).join("\n")}
+
+The attached page images are pages [${imageOrder}] in that order. Look at them and return ONLY additional nodes (do not repeat existing ones).
+
+Return JSON ONLY: { "nodes": [ { "nodeId","title","shortDefinition","parentId","nodeType","pageRefs","evidenceQuotes":[{"page","quote","confidence"}],"visualHints":[] } ] }
+
+Rules:
+- nodeType: module|concept|definition|process|example|warning|question.
+- parentId MUST be one of these existing nodes (pick the best fit):
+${existingModules}
+- pageRefs must include the page(s) each node teaches.
+- Ground every node in what the page image actually shows. Do not invent. Do not repeat existing nodes.`;
+
+    let repairJson;
+    try {
+      repairJson = await callGeminiJson({ prompt: repairPrompt, images: imagesToSend });
+    } catch (e) {
+      console.warn(`[stage1ConceptTree] tree repair ${attempt + 1} failed: ${e.message}`);
+      break;
+    }
+
+    const existingIds = new Set(safeArray(json.nodes).map((n) => safeObject(n).nodeId));
+    const added = safeArray(safeObject(repairJson).nodes).filter(
+      (n) => safeObject(n).nodeId && !existingIds.has(n.nodeId)
+    );
+    if (!added.length) {
+      console.warn(`[stage1ConceptTree] tree repair ${attempt + 1}: model added no usable nodes — stopping`);
+      break;
+    }
+    json.nodes = [...safeArray(json.nodes), ...added];
+    normalizedTree = runNormalize();
+    console.log(
+      `[stage1ConceptTree] tree repair ${attempt + 1}: added ${added.length} raw node(s); ` +
+        `normalized tree now ${normalizedTree.nodes.length} nodes`
+    );
+  }
+
+  const { rootNodeId, nodes, edges, sourceCoverage, warnings, roadmapExpansion } = normalizedTree;
+
+  // PAGE COVERAGE: every page the PDF actually has must be represented by some
+  // node's pageRefs. With page images sent to the model + the coverage-repair
+  // loop above this should be complete; we still surface any gap loudly.
+  const coveredPages = new Set(
+    nodes.flatMap((n) => safeArray(n.pageRefs).map(Number).filter(Boolean))
+  );
+  const missingPages = allPdfPages.filter((p) => !coveredPages.has(p));
+  const pageCoverage = {
+    totalPages: allPdfPages.length,
+    coveredPages: [...coveredPages].sort((a, b) => a - b),
+    missingPages,
+    complete: missingPages.length === 0,
+    pageImagesSeenByModel: treePageImages.length,
+  };
+  if (missingPages.length) {
+    const msg = `Page coverage incomplete — tree missed pages [${missingPages.join(", ")}] of ${allPdfPages.length}.`;
+    warnings.push(msg);
+    console.warn(`[stage1ConceptTree] ${msg}`);
+  } else {
+    console.log(`[stage1ConceptTree] page coverage complete: all ${allPdfPages.length} pages represented.`);
+  }
 
   const roadmapCoverage = assertRoadmapCoverage({
     nodes,
@@ -3153,6 +3332,9 @@ async function buildConceptTree({ ownerKey, resourceId, body = {}, context = {} 
       fallbackUsed: false,
       usedSmartFallback: false,
       sourceGrounded: true,
+      multimodalTreeCreation: true,
+      pageImagesSeenByModel: treePageImages.length,
+      pageCoverage,
       randomKeywordTreeBlocked: true,
       richPagePackets: true,
       fullPdfSummaryUsed: true,

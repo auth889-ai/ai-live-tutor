@@ -12,6 +12,8 @@ server/node_modules/
 .env.*
 !.env.example
 secrets/
+docs/
+notes/
 OpenMAIC/
 *.pem
 *.key
