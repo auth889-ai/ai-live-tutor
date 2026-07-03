@@ -1,0 +1,17 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: forever
+      POSTGRES_USER: forever
+      POSTGRES_PASSWORD: forever
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+

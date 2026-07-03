@@ -27,6 +27,8 @@ This repository starts with a narrow, high-quality first slice:
 
 - strict architecture documents
 - Qwen Cloud backend boundary
+- LangGraph/Celery/Redis/semantic-search production boundaries
+- optional BullMQ realtime gateway boundary
 - deterministic demo generation pipeline
 - strict timeline manifest contracts
 - audio-clock-synchronized web tutor player
@@ -71,3 +73,17 @@ For Singapore, Japan, Beijing, or Hong Kong workspaces, use the workspace-specif
 - Text description: `docs/DEVPOST_SUBMISSION.md`.
 - HLD and software architecture: `docs/HLD.md`, `docs/SOFTWARE_ARCHITECTURE.md`.
 
+## Production Stack Shape
+
+The target stack is documented and scaffolded:
+
+- FastAPI API
+- Qwen Cloud Model Studio
+- LangGraph orchestration
+- LangChain agent/tool wrappers
+- Celery + Redis worker queue
+- PostgreSQL + pgvector semantic search
+- BullMQ realtime gateway for websocket event fanout
+- Web Audio API tutor player
+
+See `docs/PRODUCTION_STACK.md` and `docs/BUILD_PLAN_120_HOURS.md`.

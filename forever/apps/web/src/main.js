@@ -1,6 +1,4 @@
-import { demoManifest } from "./data/demoManifest.js";
-import { createTutorPlayer } from "./components/TutorPlayer.js";
+import { createStudioShell } from "./components/StudioShell.js";
 
 const app = document.querySelector("#app");
-app.append(createTutorPlayer(demoManifest));
-
+app.append(createStudioShell());

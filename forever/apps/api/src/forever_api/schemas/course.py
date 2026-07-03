@@ -10,6 +10,7 @@ class CourseStartRequest(BaseModel):
     text: str
     learner_level: str = Field(default="beginner", alias="learnerLevel")
     target_minutes: int = Field(default=8, alias="targetMinutes", ge=1, le=120)
+    use_qwen: bool = Field(default=False, alias="useQwen")
 
 
 class CourseStartResponse(BaseModel):
@@ -19,4 +20,5 @@ class CourseStartResponse(BaseModel):
     status: str
     first_scene_id: str = Field(alias="firstSceneId")
     manifest: TimelineManifest
-
+    generation_mode: str = Field(default="deterministic", alias="generationMode")
+    qwen_used: bool = Field(default=False, alias="qwenUsed")

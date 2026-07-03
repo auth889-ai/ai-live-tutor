@@ -1,9 +1,13 @@
 flowchart TD
   U[User] --> UI[Forever Studio UI]
+  UI --> RT[Realtime Gateway / BullMQ]
   UI --> API[FastAPI Backend]
-  API --> ORCH[Course Orchestrator]
+  RT --> REDIS[(Redis)]
+  API --> CELERY[Celery Workers]
+  CELERY --> REDIS
+  CELERY --> ORCH[LangGraph Course Orchestrator]
   ORCH --> ING[Universal Source Pack Builder]
-  ING --> SP[(Source Pack + Vector Store)]
+  ING --> SP[(Postgres + pgvector Source Pack)]
   SP --> LUG[Learning Unit Graph]
   LUG --> PLAN[Adaptive Course Planner]
   PLAN --> INTENT[Teaching Intent Planner]
@@ -14,6 +18,7 @@ flowchart TD
   TIMELINE --> REVIEW[Grounding + Pedagogy Reviewer]
   REVIEW --> STORE[(Lesson Timeline Store)]
   STORE --> STREAM[Scene Manifest API / WebSocket]
+  STREAM --> RT
   STREAM --> PLAYER[Audio-Synced Tutor Player]
 
   QWEN[Qwen Cloud / Alibaba Model Studio] --> PLAN
@@ -27,4 +32,3 @@ flowchart TD
   CLOCK --> SUBS[Word Subtitles]
   CLOCK --> PTR[Pointer Layer]
   CLOCK --> SOURCE[Source Proof]
-
