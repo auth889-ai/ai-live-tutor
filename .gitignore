@@ -15,6 +15,11 @@ secrets/
 docs/
 notes/
 OpenMAIC/
+!forever/**/*.md
+!forever/LICENSE
+!forever/.env.example
+!forever/docs/
+!forever/docs/**/*.md
 *.pem
 *.key
 *.json.key
