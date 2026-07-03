@@ -29,6 +29,7 @@ Each of the 8 domain teachers extends this and sets:
 
 from __future__ import annotations
 
+import asyncio
 import sys
 from typing import Any, Dict, List, Optional
 
@@ -57,6 +58,18 @@ try:
 except ImportError:  # pragma: no cover
     genai_types = None
     _GENAI_OK = False
+
+# Multi-agent teacher (A3): real ADK runtime + proven architect + shared context.
+try:
+    from ...pipeline.adk_runtime import run_adk_agent, adk_available, AdkRuntimeError
+    from .lesson_architect import LessonArchitectAgent
+    from . import teacher_context as tc
+except ImportError:  # pragma: no cover
+    from google_agent.pipeline.adk_runtime import (  # type: ignore
+        run_adk_agent, adk_available, AdkRuntimeError,
+    )
+    from google_agent.planning.teachers.lesson_architect import LessonArchitectAgent  # type: ignore
+    from google_agent.planning.teachers import teacher_context as tc  # type: ignore
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -270,8 +283,38 @@ when useful):
 Each element has a concrete contentBrief (what it will actually contain, from the real page);
 Stage C fills the full content. Bind every visual element to its real regionId.
 
-SERVE ALL STUDENTS: for important screens fill levelCoverage — a weak-student scaffold (extra
-simple), the core explanation, and a stretch for strong students.
+SERVE ALL STUDENTS (non-negotiable): teach like the WORLD'S BEST teacher who leaves NO student
+behind. For EVERY important screen fill levelCoverage with three REAL explanations:
+  - weak    → slowest, simplest, most concrete (assume zero prior knowledge; tiny everyday
+              analogy; smallest possible steps).
+  - core    → the clear standard explanation every student must walk away with.
+  - stretch → deeper insight / edge case / "why it really works" for strong students.
+
+DEPTH MANDATE — THE MOST IMPORTANT RULE:
+The sample boards show element STYLE only (titled cards/panels) — they are brief mockups. Your
+lesson must go FAR DEEPER. Using the rich vision reading, ADD a LARGE, RICH, step-by-step
+explanation of EACH AND EVERYTHING on EVERY page — every line of text, every diagram, every
+arrow, every table row, every line of code — explained part by part, nothing skipped, even
+though the mockups show little text. A thin card is WRONG.
+  • Each CONTENT element's contentBrief must be a LONG, specific explanation (the real teaching),
+    not a label. Many detailed element cards per screen.
+  • The VOICE is also large: each concept gets MANY substantive voice lines that together form a
+    long, thorough spoken explanation (never one-word lines). Voice + on-screen content are BOTH
+    detailed.
+  • If vision found N step-by-step items for a region, walk through all N.
+This depth is required in ALL THREE modes:
+  (1) PREBUILT — voice + point: detailed cards already on the board; teacher speaks and points
+      at each part. (2) WRITING — voice + point + writing: teacher writes/draws the same detailed
+      explanation live while speaking. (3) BOTH — prebuilt cards plus live writing together.
+
+UNIVERSAL ELEMENT VOCABULARY (use what the real content calls for; elementType is a free string,
+invent fitting ones too): pdf_page_image (ONE source element for pointing — the lesson is NOT
+"show the PDF"; teaching lives in the detailed cards), source_quote_highlight, phrase_breakdown,
+key_points_card, definition_card, concept_map, flowchart, before_after, comparison_table,
+notes_panel, teacher_redraw, common_mistake_box, fix_it_step, student_prediction, practice_qa,
+progressive_practice_set, quiz_check, summary_card, recap_map, external_resource_card,
+source_vs_external_split, lesson_book_page.
+Images are FETCHED from the real PDF (never generated).
 
 PRACTICE A LOT: include many practice questions WITH worked answers across the lesson — recall,
 apply, and challenge. Use progressive_practice_set. Also write externalResources.searchQueries
@@ -286,12 +329,21 @@ HARD RULES:
 3. Use real visionIndex regionIds + page numbers for pointing/highlighting. Images come FROM the
    PDF — never generated.
 4. Do NOT output React/HTML or final pixel commands. Output a LessonContract ONLY.
-5. Plan BOTH board modes (use the right one per screen):
-   - PREBUILT_SCREEN: page + notes already visible; teacher points/spotlights/highlights a
-     regionId and explains. Use for overview, source-focus, diagram explain, comparison, recap, quiz.
-   - REALTIME_WRITING: board starts blank/partial; teacher WRITES/DRAWS live while speaking.
-     Use for derivations, code/SQL walk-throughs, formulas, process build-up, mistake repair.
-6. Voice lines are ATOMIC — one idea each, natural spoken language, no huge paragraphs.
+5. Plan the THREE board modes (use the right one per screen):
+   - PREBUILT (voice+point): detailed cards already on the board; teacher points/spotlights a
+     regionId/elementId and explains. Overview, source-focus, diagram explain, comparison, recap, quiz.
+   - WRITING (voice+point+writing): board starts blank/partial; teacher WRITES/DRAWS the detailed
+     explanation LIVE WHILE SPEAKING. Derivations, code/SQL walk-throughs, formulas, build-up, mistakes.
+   - BOTH: prebuilt cards PLUS live writing together.
+6. ACTION & SYNC MODEL (the board later plays ordered, timed Actions — plan for it):
+   - The visual focus (movePointer/spotlight/highlight) for a part comes JUST BEFORE the voice line
+     about it. In WRITING mode the write/draw unfolds DURING the voice. Speech finishes before the
+     next action (point → speak, or write-while-speaking).
+   - EVERYTHING NEEDS A STABLE ID so actions can bind: every screen has a screenId, every element an
+     id, every voice line a voiceLineId. Each voice line lists the regionIds/elementIds it points at
+     or writes, plus its sourceRefs. (Downstream every Action = voiceLineId + regionId + bbox + sourceRef.)
+7. Voice lines: each is one focused spoken beat synced to one pointed/written part — but give MANY
+   per concept so the spoken explanation is long, thorough, and complete (detailed, never thin).
 7. Cover EVERY page and EVERY important region. Do not collapse a rich page into one vague screen.
 8. Make the final board feel like a master teacher's board: the real PDF page shown, key ideas
    written in a growing notes panel, the pointer moving to exactly what is being said, code
@@ -369,9 +421,11 @@ class BaseDomainTeacher:
                 out.append(
                     f"  [{r.get('regionId')}] ({r.get('type')}) {clean_text(r.get('title'), 120)}"
                 )
-                out.append(f"      content: {clean_text(r.get('content') or r.get('exactContent'), 700)}")
+                out.append(f"      content: {clean_text(r.get('content') or r.get('exactContent'), 1400)}")
                 if r.get("conceptExplanation"):
-                    out.append(f"      concept: {clean_text(r.get('conceptExplanation'), 500)}")
+                    out.append(f"      concept: {clean_text(r.get('conceptExplanation'), 700)}")
+                for s in safe_list(r.get("stepByStepExplanation"))[:40]:
+                    out.append(f"      step: {clean_text(s, 600)}")
                 rels = safe_list(r.get("relationships"))
                 if rels:
                     out.append("      relationships: " + "; ".join(clean_text(x, 160) for x in rels[:12]))
@@ -544,82 +598,230 @@ Now produce the LessonContract JSON for a LARGE, DEEP lesson (~{lr['targetMinute
         if not safe_list(output.get("learningGoals")):
             errors.append("learningGoals missing")
 
+        # ── DEPTH GATE — world-class detail is REQUIRED (no thin lessons) ──
+        MIN_BRIEF = 180          # a content element's brief must be a real explanation, not a label
+        thin_briefs = content_elems = voice_total = levelcov_screens = 0
+        for seg in segments:
+            seg = safe_dict(seg)
+            voice_total += len(safe_list(seg.get("teacherVoicePlan")))
+            for sc in safe_list(seg.get("screenPlan")):
+                sc = safe_dict(sc)
+                lc = safe_dict(sc.get("levelCoverage"))
+                if lc.get("weak") and lc.get("core") and lc.get("stretch"):
+                    levelcov_screens += 1
+                for e in safe_list(sc.get("elements")):
+                    e = safe_dict(e)
+                    et = str(e.get("elementType", "")).lower()
+                    if any(k in et for k in ("pdf_page_image", "image", "highlight", "spotlight")):
+                        continue  # pure-visual/source elements are exempt from the length rule
+                    content_elems += 1
+                    if len(clean_text(e.get("contentBrief"), 6000)) < MIN_BRIEF:
+                        thin_briefs += 1
+        if content_elems and thin_briefs > content_elems // 3:
+            errors.append(f"DEPTH: {thin_briefs}/{content_elems} content elements are thin "
+                          f"(brief < {MIN_BRIEF} chars) — every explanation must be LARGE and detailed")
+        if total_screens and voice_total < total_screens * 3:
+            errors.append(f"DEPTH: only {voice_total} voice lines across {total_screens} screens — the "
+                          f"spoken explanation must be long/thorough (many detailed lines per concept)")
+        if total_screens and levelcov_screens < max(1, total_screens // 3):
+            warnings.append(f"DEPTH: only {levelcov_screens}/{total_screens} screens have full "
+                            f"weak/core/stretch levelCoverage — serve every category of student")
+
         return ValidationResult(ok=not errors, errors=errors, warnings=warnings,
                                 validator=f"{self.agent_name}.output", fallbackUsed=False)
 
-    # ── run (multimodal, no fake fallback, one repair) ───────────────────────
-    async def _generate(self, payload: JsonDict, prompt: str, thinking: bool) -> JsonDict:
-        contents = self._contents(payload, prompt)
-        result = await generate_structured_async(
-            prompt="",
-            schema=self.response_schema,
-            model=self.model,
-            temperature=0.3,
-            max_output_tokens=65536,
-            system_instruction=self.instruction,
-            thinking=thinking,
-            contents=contents,
+    # ── A3: multi-agent ADK teacher — architect + per-segment DEEP expansion ──
+    def _segment_pages(self, outline: JsonDict, payload: JsonDict) -> List[int]:
+        pages: List[int] = []
+        for p in safe_list(outline.get("pages")):
+            try:
+                pages.append(int(p))
+            except (TypeError, ValueError):
+                continue
+        return sorted(set(pages)) or tc.pages_list(payload)
+
+    def build_segment_prompt(self, payload: JsonDict, outline: JsonDict, skeleton: JsonDict) -> str:
+        pages = self._segment_pages(outline, payload)
+        seg_regions = [str(r) for r in safe_list(outline.get("regionIds"))]
+        must = safe_list(outline.get("mustCover"))
+        est = max(6, int(outline.get("estScreens") or 8))
+        thesis = clean_text(skeleton.get("teachingThesis"), 600)
+        must_block = "\n".join("  - " + clean_text(m, 300) for m in must)
+        return f"""{BASE_DOMAIN_TEACHER_PROMPT}
+
+{self.domain_addon_prompt}
+
+You are expanding ONE SEGMENT of a larger {self.domain} lesson into a DEEP, detailed stretch of
+board teaching. Use ONLY this segment's pages and regions. GO BIG — many detailed screens, long
+step-by-step briefs, lots of practice. You have the full token budget for this ONE segment.
+
+LESSON THESIS: {thesis}
+SEGMENT: {clean_text(outline.get('title'), 160)}  (id={clean_text(outline.get('segmentId'), 80)})
+learningGoal: {clean_text(outline.get('learningGoal'), 400)}
+focus: {clean_text(outline.get('focus'), 800)}
+target minutes: {outline.get('targetMinutes')}    aim for >= {est} screens
+point ONLY at these regionIds: {', '.join(seg_regions)}
+MUST COVER every one (explain each in detail):
+{must_block}
+
+VISION READING (this segment's pages only):
+{tc.vision_pages_text(payload, pages=pages)}
+
+PDF TEXT EVIDENCE (these pages):
+{tc.evidence_text(payload, pages=pages)}
+
+PRODUCE THIS ONE SEGMENT as JSON (segment shape: segmentId, title, learningGoal, screenPlan[],
+teacherVoicePlan[], practicePlan[], misconceptions[]). REQUIREMENTS (enforced):
+- aim for >= {est} detailed screens — each a real teaching beat, not a label.
+- each content element's contentBrief is a LONG step-by-step explanation.
+- weak/core/stretch levelCoverage on every teaching screen.
+- MANY voice lines (long, thorough spoken explanation), each bound to its region/element id.
+- PRACTICE A LOT: several REAL-LIFE and SCENARIO-BASED questions on THIS concept, each with a full
+  worked answer (use progressive_practice_set easy->hard + scenario practice_qa).
+- use both modes where they fit (PREBUILT point; REALTIME writing while speaking). Never invent
+  names or regionIds. Output JSON only."""
+
+    def _segment_issues(self, seg: JsonDict, outline: JsonDict) -> List[str]:
+        issues: List[str] = []
+        screens = safe_list(seg.get("screenPlan"))
+        need = max(4, int(outline.get("estScreens") or 6) // 2)
+        if len(screens) < need:
+            issues.append(f"only {len(screens)} screens — produce many more detailed screens (>= {need})")
+        if len(safe_list(seg.get("teacherVoicePlan"))) < max(6, len(screens) * 2):
+            issues.append("too few voice lines — the spoken explanation must be long and thorough")
+        if len(safe_list(seg.get("practicePlan"))) < 2:
+            issues.append("add several real-life + scenario-based practice questions WITH worked answers")
+        thin = tot = 0
+        for sc in screens:
+            for e in safe_list(safe_dict(sc).get("elements")):
+                et = str(safe_dict(e).get("elementType", "")).lower()
+                if "image" in et or "highlight" in et:
+                    continue
+                tot += 1
+                if len(clean_text(safe_dict(e).get("contentBrief"), 6000)) < 180:
+                    thin += 1
+        if tot and thin > tot // 3:
+            issues.append(f"{thin}/{tot} element briefs are thin — make each a LONG step-by-step explanation")
+        return issues
+
+    async def _expand_segment(self, payload: JsonDict, outline: JsonDict, skeleton: JsonDict) -> JsonDict:
+        outline = safe_dict(outline)
+        pages = self._segment_pages(outline, payload)
+        images = tc.image_bytes(payload, pages=pages)
+        if not images:
+            raise AdkRuntimeError(f"{self.agent_name}: no page images for segment pages {pages}")
+
+        def _stamp(s: JsonDict) -> JsonDict:
+            s = safe_dict(s)
+            s.setdefault("segmentId", clean_text(outline.get("segmentId"), 80))
+            s.setdefault("title", clean_text(outline.get("title"), 160))
+            s.setdefault("learningGoal", clean_text(outline.get("learningGoal"), 400))
+            return s
+
+        prompt = self.build_segment_prompt(payload, outline, skeleton)
+        out = await run_adk_agent(
+            name=f"{self.agent_name}_segment", instruction=self.instruction, prompt=prompt,
+            model=self.model, images=images, output_schema=_SEGMENT,
+            temperature=0.3, max_output_tokens=65536, retries=1,
         )
-        return safe_dict(result)
+        seg = _stamp(out.get("result"))
+
+        # one honest depth repair (no fake fallback)
+        issues = self._segment_issues(seg, outline)
+        if issues:
+            repair = prompt + ("\n\n────────── REPAIR (too thin) ──────────\n"
+                               "Your segment was too thin/shallow. Fix EVERY issue and return the full, "
+                               "DEEPER segment JSON:\n- " + "\n- ".join(issues))
+            out = await run_adk_agent(
+                name=f"{self.agent_name}_segment", instruction=self.instruction, prompt=repair,
+                model=self.model, images=images, output_schema=_SEGMENT,
+                temperature=0.2, max_output_tokens=65536, retries=1,
+            )
+            seg2 = _stamp(out.get("result"))
+            if safe_list(seg2.get("screenPlan")):
+                seg = seg2
+        seg["_adk"] = {"ranThroughAdkRunner": out.get("ranThroughAdkRunner"),
+                       "adkEvents": out.get("adkEvents")}
+        return seg
 
     async def run(self, payload: JsonDict) -> AgentResult:
+        """Multi-agent ADK teacher: architect → per-segment DEEP expansion (parallel) → assemble.
+        No giant call. No fake fallback."""
         payload = safe_dict(payload)
         context = AgentContext.from_payload(payload)
 
         iv = self.validate_input(payload)
         if not iv.ok:
-            return AgentResult(ok=False, agentName=self.agent_name, mode="teach",
-                               result={}, validation=iv, errors=iv.errors, warnings=iv.warnings,
-                               metadata={"agentGroup": self.agent_group, "fallbackUsed": False})
-
-        if not _GENAI_OK:
             return AgentResult(ok=False, agentName=self.agent_name, mode="teach", result={},
-                               errors=["google.genai not available for multimodal teacher"],
+                               validation=iv, errors=iv.errors, warnings=iv.warnings,
+                               metadata={"agentGroup": self.agent_group, "fallbackUsed": False})
+        if not adk_available():
+            return AgentResult(ok=False, agentName=self.agent_name, mode="teach", result={},
+                               errors=["Google ADK not available (real agent required, no fallback)"],
                                metadata={"fallbackUsed": False})
 
-        prompt = self.build_prompt(payload, context)
-
-        # generate (retry once without thinking if the JSON truncates on a big contract)
+        # 1) ARCHITECT → the segment spine (real ADK, multimodal)
+        architect = LessonArchitectAgent(
+            domain=self.domain, teaching_sequence=self.teaching_sequence,
+            hook_opening=self.hook_opening, domain_addon_prompt=self.domain_addon_prompt,
+            model=self.model)
         try:
-            raw = await self._generate(payload, prompt, self.use_thinking)
-        except GeminiStructuredError as exc:
-            if self.use_thinking:
-                print(f"[{self.agent_name}] contract truncated/invalid ({str(exc)[:80]}); "
-                      f"retrying without thinking", file=sys.stderr)
-                raw = await self._generate(payload, prompt, False)
+            skeleton = await architect.run(payload)
+        except AdkRuntimeError as exc:
+            return AgentResult(ok=False, agentName=self.agent_name, mode="teach", result={},
+                               errors=[f"architect failed: {str(exc)[:200]}"],
+                               metadata={"fallbackUsed": False})
+        outlines = safe_list(skeleton.get("segmentOutline"))
+
+        # 2) EXPAND every segment IN PARALLEL — each its own deep ADK call
+        results = await asyncio.gather(
+            *[self._expand_segment(payload, o, skeleton) for o in outlines],
+            return_exceptions=True)
+        segments: List[JsonDict] = []
+        seg_errors: List[str] = []
+        for o, r in zip(outlines, results):
+            if isinstance(r, Exception):
+                seg_errors.append(f"segment '{safe_dict(o).get('segmentId')}': {str(r)[:160]}")
             else:
-                raise
+                segments.append(r)
+        if not segments:
+            return AgentResult(ok=False, agentName=self.agent_name, mode="teach", result={},
+                               errors=["all segments failed: " + "; ".join(seg_errors)],
+                               metadata={"fallbackUsed": False})
 
-        normalized = self.normalize_output(raw, payload, context)
-        ov = self.validate_output(normalized, payload, context)
+        # 3) ASSEMBLE the LessonContract
+        lr = self._level_range(payload)
+        node = safe_dict(payload.get("selectedNode"))
+        contract: JsonDict = {
+            "domain": self.domain,
+            "nodeId": clean_text(node.get("nodeId") or payload.get("nodeId"), 120),
+            "title": clean_text(node.get("title") or payload.get("nodeTitle"), 160),
+            "studentLevel": lr["level"],
+            "targetMinutes": skeleton.get("targetMinutes") or lr["targetMinutes"],
+            "teachingThesis": skeleton.get("teachingThesis"),
+            "learningGoals": skeleton.get("learningGoals"),
+            "prerequisites": skeleton.get("prerequisites"),
+            "sourceUsePlan": skeleton.get("sourceUsePlan"),
+            "segments": segments,
+            "externalResources": {"searchQueries": skeleton.get("externalSearchQueries") or []},
+            "domainTeacher": self.agent_name,
+            "_adk": {"multiAgentAdk": True, "architect": skeleton.get("_adk"),
+                     "segmentCount": len(segments), "ranThroughAdkRunner": True},
+        }
+        ov = self.validate_output(contract, payload, context)
+        if seg_errors:
+            ov.warnings.append(f"{len(seg_errors)} segment(s) failed: {seg_errors}")
 
-        # one honest repair pass (no fake fallback)
-        if not ov.ok:
-            repair = prompt + (
-                "\n\n────────── REPAIR ──────────\n"
-                "Your previous LessonContract failed validation. Fix EXACTLY these errors and "
-                "return the full corrected LessonContract JSON:\n- "
-                + "\n- ".join(ov.errors)
-            )
-            try:
-                raw = await self._generate(payload, repair, False)
-                normalized = self.normalize_output(raw, payload, context)
-                ov = self.validate_output(normalized, payload, context)
-            except GeminiStructuredError:
-                pass
-
-        if ov.ok:
-            n_segs = len(safe_list(normalized.get("segments")))
-            n_screens = sum(len(safe_list(safe_dict(s).get("screenPlan"))) for s in safe_list(normalized.get("segments")))
-            print(f"[{self.agent_name}] LessonContract: {n_segs} segments, {n_screens} screens", file=sys.stderr)
-
+        n_screens = sum(len(safe_list(safe_dict(s).get("screenPlan"))) for s in segments)
+        print(f"[{self.agent_name}] multi-agent LessonContract: {len(segments)} segments, "
+              f"{n_screens} screens (per-segment ADK)", file=sys.stderr)
         return AgentResult(
             ok=ov.ok, agentName=self.agent_name, mode="teach",
-            result=normalized if ov.ok else {},
+            result=contract if ov.ok else {},
             validation=ov, errors=ov.errors, warnings=ov.warnings,
             metadata={"agentGroup": self.agent_group, "model": self.model,
-                      "realSeparateAgent": True, "multimodal": True, "fallbackUsed": False},
-        )
+                      "realSeparateAgent": True, "multimodal": True, "multiAgentAdk": True,
+                      "fallbackUsed": False})
 
 
 async def teach_node(teacher: "BaseDomainTeacher", payload: JsonDict) -> JsonDict:

@@ -27,6 +27,7 @@ thinking (more output budget) then raise honestly.
 
 from __future__ import annotations
 
+import asyncio
 import re
 import sys
 from typing import Any, Dict, List, Optional
@@ -50,6 +51,23 @@ try:
 except ImportError:  # pragma: no cover
     genai_types = None
     _GENAI_OK = False
+
+# Content stage = multi-agent ADK: ContentWriterAgent (ADK) + SandboxAgent (ADK + code_execution).
+try:
+    from ..pipeline.adk_runtime import run_adk_agent, adk_available, AdkRuntimeError
+    from ..pipeline.gemini_structured import PRO_MODEL
+    from ..planning.teachers import teacher_context as tc
+except ImportError:  # pragma: no cover
+    from google_agent.pipeline.adk_runtime import run_adk_agent, adk_available, AdkRuntimeError  # type: ignore
+    from google_agent.pipeline.gemini_structured import PRO_MODEL  # type: ignore
+    from google_agent.planning.teachers import teacher_context as tc  # type: ignore
+
+try:
+    from google.adk.code_executors import BuiltInCodeExecutor
+    _CODE_EXEC_OK = True
+except Exception:  # pragma: no cover
+    BuiltInCodeExecutor = None  # type: ignore
+    _CODE_EXEC_OK = False
 
 
 class SegmentGenerationError(RuntimeError):
@@ -180,9 +198,11 @@ def _vision_reading_for(payload: Dict[str, Any], pages: List[int]) -> str:
         for r in safe_list(pg.get("regions")):
             r = safe_dict(r)
             out.append(f"  [{r.get('regionId')}] ({r.get('type')}) {clean_text(r.get('title'), 120)}")
-            out.append(f"      content: {clean_text(r.get('content') or r.get('exactContent'), 1400)}")
+            out.append(f"      content: {clean_text(r.get('content') or r.get('exactContent'), 1800)}")
             if r.get("conceptExplanation"):
-                out.append(f"      concept: {clean_text(r.get('conceptExplanation'), 800)}")
+                out.append(f"      concept: {clean_text(r.get('conceptExplanation'), 900)}")
+            for s in safe_list(r.get("stepByStepExplanation"))[:50]:
+                out.append(f"      step: {clean_text(s, 700)}")
             rels = safe_list(r.get("relationships"))
             if rels:
                 out.append("      relationships: " + "; ".join(clean_text(x, 200) for x in rels[:16]))
@@ -326,6 +346,56 @@ HARD RULES:
 """
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SandboxAgent — a REAL ADK agent (code_execution) that EXECUTES code/SQL → real trace
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def _sandbox_one(code: str, language: str, model: Optional[str]) -> Dict[str, Any]:
+    lang = (language or "python").lower()
+    if "sql" in lang:
+        prompt = ("You are a SQL sandbox. Using Python sqlite3, create small sample tables + rows, "
+                  "ACTUALLY RUN this SQL, and print the real result table:\n\n" + code)
+    else:
+        prompt = (f"Run this {lang} code with the code execution tool and print the REAL output:\n\n" + code)
+    out = await run_adk_agent(
+        name="SandboxAgent",
+        instruction="Execute the code with the code execution tool and report the REAL executed output only.",
+        prompt=prompt, code_executor=BuiltInCodeExecutor(),
+        model=model or FLASH_MODEL, temperature=0.1, max_output_tokens=6000, retries=1,
+    )
+    return {"output": clean_text(out.get("rawText"), 4000), "toolCalls": out.get("adkToolCalls") or 0}
+
+
+async def _run_sandbox(result: Dict[str, Any], model: Optional[str]) -> Dict[str, Any]:
+    """For every element flagged needsSandbox with code, run it for real → attach the executed trace."""
+    if not _CODE_EXEC_OK:
+        return result
+    targets: List[Dict[str, Any]] = []
+    tasks = []
+    for s in safe_list(result.get("screens")):
+        for e in safe_list(safe_dict(s).get("elements")):
+            e = safe_dict(e)
+            code = safe_dict(e.get("code")).get("content")
+            if e.get("needsSandbox") and code:
+                targets.append(e)
+                tasks.append(_sandbox_one(code, safe_dict(e.get("code")).get("language"), model))
+    if not tasks:
+        return result
+    outs = await asyncio.gather(*tasks, return_exceptions=True)
+    verified = 0
+    for e, o in zip(targets, outs):
+        if isinstance(o, Exception):
+            e["sandboxError"] = str(o)[:200]
+        else:
+            e["sandboxOutput"] = o["output"]          # the REAL executed result shown on the board
+            e["sandboxVerified"] = bool(o["toolCalls"])
+            if o["toolCalls"]:
+                verified += 1
+    print(f"[segment_generator] SandboxAgent: {verified}/{len(targets)} code elements EXECUTED "
+          f"(real code_execution)", file=sys.stderr)
+    return result
+
+
 async def generate_segment_content(
     payload: Dict[str, Any],
     segment: Dict[str, Any],
@@ -360,20 +430,36 @@ async def generate_segment_content(
         vision=_vision_reading_for(payload, pages),
     )
 
-    async def _call(extra: str, thinking: bool) -> Dict[str, Any]:
-        return safe_dict(await generate_structured_async(
-            prompt="",
-            schema=SEGMENT_CONTENT_SCHEMA,
-            model=model or FLASH_MODEL,
+    if not adk_available():
+        raise SegmentGenerationError("Google ADK not available for ContentWriterAgent (no fallback)")
+
+    instruction = (
+        "You are a world-class teacher writing the ACTUAL detailed board content for ONE lesson "
+        "segment. You see the real PDF page images. Output only valid JSON matching the schema."
+    )
+    seg_images = tc.image_bytes(payload, pages=pages)
+
+    async def _call(extra: str, thinking: bool = False) -> Dict[str, Any]:
+        # ContentWriterAgent — a REAL ADK agent (LlmAgent + Runner), multimodal.
+        out = await run_adk_agent(
+            name="ContentWriterAgent",
+            instruction=instruction,
+            prompt=prompt + extra,
+            images=seg_images,
+            output_schema=SEGMENT_CONTENT_SCHEMA,
+            model=model or PRO_MODEL,
             temperature=0.4,
             max_output_tokens=65536,
-            thinking=thinking,
-            contents=(_image_parts(payload, pages) + [prompt + extra]),
-        ))
+            retries=1,
+        )
+        r = safe_dict(out.get("result"))
+        r["_adk"] = {"ranThroughAdkRunner": out.get("ranThroughAdkRunner"),
+                     "adkEvents": out.get("adkEvents"), "agent": "ContentWriterAgent"}
+        return r
 
     try:
         result = await _call("", False)
-    except GeminiStructuredError as exc:
+    except (GeminiStructuredError, AdkRuntimeError) as exc:
         # retry once (transient/truncation) — still honest, no fake content
         print(f"[segment_generator] {segment.get('segmentId')}: {str(exc)[:100]} — retrying",
               file=sys.stderr)
@@ -399,8 +485,11 @@ async def generate_segment_content(
             deeper = await _call(deepen, False)
             if _written_depth(deeper)[0] >= rich and safe_list(deeper.get("screens")):
                 result = deeper
-        except GeminiStructuredError:
+        except (GeminiStructuredError, AdkRuntimeError):
             pass
+
+    # SandboxAgent (ADK + code_execution): run any code/SQL element for real → attach the trace.
+    result = await _run_sandbox(result, model)
 
     result.setdefault("segmentId", segment.get("segmentId"))
     result.setdefault("title", segment.get("title"))

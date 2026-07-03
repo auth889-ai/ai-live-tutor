@@ -58,22 +58,22 @@ class TestSchema:
 class TestScanPageImage:
     @pytest.mark.asyncio
     async def test_regions_get_page_prefix_and_page_number(self):
-        async def fake(prompt, schema, **kw):
-            return _gemini_regions(2)
-        with patch(f"{_MODULE}.generate_structured_async", side_effect=fake):
+        async def fake(**kw):
+            return {"result": _gemini_regions(2)}
+        with patch(f"{_MODULE}.run_adk_agent", side_effect=fake):
             regions = await scan_page_image(5, b"png")
         assert regions[0]["regionId"] == "p5_r1"
         assert all(r["page"] == 5 for r in regions)
 
     @pytest.mark.asyncio
     async def test_bbox_clamped_to_page(self):
-        async def fake(prompt, schema, **kw):
-            return {"regions": [{
+        async def fake(**kw):
+            return {"result": {"regions": [{
                 "regionId": "r1", "type": "diagram", "description": "d",
                 "content": "c", "teachingValue": "high",
                 "bbox": {"x": 0.9, "y": -0.2, "w": 0.5, "h": 2.0},
-            }]}
-        with patch(f"{_MODULE}.generate_structured_async", side_effect=fake):
+            }]}}
+        with patch(f"{_MODULE}.run_adk_agent", side_effect=fake):
             regions = await scan_page_image(1, b"png")
         bbox = regions[0]["bbox"]
         assert 0.0 <= bbox["x"] <= 1.0 and 0.0 <= bbox["y"] <= 1.0
@@ -168,10 +168,10 @@ class TestBuildVisionIndex:
             "sourceRefs": [{"page": 5}],   # refs only mention page 5
         }
         calls = []
-        async def fake(prompt, schema, **kw):
+        async def fake(**kw):
             calls.append(1)
-            return _gemini_regions(1)
-        with patch(f"{_MODULE}.generate_structured_async", side_effect=fake):
+            return {"result": _gemini_regions(1)}
+        with patch(f"{_MODULE}.run_adk_agent", side_effect=fake):
             result = await build_vision_index(payload)
         assert result["pagesScanned"] == 3        # ALL pages, not just page 5
         assert len(calls) == 3
@@ -182,9 +182,9 @@ class TestBuildVisionIndex:
             {"page": 5, "base64": FAKE_PNG},
             {"page": 5, "base64": FAKE_PNG},
         ]}
-        async def fake(prompt, schema, **kw):
-            return _gemini_regions(1)
-        with patch(f"{_MODULE}.generate_structured_async", side_effect=fake):
+        async def fake(**kw):
+            return {"result": _gemini_regions(1)}
+        with patch(f"{_MODULE}.run_adk_agent", side_effect=fake):
             result = await build_vision_index(payload)
         assert result["pagesScanned"] == 1
 
@@ -195,12 +195,12 @@ class TestBuildVisionIndex:
             {"page": 2, "base64": FAKE_PNG},
         ]}
         call_count = {"n": 0}
-        async def fake(prompt, schema, **kw):
+        async def fake(**kw):
             call_count["n"] += 1
             if call_count["n"] == 1:
                 raise RuntimeError("Gemini choked on page 1")
-            return _gemini_regions(2)
-        with patch(f"{_MODULE}.generate_structured_async", side_effect=fake):
+            return {"result": _gemini_regions(2)}
+        with patch(f"{_MODULE}.run_adk_agent", side_effect=fake):
             result = await build_vision_index(payload)
         assert result["ok"] is True
         assert result["pagesScanned"] == 1
@@ -245,9 +245,9 @@ class TestBuildVisionIndex:
     async def test_discoveries_become_evidence(self):
         """Vision discoveries are ADDED to evidence (visionDiscovered: true)."""
         payload = {"pageImages": [{"page": 9, "base64": FAKE_PNG}]}
-        async def fake(prompt, schema, **kw):
-            return _gemini_regions(2)
-        with patch(f"{_MODULE}.generate_structured_async", side_effect=fake):
+        async def fake(**kw):
+            return {"result": _gemini_regions(2)}
+        with patch(f"{_MODULE}.run_adk_agent", side_effect=fake):
             result = await build_vision_index(payload)
         ev = result["visionEvidence"]
         assert len(ev) == 2
@@ -261,9 +261,9 @@ class TestBuildVisionIndex:
             {"page": 1, "imagePath": "/does/not/exist.png"},
             {"page": 2, "base64": FAKE_PNG},
         ]}
-        async def fake(prompt, schema, **kw):
-            return _gemini_regions(1)
-        with patch(f"{_MODULE}.generate_structured_async", side_effect=fake):
+        async def fake(**kw):
+            return {"result": _gemini_regions(1)}
+        with patch(f"{_MODULE}.run_adk_agent", side_effect=fake):
             result = await build_vision_index(payload)
         assert result["pagesScanned"] == 1
         assert result["pagesFailed"] == 1

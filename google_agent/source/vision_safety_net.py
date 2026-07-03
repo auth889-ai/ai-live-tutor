@@ -56,6 +56,17 @@ except ImportError:  # pragma: no cover
         GeminiStructuredError,
     )
 
+# Vision runs as a REAL Google ADK agent (multimodal) through the ADK Runner.
+try:
+    from ..pipeline.adk_runtime import run_adk_agent, adk_available
+except ImportError:  # pragma: no cover
+    try:
+        from google_agent.pipeline.adk_runtime import run_adk_agent, adk_available  # type: ignore
+    except Exception:
+        run_adk_agent = None  # type: ignore
+        def adk_available() -> bool:  # type: ignore
+            return False
+
 try:
     from .selected_page_vision_agent import resolve_local_image_path
 except ImportError:  # pragma: no cover
@@ -177,6 +188,24 @@ _REGION_ITEM_SCHEMA: Dict[str, Any] = {
             "type": "string",
             "description": "What students typically get wrong here (empty string if none).",
         },
+        "visualDescription": {
+            "type": "string",
+            "description": (
+                "Exactly how this region LOOKS — position on the page, colors, shape, layout, "
+                "fonts/emphasis (bold/red), and how its parts are arranged. So a person who "
+                "cannot see the image could picture it precisely."
+            ),
+        },
+        "stepByStepExplanation": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": (
+                "A GRANULAR, step-by-step explanation of EVERYTHING in this region — go part by "
+                "part: every label, number, column, row, cell, arrow (with direction), and every "
+                "sentence. For EACH part say what it IS (verbatim) AND what it MEANS. Each array "
+                "item is one detailed teaching point. Do not summarize — cover every element."
+            ),
+        },
     },
     "required": [
         "regionId",
@@ -188,6 +217,7 @@ _REGION_ITEM_SCHEMA: Dict[str, Any] = {
         "bbox",
         "teachingValue",
         "teachingNote",
+        "stepByStepExplanation",
     ],
 }
 
@@ -286,6 +316,21 @@ figures, headings, text blocks, lists, handwriting). For EACH region:
 - suggestedActions: the board actions that best explain it, in order (movePointer, circle, highlight,
   underline, zoomRegion, drawArrow, boxRegion, traceConnection).
 - commonMisconception: what students usually get wrong here (empty string "" if none).
+- visualDescription: EXACTLY how this region looks — its position on the page, colors, shapes, layout,
+  fonts/emphasis (bold, red), and how its parts are arranged. A person who cannot see the image must be
+  able to picture it precisely from your words.
+- stepByStepExplanation: the MOST IMPORTANT field. Go through this region PART BY PART and explain
+  EVERYTHING, step by step, like a world-class teacher narrating it slowly:
+    * For text: take each sentence/bullet in order — quote it, then explain what it means in simple words.
+    * For a table: go column by column and row by row — name each column, then walk key rows/cells and
+      say what each value means.
+    * For a diagram: name every box and list its fields/columns; then trace every arrow one by one
+      (from -> to, direction, cardinality, the foreign key/relationship it shows) and explain it.
+    * For code/formula: go line by line / symbol by symbol and explain each.
+  Each array item is ONE detailed teaching point. Cover EVERY element — do not summarize or skip.
+  Produce as MANY items as the region has parts (often 6 to 20+). For EACH item give BOTH the exact
+  thing on the page AND the concept / why it matters behind it, in simple words a beginner gets.
+  This is what makes the downstream lesson detailed, so be exhaustive here.
 
 HARD RULES — COMPLETENESS (do not skip ANYTHING):
 - Transcribe EVERY line of text on the page, word for word, into the relevant region's "content".
@@ -539,6 +584,8 @@ def _normalize_region(page: int, index: int, region: Dict[str, Any]) -> Dict[str
         "teachingNote": clean_text(region.get("teachingNote"), 4000),
         "suggestedActions": _normalize_suggested_actions(region.get("suggestedActions")),
         "commonMisconception": clean_text(region.get("commonMisconception"), 800),
+        "visualDescription": clean_text(region.get("visualDescription"), 4000),
+        "stepByStepExplanation": _normalize_str_list(region.get("stepByStepExplanation"), 1500, 100),
     }
 
     warning = _region_quality_warning(normalized)
@@ -577,6 +624,101 @@ def _normalize_page_analysis(page: int, raw: Dict[str, Any]) -> Dict[str, Any]:
 # Per-page vision (one focused multimodal call)
 # ─────────────────────────────────────────────────────────────────────────────
 
+_VISION_INSTRUCTION = (
+    "You are the Vision agent for an AI tutor. You SEE the attached real PDF page image and "
+    "produce a deep, exhaustive, teacher-grade structured reading of EVERYTHING on it — every "
+    "line of text and every diagram/table/formula — never skipping anything. "
+    "Output only valid JSON matching the schema."
+)
+
+# ── bbox quality guard (so the pointer always lands on the right thing) ───────
+
+_BBOX_FIX_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {"regions": {"type": "array", "items": {
+        "type": "object", "properties": {
+            "regionId": {"type": "string"},
+            "bbox": {"type": "object", "properties": {
+                "x": {"type": "number"}, "y": {"type": "number"},
+                "w": {"type": "number"}, "h": {"type": "number"}},
+                "required": ["x", "y", "w", "h"]},
+        }, "required": ["regionId", "bbox"]}}},
+    "required": ["regions"],
+}
+
+
+def _bbox_is_bad(b: Dict[str, Any]) -> bool:
+    """A bbox the pointer cannot use: degenerate, off-page, or pinned to an edge."""
+    try:
+        x, y = float(b.get("x", 0)), float(b.get("y", 0))
+        w, h = float(b.get("w", 0)), float(b.get("h", 0))
+    except Exception:
+        return True
+    if w < 0.03 or h < 0.03:        # too small to point at
+        return True
+    if x < 0 or y < 0 or x > 0.98 or y > 0.98:  # off-page / clamped to a corner
+        return True
+    if x + w > 1.02 or y + h > 1.02:
+        return True
+    return False
+
+
+async def _repair_bboxes(
+    page: int, image_bytes: bytes, analysis: Dict[str, Any], *, model: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    If any region has a missing/wrong bbox, RE-ASK the vision model (through ADK)
+    for an accurate box for exactly those regions, then merge. No fake/guessed box.
+    Only the bbox is changed — all the rich per-region detail is preserved.
+    """
+    regions = safe_list(analysis.get("regions"))
+    bad = [r for r in regions if _bbox_is_bad(safe_dict(r).get("bbox") or {})]
+    if not bad or run_adk_agent is None or not adk_available():
+        return analysis
+
+    listing = "\n".join(
+        f"- regionId={safe_dict(r).get('regionId')} :: {clean_text(safe_dict(r).get('title'), 90)} :: "
+        f"{clean_text(safe_dict(r).get('content') or safe_dict(r).get('description'), 160)}"
+        for r in bad
+    )
+    prompt = (
+        "On this page image, the following regions have a MISSING or WRONG bounding box. "
+        "For EACH regionId below, return an ACCURATE bbox as FRACTIONS of the page image "
+        "(x,y = top-left corner, w,h = width/height, all 0.0-1.0) that FULLY contains that exact "
+        "element on the page. Use the EXACT regionId given. Never return a zero-size box.\n\n"
+        f"{listing}\n\n"
+        'Return JSON: {"regions":[{"regionId":"...","bbox":{"x":..,"y":..,"w":..,"h":..}}]}'
+    )
+    try:
+        adk = await run_adk_agent(
+            name="VisionBboxFix",
+            instruction="You return accurate bounding boxes for the listed page regions. Output only JSON.",
+            prompt=prompt, images=[image_bytes], output_schema=_BBOX_FIX_SCHEMA,
+            model=model, temperature=0.1, max_output_tokens=8192,
+        )
+        fixed = safe_list(safe_dict(adk.get("result")).get("regions"))
+    except Exception as exc:
+        print(f"[vision] page {page}: bbox repair failed — {str(exc)[:100]}", file=sys.stderr)
+        return analysis
+
+    fix_map = {
+        safe_dict(f).get("regionId"): _normalize_bbox(safe_dict(f).get("bbox") or {})
+        for f in fixed if safe_dict(f).get("regionId")
+    }
+    fixed_count = 0
+    for r in regions:
+        r = safe_dict(r)
+        rid = r.get("regionId")
+        new = fix_map.get(rid)
+        if new and not _bbox_is_bad(new):
+            r["bbox"] = new
+            r.pop("warning", None)
+            fixed_count += 1
+    if fixed_count:
+        print(f"[vision] page {page}: repaired {fixed_count} bbox(es) via ADK", file=sys.stderr)
+    return analysis
+
+
 async def analyze_page_image(
     page: int,
     image_bytes: bytes,
@@ -592,8 +734,8 @@ async def analyze_page_image(
     Returns a normalized VisualPageAnalysis dict (page-level understanding + regions).
     Raises GeminiStructuredError on genuine failure (no fake fallback).
     """
-    if not _GENAI_OK:
-        raise GeminiStructuredError("google.genai not available for vision scan")
+    if not adk_available() or run_adk_agent is None:
+        raise GeminiStructuredError("Google ADK not available for the Vision agent")
 
     prompt = _PAGE_SCAN_PROMPT.format(
         page=page,
@@ -602,36 +744,24 @@ async def analyze_page_image(
         page_text=clean_text(page_text, _PAGE_TEXT_CAP) or "(no extracted text — read the image)",
     )
 
-    contents = [
-        genai_types.Part.from_bytes(data=image_bytes, mime_type="image/png"),
-        prompt,
-    ]
-
-    async def _call(thinking: bool) -> Dict[str, Any]:
-        return await generate_structured_async(
-            prompt="",
-            schema=VISION_INDEX_SCHEMA,
-            model=model,
-            temperature=0.2,
-            max_output_tokens=65536,
-            thinking=thinking,
-            contents=contents,
-        )
-
-    try:
-        result = await _call(use_thinking)
-    except GeminiStructuredError as exc:
-        # Dense pages can truncate the JSON when the thinking budget eats into the
-        # output cap. Retry once WITHOUT thinking so the full 65536 tokens go to
-        # the answer — recovers the page instead of dropping it. No fake fallback.
-        if use_thinking:
-            print(f"[vision] page {page}: response truncated/invalid ({str(exc)[:80]}); "
-                  f"retrying without thinking for full output budget", file=sys.stderr)
-            result = await _call(False)
-        else:
-            raise
-
-    return _normalize_page_analysis(page, result or {})
+    # REAL ADK agent: the page image goes through the ADK Runner (multimodal),
+    # large output budget so the exhaustive per-page reading is never truncated.
+    adk = await run_adk_agent(
+        name="VisionAgent",
+        instruction=_VISION_INSTRUCTION,
+        prompt=prompt,
+        images=[image_bytes],
+        output_schema=VISION_INDEX_SCHEMA,
+        model=model,
+        temperature=0.2,
+        max_output_tokens=65536,
+        retries=1,
+    )
+    result = adk.get("result") if isinstance(adk.get("result"), dict) else {}
+    analysis = _normalize_page_analysis(page, result or {})
+    # bbox quality guard: fix any missing/degenerate boxes (rich detail untouched).
+    analysis = await _repair_bboxes(page, image_bytes, analysis, model=model)
+    return analysis
 
 
 async def scan_page_image(

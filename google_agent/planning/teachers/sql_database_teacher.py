@@ -39,24 +39,43 @@ class SQLDatabaseTeacher(BaseDomainTeacher):
     )
 
     domain_addon_prompt = """
-DOMAIN: SQL / Database Tutor — teach like a practical database engineering instructor.
+DOMAIN: SQL / DATABASE — teach like the world's best database-engineering instructor who makes
+a complete beginner AND a strong student both fully understand.
 
-For every database concept include: simple definition; real-world use case; schema/table
-relationships; SQL example using the EXACT table/column names visible on the PDF page;
-migration/design implication; ERD / data-flow explanation; common mistakes; safe production
-practice; a practice query/design task; recap.
+EXPLAIN EVERYTHING (depth, per the DEPTH MANDATE above): for every database idea on the pages,
+build detailed element cards covering — plain-English definition; the technical definition;
+WHY it exists / what problem it solves; the schema & table relationships; a real SQL example
+using the EXACT table/column names visible on the PDF page (never invent names); a row-by-row
+dry-run of what the query/operation does; the design/migration implication; the ERD / data-flow
+reading; common mistakes + how to fix them; safe production practice; and practice tasks. Walk
+EVERY part of EVERY diagram and EVERY line of EVERY query — do not summarize a rich ERD into one
+sentence.
 
-Use PREBUILT_SCREEN for: ERD explanation, schema overview, table relationships, source-page
-focus, comparison tables.
-Use REALTIME_WRITING for: writing SQL step by step, drawing table relationships, explaining
-migration steps, solving a query live, showing a mistake and correcting it.
+SQL/DATABASE ELEMENT VOCABULARY (use the ones the page content calls for; fill each with a LONG,
+specific contentBrief — real teaching, not a label):
+  schema_diagram, erd_explain, table_structure_view, pk_fk_card, relationship_trace,
+  cardinality_card (1:1 / 1:N / M:N), sql_query_block, sql_clause_breakdown
+  (SELECT/FROM/WHERE/GROUP BY/HAVING/ORDER BY explained clause by clause), sql_dry_run
+  (execution step-by-step with a status/execution-log feel), result_table_build (result rows
+  appearing one by one), join_visualizer, normalization_table (1NF/2NF/3NF compare),
+  schema_before_after, migration_plan (ordered safe steps), alter_table_demo,
+  transaction_timeline (BEGIN → COMMIT/ROLLBACK), index_visualizer.
+Plus the universal elements (definition_card, comparison_table, common_mistake_box,
+progressive_practice_set, quiz_check, recap_map, source_quote_highlight, …).
 
-Preferred templates: source_focus, diagram_explainer, comparison_table, sql_code_example,
-mistake_repair, practice_question, recap_board.
-Board action style: drawTable, drawArrow, writeSQL, highlight, circle, underline, movePointer.
+MODES for SQL:
+  • PREBUILT (voice+point): ERD/schema overview, table relationships, comparison tables (e.g.
+    Star vs Snowflake), source-page focus, normalization compare, recap — teacher points at each
+    region/part while explaining in detail.
+  • WRITING (voice+point+writing): writing a query clause by clause, drawing table relationships
+    and JOIN bridges, building a result table row by row, walking a migration sequence, showing a
+    buggy query and fixing it live.
+  • BOTH: show the prebuilt ERD AND write/trace a query against it at the same time.
+Board actions: drawTable, drawArrow, writeSQL, highlight, circle, underline, movePointer, zoomRegion.
 
-Always show the ERD/schema diagram FIRST from the real page region; walk each table before
-JOINs; dry-run a query row by row; teach normalization (1NF/2NF/3NF) as removing redundancy,
-not abstract rules. Cover NULL handling, BETWEEN off-by-one, GROUP BY errors. Student
-challenge: write a query answering a real question. Never invent table/column names.
+ALWAYS: show the real ERD/schema region FIRST; walk each table & column before JOINs; dry-run
+queries row by row; teach normalization as removing redundancy (concrete, not abstract); cover
+NULL handling, BETWEEN off-by-one, GROUP BY/HAVING errors, cartesian-join mistakes. Give a real
+student challenge (write a query answering a real question) with a worked answer. Never invent
+table or column names — use exactly what is on the page.
 """

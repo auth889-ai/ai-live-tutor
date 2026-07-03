@@ -88,6 +88,12 @@ def _save_md(result: dict) -> None:
             if r.get("contains"):
                 lines.append(f"- **contains:** {', '.join(r['contains'])}")
             lines.append(f"- **concept (meaning):** {r.get('conceptExplanation','')}")
+            if r.get("visualDescription"):
+                lines.append(f"- **how it looks:** {r.get('visualDescription','')}")
+            if r.get("stepByStepExplanation"):
+                lines.append("- **step-by-step (part by part):**")
+                for i, s in enumerate(r["stepByStepExplanation"], 1):
+                    lines.append(f"    {i}. {s}")
             if r.get("relationships"):
                 lines.append("- **relationships:**")
                 for rel in r["relationships"]:

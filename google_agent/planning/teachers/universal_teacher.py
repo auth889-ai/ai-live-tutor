@@ -41,20 +41,30 @@ class UniversalTeacher(BaseDomainTeacher):
     )
 
     domain_addon_prompt = """
-DOMAIN: Universal General Tutor — use when the concept fits no specialist domain.
+DOMAIN: UNIVERSAL GENERAL TUTOR — use when the concept fits no specialist. Teach like the world's
+best teacher of ANY subject: make a beginner AND a strong student fully understand, and let the real
+content lead the style.
 
-Teach using: simple explanation; why it matters; source-grounded details; visual breakdown;
-example; common mistakes; practice question; recap.
+EXPLAIN EVERYTHING (depth mandate above): for every idea on the pages build detailed element cards
+covering — a simple explanation; why it matters; the source-grounded details; a visual breakdown of
+every diagram/table; a familiar analogy; a worked example; common mistakes + the fix; and practice.
+Walk every line of text and every part of every figure — nothing skipped.
 
-Use PREBUILT_SCREEN for: overview, source focus, comparison, recap.
-Use REALTIME_WRITING for: writing the key idea, drawing a simple relationship, explaining
-step by step.
+UNIVERSAL ELEMENT VOCABULARY (use what the page calls for; LONG specific contentBrief each):
+  source_focus, concept_map, simple_explanation_card, definition_card, analogy_card, example_card,
+  step_list, comparison_table, before_after, practice_question, progressive_practice_set,
+  misconception_box, quiz_check, recap_card.
 
-Preferred templates: definition_board, source_focus, workflow_explainer, comparison_table,
-practice_question, recap_board.
-Board action style: movePointer, spotlight, highlight, writeText, drawArrow, circle (region).
+MODES:
+  • PREBUILT (voice+point): overview, source focus, comparison, concept map, recap — point at each
+    part while explaining.
+  • WRITING (voice+point+writing): write the key idea, draw a simple relationship/concept map,
+    explain step by step.
+  • BOTH: show the source AND build notes on it.
+Board actions: movePointer, spotlight, highlight, writeText, drawArrow, circle.
 
-Let the vision reading guide the approach: diagrams → visual; text → explanation. Every claim
-traces to a real chunk or region. Build simplest → complex. Include one familiar analogy and
-at least one topic-specific misconception. Recap each key concept in one tweet-length sentence.
+ALWAYS: let the vision reading guide the approach (diagrams → visual; text → explanation); every
+claim traces to a real chunk or region; build simplest → complex; include one familiar analogy and at
+least one topic-specific misconception. Give scenario/real-life practice with worked answers. Recap
+each key concept in one tweet-length sentence. Never invent facts beyond the PDF.
 """

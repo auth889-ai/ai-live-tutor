@@ -119,9 +119,41 @@ class DomainRouterAgent(BaseLiveTutorAgent):
 
 
 async def route_domain(payload: JsonDict) -> JsonDict:
-    """Called by adk_pipeline_runner. Returns normalized domain profile."""
+    """
+    Called by adk_pipeline_runner. Runs as a REAL Google ADK agent through the
+    ADK Runner (not a direct Gemini SDK call). Same prompt/schema/validators —
+    only the execution path is ADK. No fake fallback.
+    """
+    try:
+        from ..pipeline.adk_runtime import run_adk_agent, adk_available
+    except ImportError:
+        from google_agent.pipeline.adk_runtime import run_adk_agent, adk_available  # type: ignore
+
     agent = DomainRouterAgent()
-    result = await agent.run(payload)
-    if not result.ok:
-        raise RuntimeError(f"DomainRouterAgent failed: {result.errors}")
-    return result.result
+    iv = agent.validate_input(payload)
+    if not iv.ok:
+        raise RuntimeError(f"DomainRouterAgent input invalid: {iv.errors}")
+    if not adk_available():
+        raise RuntimeError("Google ADK not available — refusing to bypass ADK silently")
+
+    ctx = AgentContext.from_payload(payload)
+    prompt = agent.build_prompt(payload, ctx)
+
+    adk = await run_adk_agent(
+        name="DomainRouterAgent",
+        instruction=agent.instruction,
+        prompt=prompt,
+        model=FLASH_MODEL,
+        output_schema=_SCHEMA,          # dict -> Pydantic inside the ADK runtime
+    )
+    raw = adk["result"] if isinstance(adk["result"], dict) else {}
+    norm = agent.normalize_output(raw, payload, ctx)
+    ov = agent.validate_output(norm, payload, ctx)
+    if not ov.ok:
+        raise RuntimeError(f"DomainRouterAgent output invalid: {ov.errors}")
+
+    norm["_adk"] = {
+        "ranThroughAdkRunner": adk.get("ranThroughAdkRunner"),
+        "adkEvents": adk.get("adkEvents"),
+    }
+    return norm
