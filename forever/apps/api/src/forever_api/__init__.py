@@ -1,2 +1,0 @@
-"""Forever API package."""
-
