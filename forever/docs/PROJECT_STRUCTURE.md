@@ -4,8 +4,13 @@
 forever/
   apps/
     api/                 backend app
+      requirements.txt   backend runtime dependencies
       src/forever_api/
+        main.py          FastAPI app entrypoint
+        contracts/       layout, manifest, and timing rules
         ingestion/       SourcePack creation from user material
+        routers/         dependency-free route behavior
+        services/        service wrappers around backend flows
       tests/             backend tests
     web/                 frontend app, intentionally empty until first UI slice
       src/

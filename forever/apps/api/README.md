@@ -1,32 +1,37 @@
-# Forever Backend
+# Forever API
 
-This is the backend app.
-
-Current responsibility:
+Backend responsibility:
 
 ```text
-User learning material -> SourcePack
+learning material -> SourcePack -> service response
 ```
 
-Implemented now:
+Nested structure:
 
-- text ingestion
-- source chunks
-- source references
-- concept extraction
-- tests for honest failure on unimplemented inputs
+- `contracts/` for region layout, teaching screen, and audio clock rules
+- `ingestion/` for SourcePack building
+- `routers/` for dependency-free route behavior
+- `services/` for response wrappers around ingestion
+- `main.py` for the FastAPI app entrypoint
 
-Not implemented yet:
+Current slice:
 
-- FastAPI routes
-- Qwen course planner
-- PDF ingestion
-- website ingestion
-- YouTube transcript ingestion
-- image OCR
+- plain text SourcePack ingestion
+- source-pack API behavior for `POST /api/source-packs`
+- HTTP wrapper for `POST /api/source-packs`
+- `/health`
+- contract validation
+- tests
+
+Later slices:
+
 - code sandbox
-- database
-- queue workers
+- Qwen orchestration
+- multi-input ingestion
 
-Those will be added one slice at a time.
+Run after installing dependencies:
 
+```bash
+pip install -r apps/api/requirements.txt
+uvicorn forever_api.main:app --reload --port 8000
+```
