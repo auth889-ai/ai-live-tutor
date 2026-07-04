@@ -23,7 +23,9 @@ forever/
       src/                  BullMQ websocket gateway boundary
     web/
       src/
-        components/         player and course UI components
+        components/
+          course/           course-platform shell, sidebar, header, builder surface
+          player/           audio-clock lesson player, board, media, subtitles, proof
         data/               local demo manifest
         domain/             timeline helpers
         lib/                API and clock utilities
@@ -40,4 +42,3 @@ forever/
     contracts/
   docs/
 ```
-

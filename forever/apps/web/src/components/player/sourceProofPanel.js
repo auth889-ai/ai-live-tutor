@@ -1,4 +1,4 @@
-import { el } from "../lib/dom.js";
+import { el } from "../../lib/dom.js";
 
 export function renderSourceProof(sourceEvidence) {
   const panel = el("aside", "source-proof");
@@ -23,4 +23,3 @@ function escapeHtml(text) {
     "'": "&#39;"
   })[char]);
 }
-

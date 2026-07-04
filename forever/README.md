@@ -73,6 +73,20 @@ For Singapore, Japan, Beijing, or Hong Kong workspaces, use the workspace-specif
 - Text description: `docs/DEVPOST_SUBMISSION.md`.
 - HLD and software architecture: `docs/HLD.md`, `docs/SOFTWARE_ARCHITECTURE.md`.
 
+## Mandatory Alibaba Cloud Deployment
+
+The Qwen hackathon requires backend deployment on Alibaba Cloud. Local demo is not enough for submission.
+
+Required final proof:
+
+```text
+Deployed backend URL on Alibaba Cloud
+GET /health returns ok
+GET /api/qwen/health returns ok
+Short deployment proof recording
+Repo proof script: infra/alibaba-cloud/qwen_cloud_healthcheck.py
+```
+
 ## Production Stack Shape
 
 The target stack is documented and scaffolded:

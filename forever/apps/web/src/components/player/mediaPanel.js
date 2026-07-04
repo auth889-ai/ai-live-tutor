@@ -1,4 +1,4 @@
-import { started } from "../lib/dom.js";
+import { started } from "../../lib/dom.js";
 
 export function renderMediaPanel(container, manifest, regionId, currentMs) {
   const object = manifest.objects.find((item) => item.regionId === regionId);
@@ -57,4 +57,3 @@ function escapeHtml(text) {
     "'": "&#39;"
   })[char]);
 }
-

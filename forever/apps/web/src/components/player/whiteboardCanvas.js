@@ -1,4 +1,4 @@
-import { activeIn, pct, started } from "../lib/dom.js";
+import { activeIn, pct, started } from "../../lib/dom.js";
 
 export function renderWhiteboard(container, manifest, currentMs) {
   const boardObjects = manifest.objects.filter((item) => item.regionId === "board");
@@ -55,4 +55,3 @@ function escapeHtml(text) {
     "'": "&#39;"
   })[char]);
 }
-

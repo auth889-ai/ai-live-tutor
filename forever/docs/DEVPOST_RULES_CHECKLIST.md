@@ -8,9 +8,10 @@ Based on the hackathon requirements provided in the project prompt.
 - [x] Text description drafted.
 - [x] Qwen Cloud API usage represented in code.
 - [x] Alibaba Cloud proof script included.
-- [ ] Backend deployed on Alibaba Cloud.
-- [ ] Short Alibaba Cloud backend proof recording.
+- [ ] Backend deployed on Alibaba Cloud. REQUIRED.
+- [ ] Deployed `/health` endpoint returns OK. REQUIRED.
+- [ ] Deployed `/api/qwen/health` endpoint returns OK. REQUIRED.
+- [ ] Short Alibaba Cloud backend proof recording. REQUIRED.
 - [ ] Public 3-minute demo video.
 - [ ] Track selected in submission.
 - [ ] README setup instructions verified from a clean checkout.
-

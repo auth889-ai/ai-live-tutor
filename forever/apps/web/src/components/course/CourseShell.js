@@ -1,19 +1,20 @@
-import { demoManifest } from "../data/demoManifest.js";
-import { startCourse } from "../lib/apiClient.js";
-import { el } from "../lib/dom.js";
-import { createTutorPlayer } from "./TutorPlayer.js";
+import { demoCourse } from "../../data/demoCourse.js";
+import { demoManifest } from "../../data/demoManifest.js";
+import { startCourse } from "../../lib/apiClient.js";
+import { el } from "../../lib/dom.js";
+import { createTutorPlayer } from "../player/TutorPlayer.js";
 
 const SAMPLE_INPUT = `Patterns teach nested loops. The outer loop counts the number of rows or lines. The inner loop focuses on the columns and connects them to the current row. Whatever we print, like stars, numbers, or characters, is printed inside the inner loop. After each row, we move to a new line. For a triangle pattern, row zero prints one star, row one prints two stars, and row two prints three stars.`;
 
-export function createStudioShell() {
+export function createCourseShell() {
   const root = el("section", "course-shell");
-  const sidebar = renderCourseSidebar();
+  const sidebar = renderCourseSidebar(demoCourse);
   const main = el("section", "course-main");
-  const header = renderCourseHeader();
+  const header = renderCourseHeader(demoCourse);
   const builder = renderBuilderPanel();
   const status = el("div", "studio-status", "Episode 3 ready. Generate with Qwen or play the saved demo lecture.");
   const playerSlot = el("div", "player-slot");
-  const timeline = renderSceneTimeline();
+  const timeline = renderSceneTimeline(demoCourse.timeline);
   const notebookNotice = el("div", "notebook-notice", "All notes are saved automatically in My Notebook");
 
   playerSlot.append(createTutorPlayer(demoManifest));
@@ -35,7 +36,7 @@ export function createStudioShell() {
   return root;
 }
 
-function renderCourseSidebar() {
+function renderCourseSidebar(course) {
   const element = el("aside", "course-sidebar");
   element.innerHTML = `
     <div class="course-brand">
@@ -43,13 +44,13 @@ function renderCourseSidebar() {
       <div><strong>Forever</strong><span>AI Tutor</span></div>
     </div>
     <div class="course-progress-card">
-      <strong>Java Programming</strong>
-      <span>Episode 3 of 12</span>
-      <div class="progress-row"><div><span style="width: 48%"></span></div><b>25%</b></div>
+      <strong>${escapeHtml(course.subject)}</strong>
+      <span>Episode ${course.currentEpisode} of ${course.totalEpisodes}</span>
+      <div class="progress-row"><div><span style="width: ${course.progressPercent}%"></span></div><b>${course.progressPercent}%</b></div>
     </div>
     <div class="episodes-block">
       <div class="sidebar-heading">Episodes</div>
-      ${renderEpisodeList()}
+      ${renderEpisodeList(course.episodes)}
     </div>
     <div class="tools-block">
       <div class="sidebar-heading">Tools</div>
@@ -67,31 +68,22 @@ function renderCourseSidebar() {
   return element;
 }
 
-function renderEpisodeList() {
-  const episodes = [
-    ["1", "What is Programming?", "10:45", "done"],
-    ["2", "Variables & Data Types", "14:20", "done"],
-    ["3", "Nested Loops & Patterns", "18:35", "active"],
-    ["4", "Functions", "", "locked"],
-    ["5", "Arrays", "", "locked"],
-    ["6", "Strings", "", "locked"],
-    ["7", "Recursion", "", "locked"]
-  ];
-  return episodes.map(([number, title, duration, state]) => `
+function renderEpisodeList(episodes) {
+  return episodes.map(({ number, title, duration, state }) => `
     <div class="episode-item ${state}">
       <span>${number}</span>
-      <div><strong>${title}</strong>${duration ? `<small>${duration}</small>` : ""}</div>
+      <div><strong>${escapeHtml(title)}</strong>${duration ? `<small>${duration}</small>` : ""}</div>
       <b>${state === "done" ? "✓" : state === "active" ? "▶" : "⌕"}</b>
     </div>
   `).join("");
 }
 
-function renderCourseHeader() {
+function renderCourseHeader(course) {
   const header = el("header", "course-header");
   header.innerHTML = `
     <div>
-      <h1>Nested Loops & Patterns in C++</h1>
-      <p>Episode 3 <span>•</span> Lesson 2: Square Pattern</p>
+      <h1>${escapeHtml(course.title)}</h1>
+      <p>${escapeHtml(course.episodeLabel)} <span>•</span> ${escapeHtml(course.lessonLabel)}</p>
     </div>
     <div class="header-actions">
       <button class="soft-button">Save Notebook</button>
@@ -139,22 +131,15 @@ function renderBuilderPanel() {
   };
 }
 
-function renderSceneTimeline() {
+function renderSceneTimeline(scenes) {
   const timeline = el("section", "scene-timeline");
-  const scenes = [
-    ["1", "Rules of Nested Loops", "0:00 - 2:45", "notebook", true],
-    ["2", "Square Pattern Explanation", "2:45 - 6:20", "stars", false],
-    ["3", "Code Implementation", "6:20 - 10:35", "code", false],
-    ["4", "Dry Run (4x4 Pattern)", "10:35 - 14:50", "table", false],
-    ["5", "More Pattern Examples", "14:50 - 18:35", "triangle", false]
-  ];
   timeline.innerHTML = `
     <div class="timeline-tabs"><b>Timeline</b><span>Notebook Pages</span><span>Bookmarks</span></div>
     <div class="timeline-cards">
-      ${scenes.map(([number, title, time, type, active]) => `
+      ${scenes.map(({ number, title, timeRange, thumbnailType, active }) => `
         <div class="timeline-card ${active ? "active" : ""}">
-          <div class="timeline-thumb ${type}"></div>
-          <div><strong>${number}. ${title}</strong><span>${time}</span></div>
+          <div class="timeline-thumb ${thumbnailType}"></div>
+          <div><strong>${number}. ${escapeHtml(title)}</strong><span>${escapeHtml(timeRange)}</span></div>
         </div>
       `).join("")}
     </div>
@@ -195,3 +180,12 @@ function checkboxField(label, checked) {
   return { wrap, input };
 }
 
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  })[char]);
+}

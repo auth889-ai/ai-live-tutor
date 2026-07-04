@@ -1,4 +1,4 @@
-import { createStudioShell } from "./components/StudioShell.js";
+import { createCourseShell } from "./components/course/CourseShell.js";
 
 const app = document.querySelector("#app");
-app.append(createStudioShell());
+app.append(createCourseShell());

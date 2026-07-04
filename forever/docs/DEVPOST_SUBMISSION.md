@@ -42,5 +42,11 @@ See `docs/diagrams/system_architecture.mmd`.
 
 ## Alibaba Cloud Deployment Proof
 
-See `infra/alibaba-cloud/qwen_cloud_healthcheck.py`. The deployed backend should expose `/api/qwen/health` and record a short proof video showing it running on Alibaba Cloud.
+Alibaba Cloud deployment is mandatory. The submitted backend must run on Alibaba Cloud and expose:
 
+```text
+GET /health
+GET /api/qwen/health
+```
+
+See `infra/alibaba-cloud/qwen_cloud_healthcheck.py` for the repo proof file demonstrating Qwen Cloud API usage. The final Devpost submission must also include a short proof video showing the deployed backend running on Alibaba Cloud.

@@ -1,5 +1,5 @@
-import { AudioClock } from "../lib/AudioClock.js";
-import { el } from "../lib/dom.js";
+import { AudioClock } from "../../lib/AudioClock.js";
+import { el } from "../../lib/dom.js";
 import { renderMediaPanel } from "./mediaPanel.js";
 import { renderSourceProof } from "./sourceProofPanel.js";
 import { renderSubtitles } from "./subtitleBar.js";
@@ -77,4 +77,3 @@ function formatTime(ms) {
   const sec = String(total % 60).padStart(2, "0");
   return `${min}:${sec}`;
 }
-

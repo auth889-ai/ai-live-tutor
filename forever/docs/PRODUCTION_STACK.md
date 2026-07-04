@@ -14,14 +14,27 @@ Redis
 PostgreSQL + pgvector
 WebSocket/SSE messaging
 Web Audio API tutor player
+Alibaba Cloud deployment
+```
+
+## Required Deployment Layer
+
+For Devpost, Alibaba Cloud deployment is mandatory.
+
+```text
+Alibaba Cloud ECS/ACK deployment
+Qwen Cloud Model Studio
+Alibaba Cloud proof recording
+Backend health endpoint
+Qwen health endpoint
+Deployment proof file in repo
 ```
 
 ## Optional But Strong
 
 ```text
 BullMQ Node realtime gateway
-Alibaba Cloud OSS for media
-Alibaba Cloud ECS/ACK deployment
+Alibaba Cloud OSS for media/audio
 Object storage signed URLs
 OpenTelemetry traces
 ```
@@ -38,6 +51,20 @@ OpenTelemetry traces
 | Realtime | BullMQ + WebSocket | UI progress and scene-ready events |
 | Search | PostgreSQL + pgvector | semantic retrieval over source chunks |
 | Player | Web Audio + SVG/canvas | audio-clock-synced lesson rendering |
+| Deployment | Alibaba Cloud ECS/ACK | mandatory Devpost backend hosting |
+
+## Alibaba Cloud Submission Gate
+
+The project is not submission-ready until all are true:
+
+```text
+Backend runs on Alibaba Cloud.
+/health returns ok from the deployed backend.
+/api/qwen/health returns ok from the deployed backend.
+Repo includes a proof file showing Alibaba/Qwen API usage.
+Demo includes a short deployment proof recording.
+Devpost text includes Alibaba Cloud deployment URL/proof.
+```
 
 ## Multi-Agent Society
 
