@@ -1,22 +1,22 @@
-# Forever Web Player
+# Forever Frontend
 
-Static first-slice tutor player. It opens directly in the browser and uses Web Audio `currentTime` as the master playback clock.
+This is the frontend app.
 
-Open:
+Current status:
 
 ```text
-index.html
+Reserved, not implemented yet.
 ```
 
-The player renders a deterministic coding-pattern scene that demonstrates:
+Reason:
 
-- teacher presence
-- dark handwritten board
-- timed writing
-- code panel
-- dry-run trace table
-- output panel
-- pointer focus
-- word subtitles
-- source proof
+The frontend should not be built as a fake static player before the backend has real lesson data contracts.
+
+First frontend slice will be:
+
+```text
+Source input form -> call backend SourcePack endpoint -> show source chunks and refs
+```
+
+Only after that we build the tutor course player.
 

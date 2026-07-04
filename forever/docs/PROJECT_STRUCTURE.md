@@ -3,42 +3,30 @@
 ```text
 forever/
   apps/
-    api/
+    api/                 backend app
       src/forever_api/
-        agents/             multi-agent specs and registry
-        generation/         deterministic and Qwen generation pipelines
-        messaging/          event contracts and publishers
-        modules/            focused generation stages
-        orchestration/      LangGraph state and graph boundary
-        queues/             Celery/Redis worker boundary
-        qwen/               Qwen Cloud client
-        schemas/            API and manifest contracts
-        semantic_search/    pgvector retrieval boundary
-        storage/            persistence boundary
-      tests/
-        unit/
-        integration/
-        fixtures/
-    realtime/
-      src/                  BullMQ websocket gateway boundary
-    web/
+        ingestion/       SourcePack creation from user material
+      tests/             backend tests
+    web/                 frontend app, intentionally empty until first UI slice
       src/
-        components/
-          course/           course-platform shell, sidebar, header, builder surface
-          player/           audio-clock lesson player, board, media, subtitles, proof
-        data/               local demo manifest
-        domain/             timeline helpers
-        lib/                API and clock utilities
-      tests/
-  e2e/
-    pages/
-    tests/
-    fixtures/
-  infra/
-    alibaba-cloud/
-    postgres/
-    redis/
-  packages/
-    contracts/
   docs/
+    ARCHITECTURE.md
+    BUILD_PHASES.md
+    PROJECT_STRUCTURE.md
+  e2e/                   future browser tests
+```
+
+Rule:
+
+```text
+Do not add duplicate folders for the same purpose.
+Do not add fake static product code.
+Each file must own one clear responsibility.
+```
+
+Current reality:
+
+```text
+backend slice exists: SourcePack ingestion for text
+frontend slice is reserved
 ```

@@ -1,2 +1,2 @@
-__all__ = ["main"]
+"""Forever API package."""
 
