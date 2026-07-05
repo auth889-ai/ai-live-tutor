@@ -14,3 +14,4 @@ playwright-report/
 test-results/
 
 eval/out/
+app/dev/lesson/generated-lesson.json
