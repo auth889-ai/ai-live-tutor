@@ -62,6 +62,24 @@ Phase research questions (answer at kickoff, not before):
 One phase in flight at a time. If a discovery invalidates a previous phase's decision,
 STOP, update the doc, fix the earlier phase to green, then resume.
 
+### Phase 1 research findings (2026-07-05) — DECIDED
+
+**Handwriting reveal:** industry technique is SVG `stroke-dasharray`/`stroke-dashoffset`
+(set dasharray to path length, animate dashoffset → 0); variable-width calligraphy strokes
+need the mask variant (a stroked mask path reveals the filled text under it). Sources:
+CSS-Tricks handwriting/line-animation articles, SVGator handwriting tutorial, cassie.codes.
+**Our twist:** NO CSS animations/transitions — dashoffset is set every frame as a pure
+function of clock time, otherwise seeking breaks.
+
+**Clock sync:** one `requestAnimationFrame` loop samples `<audio>.currentTime` (precision =
+one frame, ~16.7ms — fine; word-level sync needs ~50ms). Guard: never start a second rAF
+loop on `seeking`/`seeked` events (double-compute bug documented in the wild).
+
+**The load-bearing decision:** the action engine is a PURE FUNCTION
+`boardStateAt(timeline, tMs) -> state`. No accumulated mutable state between frames.
+Consequences: seek/scrub/replay/speed are correct by construction (state at t is the same
+no matter how you got there), and the whole engine unit-tests in Node with zero browser.
+
 ## 3. Mistake-prevention checklist (read at the start of every phase)
 
 **Process (how projects like this die, and how we won't):**
