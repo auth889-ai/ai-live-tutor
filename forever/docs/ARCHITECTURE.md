@@ -154,7 +154,7 @@ Every stage validates its output schema before the next stage runs. Every stage 
 |---|---|---|
 | Frontend + API | Next.js (App Router) + React | Player, Studio, API routes in one deployable |
 | Board renderer | SVG + custom action engine (`packages/@forever/renderer`) | Stroke animation, region layout, clock-driven |
-| Agent runtime | Custom society kernel in Node (`lib/orchestration`) | Typed messages, blackboard, debate/negotiation protocol — the Track 3 differentiator, engineered not imported |
+| Agent runtime | Custom society kernel in Node (`lib/orchestration`) + **LangGraph.js for the cyclic review loop** | Typed messages, blackboard, negotiation protocol are custom (the Track 3 differentiator); the per-scene generate→critique→debate→repair CYCLE runs as a LangGraph state machine — cycles with conditional edges are what LangGraph is for (same split OpenMAIC uses). Deterministic fan-out stays BullMQ. Never one mega-call: ~10+ focused agent calls per scene |
 | Queue | BullMQ on Tair (Redis) | Per-scene parallelism, retries, resumability |
 | DB | ApsaraDB RDS PostgreSQL + pgvector | Relational course data + vector retrieval in one service |
 | Object storage | Alibaba OSS | Audio, page images, manifests, notebook PDFs |
