@@ -80,6 +80,30 @@ loop on `seeking`/`seeked` events (double-compute bug documented in the wild).
 Consequences: seek/scrub/replay/speed are correct by construction (state at t is the same
 no matter how you got there), and the whole engine unit-tests in Node with zero browser.
 
+### Phase 1 slice-2 findings (2026-07-05, board renderer) — DECIDED
+
+Studied how the two production whiteboard tools render (toolpick.dev comparison, tldraw
+docs, Excalidraw): **Excalidraw = HTML canvas + plain serializable element array;
+tldraw = DOM/React rendering, data model + interpreter utilities.**
+
+1. **We render SVG in the DOM (tldraw's side), not canvas.** Reasons: our board is a
+   structured region layout, not an infinite canvas; the W4 pointer contract requires
+   `getBoundingClientRect()` on real DOM nodes; tldraw proves DOM rendering carries
+   production complexity.
+2. **Hand-drawn look = rough.js** (<9kB, powers the Excalidraw aesthetic, works
+   headless via `rough.generator()` → path data, no DOM needed). CRITICAL: always pass
+   a **seed derived from the object id** — rough.js randomizes stroke bowing, and an
+   unseeded redraw would jitter between frames, breaking pure state-at-t rendering.
+3. **Handwritten text = handwriting web font + per-word progressive reveal** driven by
+   the engine's progress value — NOT font-outline stroke tracing (glyphs are filled
+   outlines; dasharray tracing reads wrong per CSS-Tricks; the mask variant costs a
+   hand-authored mask per text). Word-level reveal also matches the product goal
+   exactly: the word appears as the tutor says it.
+4. **Renderer core is isomorphic pure functions** (`packages/@forever/renderer`):
+   (manifest objects + engine state) → SVG. No React dependency in the core — the same
+   code renders the live board, timeline thumbnails, and server-side notebook PDFs.
+   React wrapper is a thin layer added with the app shell.
+
 ### Phase 6 findings (2026-07-05, from the old server's proven code) — DECIDED EARLY
 
 **PDF page rendering** (port of `server/services/googleAgent/pdfPageImageRenderer.service.js`):
