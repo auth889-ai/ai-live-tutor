@@ -104,6 +104,30 @@ tldraw = DOM/React rendering, data model + interpreter utilities.**
    code renders the live board, timeline thumbnails, and server-side notebook PDFs.
    React wrapper is a thin layer added with the app shell.
 
+### Phase 2 findings (2026-07-05, TTS + sync) — DECIDED
+
+From Alibaba Model Studio docs: current non-realtime TTS model is **qwen3-tts-flash**
+(voices e.g. "Cherry", `language_type`, returns an **audio URL**, 24h expiry). CRITICAL:
+**TTS does NOT return word timestamps.** So word-level board sync = two steps:
+1. **qwen3-tts-flash** renders each voice line → audio clip (url + duration).
+2. **paraformer** ASR aligns the rendered audio → per-word offsets (the Reconciler).
+
+**The elegant consequence (DRY):** the timeline compiler takes an injectable
+`speechDurationFor(line)` function. Provisional timing passes a word-count estimate;
+reconciled timing passes the REAL measured clip duration. Same validated compiler builds
+both — the reconciled timeline is correct by construction, not patched. Pure logic
+(reconcile) unit-tests deterministically; the TTS/ASR I/O lives in eval/ (spends tokens).
+Scene audio = clips concatenated in line order; each speech action's startMs = cumulative
+offset, durationMs = real clip length; writes track their speech.
+
+**BLOCKER found (2026-07-05):** the hackathon workspace key is scoped to its gateway
+(`*.maas.aliyuncs.com`) and 401s on standard DashScope. That gateway's 82 models are
+**LLMs + video (happyhorse/wan2.6) only — NO TTS/ASR**. So qwen3-tts/paraformer are not
+reachable with current credentials. Phase 2 CODE is complete and green (adapter,
+duration decoder, reconciler); live audio is blocked on model access — a credentials/
+region decision only the account owner can make. When a TTS endpoint is available, it is
+one env change (TTS_MODEL + endpoint) to go live. Do NOT fake audio to unblock.
+
 ### Phase 6 findings (2026-07-05, from the old server's proven code) — DECIDED EARLY
 
 **PDF page rendering** (port of `server/services/googleAgent/pdfPageImageRenderer.service.js`):
