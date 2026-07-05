@@ -11,7 +11,7 @@ This document lists every user-facing feature and the engineering that makes it 
 **Feature:** Upload/paste PDF, text notes, website URL, YouTube transcript, code, syllabus, research paper — or type just a topic name — and get a structured course.
 
 **How:** Every input type has an adapter that normalizes into ONE format: the **SourcePack** (chunks + page images + source refs + concept graph). Downstream agents only ever see SourcePacks, so a new input type is one adapter, zero pipeline changes.
-- PDF → pdfjs text + rasterized page images → qwen3-vl vision pass transcribes every page, finds regions, diagrams, relationships (a diagram-only page counts as evidence — the image is the proof).
+- PDF → pdfjs text + rasterized page images → qwen3.7-plus vision pass transcribes every page, finds regions, diagrams, relationships (a diagram-only page counts as evidence — the image is the proof).
 - URL → Jina Reader/Firecrawl extraction. YouTube → transcript fetch with timestamps as source refs.
 - **Topic name** (the hard one): the Researcher agent web-searches, reads multiple sources, and builds a *cited* SourcePack — so even a bare topic keeps full source grounding. Grounding is never skipped; it's constructed.
 
@@ -20,7 +20,7 @@ This document lists every user-facing feature and the engineering that makes it 
 **Feature:** SQL today, organic chemistry tomorrow, medieval history, guitar theory, Kubernetes — same product, appropriate teaching style each time.
 
 **How:** Nothing subject-specific is hardcoded. Registries hold TYPES (layouts, action kinds, message kinds), never content. Universality comes from three mechanisms:
-1. **Dynamic persona synthesis.** The Domain Router doesn't pick from a fixed teacher list — it *generates* a Teacher persona per course: teaching conventions, board notation habits, example genres, misconception patterns for THAT subject (a chemistry teacher draws mechanisms and warns about electron-pushing errors; a history teacher builds timelines and argues causes). The persona is data on the blackboard, produced by qwen3-max, validated against a persona contract.
+1. **Dynamic persona synthesis.** The Domain Router doesn't pick from a fixed teacher list — it *generates* a Teacher persona per course: teaching conventions, board notation habits, example genres, misconception patterns for THAT subject (a chemistry teacher draws mechanisms and warns about electron-pushing errors; a history teacher builds timelines and argues causes). The persona is data on the blackboard, produced by qwen3.7-max, validated against a persona contract.
 2. **Open board vocabulary.** Board objects have a free-string `objectType` + a rendering hint (text / list / table / diagram / code / math / timeline / annotation). The Board Director invents subject-appropriate objects (`reaction_mechanism`, `battle_map_annotation`, `chord_diagram`); the renderer maps hints to primitives, so unknown types still render.
 3. **Domain-agnostic quality gates.** The Review Board rubrics check grounding, pacing, clarity, and sync — properties of good teaching in ANY subject — so the quality floor holds without per-domain rules.
 

@@ -23,4 +23,3 @@ export function createGenerationProgress(stage, detail = {}) {
     updatedAt: new Date().toISOString(),
   };
 }
-

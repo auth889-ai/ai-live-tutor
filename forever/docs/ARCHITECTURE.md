@@ -37,7 +37,7 @@ flowchart TB
         RDS["ApsaraDB RDS PostgreSQL\n+ pgvector (courses, manifests,\nchunks, embeddings, memory)"]
         Tair["Tair (Redis)\nqueues + progress events"]
         OSS["OSS (page images, TTS audio,\nmanifests, notebook PDFs)"]
-        ModelStudio["Model Studio / DashScope\nqwen3-max · qwen-plus · qwen-flash\nqwen3-vl · qwen3-coder\ntext-embedding-v4 · CosyVoice · Paraformer"]
+        ModelStudio["Model Studio / DashScope\nqwen3.7-max · qwen3.7-plus (vision)\nqwen3.6-flash · qwen3-coder\ntext-embedding-v4 · CosyVoice · Paraformer"]
     end
 
     Ext["External ingestion APIs\n(web search, URL reader,\nYouTube transcript, code sandbox)"]
@@ -63,17 +63,17 @@ The society is a **faculty** — named agents with distinct capabilities, a shar
 
 | Agent | Model | Job |
 |---|---|---|
-| **Librarian** | qwen-flash + qwen3-vl | Ingestion: adapters → SourcePack (chunks, page images, source refs). Vision pass reads every page image: transcribes, finds regions, diagrams, relationships. |
-| **Researcher** | qwen-plus + web search | Only for topic-name/thin input: searches, reads, and builds a *cited* SourcePack so grounding still holds. |
+| **Librarian** | qwen3.6-flash + qwen3.7-plus (vision) | Ingestion: adapters → SourcePack (chunks, page images, source refs). Vision pass reads every page image: transcribes, finds regions, diagrams, relationships. |
+| **Researcher** | qwen3.7-plus + built-in `web_search`/`web_extractor` tools | Only for topic-name/thin input: searches, reads, and builds a *cited* SourcePack so grounding still holds. Uses Qwen Cloud's native Responses-API tools first; Tavily/Jina are fallbacks. |
 | **Archivist** | text-embedding-v4 | Embeds chunks into pgvector; serves semantic retrieval to every other agent. |
-| **Dean** | qwen3-max | Course outline: episodes, lessons, learning objectives, duration budgets — from the SourcePack concept graph. |
-| **Domain Router** | qwen-flash | Classifies domain (code / math / data / science / general) → picks the Teacher persona. |
-| **Teacher** | qwen3-max (thinking) | Per lesson: pedagogy plan — scenes, teaching sequence, misconceptions, level coverage, which source regions each scene must use. |
-| **Board Director** | qwen-plus | Per scene: visual plan — layout template, regions, board objects (title, bullets, table, diagram spec, code block), each bound to a sourceRef. Regions only, never x/y. |
-| **Voice Writer** | qwen-plus | Per scene: narration lines bound to board objects and regions; conversational, step-by-step, human-teacher register. |
+| **Dean** | qwen3.7-max | Course outline: episodes, lessons, learning objectives, duration budgets — from the SourcePack concept graph. |
+| **Domain Router** | qwen3.6-flash | Classifies domain (code / math / data / science / general) → picks the Teacher persona. |
+| **Teacher** | qwen3.7-max (thinking) | Per lesson: pedagogy plan — scenes, teaching sequence, misconceptions, level coverage, which source regions each scene must use. |
+| **Board Director** | qwen3.7-plus | Per scene: visual plan — layout template, regions, board objects (title, bullets, table, diagram spec, code block), each bound to a sourceRef. Multimodal: SEES the actual page images while planning, so the board mirrors the source. Regions only, never x/y. |
+| **Voice Writer** | qwen3.7-plus | Per scene: narration lines bound to board objects and regions; conversational, step-by-step, human-teacher register. |
 | **Code Runner** | qwen3-coder + sandbox | For code scenes: writes runnable examples, executes them for real, captures actual output and dry-run traces. Output shown is real output. |
-| **Quiz Master** | qwen-plus | Checkpoint questions with worked answers, each answerable from cited source regions. |
-| **Notebook Scribe** | qwen-flash | Compiles each lesson's board state into a saved notebook page (and PDF export). |
+| **Quiz Master** | qwen3.7-plus | Checkpoint questions with worked answers, each answerable from cited source regions. |
+| **Notebook Scribe** | qwen3.6-flash | Compiles each lesson's board state into a saved notebook page (and PDF export). |
 | **Review Board** | see 3.3 | Four critics + an Arbiter — quality gate before any manifest is stored. |
 | **Timeline Compiler** | deterministic code | No LLM. Compiles board plan + voice lines into the timed action timeline (focus-before-speech, canvas safe zones, validation). |
 | **Reconciler** | Paraformer ASR | Replaces provisional timings with real word offsets from the rendered TTS audio. |
@@ -86,7 +86,7 @@ The society is a **faculty** — named agents with distinct capabilities, a shar
 
 ### 3.3 Disagreement and negotiation (explicit, not decorative)
 
-**Review Board debate.** Grounding Auditor, Pedagogy Critic, Sync Inspector, and Clutter Critic each score the scene against a rubric. Any failing critic files an `objection` with evidence. The producing agent gets one `revision` round per objection. If critic and producer still disagree after two rounds, the **Arbiter** (qwen3-max, sees only the contract, the evidence, and both arguments) issues a binding `verdict`. Only the failed stage re-runs — never the whole scene.
+**Review Board debate.** Grounding Auditor, Pedagogy Critic, Sync Inspector, and Clutter Critic each score the scene against a rubric. Any failing critic files an `objection` with evidence. The producing agent gets one `revision` round per objection. If critic and producer still disagree after two rounds, the **Arbiter** (qwen3.7-max, sees only the contract, the evidence, and both arguments) issues a binding `verdict`. Only the failed stage re-runs — never the whole scene.
 
 **Budget negotiation.** Board Director and Voice Writer share a per-scene time budget derived from the Dean's episode plan. If the Voice Writer's narration overruns the Board Director's visual pacing (or vice versa), the runtime opens a negotiation round: each proposes cuts/merges with justification; the Teacher persona arbitrates against the learning objectives. Resolved budgets are written to the blackboard as constraints.
 
@@ -95,14 +95,14 @@ The society is a **faculty** — named agents with distinct capabilities, a shar
 ### 3.4 Society memory
 
 The faculty accumulates experience across runs (also strengthens the submission story):
-- **Rubric memory:** verdicts from the Arbiter are distilled (qwen-flash) into reusable review heuristics, retrieved by critics on later scenes.
+- **Rubric memory:** verdicts from the Arbiter are distilled (qwen3.6-flash) into reusable review heuristics, retrieved by critics on later scenes.
 - **Learner memory:** quiz results and replayed segments feed back into the Teacher's next-lesson plan (remediation scenes).
 Both stored in Postgres, retrieved via pgvector — bounded, with recency decay so stale rules expire.
 
 ### 3.5 Measurable gain over single-agent baseline (judging requirement)
 
 `eval/` contains a benchmark harness that runs the **same SourcePack** through:
-- **Baseline:** one qwen3-max mega-prompt producing a full scene manifest in one shot.
+- **Baseline:** one qwen3.7-max mega-prompt producing a full scene manifest in one shot.
 - **Society:** the full faculty pipeline.
 
 Reported metrics (auto-generated table in `eval/RESULTS.md`): contract validation pass rate, grounding coverage (% board objects with resolving sourceRefs), region-discipline violations, quiz answerability (independent checker), timeline sync errors, repair convergence rounds, wall time, and token cost. The claim "society beats single agent" ships with numbers, not vibes.
@@ -158,13 +158,22 @@ Every stage validates its output schema before the next stage runs. Every stage 
 | Queue | BullMQ on Tair (Redis) | Per-scene parallelism, retries, resumability |
 | DB | ApsaraDB RDS PostgreSQL + pgvector | Relational course data + vector retrieval in one service |
 | Object storage | Alibaba OSS | Audio, page images, manifests, notebook PDFs |
-| LLMs | Qwen Cloud (DashScope OpenAI-compatible): qwen3-max (thinking) for Dean/Teacher/Arbiter, qwen-plus for scene agents, qwen-flash for routing/validators, qwen3-vl for page vision, qwen3-coder for code | Right model per job; all-Qwen (judging) |
+| LLMs | Qwen Cloud (DashScope OpenAI-compatible): qwen3.7-max (thinking) for Dean/Teacher/Arbiter, qwen3.7-plus for scene agents, qwen3.6-flash for routing/validators, qwen3.7-plus multimodal vision for page images (1M context — whole SourcePacks fit), qwen3-coder for code | Right model per job; all-Qwen (judging) |
 | Embeddings | text-embedding-v4 | RAG + memory retrieval |
 | TTS | CosyVoice v2 (DashScope) | Natural tutor voice |
 | Word alignment | Paraformer ASR (DashScope) on the TTS audio | Word-level offsets → timestamp reconciler |
 | Code execution | Sandboxed runner (Docker on ECS; Judge0 fallback) | Real output on the board, never invented |
-| Ingestion | pdfjs + page rasterization; Jina Reader / Firecrawl for URLs; YouTube transcript fetch; Tavily/Serper web search for topic-name input | Every input type from the vision |
+| Ingestion | pdfjs + page rasterization; Qwen built-in `web_search`/`web_extractor` (Responses API) for topic-name and URL input, with Jina Reader / Tavily as fallbacks; YouTube transcript fetch | Every input type from the vision, mostly on native Qwen Cloud tools |
 | Observability | Simple Log Service + per-run token/cost ledger in Postgres | Production-readiness evidence |
+
+### Qwen Cloud platform features we exploit (verified in console, July 2026)
+
+- **Structured Outputs:** every agent's contract schema is enforced at the API level — validated JSON from the model, drastically fewer repair rounds.
+- **Function Calling:** society tools (retrieval, blackboard reads, sandbox dispatch) exposed as native tool calls.
+- **Explicit + implicit prompt cache:** the SourcePack prefix (pages + vision reading) is identical across every scene agent in an episode — cached input costs $0.04–0.08/M instead of $0.32–0.40/M, roughly a 5–10× cut on the dominant cost. Cache creation happens once per episode, then all parallel scene jobs read it.
+- **Built-in tools (Responses API):** `web_search` + `web_extractor` power the Researcher natively; `code_interpreter` is an option for quick numeric checks (the Docker sandbox remains the source of truth for displayed code output).
+- **Batches:** non-interactive stages (embedding backfills, notebook compilation, benchmark runs) go through the batch endpoint at lower priority/cost.
+- **Rate limits** (qwen3.7-plus: 15K RPM / 5M TPM) comfortably cover a full episode's scenes generating in parallel.
 
 **Deployment (submission proof):** everything runs on Alibaba Cloud — ECS (or SAE) for web + workers, RDS, Tair, OSS, Model Studio. `infra/` holds provisioning scripts + the deployment-proof recording checklist. Frontend may additionally be served via CDN, but the backend proof recording shows ECS/SAE, RDS, Tair, OSS consoles and live API calls hitting the Alibaba-hosted endpoint.
 

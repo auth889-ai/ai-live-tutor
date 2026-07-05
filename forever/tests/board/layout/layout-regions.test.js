@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { LAYOUT_REGIONS, getRegionLinePosition, validateRegionLine } from '../../lib/board/layout-regions.js';
+import { LAYOUT_REGIONS, getRegionLinePosition, validateRegionLine } from '../../../lib/board/layout/layout-regions.js';
 
 test('Forever exposes named teaching regions instead of raw agent coordinates', () => {
   assert.ok(LAYOUT_REGIONS.teacher_notebook);
