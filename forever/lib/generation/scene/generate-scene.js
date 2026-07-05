@@ -4,7 +4,7 @@
 // No fallbacks: a stage that cannot pass its contract throws.
 
 import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
-import { designBoard } from '../../orchestration/agents/board-director.js';
+import { runGroundingReview } from '../../orchestration/review/grounding-review-loop.js';
 import { writeVoice } from '../../orchestration/agents/voice-writer.js';
 import { compileProvisionalTimeline } from '../timeline/timeline-compiler.js';
 
@@ -12,21 +12,25 @@ export async function generateSceneFromText(text, { layout = 'teacher_notebook_c
   const sourcePack = buildTextSourcePack(text);
   const sceneId = `gen_${sourcePack.id.slice(3)}`;
 
-  const board = await designBoard({ sourcePack, layout });
-  const voice = await writeVoice({ objects: board.objects, sourcePack });
+  // Board goes through the society's grounding review cycle (generate -> audit -> revise)
+  // before it is allowed to be narrated. Ungrounded boards never reach the student.
+  const review = await runGroundingReview({ sceneId, sourcePack, layout });
+  const voice = await writeVoice({ objects: review.objects, sourcePack });
   const { timeline, durationMs } = compileProvisionalTimeline({
     sceneId,
-    objects: board.objects,
+    objects: review.objects,
     voiceLines: voice.voiceLines,
   });
 
   return {
-    scene: { sceneId, layout, objects: board.objects, voiceLines: voice.voiceLines },
+    scene: { sceneId, layout, objects: review.objects, voiceLines: voice.voiceLines },
     timeline,
     durationMs,
     sourcePack,
+    transcript: review.transcript,
+    reviewRounds: review.rounds,
     usage: {
-      boardDirector: board.usage,
+      review: review.usages,
       voiceWriter: voice.usage,
     },
   };

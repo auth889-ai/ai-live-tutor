@@ -2,6 +2,7 @@
 // objects for one scene. Free objectType (invents subject-appropriate names),
 // closed renderHints, every object cites a REAL chunk. Validated against the
 // board-object contract; one repair round; then honest failure.
+// Can also REVISE an existing board given Grounding Auditor objections.
 
 import { callQwenJson } from '../../qwen/client.js';
 import { validateBoardObjects } from '../../board/objects/board-objects.js';
@@ -9,11 +10,8 @@ import { LAYOUT_REGIONS } from '../../board/layout/layout-regions.js';
 
 const SUPPORTED_HINTS = ['text', 'list', 'code']; // grows as the renderer grows
 
-export async function designBoard({ sourcePack, layout = 'teacher_notebook_code' }) {
-  const regions = LAYOUT_REGIONS[layout];
-  if (!regions) throw new Error(`Unknown layout: ${layout}`);
-
-  const system = `You are the Board Director of an AI tutor. You design what gets written on the
+function boardSystemPrompt(regions) {
+  return `You are the Board Director of an AI tutor. You design what gets written on the
 teaching board for ONE short scene (60-180 seconds). You output ONLY JSON:
 {"objects":[{"id","objectType","renderHint","region","lineNumber","content","sourceRef":{"chunkId"}}]}
 Rules you must never break:
@@ -23,15 +21,19 @@ Rules you must never break:
 - NEVER output x/y coordinates.
 - Every object MUST cite sourceRef.chunkId from the provided chunks — only claims supported by the source.
 - 2 to 4 objects: a short title first, then the teaching content. Write like a great teacher's board: compact, structured, concrete.`;
+}
 
-  const user = JSON.stringify({
+function boardUser(sourcePack, regions) {
+  return JSON.stringify({
     task: 'Design the board for one teaching scene from this source material.',
     layoutRegions: Object.fromEntries(
       Object.entries(regions).map(([name, region]) => [name, { maxLines: region.maxLines ?? null, role: region.role }]),
     ),
     chunks: sourcePack.chunks.map((chunk) => ({ chunkId: chunk.id, text: chunk.text })),
   });
+}
 
+async function runBoardCall({ system, user, sourcePack, layout }) {
   let lastError;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const repair = attempt === 0 ? '' : `\nYour previous output was rejected: ${lastError}. Fix exactly that and output the full JSON again.`;
@@ -50,4 +52,28 @@ Rules you must never break:
     }
   }
   throw new Error(`Board Director failed contract validation after repair: ${lastError}`);
+}
+
+export async function designBoard({ sourcePack, layout = 'teacher_notebook_code' }) {
+  const regions = LAYOUT_REGIONS[layout];
+  if (!regions) throw new Error(`Unknown layout: ${layout}`);
+  return runBoardCall({ system: boardSystemPrompt(regions), user: boardUser(sourcePack, regions), sourcePack, layout });
+}
+
+// Revise the board to answer specific Grounding Auditor objections.
+export async function reviseBoard({ sourcePack, layout, previousObjects, objections }) {
+  const regions = LAYOUT_REGIONS[layout];
+  if (!regions) throw new Error(`Unknown layout: ${layout}`);
+  const complaints = objections
+    .map((message) => {
+      const objectId = message.evidenceRefs.find((ref) => ref.objectId)?.objectId;
+      return `- object "${objectId}": ${message.body}`;
+    })
+    .join('\n');
+  const system = `${boardSystemPrompt(regions)}
+The Grounding Auditor rejected your previous board. Fix EXACTLY these grounding problems —
+rewrite or remove the offending objects so every claim is supported by its cited chunk:
+${complaints}`;
+  const user = `${boardUser(sourcePack, regions)}\n\nYour previous (rejected) board was:\n${JSON.stringify(previousObjects)}`;
+  return runBoardCall({ system, user, sourcePack, layout });
 }

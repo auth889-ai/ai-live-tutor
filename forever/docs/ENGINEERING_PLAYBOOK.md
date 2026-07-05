@@ -128,6 +128,22 @@ duration decoder, reconciler); live audio is blocked on model access — a crede
 region decision only the account owner can make. When a TTS endpoint is available, it is
 one env change (TTS_MODEL + endpoint) to go live. Do NOT fake audio to unblock.
 
+### Phase 3 findings (2026-07-06, society review loop) — DECIDED
+
+TTS is blocked on model access (Phase 2 finding), but Track 3 is judged on the SOCIETY,
+not voice. So we build the society deeper now; TTS flips on when an endpoint lands.
+
+The review loop is the Track 3 "conflict resolution" showcase AND our grounding moat.
+Shape (LangGraph-style cyclic state machine, hand-built for auditability):
+  generate (Board Director) -> audit (Grounding Auditor) -> [pass | objections]
+    objections -> revise (Board Director, given the objections) -> re-audit
+    up to MAX_DEBATE_ROUNDS; still failing -> honest SceneQualityError (never ship ungrounded)
+Each objection carries evidence (chunkId/objectId) via the society-message contract, so a
+critic cannot hand-wave — it must point at the offending object and the source. Every
+objection + revision is a persisted blackboard message = the live Studio debate feed.
+The Grounding Auditor is a SEPARATE model call from the Board Director (independent judge),
+never the same call grading itself.
+
 ### Phase 6 findings (2026-07-05, from the old server's proven code) — DECIDED EARLY
 
 **PDF page rendering** (port of `server/services/googleAgent/pdfPageImageRenderer.service.js`):

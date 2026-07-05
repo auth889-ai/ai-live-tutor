@@ -112,7 +112,7 @@ STEP 3 — STUDENT CLICKS NODE → LESSON STARTS (Stage 2)
                     │  CURRENT (BROKEN)  vs  FIXED (NEW)   │
                     └──────────────────────────────────────┘
 
-━━━ CURRENT BROKEN FLOW ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━ CURRENT BROKEN FLOW ━━━━━━━━━━━━━━━━━━━━━━1━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Stage2LiveTutorWorkbench.jsx
   └── POST /api/.../stage2/teach-node   ← BLOCKS for 600 seconds

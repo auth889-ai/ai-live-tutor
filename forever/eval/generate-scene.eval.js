@@ -20,7 +20,13 @@ for (const object of result.scene.objects) {
 }
 console.log('\n=== TUTOR VOICE ===');
 for (const line of result.scene.voiceLines) console.log(`(${line.targetObjectId}) "${line.text}"`);
+console.log(`\n=== SOCIETY DEBATE (${result.reviewRounds} revision round(s)) ===`);
+for (const message of result.transcript) {
+  const who = message.fromRole.replace(/_/g, ' ');
+  console.log(`  [${message.kind}] ${who}: ${message.body}`);
+}
+
 console.log(`\n=== TIMELINE === ${result.timeline.actions.length} actions, ${(result.durationMs / 1000).toFixed(1)}s, contract-valid`);
-const usage = Object.values(result.usage).filter(Boolean);
-const tokens = usage.reduce((sum, u) => sum + (u.total_tokens ?? 0), 0);
-console.log(`Tokens: ${tokens} across ${usage.length} focused agent calls · wall ${(Date.now() - started) / 1000}s`);
+const flat = [...(result.usage.review ?? []), result.usage.voiceWriter].filter(Boolean);
+const tokens = flat.reduce((sum, u) => sum + (u.total_tokens ?? 0), 0);
+console.log(`Tokens: ${tokens} across ${flat.length} focused agent calls · wall ${(Date.now() - started) / 1000}s`);
