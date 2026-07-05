@@ -80,6 +80,25 @@ loop on `seeking`/`seeked` events (double-compute bug documented in the wild).
 Consequences: seek/scrub/replay/speed are correct by construction (state at t is the same
 no matter how you got there), and the whole engine unit-tests in Node with zero browser.
 
+### Phase 6 findings (2026-07-05, from the old server's proven code) — DECIDED EARLY
+
+**PDF page rendering** (port of `server/services/googleAgent/pdfPageImageRenderer.service.js`):
+- Every PDF page → ONE exact full-page PNG. Images/diagrams inside the PDF are never
+  extracted separately — the page is the unit, so a picture always keeps its context.
+- Render order: `pdftocairo -png -r <dpi>` first, `pdftoppm` as fallback (poppler,
+  `brew install poppler` / apt on ECS). DPI configurable via env.
+- **Puppeteer/browser PDF screenshots are BANNED** — the old project tried it: Chrome's
+  viewer captures sidebar/toolbar chrome and repeats pages. This mistake is already paid for.
+
+**Displaying PDF images (the OpenMAIC-style overlay — FULL-PAGE RULE):**
+- The Source & Proof panel shows the REAL page image, untouched — never cropped, never
+  file-cut. Evidence is shown by drawing an overlay (highlight box) on top using the
+  sourceRef.bbox (normalized 0..1 — already validated by `source-pack/refs/source-refs.js`).
+- Zoom = CSS transform on the intact image (reversible); final pixel positions come from
+  DOM measurement (getBoundingClientRect), so pointer accuracy is exact on any screen size.
+- The vision pass (qwen3.7-plus) produces the bboxes at ingestion; the renderer only ever
+  consumes normalized coordinates.
+
 ## 3. Mistake-prevention checklist (read at the start of every phase)
 
 **Process (how projects like this die, and how we won't):**
