@@ -129,6 +129,10 @@ tldraw = DOM/React rendering, data model + interpreter utilities.**
 - [ ] Commit small and often. (`forever/` sat fully untracked for days — never again. Every green test run is committable.)
 - [ ] Never build stage N+1 on an unvalidated stage N. The phase exit gates in WORKFLOW.md are hard gates.
 - [ ] Fixtures before AI: the renderer was provable with hand-written manifests before any token was spent. Keep a fixture path working forever — it's also the offline demo fallback.
+- [ ] Fixtures are TEST DATA for the display machinery, never product content. lib/,
+      packages/, workers/ must never import from fixtures/ — mechanically enforced by
+      tests/fixtures/fixture-isolation.test.js (guards the System 1 fake-content mistake).
+      The pipeline has no fallback that could serve a fixture: failed agents raise.
 - [ ] One integration at a time. Wire Qwen into ONE agent, prove it, then the next. No big-bang "wire everything then debug" step.
 - [ ] Every LLM call goes through `lib/qwen/` with: retries, timeout, structured-output schema, token/cost ledger entry. No raw fetch calls sprinkled around.
 - [ ] Model IDs, prices, and limits live in env/config only. When Qwen ships 3.8, we change one file.

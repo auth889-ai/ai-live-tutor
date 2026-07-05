@@ -5,6 +5,9 @@
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "test": "node --test",
     "check:contracts": "node --test tests/**/*.test.js"
   },
@@ -12,6 +15,9 @@
     "node": ">=20.9.0"
   },
   "dependencies": {
+    "next": "^16.2.10",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "roughjs": "^4.6.6"
   }
 }
