@@ -17,6 +17,7 @@ notes/
 OpenMAIC/
 forever/**/*.md
 !forever/LICENSE
+!forever/README.md
 !forever/.env.example
 !forever/docs/
 !forever/docs/**/*.md
