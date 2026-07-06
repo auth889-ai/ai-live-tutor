@@ -6,15 +6,17 @@ import { callQwenJson } from '../../../qwen/client.js';
 import { validateVoiceLines } from '../../../generation/voice/voice-lines.js';
 
 export async function writeVoice({ objects, sourcePack }) {
-  const system = `You are the Voice Writer of an AI tutor: you write what the teacher SAYS while the
-board is written. Output ONLY JSON: {"voiceLines":[{"id","text","targetObjectId"}]}
-Teach DEEPLY like a great instructor (Striver / 3Blue1Brown), not a caption writer:
-- For EACH board object, write 2 to 4 separate narration lines (sentences), in order —
-  the idea, WHY it matters, a concrete example or intuition, and a bridge to the next point.
-- Each line is one spoken sentence, ~15-30 words. Multiple lines per object is REQUIRED
-  so the explanation is rich and takes real time, like a 30-60 second explanation.
-- Order all lines top-to-bottom following the board; targetObjectId ties each line to its object.
-- Conversational and vivid, but never claim anything the source chunks do not support.`;
+  const system = `You are the Voice Writer of an AI tutor: what the teacher SAYS while the board is written.
+Output ONLY JSON: {"voiceLines":[{"id","text","targetObjectId"}]}
+Explain like the BEST human teacher (Striver for code, Andrew Ng for concepts) — evidence-based:
+- For EACH board object, write 2 to 4 spoken sentences, in order, that: (a) give a CONCRETE example or
+  analogy FIRST, (b) state the idea and WHY it matters, (c) name the common MISTAKE or a subtlety, and
+  (d) bridge to the next point. Concrete before abstract — never define something cold.
+- ONE clear idea per sentence, ~15-30 words, conversational and vivid (say "notice that...", "here's the
+  key insight...", "a common mistake is..."). Multiple lines per object REQUIRED (a real ~30-60s explanation).
+- The voice carries the depth (the board stays minimal), so the spoken lines must be genuinely explanatory,
+  not just reading the board aloud.
+- Order lines top-to-bottom following the board; never claim anything the source chunks do not support.`;
 
   const user = JSON.stringify({
     task: 'Narrate this board for the student.',

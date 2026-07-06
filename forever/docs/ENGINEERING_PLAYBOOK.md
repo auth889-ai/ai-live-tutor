@@ -196,6 +196,17 @@ crossfading when focus moves. Scene title persists as a header for orientation. 
 the all-panels-visible BoardView in the player. This is the "cuts between shots" feel.
 Teaching pedagogy (brute->better->optimal, intuition-first) is a separate Teacher upgrade.
 
+### Teaching-quality findings (2026-07-06) — DECIDED
+
+Research (cognitive-load theory, worked-example effect, concrete-before-abstract studies,
+Striver, Andrew Ng): elite teaching = concrete example FIRST then the abstract idea;
+chunk to 3-5 new items per scene; worked examples at decreasing scaffolding; flag the
+common misconception; bottom-up (simplest first, add layers); for algorithms brute->better
+->optimal. DECISION: encode these into the Teacher (sequence: concrete example before the
+abstract rule, one idea per scene, a misconception beat, brute->better->optimal for coding)
+and Voice Writer (each point: the why + a concrete example/analogy + the common mistake,
+one clear idea per line). Prompt-level quality upgrade; structure stays contract-valid.
+
 ### Phase 6 findings (2026-07-05, from the old server's proven code) — DECIDED EARLY
 
 **PDF page rendering** (port of `server/services/googleAgent/pdfPageImageRenderer.service.js`):
