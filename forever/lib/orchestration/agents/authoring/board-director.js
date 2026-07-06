@@ -8,7 +8,7 @@ import { callQwenJson } from '../../../qwen/client.js';
 import { validateBoardObjects } from '../../../board/objects/board-objects.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 
-const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram']; // grows as the renderer grows
+const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram', 'math']; // grows as the renderer grows
 
 function boardSystemPrompt(regions, brief) {
   const teachingFocus = brief
@@ -36,6 +36,8 @@ Rules you must never break:
     erDiagram (databases) · architecture-beta (system design) · mindmap · timeline (history) ·
     quadrantChart (SWOT/risk) · xychart-beta (graphs) · gitGraph. Use whichever fits.
   Prefer a diagram for any process, structure, interaction, hierarchy, or comparison — it teaches far better than text.
+- Use "math" for equations/formulas (KaTeX LaTeX). content is {"latex":"E = mc^2"} for one equation,
+  or {"steps":[{"latex":"x + 2 = 5","note":"start"},{"latex":"x = 3","note":"subtract 2"}]} for a step-by-step derivation.
 - objectType is a free descriptive snake_case name YOU invent for this subject.
 - region must be one of: ${Object.keys(regions).join(', ')}. lineNumber is an integer within the region's capacity.
 - NEVER output x/y coordinates.

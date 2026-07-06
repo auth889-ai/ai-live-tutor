@@ -1,3 +1,4 @@
+import 'katex/dist/katex.min.css';
 import { Caveat } from 'next/font/google';
 
 const caveat = Caveat({ subsets: ['latin'], variable: '--font-caveat' });
