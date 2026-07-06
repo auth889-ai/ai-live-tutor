@@ -27,3 +27,14 @@ test('rejects unknown diagram types and malformed shortcuts', () => {
   assert.throws(() => validateDiagramContent({ diagramType: 'hologram' }), /unknown diagramType/);
   assert.throws(() => validateDiagramContent({ diagramType: 'flowchart', steps: [] }), /needs steps/);
 });
+
+test('graph accepts an optional traversal highlightSequence of existing nodes', () => {
+  validateDiagramContent({ diagramType: 'graph', nodes: [{ id: '1' }, { id: '2' }], edges: [{ from: '1', to: '2' }], highlightSequence: ['1', '2'] });
+});
+
+test('graph rejects a highlightSequence referencing a missing node', () => {
+  assert.throws(
+    () => validateDiagramContent({ diagramType: 'graph', nodes: [{ id: '1' }], edges: [], highlightSequence: ['1', '9'] }),
+    /highlightSequence references a missing node/,
+  );
+});

@@ -7,6 +7,7 @@
 // (minimal on-screen text); the subtitle tracks the narration.
 
 import { useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 
 import { boardStateAt } from '../../../lib/playback/engine/action-engine.js';
 import { CodePanel } from './code-panel.js';
@@ -34,9 +35,18 @@ export function StagePresenter({ scene, tMs, title }) {
         {title}
       </div>
       <div style={{ minHeight: 360, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 28 }}>
-        <div key={focusObj?.id} className="forever-shot" style={{ width: '100%' }}>
-          {focusObj && <Focus object={focusObj} state={state} />}
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={focusObj?.id}
+            style={{ width: '100%' }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+          >
+            {focusObj && <Focus object={focusObj} state={state} />}
+          </motion.div>
+        </AnimatePresence>
       </div>
       <div style={{ minHeight: 54, padding: '12px 24px', background: '#fffdf8', borderTop: '1px solid #efe6d3', color: '#5a4a2a', fontSize: 18, textAlign: 'center', lineHeight: 1.5 }}>
         {subtitle}
@@ -50,7 +60,8 @@ function Focus({ object, state }) {
     return <CodePanel codeObject={object} revealProgress={state.codeReveal.get(object.id)?.progress ?? 1} outputShown={state.outputShown.has(object.id)} />;
   }
   if (object.renderHint === 'diagram') {
-    return <div style={{ maxWidth: 720, margin: '0 auto' }}><DiagramPanel content={object.content} /></div>;
+    const progress = state.writing.get(object.id)?.progress ?? 1;
+    return <div style={{ maxWidth: 720, margin: '0 auto' }}><DiagramPanel content={object.content} progress={progress} /></div>;
   }
   if (object.renderHint === 'math') {
     return <MathView content={object.content} />;

@@ -13,10 +13,10 @@ import { GraphView } from './graph-view.js';
 
 mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'strict', flowchart: { htmlLabels: true, curve: 'basis' } });
 
-export function DiagramPanel({ content }) {
+export function DiagramPanel({ content, progress = 1 }) {
   if (content.diagramType === 'comparison') return <ComparisonTable content={content} />;
   if (content.diagramType === 'trace') return <TraceTable content={content} />;
-  if (content.diagramType === 'graph') return <GraphView content={content} />; // data structures via React Flow + dagre
+  if (content.diagramType === 'graph') return <GraphView content={content} progress={progress} />; // React Flow + dagre (+ traversal animation)
   return <MermaidDiagram content={content} />;
 }
 

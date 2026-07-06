@@ -46,6 +46,13 @@ export function validateDiagramContent(content, context = 'diagram') {
     for (const e of content.edges) {
       if (!ids.has(String(e.from)) || !ids.has(String(e.to))) throw new Error(`${context} graph edge references a missing node`);
     }
+    // Optional traversal animation (BFS/DFS/visit order): node ids highlighted in sequence.
+    if (content.highlightSequence !== undefined) {
+      if (!Array.isArray(content.highlightSequence)) throw new Error(`${context} graph highlightSequence must be an array`);
+      for (const nid of content.highlightSequence) {
+        if (!ids.has(String(nid))) throw new Error(`${context} graph highlightSequence references a missing node`);
+      }
+    }
     return content;
   }
   throw new Error(`${context} has unknown diagramType: ${type}`);
