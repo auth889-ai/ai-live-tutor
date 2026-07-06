@@ -42,6 +42,9 @@ export function LessonPlayer({ lesson }) {
       </aside>
 
       <section style={{ flex: 1 }}>
+        {player.audioUrl && (
+          <audio ref={player.audioRef} src={player.audioUrl} preload="auto" key={player.audioUrl} />
+        )}
         <BoardView scene={scene} tMs={tMs} />
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button onClick={player.togglePlay} style={{ padding: '8px 22px', fontSize: 16 }}>

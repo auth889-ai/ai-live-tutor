@@ -39,10 +39,10 @@ test('speech durations become the REAL measured clip durations', () => {
   assert.equal(timeline.actions.find((a) => a.id === 'act_speak_obj_b_0').durationMs, 6200);
 });
 
-test('writing tracks the real speech length', () => {
+test('writing spans the full real speech length', () => {
   const { timeline } = reconcile();
   const write = timeline.actions.find((a) => a.id === 'act_write_obj_b');
-  assert.equal(write.durationMs, Math.round(6200 * 0.9));
+  assert.equal(write.durationMs, 6200); // write covers obj_b's entire narration
 });
 
 test('a missing clip for any voice line is an honest failure', () => {
