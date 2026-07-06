@@ -35,3 +35,20 @@ test('compilation is deterministic', () => {
   const second = compileProvisionalTimeline({ sceneId: 'sc_x', objects, voiceLines });
   assert.deepEqual(first, second);
 });
+
+test('a code object with real output gets a show_output action after it writes', () => {
+  const codeObjects = [{ id: 'obj_code', renderHint: 'code', output: '4' }];
+  const codeVoice = [{ id: 'vl_c', text: 'Run the code and see the result printed clearly.', targetObjectId: 'obj_code' }];
+  const { timeline } = compileProvisionalTimeline({ sceneId: 'sc_c', objects: codeObjects, voiceLines: codeVoice });
+  const output = timeline.actions.find((a) => a.id === 'act_output_obj_code');
+  const write = timeline.actions.find((a) => a.id === 'act_write_obj_code');
+  assert.ok(output, 'expected a show_output action');
+  assert.ok(output.startMs >= write.startMs + write.durationMs, 'output reveals after code finishes writing');
+});
+
+test('a code object with no output gets no show_output action', () => {
+  const codeObjects = [{ id: 'obj_code', renderHint: 'code' }];
+  const codeVoice = [{ id: 'vl_c', text: 'Here is the code that we will study today together.', targetObjectId: 'obj_code' }];
+  const { timeline } = compileProvisionalTimeline({ sceneId: 'sc_c', objects: codeObjects, voiceLines: codeVoice });
+  assert.ok(!timeline.actions.some((a) => a.kind === 'show_output'));
+});

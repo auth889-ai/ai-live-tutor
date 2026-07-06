@@ -16,8 +16,10 @@ export async function generateLessonFromText(text, { agents = {} } = {}) {
   const { lessonTitle, scenes: briefs } = await designPedagogy({ sourcePack });
 
   // Scenes are independent -> generate in parallel (the production BullMQ model). Each
-  // scene carries its teaching brief (role + directive) so it goes deep, not shallow.
-  const scenes = await Promise.all(
+  // carries its teaching brief (role + directive) so it goes deep. RESILIENT: one scene
+  // failing (timeout, a stubborn grounding audit) must not kill the whole lesson —
+  // successful scenes are kept in order; the lesson fails only if none succeed.
+  const settled = await Promise.allSettled(
     briefs.map((brief, index) => {
       const focused = focusSourcePack(sourcePack, brief.focusChunkIds);
       return genScene(focused, {
@@ -26,10 +28,14 @@ export async function generateLessonFromText(text, { agents = {} } = {}) {
       }).then((result) => ({ title: brief.title, pedagogicalRole: brief.pedagogicalRole, ...result }));
     }),
   );
+  const scenes = settled.filter((r) => r.status === 'fulfilled').map((r) => r.value);
+  const skipped = settled.length - scenes.length;
+  if (scenes.length === 0) throw new Error('Every scene failed to generate — refusing to ship an empty lesson');
 
   return {
     lessonTitle,
     sourcePackId: sourcePack.id,
+    skippedScenes: skipped,
     scenes: scenes.map((scene) => ({
       sceneId: scene.scene.sceneId,
       title: scene.title,

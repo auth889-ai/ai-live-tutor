@@ -61,6 +61,20 @@ export function compileTimeline({
         targetObjectId: object.id,
       });
       blockEnd = Math.max(speechStart + speechMs, speechStart + 100 + writeMs);
+
+      // A code object with real executed output reveals that output right after the code
+      // finishes writing — so the board shows the program actually running.
+      if (object.renderHint === 'code' && object.output != null) {
+        const outputStart = speechStart + 100 + writeMs;
+        actions.push({
+          id: `act_output_${object.id}`,
+          kind: 'show_output',
+          startMs: Math.round(outputStart),
+          durationMs: 500,
+          targetObjectId: object.id,
+        });
+        blockEnd = Math.max(blockEnd, outputStart + 500);
+      }
     }
     cursor = blockEnd + GAP_MS;
   }

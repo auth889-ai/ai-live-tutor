@@ -22,7 +22,7 @@ export async function callQwenJson({
   model = process.env.MODEL_SCENE || 'qwen3.7-plus',
   temperature = 0.4,
   maxTokens = 4000,
-  timeoutMs = 90_000,
+  timeoutMs = 150_000,
   env = process.env,
 }) {
   const { apiKey, baseUrl } = qwenConfig(env);
