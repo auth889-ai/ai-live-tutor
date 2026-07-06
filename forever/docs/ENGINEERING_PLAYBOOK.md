@@ -144,6 +144,18 @@ objection + revision is a persisted blackboard message = the live Studio debate 
 The Grounding Auditor is a SEPARATE model call from the Board Director (independent judge),
 never the same call grading itself.
 
+### P1 depth findings (2026-07-06, deep lessons) — DECIDED
+
+Research (NIH teaching-programming tips, dry-run pedagogy, instructional sequencing,
+worked-example effect): a deep lesson is a TEACHING SEQUENCE, not a summary. Proven
+pattern: motivate -> intuition (before implementation) -> subgoal-labelled worked example
+-> dry-run/trace table -> complexity -> edge cases -> recap -> practice. Interactivity
+(quiz) spaced in. Decision: a **Teacher agent** designs this sequence (5-9 scenes, each a
+pedagogicalRole + directive), replacing the shallow chunk-splitter. Each scene's role +
+directive threads into the Board Director so it produces role-appropriate depth. Grounding
+auditor still enforces facts; pedagogy/structure is the added value (that's what a teacher
+does). This is the fix for "lessons too short".
+
 ### Phase 6 findings (2026-07-05, from the old server's proven code) — DECIDED EARLY
 
 **PDF page rendering** (port of `server/services/googleAgent/pdfPageImageRenderer.service.js`):

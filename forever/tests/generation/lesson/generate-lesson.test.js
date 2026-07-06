@@ -10,11 +10,11 @@ const TEXT =
 test('a lesson decomposes into ordered scenes, each generated from its focused chunks', async () => {
   const lesson = await generateLessonFromText(TEXT, {
     agents: {
-      planLesson: async ({ sourcePack }) => ({
+      designPedagogy: async ({ sourcePack }) => ({
         lessonTitle: 'Alpha and Beta',
         scenes: [
-          { title: 'Alpha', focusChunkIds: [sourcePack.chunks[0].id] },
-          { title: 'Beta', focusChunkIds: [sourcePack.chunks[0].id] },
+          { title: 'Alpha', pedagogicalRole: 'intuition', directive: 'Explain alpha.', focusChunkIds: [sourcePack.chunks[0].id] },
+          { title: 'Beta', pedagogicalRole: 'worked_example', directive: 'Show beta with an example.', focusChunkIds: [sourcePack.chunks[0].id] },
         ],
         usage: null,
       }),

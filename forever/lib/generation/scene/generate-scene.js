@@ -8,12 +8,12 @@ import { runGroundingReview } from '../../orchestration/review/grounding-review-
 import { writeVoice } from '../../orchestration/agents/voice-writer.js';
 import { compileProvisionalTimeline } from '../timeline/timeline-compiler.js';
 
-export async function generateSceneFromSourcePack(sourcePack, { layout = 'teacher_notebook_code', sceneId } = {}) {
+export async function generateSceneFromSourcePack(sourcePack, { layout = 'teacher_notebook_code', sceneId, brief = null } = {}) {
   const id = sceneId ?? `gen_${sourcePack.id.slice(3)}`;
 
   // Board goes through the society's grounding review cycle (generate -> audit -> revise)
   // before it is allowed to be narrated. Ungrounded boards never reach the student.
-  const review = await runGroundingReview({ sceneId: id, sourcePack, layout });
+  const review = await runGroundingReview({ sceneId: id, sourcePack, layout, brief });
   const voice = await writeVoice({ objects: review.objects, sourcePack });
   const { timeline, durationMs } = compileProvisionalTimeline({
     sceneId: id,

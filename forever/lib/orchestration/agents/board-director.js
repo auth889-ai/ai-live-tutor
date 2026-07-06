@@ -10,9 +10,14 @@ import { LAYOUT_REGIONS } from '../../board/layout/layout-regions.js';
 
 const SUPPORTED_HINTS = ['text', 'list', 'code']; // grows as the renderer grows
 
-function boardSystemPrompt(regions) {
+function boardSystemPrompt(regions, brief) {
+  const teachingFocus = brief
+    ? `\nTHIS SCENE'S TEACHING ROLE: ${brief.pedagogicalRole}. Directive: ${brief.directive}
+Design the board to fulfill that role with DEPTH — concrete example / step-by-step trace /
+complexity reasoning as the role requires, not a vague summary.`
+    : '';
   return `You are the Board Director of an AI tutor. You design what gets written on the
-teaching board for ONE short scene (60-180 seconds). You output ONLY JSON:
+teaching board for ONE teaching scene. You output ONLY JSON:${teachingFocus}
 {"objects":[{"id","objectType","renderHint","region","lineNumber","content","sourceRef":{"chunkId"}}]}
 Rules you must never break:
 - renderHint must be one of: ${SUPPORTED_HINTS.join(', ')}. content for "list" is {"items":[...]}, for "text"/"code" a string.
@@ -54,14 +59,14 @@ async function runBoardCall({ system, user, sourcePack, layout }) {
   throw new Error(`Board Director failed contract validation after repair: ${lastError}`);
 }
 
-export async function designBoard({ sourcePack, layout = 'teacher_notebook_code' }) {
+export async function designBoard({ sourcePack, layout = 'teacher_notebook_code', brief = null }) {
   const regions = LAYOUT_REGIONS[layout];
   if (!regions) throw new Error(`Unknown layout: ${layout}`);
-  return runBoardCall({ system: boardSystemPrompt(regions), user: boardUser(sourcePack, regions), sourcePack, layout });
+  return runBoardCall({ system: boardSystemPrompt(regions, brief), user: boardUser(sourcePack, regions), sourcePack, layout });
 }
 
 // Revise the board to answer specific Grounding Auditor objections.
-export async function reviseBoard({ sourcePack, layout, previousObjects, objections }) {
+export async function reviseBoard({ sourcePack, layout, previousObjects, objections, brief = null }) {
   const regions = LAYOUT_REGIONS[layout];
   if (!regions) throw new Error(`Unknown layout: ${layout}`);
   const complaints = objections
@@ -70,7 +75,7 @@ export async function reviseBoard({ sourcePack, layout, previousObjects, objecti
       return `- object "${objectId}": ${message.body}`;
     })
     .join('\n');
-  const system = `${boardSystemPrompt(regions)}
+  const system = `${boardSystemPrompt(regions, brief)}
 The Grounding Auditor rejected your previous board. Fix EXACTLY these grounding problems —
 rewrite or remove the offending objects so every claim is supported by its cited chunk:
 ${complaints}`;

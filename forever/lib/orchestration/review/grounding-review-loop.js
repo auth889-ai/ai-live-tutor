@@ -14,6 +14,7 @@ export async function runGroundingReview({
   sceneId,
   sourcePack,
   layout = 'teacher_notebook_code',
+  brief = null,
   maxRounds,
   // Agents are injectable so the state machine is unit-testable without spending tokens.
   agents = { designBoard, reviseBoard, auditGrounding },
@@ -22,7 +23,7 @@ export async function runGroundingReview({
   const transcript = [];
   const usages = [];
 
-  let board = await agents.designBoard({ sourcePack, layout });
+  let board = await agents.designBoard({ sourcePack, layout, brief });
   usages.push(board.usage);
   transcript.push(
     createSocietyMessage({
@@ -55,7 +56,7 @@ export async function runGroundingReview({
 
     if (round === rounds) break; // out of revision budget
 
-    board = await agents.reviseBoard({ sourcePack, layout, previousObjects: board.objects, objections: audit.objections });
+    board = await agents.reviseBoard({ sourcePack, layout, previousObjects: board.objects, objections: audit.objections, brief });
     usages.push(board.usage);
     transcript.push(
       createSocietyMessage({
