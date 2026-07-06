@@ -8,11 +8,16 @@ import { focusSourcePack } from '../../source-pack/build/focus-source-pack.js';
 import { designPedagogy as designPedagogyAgent } from '../../orchestration/agents/planning/teacher.js';
 import { generateSceneFromSourcePack as generateScene } from '../scene/generate-scene.js';
 
-export async function generateLessonFromText(text, { agents = {} } = {}) {
+export async function generateLessonFromText(text, options = {}) {
+  return generateLessonFromSourcePack(buildTextSourcePack(text), options);
+}
+
+// Accepts a prebuilt SourcePack (text OR multimodal from a PDF/URL/YouTube) so every input
+// type flows through the same society pipeline.
+export async function generateLessonFromSourcePack(sourcePack, { agents = {} } = {}) {
   const designPedagogy = agents.designPedagogy ?? designPedagogyAgent;
   const genScene = agents.generateScene ?? generateScene;
 
-  const sourcePack = buildTextSourcePack(text);
   const { lessonTitle, scenes: briefs } = await designPedagogy({ sourcePack });
 
   // Scenes are independent -> generate in parallel (the production BullMQ model). Each
