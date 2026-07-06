@@ -52,3 +52,16 @@ test('a code object with no output gets no show_output action', () => {
   const { timeline } = compileProvisionalTimeline({ sceneId: 'sc_c', objects: codeObjects, voiceLines: codeVoice });
   assert.ok(!timeline.actions.some((a) => a.kind === 'show_output'));
 });
+
+test('multiple narration lines per object still yield a startMs-sorted timeline', () => {
+  const objs = [{ id: 'obj_x', renderHint: 'text' }];
+  const many = [
+    { id: 'l1', text: 'First sentence explaining the idea in some detail here.', targetObjectId: 'obj_x' },
+    { id: 'l2', text: 'Second sentence going deeper into why it matters a lot.', targetObjectId: 'obj_x' },
+    { id: 'l3', text: 'Third sentence with a concrete example for the learner.', targetObjectId: 'obj_x' },
+  ];
+  const { timeline } = compileProvisionalTimeline({ sceneId: 'sc_m', objects: objs, voiceLines: many });
+  for (let i = 1; i < timeline.actions.length; i += 1) {
+    assert.ok(timeline.actions[i].startMs >= timeline.actions[i - 1].startMs, 'actions sorted by startMs');
+  }
+});

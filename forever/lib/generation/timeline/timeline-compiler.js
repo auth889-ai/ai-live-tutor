@@ -91,6 +91,11 @@ export function compileTimeline({
     cursor = blockEnd + GAP_MS;
   }
 
+  // Actions are emitted per object (point, speeches, write, output). With multiple
+  // narration lines the write can start before a later speech, so sort by startMs — the
+  // contract requires ascending order and playback reads state at t regardless of order.
+  actions.sort((a, b) => a.startMs - b.startMs || a.id.localeCompare(b.id));
+
   const timeline = { sceneId, timingSource, actions };
   if (audio) timeline.audio = audio;
   validateTimeline(timeline, { objects, voiceLines });
