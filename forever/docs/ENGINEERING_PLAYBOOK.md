@@ -169,6 +169,20 @@ Judge0 adapter (JUDGE0_URL) is the production hardening. Honest failure if no ru
 execute the language. Board only ever shows REAL captured output (never invented) — this
 is what makes coding lessons beat Striver.
 
+### Code panel findings (2026-07-06) — DECIDED
+
+User: "where code editor / real tools?" — the code was rendered as plain SVG text, not an
+editor. Research (Shiki vs Prism vs highlight.js): Shiki = best quality but WASM-heavy for
+a client player; the clock player is client-side. DECISION: the code panel is a REAL React
+component (not SVG), using `react-syntax-highlighter` (Prism, inline styles, CSP-safe,
+offline, built-in line numbers). Key insight: highlighting is STATIC (code doesn't change),
+only the revealed line count changes with the clock — highlight once, reveal by clock.
+Architecture: SVG board = handwriting + diagrams; a sibling HTML CodePanel = code (filename
+tab, line numbers, syntax colors, Output panel) — exactly the mockup layout (code is a
+separate right-side panel, never handwritten). Execution ("real tools") happens at
+generation (Code Runner) and the real output feeds the panel. Interactive coding exercises
+(student edits + runs live, Udemy-parity) is a later feature (P7).
+
 ### Phase 6 findings (2026-07-05, from the old server's proven code) — DECIDED EARLY
 
 **PDF page rendering** (port of `server/services/googleAgent/pdfPageImageRenderer.service.js`):
