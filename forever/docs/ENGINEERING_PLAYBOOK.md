@@ -156,6 +156,19 @@ directive threads into the Board Director so it produces role-appropriate depth.
 auditor still enforces facts; pedagogy/structure is the added value (that's what a teacher
 does). This is the fix for "lessons too short".
 
+### P2 findings (2026-07-06, real code execution) — DECIDED
+
+Research (Rustbox/Northflank/Beam sandbox comparisons, Judge0 + Piston GitHub): for an
+EDUCATION use case (short trusted snippets, capture stdout) **Judge0** is the right engine
+— 90+ languages, self-hostable on Alibaba ECS (keeps submission all-Alibaba), per-run CPU
+caps. E2B/Firecracker microVMs are for persistent untrusted agent workspaces (overkill);
+Piston's public API is gone (Feb 2026). Design: a `lib/execution` abstraction —
+runCode({language,source}) -> {stdout,stderr,exitCode,timedOut}. Local subprocess runner
+(node/python3, timeout, no fake output) works TODAY for trusted generated snippets; a
+Judge0 adapter (JUDGE0_URL) is the production hardening. Honest failure if no runner can
+execute the language. Board only ever shows REAL captured output (never invented) — this
+is what makes coding lessons beat Striver.
+
 ### Phase 6 findings (2026-07-05, from the old server's proven code) — DECIDED EARLY
 
 **PDF page rendering** (port of `server/services/googleAgent/pdfPageImageRenderer.service.js`):
