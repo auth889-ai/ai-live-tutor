@@ -4,7 +4,7 @@
 // Route pages (app/course/[id], app/dev/lesson) are thin wrappers that supply the lesson.
 
 import { useLessonClock } from './use-lesson-clock.js';
-import { BoardView } from '../panels/board-view.js';
+import { StagePresenter } from '../panels/stage-presenter.js';
 
 export function LessonPlayer({ lesson }) {
   const player = useLessonClock(lesson.scenes);
@@ -45,7 +45,7 @@ export function LessonPlayer({ lesson }) {
         {player.audioUrl && (
           <audio ref={player.audioRef} src={player.audioUrl} preload="auto" key={player.audioUrl} />
         )}
-        <BoardView scene={scene} tMs={tMs} />
+        <StagePresenter scene={scene} tMs={tMs} title={scene.title} />
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button onClick={player.togglePlay} style={{ padding: '8px 22px', fontSize: 16 }}>
             {playing ? 'Pause' : 'Play'}

@@ -183,6 +183,19 @@ separate right-side panel, never handwritten). Execution ("real tools") happens 
 generation (Code Runner) and the real output feeds the panel. Interactive coding exercises
 (student edits + runs live, Udemy-parity) is a later feature (P7).
 
+### Video-feeling findings (2026-07-06) — DECIDED
+
+User: stacked panels (board + code + diagram + table all visible) feel like a dashboard,
+not a video course. Research (Khan Academy, Andrew Ng, Striver, 3Blue1Brown): a video
+course shows ONE focal element at a time — the thing being narrated RIGHT NOW — with the
+voice carrying the explanation (brain can't process text+illustration simultaneously),
+minimal on-screen text, a spotlight following the narration, and smooth transitions
+between focuses. DECISION: a single-focus StagePresenter — at clock time t, show only the
+object targeted by the active voice line (board note / code / diagram / trace), full-frame,
+crossfading when focus moves. Scene title persists as a header for orientation. Replaces
+the all-panels-visible BoardView in the player. This is the "cuts between shots" feel.
+Teaching pedagogy (brute->better->optimal, intuition-first) is a separate Teacher upgrade.
+
 ### Phase 6 findings (2026-07-05, from the old server's proven code) — DECIDED EARLY
 
 **PDF page rendering** (port of `server/services/googleAgent/pdfPageImageRenderer.service.js`):
