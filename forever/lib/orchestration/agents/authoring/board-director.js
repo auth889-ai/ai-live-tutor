@@ -8,7 +8,7 @@ import { callQwenJson } from '../../../qwen/client.js';
 import { validateBoardObjects } from '../../../board/objects/board-objects.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 
-const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram', 'math', 'image']; // grows as the renderer grows
+const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram', 'math', 'image', 'callout']; // grows as the renderer grows
 
 function boardSystemPrompt(regions, brief) {
   const teachingFocus = brief
@@ -40,6 +40,7 @@ Rules you must never break:
   or {"steps":[{"latex":"x + 2 = 5","note":"start"},{"latex":"x = 3","note":"subtract 2"}]} for a step-by-step derivation.
 - Use "image" ONLY for an image listed in availableImages below (a real figure from the source).
   content is {"url": <the image url>, "alt": <what it shows>, "caption": <short caption>}. Teach FROM the figure.
+- Use "callout" for a striking teacher card. content is {"variant": one of mistake|checkpoint|recap|tip|analogy|insight, "body": string or [items]}. Use "mistake" for the common-mistake beat, "recap" for key takeaways, "checkpoint" to pause and think. Use sparingly, for emphasis.
 - objectType is a free descriptive snake_case name YOU invent for this subject.
 - region must be one of: ${Object.keys(regions).join(', ')}. lineNumber is an integer within the region's capacity.
 - NEVER output x/y coordinates.
