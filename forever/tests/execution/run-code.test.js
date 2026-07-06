@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { runCode } from '../../lib/execution/run-code.js';
+import { runCode, selectRunner } from '../../lib/execution/run-code.js';
 
 // These run REAL code via the local node runtime (always present in this test env),
 // so they prove the engine captures genuine output — the anti-fake-output guarantee.
@@ -33,9 +33,15 @@ test('a runaway infinite loop is killed by the timeout, not hung forever', async
 });
 
 test('an unsupported language fails honestly (no fake output)', async () => {
-  await assert.rejects(() => runCode({ language: 'brainfuck', source: '+++.' }), /no runner for language/);
+  await assert.rejects(() => runCode({ language: 'brainfuck', source: '+++.' }), /no local runner/);
 });
 
 test('empty source is rejected', async () => {
   await assert.rejects(() => runCode({ language: 'js', source: '   ' }), /source is required/);
+});
+
+test('runner tier selection is explicit and prioritized', () => {
+  assert.equal(selectRunner({ JUDGE0_URL: 'http://x' }), 'judge0');
+  assert.equal(selectRunner({ CODE_SANDBOX: 'docker' }), 'docker');
+  assert.equal(selectRunner({}), 'local');
 });
