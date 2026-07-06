@@ -100,11 +100,30 @@ test('rendering is fully deterministic — same time, identical SVG string', () 
 });
 
 test('unsupported render hints fail loudly instead of drawing blanks', () => {
-  const badScene = { ...scene, objects: [{ ...scene.objects[0], renderHint: 'diagram' }] };
+  const badScene = { ...scene, objects: [{ ...scene.objects[0], renderHint: 'math' }] };
   assert.throws(() => renderBoardSvg(badScene, boardStateAt(timeline, 1200)), /does not support renderHint/);
 });
 
 test('seeds derive stably from object ids', () => {
   assert.equal(seedFrom('obj_title'), seedFrom('obj_title'));
   assert.notEqual(seedFrom('obj_title'), seedFrom('obj_rules'));
+});
+
+test('renders a flowchart diagram as rough boxes with arrows', () => {
+  const diagramScene = {
+    layout: 'teacher_notebook',
+    objects: [{
+      id: 'obj_flow', objectType: 'migration_workflow', renderHint: 'diagram',
+      region: 'notebook_body', lineNumber: 0,
+      content: { diagramType: 'flowchart', steps: ['Create', 'Write', 'Run', 'Commit'] },
+      sourceRef: { chunkId: 'chunk_0001' },
+    }],
+    voiceLines: [],
+    timeline: { sceneId: 's', timingSource: 'provisional', actions: [
+      { id: 'a1', kind: 'write', startMs: 0, durationMs: 1000, targetObjectId: 'obj_flow' },
+    ] },
+  };
+  const svg = renderBoardSvg(diagramScene, boardStateAt(diagramScene.timeline, 1000));
+  assert.ok(svg.includes('Create') && svg.includes('Commit'));
+  assert.ok(svg.includes('marker-end'), 'flowchart has arrows');
 });

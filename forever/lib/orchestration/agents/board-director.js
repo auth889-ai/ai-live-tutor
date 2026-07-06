@@ -8,7 +8,7 @@ import { callQwenJson } from '../../qwen/client.js';
 import { validateBoardObjects } from '../../board/objects/board-objects.js';
 import { LAYOUT_REGIONS } from '../../board/layout/layout-regions.js';
 
-const SUPPORTED_HINTS = ['text', 'list', 'code']; // grows as the renderer grows
+const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram']; // grows as the renderer grows
 
 function boardSystemPrompt(regions, brief) {
   const teachingFocus = brief
@@ -21,6 +21,13 @@ teaching board for ONE teaching scene. You output ONLY JSON:${teachingFocus}
 {"objects":[{"id","objectType","renderHint","region","lineNumber","content","sourceRef":{"chunkId"}}]}
 Rules you must never break:
 - renderHint must be one of: ${SUPPORTED_HINTS.join(', ')}. content for "list" is {"items":[...]}, for "text"/"code" a string.
+- Use "diagram" when a VISUAL explains better than text (a process, cycle, hierarchy, or comparison).
+  content for "diagram" is one of:
+    {"diagramType":"flowchart","steps":["Step 1","Step 2",...]}         (a process, left to right)
+    {"diagramType":"cycle","steps":["A","B","C"]}                        (a repeating cycle)
+    {"diagramType":"tree","root":{"label":"Topic","children":[{"label":"Sub","detail":"..."}]}}
+    {"diagramType":"comparison","columns":["X","Y"],"rows":[{"label":"Feature","values":["No","Yes"]}]}
+  Prefer a diagram for anything with steps, parts, or a compare — it teaches far better than a bullet list.
 - objectType is a free descriptive snake_case name YOU invent for this subject.
 - region must be one of: ${Object.keys(regions).join(', ')}. lineNumber is an integer within the region's capacity.
 - NEVER output x/y coordinates.

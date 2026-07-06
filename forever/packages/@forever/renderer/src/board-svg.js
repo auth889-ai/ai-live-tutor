@@ -12,6 +12,7 @@
 import rough from 'roughjs';
 
 import { BOARD_WIDTH, BOARD_HEIGHT, getRegion } from '../../../../lib/board/layout/layout-regions.js';
+import { layoutDiagram } from '../../../../lib/board/diagrams/diagram-layout.js';
 
 const INK = '#c0392b'; // primary handwriting ink (mockups: warm red)
 const PAPER = '#fdf8f0';
@@ -66,6 +67,12 @@ function layoutObjects(layout, objects) {
     regionObjects.sort((a, b) => (a.lineNumber ?? 0) - (b.lineNumber ?? 0));
     let cursorY = region.y + TOP_PAD;
     for (const object of regionObjects) {
+      if (object.renderHint === 'diagram') {
+        const h = diagramHeight(object.content);
+        positions.set(object.id, { x: region.x, y: cursorY, w: region.w, lines: [] });
+        cursorY += h + OBJECT_GAP;
+        continue;
+      }
       const lines = displayLines(object, region);
       const lineH = object.renderHint === 'code' ? CODE_LINE_H : LINE_H;
       const bodyH = lines.length * lineH + (object.renderHint === 'code' ? 24 : 0);
@@ -112,9 +119,51 @@ function renderObject(object, pos, progress, state) {
       return revealText(object, pos, progress);
     case 'code':
       return codePanel(object, pos, progress, state);
+    case 'diagram':
+      return renderDiagram(object, pos, progress);
     default:
       throw new Error(`board-svg does not support renderHint "${object.renderHint}" yet (object ${object.id})`);
   }
+}
+
+const DIAGRAM_COLORS = { box: '#fff' };
+
+function diagramHeight(content) {
+  if (content.diagramType === 'tree') return 200;
+  if (content.diagramType === 'comparison') return 40 + (content.rows?.length ?? 0) * 34;
+  if (content.diagramType === 'cycle') return 150;
+  return 110; // flowchart
+}
+
+// Hand-drawn diagram: rough.js boxes + arrows + labels, revealed shape-by-shape with the clock.
+function renderDiagram(object, pos, progress) {
+  const region = { x: pos.x, y: pos.y, w: pos.w, h: diagramHeight(object.content) };
+  const shapes = layoutDiagram(object.content, region);
+  const visible = Math.max(1, Math.floor(progress * shapes.length + 1e-9));
+  const generator = rough.generator({ options: { seed: seedFrom(object.id), roughness: 1.4 } });
+  const out = [`<g data-object-id="${escapeXml(object.id)}">`];
+
+  shapes.slice(0, visible).forEach((shape, index) => {
+    if (shape.kind === 'box') {
+      const rect = generator.rectangle(shape.x, shape.y, shape.w, shape.h, { stroke: shape.color, strokeWidth: 2, fill: '#fffdf8', fillStyle: 'solid' });
+      for (const p of generator.toPaths(rect)) {
+        out.push(`<path d="${p.d}" stroke="${p.stroke}" stroke-width="${p.strokeWidth}" fill="${p.fill || 'none'}"/>`);
+      }
+      out.push(`<text x="${shape.x + shape.w / 2}" y="${shape.y + shape.h / 2 + 6}" text-anchor="middle" fill="${shape.color}" font-size="17">${escapeXml(shape.label)}</text>`);
+    } else if (shape.kind === 'arrow') {
+      out.push(arrowSvg(shape, `${object.id}_${index}`));
+    } else if (shape.kind === 'rule') {
+      out.push(`<line x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" stroke="#e0d6c2" stroke-width="1"/>`);
+    } else if (shape.kind === 'text') {
+      out.push(`<text x="${shape.x}" y="${shape.y}" ${shape.anchor ? `text-anchor="${shape.anchor}"` : ''} fill="${INK}" font-size="${shape.size ?? 15}"${shape.bold ? ' font-weight="700"' : ''}>${escapeXml(shape.text)}</text>`);
+    }
+  });
+  out.push('</g>');
+  return out.join('');
+}
+
+function arrowSvg(shape, id) {
+  return `<g><line x1="${shape.x1}" y1="${shape.y1}" x2="${shape.x2}" y2="${shape.y2}" stroke="${INK}" stroke-width="2" marker-end="url(#arrow_${escapeXml(id)})"/><defs><marker id="arrow_${escapeXml(id)}" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="${INK}"/></marker></defs></g>`;
 }
 
 // Handwriting reveal: words appear progressively across the pre-wrapped display lines.
