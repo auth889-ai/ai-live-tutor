@@ -35,8 +35,8 @@ test('reconciled timeline is contract-valid with reconciled timingSource and aud
 
 test('speech durations become the REAL measured clip durations', () => {
   const { timeline } = reconcile();
-  assert.equal(timeline.actions.find((a) => a.id === 'act_speak_obj_a').durationMs, 1800);
-  assert.equal(timeline.actions.find((a) => a.id === 'act_speak_obj_b').durationMs, 6200);
+  assert.equal(timeline.actions.find((a) => a.id === 'act_speak_obj_a_0').durationMs, 1800);
+  assert.equal(timeline.actions.find((a) => a.id === 'act_speak_obj_b_0').durationMs, 6200);
 });
 
 test('writing tracks the real speech length', () => {

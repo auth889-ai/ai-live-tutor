@@ -26,12 +26,17 @@ export function compileTimeline({
   timingSource = 'provisional',
   audio = null,
 }) {
-  const lineByObject = new Map(voiceLines.map((line) => [line.targetObjectId, line]));
+  // Multiple narration lines per object (deep teaching): group in array order.
+  const linesByObject = new Map();
+  for (const line of voiceLines) {
+    if (!linesByObject.has(line.targetObjectId)) linesByObject.set(line.targetObjectId, []);
+    linesByObject.get(line.targetObjectId).push(line);
+  }
   const actions = [];
   let cursor = 0;
 
   for (const object of objects) {
-    const line = lineByObject.get(object.id);
+    const lines = linesByObject.get(object.id) ?? [];
     actions.push({
       id: `act_point_${object.id}`,
       kind: 'point',
@@ -41,18 +46,25 @@ export function compileTimeline({
     });
 
     let blockEnd = cursor + FOCUS_MS;
-    if (line) {
-      const speechMs = Math.max(1000, Math.round(speechDurationFor(line)));
+    if (lines.length) {
+      // Chain the object's narration lines back-to-back; the write spans them all.
       const speechStart = cursor + FOCUS_LEAD_MS;
-      actions.push({
-        id: `act_speak_${object.id}`,
-        kind: 'speech',
-        startMs: Math.round(speechStart),
-        durationMs: speechMs,
-        voiceLineId: line.id,
+      let speechCursor = speechStart;
+      lines.forEach((line, index) => {
+        const speechMs = Math.max(1000, Math.round(speechDurationFor(line)));
+        actions.push({
+          id: `act_speak_${object.id}_${index}`,
+          kind: 'speech',
+          startMs: Math.round(speechCursor),
+          durationMs: speechMs,
+          voiceLineId: line.id,
+        });
+        speechCursor += speechMs;
       });
+      const totalSpeechMs = speechCursor - speechStart;
+
       const writeKind = object.renderHint === 'code' ? 'reveal_code' : 'write';
-      const writeMs = Math.max(1000, Math.round(speechMs * 0.9));
+      const writeMs = Math.max(1000, Math.round(totalSpeechMs * 0.9));
       actions.push({
         id: `act_write_${object.id}`,
         kind: writeKind,
@@ -60,7 +72,7 @@ export function compileTimeline({
         durationMs: writeMs,
         targetObjectId: object.id,
       });
-      blockEnd = Math.max(speechStart + speechMs, speechStart + 100 + writeMs);
+      blockEnd = Math.max(speechCursor, speechStart + 100 + writeMs);
 
       // A code object with real executed output reveals that output right after the code
       // finishes writing — so the board shows the program actually running.

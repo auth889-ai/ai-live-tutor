@@ -8,11 +8,13 @@ import { validateVoiceLines } from '../../generation/voice/voice-lines.js';
 export async function writeVoice({ objects, sourcePack }) {
   const system = `You are the Voice Writer of an AI tutor: you write what the teacher SAYS while the
 board is written. Output ONLY JSON: {"voiceLines":[{"id","text","targetObjectId"}]}
-Rules:
-- Exactly one voice line per board object, in board order, each 15-40 words.
-- targetObjectId must be the id of the object the line explains.
-- Speak like a great YouTube teacher: conversational, step-by-step, concrete, no fluff,
-  and never claim anything the source chunks do not support.`;
+Teach DEEPLY like a great instructor (Striver / 3Blue1Brown), not a caption writer:
+- For EACH board object, write 2 to 4 separate narration lines (sentences), in order —
+  the idea, WHY it matters, a concrete example or intuition, and a bridge to the next point.
+- Each line is one spoken sentence, ~15-30 words. Multiple lines per object is REQUIRED
+  so the explanation is rich and takes real time, like a 30-60 second explanation.
+- Order all lines top-to-bottom following the board; targetObjectId ties each line to its object.
+- Conversational and vivid, but never claim anything the source chunks do not support.`;
 
   const user = JSON.stringify({
     task: 'Narrate this board for the student.',

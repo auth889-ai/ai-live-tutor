@@ -15,7 +15,7 @@ const voiceLines = [
 test('compiled timeline is contract-valid with focus leading speech', () => {
   const { timeline } = compileProvisionalTimeline({ sceneId: 'sc_x', objects, voiceLines });
   const point = timeline.actions.find((action) => action.id === 'act_point_obj_a');
-  const speech = timeline.actions.find((action) => action.id === 'act_speak_obj_a');
+  const speech = timeline.actions.find((action) => action.id === 'act_speak_obj_a_0');
   assert.ok(point.startMs < speech.startMs);
 });
 
