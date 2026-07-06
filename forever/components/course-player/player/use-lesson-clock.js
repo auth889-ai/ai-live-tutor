@@ -15,6 +15,7 @@ export function useLessonClock(scenes) {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef(null);
   const manualRef = useRef(null);
+  const holdRef = useRef(false);
   if (!manualRef.current) manualRef.current = createManualClock();
 
   const scene = scenes[sceneIndex];
@@ -28,6 +29,12 @@ export function useLessonClock(scenes) {
     let frame;
     const tick = () => {
       const clock = getClock();
+      // A quiz (or any interactive block) holds playback until the student acts.
+      if (holdRef.current) {
+        if (clock.isPlaying()) clock.pause();
+        frame = requestAnimationFrame(tick);
+        return;
+      }
       const next = Math.min(clock.currentTimeMs(), durationMs);
       setTMs(next);
       if (next >= durationMs - 20 && clock.isPlaying()) {
@@ -56,6 +63,9 @@ export function useLessonClock(scenes) {
     playing,
     audioRef,
     audioUrl: scene.audioUrl || null,
+    setHold(held) {
+      holdRef.current = held;
+    },
     togglePlay() {
       const clock = getClock();
       if (clock.isPlaying()) {

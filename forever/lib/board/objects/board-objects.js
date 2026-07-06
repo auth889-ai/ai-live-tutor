@@ -4,6 +4,7 @@ import { validateDiagramContent } from '../diagrams/diagram-content.js';
 import { validateMathContent } from '../math/render-math.js';
 import { validateImageContent } from '../image/image-content.js';
 import { validateCalloutContent } from '../callout/callout-content.js';
+import { validateQuizContent } from '../quiz/quiz-content.js';
 
 // Rendering hints are a closed set the renderer understands. objectType stays a FREE
 // string so agents can invent subject-appropriate objects (reaction_mechanism,
@@ -17,6 +18,7 @@ export const RENDER_HINTS = Object.freeze([
   'math',
   'image',
   'callout',
+  'quiz',
   'timeline',
   'annotation',
 ]);
@@ -38,6 +40,7 @@ export function validateBoardObject(object, layout) {
   if (object.renderHint === 'math') validateMathContent(object.content, context);
   if (object.renderHint === 'image') validateImageContent(object.content, context);
   if (object.renderHint === 'callout') validateCalloutContent(object.content, context);
+  if (object.renderHint === 'quiz') validateQuizContent(object.content, context);
   if (object.decorative !== true) {
     if (!object.sourceRef) {
       throw new Error(`${context} needs a sourceRef — every factual board object carries source proof`);

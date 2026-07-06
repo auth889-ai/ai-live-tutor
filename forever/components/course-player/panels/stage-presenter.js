@@ -6,7 +6,7 @@
 // between shots. The scene title persists for orientation; the voice carries the detail
 // (minimal on-screen text); the subtitle tracks the narration.
 
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { boardStateAt } from '../../../lib/playback/engine/action-engine.js';
@@ -15,10 +15,12 @@ import { DiagramPanel } from './diagram-panel.js';
 import { MathView } from './math-view.js';
 import { ImageView } from './image-view.js';
 import { CalloutView } from './callout-view.js';
+import { QuizView } from './quiz-view.js';
 
-export function StagePresenter({ scene, tMs, title }) {
+export function StagePresenter({ scene, tMs, title, setHold }) {
   const state = useMemo(() => boardStateAt(scene.timeline, tMs), [scene, tMs]);
   const lastFocus = useRef(scene.objects[0]?.id);
+  const [answered, setAnswered] = useState(() => new Set());
 
   const activeLine = state.activeSpeech ? scene.voiceLines.find((l) => l.id === state.activeSpeech) : null;
   let focusId = activeLine?.targetObjectId;
@@ -28,6 +30,13 @@ export function StagePresenter({ scene, tMs, title }) {
   if (focusId) lastFocus.current = focusId;
   const focusObj = scene.objects.find((o) => o.id === lastFocus.current) || scene.objects[0];
   const subtitle = activeLine?.text ?? '';
+
+  // Hold playback while an unanswered quiz is on screen.
+  const quizBlocking = focusObj?.renderHint === 'quiz' && !answered.has(focusObj.id);
+  useEffect(() => {
+    setHold?.(quizBlocking);
+    return () => setHold?.(false);
+  }, [quizBlocking, setHold]);
 
   return (
     <div style={{ background: '#fdf8f0', border: '1px solid #e8ddc9', borderRadius: 14, overflow: 'hidden' }}>
@@ -44,7 +53,13 @@ export function StagePresenter({ scene, tMs, title }) {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
           >
-            {focusObj && <Focus object={focusObj} state={state} />}
+            {focusObj && (
+              <Focus
+                object={focusObj}
+                state={state}
+                onQuizAnswered={() => setAnswered((prev) => new Set(prev).add(focusObj.id))}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -55,7 +70,10 @@ export function StagePresenter({ scene, tMs, title }) {
   );
 }
 
-function Focus({ object, state }) {
+function Focus({ object, state, onQuizAnswered }) {
+  if (object.renderHint === 'quiz') {
+    return <QuizView content={object.content} onAnswered={onQuizAnswered} />;
+  }
   if (object.renderHint === 'code') {
     return <CodePanel codeObject={object} revealProgress={state.codeReveal.get(object.id)?.progress ?? 1} outputShown={state.outputShown.has(object.id)} />;
   }

@@ -45,7 +45,7 @@ export function LessonPlayer({ lesson }) {
         {player.audioUrl && (
           <audio ref={player.audioRef} src={player.audioUrl} preload="auto" key={player.audioUrl} />
         )}
-        <StagePresenter scene={scene} tMs={tMs} title={scene.title} />
+        <StagePresenter scene={scene} tMs={tMs} title={scene.title} setHold={player.setHold} />
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button onClick={player.togglePlay} style={{ padding: '8px 22px', fontSize: 16 }}>
             {playing ? 'Pause' : 'Play'}
