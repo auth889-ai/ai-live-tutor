@@ -9,12 +9,14 @@ import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 
 import { toMermaid } from '../../../lib/board/diagrams/to-mermaid.js';
+import { GraphView } from './graph-view.js';
 
 mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'strict', flowchart: { htmlLabels: true, curve: 'basis' } });
 
 export function DiagramPanel({ content }) {
   if (content.diagramType === 'comparison') return <ComparisonTable content={content} />;
   if (content.diagramType === 'trace') return <TraceTable content={content} />;
+  if (content.diagramType === 'graph') return <GraphView content={content} />; // data structures via React Flow + dagre
   return <MermaidDiagram content={content} />;
 }
 

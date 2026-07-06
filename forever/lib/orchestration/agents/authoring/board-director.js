@@ -27,6 +27,9 @@ Rules you must never break:
     {"diagramType":"cycle","steps":["A","B","C"]}                        (a repeating cycle)
     {"diagramType":"tree","root":{"label":"Topic","children":[{"label":"Sub","detail":"..."}]}}
     {"diagramType":"comparison","columns":["X","Y"],"rows":[{"label":"Feature","values":["No","Yes"]}]}
+  DATA STRUCTURES (binary tree, BST, graph, linked list) — output a real laid-out graph:
+    {"diagramType":"graph","nodes":[{"id":"1","label":"8"},{"id":"2","label":"3"},{"id":"3","label":"10"}],"edges":[{"from":"1","to":"2"},{"from":"1","to":"3"}],"directed":true}
+    (use this for actual tree/graph/linked-list data with node values — it auto-lays-out cleanly)
   RICH diagrams — output raw Mermaid (DECLARE the type on line 1), for example:
     {"diagramType":"mermaid","code":"sequenceDiagram\\n  Client->>Server: SYN\\n  Server->>Client: SYN-ACK\\n  Client->>Server: ACK"}
     classDiagram (OOP: classes, inheritance) · stateDiagram-v2 (state machines, lifecycles) ·

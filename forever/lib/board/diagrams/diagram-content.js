@@ -39,5 +39,14 @@ export function validateDiagramContent(content, context = 'diagram') {
     if (!Array.isArray(content.columns) || !Array.isArray(content.rows)) throw new Error(`${context} ${type} needs columns[] and rows[]`);
     return content;
   }
+  if (type === 'graph') {
+    if (!Array.isArray(content.nodes) || content.nodes.length === 0) throw new Error(`${context} graph needs nodes[]`);
+    if (!Array.isArray(content.edges)) throw new Error(`${context} graph needs edges[]`);
+    const ids = new Set(content.nodes.map((n) => String(n.id)));
+    for (const e of content.edges) {
+      if (!ids.has(String(e.from)) || !ids.has(String(e.to))) throw new Error(`${context} graph edge references a missing node`);
+    }
+    return content;
+  }
   throw new Error(`${context} has unknown diagramType: ${type}`);
 }
