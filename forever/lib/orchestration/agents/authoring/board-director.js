@@ -8,7 +8,7 @@ import { callQwenJson } from '../../../qwen/client.js';
 import { validateBoardObjects } from '../../../board/objects/board-objects.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 
-const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram', 'math']; // grows as the renderer grows
+const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram', 'math', 'image']; // grows as the renderer grows
 
 function boardSystemPrompt(regions, brief) {
   const teachingFocus = brief
@@ -38,6 +38,8 @@ Rules you must never break:
   Prefer a diagram for any process, structure, interaction, hierarchy, or comparison — it teaches far better than text.
 - Use "math" for equations/formulas (KaTeX LaTeX). content is {"latex":"E = mc^2"} for one equation,
   or {"steps":[{"latex":"x + 2 = 5","note":"start"},{"latex":"x = 3","note":"subtract 2"}]} for a step-by-step derivation.
+- Use "image" ONLY for an image listed in availableImages below (a real figure from the source).
+  content is {"url": <the image url>, "alt": <what it shows>, "caption": <short caption>}. Teach FROM the figure.
 - objectType is a free descriptive snake_case name YOU invent for this subject.
 - region must be one of: ${Object.keys(regions).join(', ')}. lineNumber is an integer within the region's capacity.
 - NEVER output x/y coordinates.
@@ -46,12 +48,17 @@ Rules you must never break:
 }
 
 function boardUser(sourcePack, regions) {
+  // Only offer described figures — an image without a caption isn't teachable yet.
+  const availableImages = (sourcePack.assets ?? [])
+    .filter((asset) => asset.kind === 'figure' && asset.caption?.trim())
+    .map((asset) => ({ url: asset.url, caption: asset.caption }));
   return JSON.stringify({
     task: 'Design the board for one teaching scene from this source material.',
     layoutRegions: Object.fromEntries(
       Object.entries(regions).map(([name, region]) => [name, { maxLines: region.maxLines ?? null, role: region.role }]),
     ),
     chunks: sourcePack.chunks.map((chunk) => ({ chunkId: chunk.id, text: chunk.text })),
+    availableImages,
   });
 }
 

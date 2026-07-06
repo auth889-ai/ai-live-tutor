@@ -9,6 +9,7 @@ import { parsePdfWithMineru } from './mineru.js';
 import { unpackMineru } from './unpack-mineru.js';
 import { renderPageImages } from './page-images.js';
 import { cleanMarkdown } from './clean-markdown.js';
+import { describeImage } from '../../orchestration/agents/vision/describe-image.js';
 import { buildMultimodalSourcePack } from '../../source-pack/build/multimodal-source-pack.js';
 
 export async function ingestPdf(pdfPath, { workDir = '.data/ingest', env = process.env } = {}) {
@@ -32,11 +33,29 @@ export async function ingestPdf(pdfPath, { workDir = '.data/ingest', env = proce
   const text = cleanMarkdown(markdown);
   if (text.length < 40) throw new Error('PDF produced too little text to teach from');
 
+  // Vision pass: SEE each figure so the tutor can teach FROM it (bounded to avoid runaway
+  // cost). A figure that can't be described is kept without a caption (not offered to teach).
+  const maxFigures = Number(env.PDF_MAX_VISION_FIGURES || 8);
+  const describedFigures = [];
+  for (const img of images.slice(0, maxFigures)) {
+    let caption = '';
+    let whatItShows = '';
+    try {
+      const seen = await describeImage({ imagePath: img.path });
+      caption = seen.caption;
+      whatItShows = seen.whatItShows;
+    } catch {
+      // vision unavailable for this figure — keep it uncaptioned
+    }
+    describedFigures.push({ id: img.id, kind: 'figure', url: img.path, caption, whatItShows });
+  }
+
   return buildMultimodalSourcePack({
     title: path.basename(pdfPath, path.extname(pdfPath)),
     text,
     images: [
-      ...images.map((img) => ({ id: img.id, kind: 'figure', url: img.path, caption: '' })),
+      ...describedFigures,
+      ...images.slice(maxFigures).map((img) => ({ id: img.id, kind: 'figure', url: img.path, caption: '' })),
       ...pages.map((p) => ({ id: `page_${String(p.page).padStart(3, '0')}`, kind: 'page', url: p.path, page: p.page })),
     ],
     documentType: 'pdf',

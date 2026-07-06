@@ -2,6 +2,7 @@ import { getRegion, validateRegionLine } from '../layout/layout-regions.js';
 import { validateSourceRef } from '../../source-pack/refs/source-refs.js';
 import { validateDiagramContent } from '../diagrams/diagram-content.js';
 import { validateMathContent } from '../math/render-math.js';
+import { validateImageContent } from '../image/image-content.js';
 
 // Rendering hints are a closed set the renderer understands. objectType stays a FREE
 // string so agents can invent subject-appropriate objects (reaction_mechanism,
@@ -33,6 +34,7 @@ export function validateBoardObject(object, layout) {
   if (!hasContent(object.content)) throw new Error(`${context}.content is required and must be non-empty`);
   if (object.renderHint === 'diagram') validateDiagramContent(object.content, context);
   if (object.renderHint === 'math') validateMathContent(object.content, context);
+  if (object.renderHint === 'image') validateImageContent(object.content, context);
   if (object.decorative !== true) {
     if (!object.sourceRef) {
       throw new Error(`${context} needs a sourceRef — every factual board object carries source proof`);

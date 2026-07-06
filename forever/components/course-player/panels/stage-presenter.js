@@ -12,6 +12,7 @@ import { boardStateAt } from '../../../lib/playback/engine/action-engine.js';
 import { CodePanel } from './code-panel.js';
 import { DiagramPanel } from './diagram-panel.js';
 import { MathView } from './math-view.js';
+import { ImageView } from './image-view.js';
 
 export function StagePresenter({ scene, tMs, title }) {
   const state = useMemo(() => boardStateAt(scene.timeline, tMs), [scene, tMs]);
@@ -52,6 +53,9 @@ function Focus({ object, state }) {
   }
   if (object.renderHint === 'math') {
     return <MathView content={object.content} />;
+  }
+  if (object.renderHint === 'image') {
+    return <ImageView content={object.content} />;
   }
   return <Handwritten object={object} progress={state.writing.get(object.id)?.progress ?? 1} />;
 }
