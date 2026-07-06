@@ -70,3 +70,4 @@ tmp/
 *.sqlite
 *.sqlite3
 *.db
+.data/
