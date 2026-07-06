@@ -35,6 +35,16 @@ of RENDERING PRIMITIVES with different content. Forever builds the PRIMITIVES; t
    underline, arrow, zoom, mistake card, analogy card, checkpoint "pause & think", recap,
    next-lesson hook, voice pace. These give premium feel in EVERY subject.
 
+## Extensible — NOT capped at 8 (specialized primitives 9+)
+The 8 core primitives cover ~80% of the catalog. Specialized subjects add their own primitive
+via the SAME plug-in pattern (install a real library -> component -> diagram-type in the
+content contract -> Board Director prompt -> test), exactly like the React Flow graph view:
+- Molecule viewer (3Dmol.js/RDKit) — chemistry     · Circuit diagrams (CircuiTikZ) — physics/EE
+- Maps (Leaflet) — history/geography               · Music notation (VexFlow) — music theory
+- 3D/geometry (Three.js) — physics/geometry        · Chess/board (chessboard.js) — strategy
+- Chemical equation balancer — chemistry           · Free-body/vector diagrams — physics
+No ceiling: each new specialized need is one repeatable slice. Priority by course demand.
+
 ## Why this beats Udemy/Coursera/YouTube
 A human instructor uses the same few visual devices (diagram, table, code, formula, image,
 animation, pointer) across every topic — the SKILL is choosing the right one and explaining
