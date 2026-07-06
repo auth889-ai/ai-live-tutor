@@ -21,13 +21,18 @@ teaching board for ONE teaching scene. You output ONLY JSON:${teachingFocus}
 {"objects":[{"id","objectType","renderHint","region","lineNumber","content","sourceRef":{"chunkId"}}]}
 Rules you must never break:
 - renderHint must be one of: ${SUPPORTED_HINTS.join(', ')}. content for "list" is {"items":[...]}, for "text"/"code" a string.
-- Use "diagram" when a VISUAL explains better than text (a process, cycle, hierarchy, or comparison).
-  content for "diagram" is one of:
-    {"diagramType":"flowchart","steps":["Step 1","Step 2",...]}         (a process, left to right)
+- Use "diagram" when a VISUAL explains better than text. Pick the RIGHT diagram for the concept:
+  SIMPLE shortcuts:
+    {"diagramType":"flowchart","steps":["Step 1","Step 2",...]}         (a linear process)
     {"diagramType":"cycle","steps":["A","B","C"]}                        (a repeating cycle)
     {"diagramType":"tree","root":{"label":"Topic","children":[{"label":"Sub","detail":"..."}]}}
     {"diagramType":"comparison","columns":["X","Y"],"rows":[{"label":"Feature","values":["No","Yes"]}]}
-  Prefer a diagram for anything with steps, parts, or a compare — it teaches far better than a bullet list.
+  RICH diagrams — output raw Mermaid (DECLARE the type on line 1), for example:
+    {"diagramType":"mermaid","code":"sequenceDiagram\\n  Client->>Server: SYN\\n  Server->>Client: SYN-ACK\\n  Client->>Server: ACK"}
+    classDiagram (OOP: classes, inheritance) · stateDiagram-v2 (state machines, lifecycles) ·
+    erDiagram (databases) · architecture-beta (system design) · mindmap · timeline (history) ·
+    quadrantChart (SWOT/risk) · xychart-beta (graphs) · gitGraph. Use whichever fits.
+  Prefer a diagram for any process, structure, interaction, hierarchy, or comparison — it teaches far better than text.
 - objectType is a free descriptive snake_case name YOU invent for this subject.
 - region must be one of: ${Object.keys(regions).join(', ')}. lineNumber is an integer within the region's capacity.
 - NEVER output x/y coordinates.

@@ -4,6 +4,8 @@
 
 export function toMermaid(content) {
   switch (content.diagramType) {
+    case 'mermaid':
+      return String(content.code); // raw Mermaid (any of the 26 types), Board-Director-authored
     case 'flowchart':
       return flowchart(content.steps ?? [], false);
     case 'cycle':
