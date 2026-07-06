@@ -2,8 +2,8 @@
 // teacher. Every line is bound to the board object it explains. Contract-validated,
 // one repair round, honest failure.
 
-import { callQwenJson } from '../../qwen/client.js';
-import { validateVoiceLines } from '../../generation/voice/voice-lines.js';
+import { callQwenJson } from '../../../qwen/client.js';
+import { validateVoiceLines } from '../../../generation/voice/voice-lines.js';
 
 export async function writeVoice({ objects, sourcePack }) {
   const system = `You are the Voice Writer of an AI tutor: you write what the teacher SAYS while the

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { charsToWordTimings } from '../../lib/tts/elevenlabs.js';
+import { charsToWordTimings } from '../../lib/tts/providers/elevenlabs.js';
 
 // ElevenLabs returns per-character timings; we aggregate them into word timings that the
 // reconciler uses to sync board writing to the spoken words. Pure -> deterministic test.

@@ -2,7 +2,7 @@
 // The player itself lives in components/course-player (used by the real app/course/[id]
 // route too). This page just feeds it cached agent output for quick visual iteration.
 
-import { LessonPlayer } from '../../../components/course-player/lesson-player.js';
+import { LessonPlayer } from '../../../components/course-player/player/lesson-player.js';
 import lesson from './generated-lesson.json';
 
 export default function DevLessonPage() {

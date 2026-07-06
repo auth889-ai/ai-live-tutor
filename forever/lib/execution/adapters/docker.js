@@ -2,7 +2,7 @@
 // (--network none), memory/CPU capped, auto-removed. Real isolation without cloud infra —
 // the middle tier between raw subprocess (dev) and Judge0-on-ECS (production).
 
-import { runLocal } from './run-code.js';
+import { runLocal } from '../run-code.js';
 
 const IMAGES = {
   javascript: { image: 'node:22-slim', run: (src) => ['node', '-e', src] },

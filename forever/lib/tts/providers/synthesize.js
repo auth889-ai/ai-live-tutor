@@ -3,8 +3,8 @@
 // empty audio. Duration is decoded from the returned audio so the reconciler gets
 // REAL clip lengths (playbook Phase 2 decision).
 
-import { qwenConfig } from '../qwen/client.js';
-import { measureAudioDurationMs } from './measure-duration.js';
+import { qwenConfig } from '../../qwen/client.js';
+import { measureAudioDurationMs } from '../audio/measure-duration.js';
 
 export async function synthesizeLine({
   text,

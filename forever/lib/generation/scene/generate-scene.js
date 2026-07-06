@@ -6,8 +6,8 @@
 
 import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
 import { runGroundingReview } from '../../orchestration/review/grounding-review-loop.js';
-import { writeVoice } from '../../orchestration/agents/voice-writer.js';
-import { generateExecutedCode } from '../../orchestration/agents/code-runner.js';
+import { writeVoice } from '../../orchestration/agents/authoring/voice-writer.js';
+import { generateExecutedCode } from '../../orchestration/agents/coding/code-runner.js';
 import { compileProvisionalTimeline } from '../timeline/timeline-compiler.js';
 
 const CODE_ROLES = new Set(['worked_example', 'dry_run']);

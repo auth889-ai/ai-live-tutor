@@ -6,8 +6,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { createManualClock } from '../../lib/playback/clock/manual-clock.js';
-import { createAudioClock } from '../../lib/playback/clock/audio-clock.js';
+import { createManualClock } from '../../../lib/playback/clock/manual-clock.js';
+import { createAudioClock } from '../../../lib/playback/clock/audio-clock.js';
 
 export function useLessonClock(scenes) {
   const [sceneIndex, setSceneIndex] = useState(0);

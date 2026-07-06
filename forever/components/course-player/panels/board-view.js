@@ -7,8 +7,8 @@
 
 import { useMemo } from 'react';
 
-import { boardStateAt } from '../../lib/playback/engine/action-engine.js';
-import { renderBoardSvg } from '../../packages/@forever/renderer/src/board-svg.js';
+import { boardStateAt } from '../../../lib/playback/engine/action-engine.js';
+import { renderBoardSvg } from '../../../packages/@forever/renderer/src/board-svg.js';
 import { CodePanel } from './code-panel.js';
 import { DiagramPanel } from './diagram-panel.js';
 

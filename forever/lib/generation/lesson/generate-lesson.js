@@ -5,7 +5,7 @@
 
 import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
 import { focusSourcePack } from '../../source-pack/build/focus-source-pack.js';
-import { designPedagogy as designPedagogyAgent } from '../../orchestration/agents/teacher.js';
+import { designPedagogy as designPedagogyAgent } from '../../orchestration/agents/planning/teacher.js';
 import { generateSceneFromSourcePack as generateScene } from '../scene/generate-scene.js';
 
 export async function generateLessonFromText(text, { agents = {} } = {}) {

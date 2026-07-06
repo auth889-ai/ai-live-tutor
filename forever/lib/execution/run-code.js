@@ -28,11 +28,11 @@ export async function runCode({ language, source, stdin = '', timeoutMs = 5000, 
   const tier = selectRunner(env);
 
   if (tier === 'judge0') {
-    const { runViaJudge0 } = await import('./judge0.js');
+    const { runViaJudge0 } = await import('./adapters/judge0.js');
     return runViaJudge0({ language: lang, source, stdin, timeoutMs, env });
   }
   if (tier === 'docker') {
-    const { runViaDocker } = await import('./docker.js');
+    const { runViaDocker } = await import('./adapters/docker.js');
     return runViaDocker({ language: lang, source, stdin, timeoutMs });
   }
 

@@ -4,7 +4,7 @@
 // practice. Output is an ordered list of scene briefs (role + directive + focus chunks).
 // This is what makes lessons deep and long instead of a short summary.
 
-import { callQwenJson } from '../../qwen/client.js';
+import { callQwenJson } from '../../../qwen/client.js';
 
 export const PEDAGOGICAL_ROLES = [
   'motivate',

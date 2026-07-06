@@ -4,9 +4,9 @@
 // board-object contract; one repair round; then honest failure.
 // Can also REVISE an existing board given Grounding Auditor objections.
 
-import { callQwenJson } from '../../qwen/client.js';
-import { validateBoardObjects } from '../../board/objects/board-objects.js';
-import { LAYOUT_REGIONS } from '../../board/layout/layout-regions.js';
+import { callQwenJson } from '../../../qwen/client.js';
+import { validateBoardObjects } from '../../../board/objects/board-objects.js';
+import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 
 const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram']; // grows as the renderer grows
 

@@ -4,7 +4,7 @@
 // Route pages (app/course/[id], app/dev/lesson) are thin wrappers that supply the lesson.
 
 import { useLessonClock } from './use-lesson-clock.js';
-import { BoardView } from './board-view.js';
+import { BoardView } from '../panels/board-view.js';
 
 export function LessonPlayer({ lesson }) {
   const player = useLessonClock(lesson.scenes);

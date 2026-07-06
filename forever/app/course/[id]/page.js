@@ -4,7 +4,7 @@
 
 import { notFound } from 'next/navigation';
 
-import { LessonPlayer } from '../../../components/course-player/lesson-player.js';
+import { LessonPlayer } from '../../../components/course-player/player/lesson-player.js';
 import { loadLesson } from '../../../lib/storage/lesson-store.js';
 
 export default async function CoursePage({ params }) {

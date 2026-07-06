@@ -6,7 +6,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { synthesizeWithTimestamps } from './elevenlabs.js';
+import { synthesizeWithTimestamps } from './providers/elevenlabs.js';
 import { reconcileTimeline } from '../playback/reconcile/reconcile-timeline.js';
 
 export async function voiceLesson(lesson, { publicDir = 'public', urlBase = '/audio', synth = synthesizeWithTimestamps } = {}) {

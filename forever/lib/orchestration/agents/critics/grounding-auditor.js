@@ -2,9 +2,9 @@
 // One job — check every board object's content is actually supported by its cited chunk.
 // Emits objections as evidence-carrying society messages. Never grades its own writing.
 
-import { callQwenJson } from '../../qwen/client.js';
-import { createSocietyMessage } from '../messages/society-messages.js';
-import { FOREVER_AGENT_ROLES } from '../roles/agent-roles.js';
+import { callQwenJson } from '../../../qwen/client.js';
+import { createSocietyMessage } from '../../messages/society-messages.js';
+import { FOREVER_AGENT_ROLES } from '../../roles/agent-roles.js';
 
 export async function auditGrounding({ sceneId, objects, sourcePack }) {
   const chunkText = new Map(sourcePack.chunks.map((chunk) => [chunk.id, chunk.text]));

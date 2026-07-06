@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { measureAudioDurationMs } from '../../lib/tts/measure-duration.js';
+import { measureAudioDurationMs } from '../../lib/tts/audio/measure-duration.js';
 
 // Build a minimal 1-second 16-bit mono 8kHz WAV: byteRate = 8000*2 = 16000, data = 16000 bytes.
 function oneSecondWav() {

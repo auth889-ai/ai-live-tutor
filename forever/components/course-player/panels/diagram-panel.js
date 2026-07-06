@@ -8,13 +8,47 @@
 import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 
-import { toMermaid } from '../../lib/board/diagrams/to-mermaid.js';
+import { toMermaid } from '../../../lib/board/diagrams/to-mermaid.js';
 
 mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'strict', flowchart: { htmlLabels: true, curve: 'basis' } });
 
 export function DiagramPanel({ content }) {
   if (content.diagramType === 'comparison') return <ComparisonTable content={content} />;
+  if (content.diagramType === 'trace') return <TraceTable content={content} />;
   return <MermaidDiagram content={content} />;
+}
+
+// Step-by-step variable trace (the Striver dry-run) from REAL execution.
+function TraceTable({ content }) {
+  const columns = content.columns ?? [];
+  const rows = content.rows ?? [];
+  return (
+    <div style={{ overflowX: 'auto', border: '1px solid #e8ddc9', borderRadius: 12, background: '#fffdf8' }}>
+      <div style={{ padding: '6px 12px', fontSize: 12, color: '#8a6d3b', background: '#fdeaa7', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+        Dry run — variables at each step (real execution)
+      </div>
+      <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 14, fontFamily: 'ui-monospace, monospace' }}>
+        <thead>
+          <tr>
+            <th style={cell(true)}>Step</th>
+            {columns.map((col) => (
+              <th key={col} style={cell(true)}>{col}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.label}>
+              <td style={{ ...cell(false), color: '#8a6d3b' }}>{row.label}</td>
+              {row.values.map((value, i) => (
+                <td key={i} style={cell(false)}>{value}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function MermaidDiagram({ content }) {

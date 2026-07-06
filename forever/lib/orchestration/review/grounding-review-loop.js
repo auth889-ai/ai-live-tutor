@@ -3,8 +3,8 @@
 // Returns the grounded board PLUS the full blackboard transcript (the Studio debate feed).
 // No fallback: if grounding cannot be reached, it raises SceneQualityError.
 
-import { designBoard, reviseBoard } from '../agents/board-director.js';
-import { auditGrounding } from '../agents/grounding-auditor.js';
+import { designBoard, reviseBoard } from '../agents/authoring/board-director.js';
+import { auditGrounding } from '../agents/critics/grounding-auditor.js';
 import { createSocietyMessage } from '../messages/society-messages.js';
 import { FOREVER_AGENT_ROLES } from '../roles/agent-roles.js';
 
