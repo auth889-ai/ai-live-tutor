@@ -52,8 +52,9 @@ export function GenerateLessonButton({ courseId, outlineLessonId, initialJobId =
 
   if (progress) {
     return (
-      <span style={{ fontSize: 12.5, fontWeight: 700, color: '#8a6d3b', whiteSpace: 'nowrap' }}>
-        ⏳ {progress.phase} · {progress.percent ?? 0}%
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 800, color: '#a06b1f', whiteSpace: 'nowrap', background: '#fef3e2', borderRadius: 999, padding: '5px 13px' }}>
+        <span className="forever-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: '#f47368' }} />
+        {progress.phase} · {progress.percent ?? 0}%
       </span>
     );
   }

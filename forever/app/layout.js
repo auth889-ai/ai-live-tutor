@@ -22,6 +22,11 @@ export default function RootLayout({ children }) {
           .forever-glow { animation: foreverGlow 2.6s ease-in-out infinite; }
           @keyframes foreverPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
           .forever-pulse { animation: foreverPulse 2.6s ease-in-out infinite; }
+          @keyframes foreverRowIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+          .forever-row { animation: foreverRowIn 0.45s ease both; transition: background 0.15s; }
+          .forever-row:hover { background: #fdf6ef; }
+          @keyframes foreverDot { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+          .forever-dot { animation: foreverDot 1.4s ease-in-out infinite; }
           .forever-shot { animation: foreverShot 0.45s ease; }
           :root { --caveat: ${caveat.style.fontFamily}; }
         `}</style>

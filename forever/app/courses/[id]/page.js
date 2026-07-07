@@ -11,7 +11,14 @@ import { GenerateLessonButton } from '../../../components/dashboard/generate-les
 
 const UI = { text: '#2b211a', muted: '#8a6d3b', border: '#f5e6d9', card: '#fff', accent: '#f47368', accentDark: '#e8604c', bgSoft: '#fdf1ea' };
 
-const TYPE_ICONS = { concept: '💡', build: '🛠', see_it: '🎬', pitfalls: '⚠️', practice: '✍️', recap: '🔁' };
+const TYPE_STYLE = {
+  concept: { icon: '💡', bg: '#fde8e4', color: '#c04b3c', label: 'Concept' },
+  see_it: { icon: '🎬', bg: '#fef3e2', color: '#a06b1f', label: 'See it' },
+  build: { icon: '🛠', bg: '#e9f4ec', color: '#2f7d4a', label: 'Build' },
+  pitfalls: { icon: '⚠️', bg: '#fdf0d5', color: '#9a6a00', label: 'Pitfalls' },
+  practice: { icon: '✍️', bg: '#e8f0fa', color: '#2d5f9e', label: 'Practice' },
+  recap: { icon: '🔁', bg: '#f0e8fa', color: '#6b3fa0', label: 'Recap' },
+};
 
 export default async function CourseSyllabusPage({ params }) {
   const { id } = await params;
@@ -58,17 +65,22 @@ export default async function CourseSyllabusPage({ params }) {
             </div>
             {episode.lessons.map((lesson, index) => {
               const link = lessonLinks[lesson.id];
+              const type = TYPE_STYLE[lesson.lessonType] ?? { icon: '📘', bg: UI.bgSoft, color: UI.muted, label: lesson.lessonType };
               return (
-                <div key={lesson.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 18px', borderTop: `1px solid ${UI.border}` }}>
-                  <span style={{ width: 30, height: 30, borderRadius: 9, background: link ? '#e9f4ec' : UI.bgSoft, display: 'grid', placeItems: 'center', fontSize: 14, flexShrink: 0 }}>
-                    {link ? '✓' : TYPE_ICONS[lesson.lessonType] ?? '📘'}
+                <div key={lesson.id} className="forever-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderTop: `1px solid ${UI.border}`, animationDelay: `${index * 60}ms` }}>
+                  <span style={{ width: 38, height: 38, borderRadius: 12, background: link ? '#e9f4ec' : type.bg, display: 'grid', placeItems: 'center', fontSize: 17, flexShrink: 0 }}>
+                    {link ? '✓' : type.icon}
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: 'block', fontWeight: 700, fontSize: 14.5, lineHeight: 1.3 }}>
-                      {epIndex + 1}.{index + 1} {lesson.title}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                      <span style={{ fontWeight: 800, fontSize: 14.5, lineHeight: 1.3 }}>
+                        {epIndex + 1}.{index + 1} {lesson.title}
+                      </span>
                     </span>
-                    <span style={{ fontSize: 12, color: UI.muted }}>
-                      {lesson.lessonType.replace('_', ' ')} · ~{lesson.estimatedMinutes} min{lesson.objective ? ` — ${lesson.objective}` : ''}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 0.5, color: type.color, background: type.bg, borderRadius: 999, padding: '2px 10px' }}>{type.label.toUpperCase()}</span>
+                      <span style={{ fontSize: 11.5, fontWeight: 700, color: UI.muted }}>⏱ ~{lesson.estimatedMinutes} min</span>
+                      {lesson.objective && <span style={{ fontSize: 12, color: UI.muted, lineHeight: 1.4 }}>{lesson.objective}</span>}
                     </span>
                   </span>
                   {link ? (
