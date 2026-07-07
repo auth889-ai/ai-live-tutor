@@ -20,7 +20,7 @@ export async function runGroundingReview({
   // Agents are injectable so the state machine is unit-testable without spending tokens.
   agents = { designBoard, reviseBoard, auditGrounding, auditPedagogy },
 }) {
-  const rounds = maxRounds ?? Number(process.env.MAX_DEBATE_ROUNDS || 2);
+  const rounds = maxRounds ?? Number(process.env.MAX_DEBATE_ROUNDS || 3);
   const transcript = [];
   const usages = [];
 

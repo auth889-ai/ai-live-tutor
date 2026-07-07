@@ -13,6 +13,12 @@ export async function auditGrounding({ sceneId, objects, sourcePack }) {
 For each board object, decide if its content is DIRECTLY supported by the exact source chunk it cites.
 Reject: invented facts, numbers/claims not in the chunk, or content citing the wrong chunk.
 Accept: faithful summaries, reorganizations, and formatting of what the chunk actually says.
+TEACHING DEVICES ARE NOT OBJECTIONS: analogies, hooks, motivation, recap summaries, practice
+questions with worked answers, and concrete illustrative examples (a specific array, a tiny graph)
+are the TEACHER'S craft — by nature they are not sentences from the source. Audit only the
+FACTUAL/technical claims inside them: object when a device CONTRADICTS the chunk or asserts a
+specific technical fact/number the chunk does not support — never because the device itself
+"is not in the source".
 Output ONLY JSON: {"objections":[{"objectId","reason","citedChunkId"}]}. Empty array means everything is grounded.
 Be strict but fair — do not object to correct teaching just because it is concise.`;
 

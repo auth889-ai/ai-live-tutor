@@ -33,27 +33,17 @@ Rules you must never break:
     {"diagramType":"cycle","steps":["A","B","C"]}                        (a repeating cycle)
     {"diagramType":"tree","root":{"label":"Topic","children":[{"label":"Sub","detail":"..."}]}}
     {"diagramType":"comparison","columns":["X","Y"],"rows":[{"label":"Feature","values":["No","Yes"]}]}
-  ARRAYS (binary search, two-pointer, sliding window, sorting) — output a real array with a dry-run trace:
-    {"diagramType":"array","values":["1","3","5","7","9","11","13"],"trace":[
-      {"note":"low=0, high=6, mid=3 -> arr[3]=7. Target 11 > 7, discard left half.","current":3,"pointers":{"low":0,"mid":3,"high":6}},
-      {"note":"low=4, high=6, mid=5 -> arr[5]=11. Found it!","current":5,"eliminated":[0,1,2,3],"pointers":{"low":4,"mid":5,"high":6}}]}
-    "values" are the cells (index-labelled automatically). Each trace step is ONE logical move: "note" is the
-    plain-English state (comparisons + the decision), "pointers" map names (low/mid/high, i/j, slow/fast) to cell
-    INDICES and ride above those cells, "eliminated" are indices ruled out (grey/strike-through), "current" is the
-    index examined NOW (orange). The array animates through the steps SYNCED to your narration — a teacher moving
-    their finger across the array. THIS is how you teach binary search / two-pointer / sliding window — never a
-    static table. Group micro-moves into logical steps (4–10, one per real decision).
+  ARRAYS (binary search, two-pointer, sliding window, sorting) — show the concrete array:
+    {"diagramType":"array","values":["2","5","8","12","16","23","38","56"]}
   DATA STRUCTURES (binary tree, BST, graph, linked list) — output a real laid-out graph:
     {"diagramType":"graph","nodes":[{"id":"1","label":"8"},{"id":"2","label":"3"},{"id":"3","label":"10"}],"edges":[{"from":"1","to":"2"},{"from":"1","to":"3"}],"directed":true}
     (use this for actual tree/graph/linked-list data with node values — it auto-lays-out cleanly)
-    For a TRAVERSAL (BFS/DFS/visit order), add "highlightSequence":["1","2","3"] — nodes light up in that order as the clock plays.
-    DRY-RUN TRACE (the BEST way to teach a search/traversal — a real teacher WALKS the structure): add
-      "trace":[{"note":"low=0, high=6, mid=3 -> arr[3]=8, too big, go left","current":"4","visited":["1"],"pointers":{"low":"2","mid":"4","high":"7"}},{"note":"...","current":"2","pointers":{...}}]
-    Each step is ONE logical move: "note" is the plain-English state (comparisons, decisions), "current" is the node
-    being examined NOW (highlights orange), "visited" are nodes already ruled out/walked (stay green), "pointers" ride
-    ON nodes (low/mid/high, slow/fast, curr/prev). The graph animates through these steps SYNCED to your narration —
-    so the tutor points and explains while the algorithm moves. USE THIS for binary search, BST insert/search, tree/graph
-    traversal, two-pointer, linked-list walks. Group micro-moves into logical steps (aim for 4–10 steps, one per real decision).
+    For a simple visit ORDER (BFS levels, DFS order), you may add "highlightSequence":["1","2","3"] —
+    nodes light up in that order as the clock plays. Every id must be a node id from "nodes".
+  ANIMATION OWNERSHIP (never violate): you NEVER hand-author step-by-step algorithm traces — any "trace"
+    field you output is discarded. Real dry-run animation (active code line, moving pointers, queue/stack,
+    growing trace table) is produced by the Execution Tracer agent, which RUNS the real algorithm. Your
+    board FRAMES that animation: the concrete input, the structure, and what to watch for.
   RICH diagrams — output raw Mermaid (DECLARE the type on line 1), for example:
     {"diagramType":"mermaid","code":"sequenceDiagram\\n  Client->>Server: SYN\\n  Server->>Client: SYN-ACK\\n  Client->>Server: ACK"}
     classDiagram (OOP: classes, inheritance) · stateDiagram-v2 (state machines, lifecycles) ·
@@ -100,15 +90,19 @@ function boardUser(sourcePack, regions) {
   });
 }
 
-// STRUCTURAL division of labour (never trust prompt obedience alone): in a dry_run scene the
-// Execution Tracer owns ALL animation — it ran the real algorithm. Any trace/highlightSequence
-// the Board Director hand-authored there is an IMAGINED animation and is stripped before
-// validation, deterministically.
+// STRUCTURAL division of labour (never trust prompt obedience alone): algorithm state over
+// time comes ONLY from the Execution Tracer, which ran the real code. A hand-authored
+// "trace" is an IMAGINED animation — stripped from every scene, deterministically, before
+// validation (this was the top scene-killer: invented traces failing the contract).
+// highlightSequence (a simple visit order) stays allowed, except in dry_run scenes where
+// the tracer owns all animation.
 function stripHandAuthoredAnimation(objects, brief) {
-  if (brief?.pedagogicalRole !== 'dry_run' || !Array.isArray(objects)) return objects;
+  if (!Array.isArray(objects)) return objects;
+  const dryRun = brief?.pedagogicalRole === 'dry_run';
   return objects.map((object) => {
     if (object?.renderHint !== 'diagram' || !object.content || typeof object.content !== 'object') return object;
     const { trace, highlightSequence, ...content } = object.content;
+    if (!dryRun && highlightSequence !== undefined) content.highlightSequence = highlightSequence;
     return { ...object, content };
   });
 }
