@@ -25,6 +25,9 @@ function resolveState({ content, progress, activeStep }) {
   return {
     pointerAt,
     eliminated,
+    comparing: new Set((step.comparing ?? []).map(Number)), // sorting: cells being compared
+    swapped: new Set((step.swapped ?? []).map(Number)), // sorting: cells just swapped
+    sorted: new Set((step.sorted ?? []).map(Number)), // sorting: cells locked in final place
     current: step.current != null ? Number(step.current) : null,
     note: step.note,
     stepNum: idx + 1,
@@ -36,7 +39,7 @@ export function ArrayView({ content, progress = 1, activeStep = null }) {
   const values = Array.isArray(content.values) ? content.values : [];
   if (!values.length) return <div style={{ color: '#c0392b', fontSize: 13 }}>array unavailable</div>;
 
-  const { pointerAt, eliminated, current, note, stepNum, stepTotal } = resolveState({ content, progress, activeStep });
+  const { pointerAt, eliminated, comparing, swapped, sorted, current, note, stepNum, stepTotal } = resolveState({ content, progress, activeStep });
   const hasTrace = Boolean(note);
 
   return (
@@ -46,9 +49,13 @@ export function ArrayView({ content, progress = 1, activeStep = null }) {
           const pointers = pointerAt.get(i);
           const isCurrent = i === current;
           const isEliminated = eliminated.has(i);
-          const border = isCurrent ? '#d35400' : isEliminated ? '#d8cdb8' : '#c9a227';
-          const bg = isCurrent ? '#ffd9a8' : isEliminated ? '#f3eee2' : '#fff8e6';
-          const fg = isCurrent ? '#8a3a12' : isEliminated ? '#b3a889' : '#5a4a2a';
+          const isComparing = comparing.has(i);
+          const isSwapped = swapped.has(i);
+          const isSorted = sorted.has(i);
+          // priority: current > swapped > comparing > sorted > eliminated > default
+          const border = isCurrent ? '#d35400' : isSwapped ? '#c0392b' : isComparing ? '#c9a227' : isSorted ? '#27ae60' : isEliminated ? '#d8cdb8' : '#c9a227';
+          const bg = isCurrent ? '#ffd9a8' : isSwapped ? '#fdd9d2' : isComparing ? '#fdeaa7' : isSorted ? '#eafaf0' : isEliminated ? '#f3eee2' : '#fff8e6';
+          const fg = isEliminated ? '#b3a889' : isSorted ? '#1c6b3a' : '#5a4a2a';
           return (
             <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 44 }}>
               {/* pointer badges ride above the cell they point at */}

@@ -38,7 +38,8 @@ function resolveState({ content, progress, activeNode, activeStep }) {
       if (!pointerAt.has(key)) pointerAt.set(key, []);
       pointerAt.get(key).push(name);
     }
-    return { current, visited: path, pointerAt, note: step.note, stepNum: idx + 1, stepTotal: trace.length };
+    const activeEdge = Array.isArray(step.activeEdge) ? step.activeEdge.map(String) : null;
+    return { current, visited: path, pointerAt, note: step.note, stepNum: idx + 1, stepTotal: trace.length, activeEdge };
   }
   const seq = Array.isArray(content.highlightSequence) ? content.highlightSequence.map(String) : null;
   if (seq) {
@@ -90,7 +91,7 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
 
   if (!laid) return <div style={{ color: '#c0392b', fontSize: 13 }}>diagram unavailable</div>;
 
-  const { current, visited, pointerAt, note, stepNum, stepTotal } = resolveState({ content, progress, activeNode, activeStep });
+  const { current, visited, pointerAt, note, stepNum, stepTotal, activeEdge = null } = resolveState({ content, progress, activeNode, activeStep });
   const hasTrace = Boolean(note);
 
   const nodeColor = (id) => {
@@ -132,16 +133,19 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
       },
     };
   });
+  const isActiveEdge = (e) =>
+    activeEdge && ((activeEdge[0] === e.from && activeEdge[1] === e.to) || (content.directed === false && activeEdge[0] === e.to && activeEdge[1] === e.from));
   const edges = laid.edges.map((e) => {
-    const active = e.from === current || e.to === current || (visited.has(e.from) && visited.has(e.to));
+    const traversing = isActiveEdge(e); // the edge the algorithm walks THIS step
+    const active = traversing || e.from === current || e.to === current || (visited.has(e.from) && visited.has(e.to));
     return {
       id: e.id,
       source: e.from,
       target: e.to,
       label: e.label,
-      animated: e.from === current || e.to === current,
+      animated: traversing || e.from === current || e.to === current,
       markerEnd: content.directed !== false ? { type: MarkerType.ArrowClosed, color: active ? '#d35400' : '#8a6d3b' } : undefined,
-      style: { stroke: active ? '#d35400' : '#8a6d3b', strokeWidth: active ? 2.5 : 1.5, transition: 'stroke 0.3s' },
+      style: { stroke: active ? '#d35400' : '#8a6d3b', strokeWidth: traversing ? 3.5 : active ? 2.5 : 1.5, transition: 'stroke 0.3s, stroke-width 0.3s' },
     };
   });
 
