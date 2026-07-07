@@ -72,6 +72,7 @@ test('processLessonJob generates, VOICES, and saves the voiced lesson (not the s
           onProgress({ sceneDone: 2, sceneTotal: 2 });
           return fakeVoiced;
         },
+        publishAssets: async (lesson) => lesson,
         save: async (id, lesson) => { saved[id] = lesson; },
       },
     },
@@ -96,6 +97,7 @@ test('processLessonJob honours the explicit DISABLE_TTS=1 dev opt-out (never a s
       deps: {
         generate: async () => fakeLesson,
         voice: async () => { throw new Error('voice must NOT be called when DISABLE_TTS=1'); },
+        publishAssets: async (lesson) => lesson,
         save: async (id, lesson) => { saved[id] = lesson; },
         env: { DISABLE_TTS: '1' },
       },

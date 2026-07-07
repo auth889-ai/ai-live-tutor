@@ -6,6 +6,7 @@
 import { generateLessonFromSourcePack } from '../generation/lesson/generate-lesson.js';
 import { buildSourcePackFromInput } from '../source-pack/build/dispatch-source-pack.js';
 import { voiceLesson } from '../tts/voice-lesson.js';
+import { publishLessonAssets } from '../storage/asset-publisher.js';
 import { saveLesson } from '../storage/lesson-store.js';
 import { validateJobInput, makeProgress } from './job-contract.js';
 
@@ -50,7 +51,10 @@ export async function processLessonJob(rawInput, { report = () => {}, deps = {} 
   }
 
   const lessonId = lessonIdFor(finalLesson.sourcePackId);
-  report(makeProgress({ phase: 'saving', message: 'Saving lesson' }));
+  report(makeProgress({ phase: 'saving', message: 'Publishing images and saving' }));
+  // Board images reference ingest files under .data/ — copy them somewhere a browser can
+  // load (public/assets locally, OSS in production) and rewrite the urls.
+  finalLesson = await (deps.publishAssets ?? publishLessonAssets)(finalLesson);
   await save(lessonId, finalLesson, { ownerId }); // saved under its owner — privacy at the data layer
 
   const result = {

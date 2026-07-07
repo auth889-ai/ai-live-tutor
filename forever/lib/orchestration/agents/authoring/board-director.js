@@ -56,9 +56,13 @@ Rules you must never break:
   Prefer a diagram for any process, structure, interaction, hierarchy, or comparison — it teaches far better than text.
 - Use "math" for equations/formulas (KaTeX LaTeX). content is {"latex":"E = mc^2"} for one equation,
   or {"steps":[{"latex":"x + 2 = 5","note":"start"},{"latex":"x = 3","note":"subtract 2"}]} for a step-by-step derivation.
-- IMAGES: if availableImages below is non-empty and any figure is relevant to THIS scene, you MUST place it
-  with an "image" object and teach FROM it (this is a source-grounded document — show its real diagrams, don't
-  just describe them). content is {"url": <exact url from availableImages>, "alt": <what it shows>, "caption": <short caption>}.
+- IMAGES: if availableImages below is non-empty and any of them is relevant to THIS scene, you MUST place it
+  with an "image" object and teach FROM it (this is a source-grounded document — show its real diagrams and
+  pages, don't just describe them). content is {"url": <exact url from availableImages>, "alt": <what it shows>,
+  "caption": <short caption>, "page": <its source page number, copy from availableImages when present>,
+  "bbox": {"x","y","w","h"} (OPTIONAL, all normalized 0-1) to highlight the exact part you are teaching —
+  the full image always stays visible (never cropped), the highlight draws ON TOP. Prefer a "figure" when one
+  matches; use a "page" render when the page's own layout/pictures ARE the lesson (a diagram beside its text).
 - Use "callout" for a striking teacher card. content is {"variant": one of mistake|checkpoint|recap|tip|analogy|insight, "body": string or [items]}. Use "mistake" for the common-mistake beat, "recap" for key takeaways, "checkpoint" to pause and think. Use sparingly, for emphasis.
 - Use "quiz" for a checkpoint question (practice/checkpoint scenes). content is {"question": string, "choices": ['A','B',...], "answerIndex": int, "explanation": string}. The lesson pauses until the student answers.
 - objectType is a free descriptive snake_case name YOU invent for this subject.
@@ -69,10 +73,17 @@ Rules you must never break:
 }
 
 function boardUser(sourcePack, regions) {
-  // Only offer described figures — an image without a caption isn't teachable yet.
+  // Offer described figures (vision-read) AND full-page renders — a page render is how the
+  // tutor shows a diagram in its real context when a source page mixes pictures with text.
   const availableImages = (sourcePack.assets ?? [])
-    .filter((asset) => asset.kind === 'figure' && asset.caption?.trim())
-    .map((asset) => ({ url: asset.url, caption: asset.caption }));
+    .filter((asset) => (asset.kind === 'figure' && asset.caption?.trim()) || asset.kind === 'page')
+    .map((asset) => ({
+      kind: asset.kind,
+      url: asset.url,
+      caption: asset.kind === 'page' ? `Full render of source page ${asset.page}` : asset.caption,
+      ...(asset.whatItShows ? { whatItShows: asset.whatItShows } : {}),
+      ...(asset.page ? { page: asset.page } : {}),
+    }));
   return JSON.stringify({
     task: 'Design the board for one teaching scene from this source material.',
     layoutRegions: Object.fromEntries(

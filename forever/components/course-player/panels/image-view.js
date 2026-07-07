@@ -5,7 +5,7 @@
 // points at the relevant part. Caption below. Zoom is a CSS transform (reversible).
 
 export function ImageView({ content }) {
-  const { url, alt, caption, bbox } = content;
+  const { url, alt, caption, bbox, page } = content;
   return (
     <figure style={{ margin: 0, maxWidth: 720, marginInline: 'auto' }}>
       <div style={{ position: 'relative', display: 'inline-block', border: '1px solid #e8ddc9', borderRadius: 12, overflow: 'hidden', background: '#fffdf8' }}>
@@ -26,7 +26,14 @@ export function ImageView({ content }) {
           />
         )}
       </div>
-      {caption && <figcaption style={{ fontSize: 14, color: '#8a6d3b', textAlign: 'center', marginTop: 6 }}>{caption}</figcaption>}
+      <figcaption style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', marginTop: 6 }}>
+        {caption && <span style={{ fontSize: 14, color: '#8a6d3b' }}>{caption}</span>}
+        {page != null && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#e8604c', border: '1px solid #f3cdc5', borderRadius: 999, padding: '2px 10px', background: '#fdf0ee', whiteSpace: 'nowrap' }}>
+            Source · page {page}
+          </span>
+        )}
+      </figcaption>
     </figure>
   );
 }
