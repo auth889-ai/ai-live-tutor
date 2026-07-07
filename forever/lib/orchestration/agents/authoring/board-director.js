@@ -14,7 +14,13 @@ function boardSystemPrompt(regions, brief) {
   const teachingFocus = brief
     ? `\nTHIS SCENE'S TEACHING ROLE: ${brief.pedagogicalRole}. Directive: ${brief.directive}
 Design the board to fulfill that role with DEPTH — concrete example / step-by-step trace /
-complexity reasoning as the role requires, not a vague summary.`
+complexity reasoning as the role requires, not a vague summary.${brief.pedagogicalRole === 'dry_run'
+      ? `\nDRY-RUN DIVISION OF LABOUR: a separate Execution Tracer RUNS the real algorithm and its
+step-by-step animation panel (code + structure + pointers + queue/stack + trace table) is attached
+to this scene automatically. Therefore do NOT hand-author any "trace" or "highlightSequence"
+yourself — your board supplies the framing around that animation: the scene title, the concrete
+input being traced, and one short callout on what to watch for. 2-3 objects max.`
+      : ''}`
     : '';
   return `You are the Board Director of an AI tutor. You design what gets written on the
 teaching board for ONE teaching scene. You output ONLY JSON:${teachingFocus}
@@ -94,13 +100,26 @@ function boardUser(sourcePack, regions) {
   });
 }
 
-async function runBoardCall({ system, user, sourcePack, layout }) {
+// STRUCTURAL division of labour (never trust prompt obedience alone): in a dry_run scene the
+// Execution Tracer owns ALL animation — it ran the real algorithm. Any trace/highlightSequence
+// the Board Director hand-authored there is an IMAGINED animation and is stripped before
+// validation, deterministically.
+function stripHandAuthoredAnimation(objects, brief) {
+  if (brief?.pedagogicalRole !== 'dry_run' || !Array.isArray(objects)) return objects;
+  return objects.map((object) => {
+    if (object?.renderHint !== 'diagram' || !object.content || typeof object.content !== 'object') return object;
+    const { trace, highlightSequence, ...content } = object.content;
+    return { ...object, content };
+  });
+}
+
+async function runBoardCall({ system, user, sourcePack, layout, brief = null }) {
   let lastError;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const repair = attempt === 0 ? '' : `\nYour previous output was rejected: ${lastError}. Fix exactly that and output the full JSON again.`;
     const { json, usage } = await callQwenJson({ agent: 'board_director', system: system + repair, user });
     try {
-      const objects = json.objects;
+      const objects = stripHandAuthoredAnimation(json.objects, brief);
       validateBoardObjects(objects, layout);
       for (const object of objects) {
         if (!sourcePack.chunks.some((chunk) => chunk.id === object.sourceRef?.chunkId)) {
@@ -118,7 +137,7 @@ async function runBoardCall({ system, user, sourcePack, layout }) {
 export async function designBoard({ sourcePack, layout = 'teacher_notebook_code', brief = null }) {
   const regions = LAYOUT_REGIONS[layout];
   if (!regions) throw new Error(`Unknown layout: ${layout}`);
-  return runBoardCall({ system: boardSystemPrompt(regions, brief), user: boardUser(sourcePack, regions), sourcePack, layout });
+  return runBoardCall({ system: boardSystemPrompt(regions, brief), user: boardUser(sourcePack, regions), sourcePack, layout, brief });
 }
 
 // Revise the board to answer specific Grounding Auditor objections.
@@ -136,5 +155,5 @@ The Grounding Auditor rejected your previous board. Fix EXACTLY these grounding 
 rewrite or remove the offending objects so every claim is supported by its cited chunk:
 ${complaints}`;
   const user = `${boardUser(sourcePack, regions)}\n\nYour previous (rejected) board was:\n${JSON.stringify(previousObjects)}`;
-  return runBoardCall({ system, user, sourcePack, layout });
+  return runBoardCall({ system, user, sourcePack, layout, brief });
 }

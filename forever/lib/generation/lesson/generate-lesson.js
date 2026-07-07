@@ -55,13 +55,19 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
     }),
   );
   const scenes = settled.filter((r) => r.status === 'fulfilled').map((r) => r.value);
-  const skipped = settled.length - scenes.length;
-  if (scenes.length === 0) throw new Error('Every scene failed to generate — refusing to ship an empty lesson');
+  const skippedScenes = settled
+    .map((r, i) => (r.status === 'rejected' ? { title: briefs[i].title, pedagogicalRole: briefs[i].pedagogicalRole, reason: String(r.reason?.message ?? r.reason).slice(0, 300) } : null))
+    .filter(Boolean);
+  // A dropped scene must be LOUD and DIAGNOSABLE — silent skips are how quality rots.
+  for (const skip of skippedScenes) console.error(`[lesson] scene DROPPED "${skip.title}" (${skip.pedagogicalRole}): ${skip.reason}`);
+  const skipped = skippedScenes.length;
+  if (scenes.length === 0) throw new Error(`Every scene failed to generate — refusing to ship an empty lesson. First failure: ${skippedScenes[0]?.reason}`);
 
   return {
     lessonTitle,
     sourcePackId: sourcePack.id,
     skippedScenes: skipped,
+    skippedSceneReasons: skippedScenes,
     scenes: scenes.map((scene) => ({
       sceneId: scene.scene.sceneId,
       title: scene.title,

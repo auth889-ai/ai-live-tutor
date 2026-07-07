@@ -35,7 +35,7 @@ test('graph accepts an optional traversal highlightSequence of existing nodes', 
 test('graph rejects a highlightSequence referencing a missing node', () => {
   assert.throws(
     () => validateDiagramContent({ diagramType: 'graph', nodes: [{ id: '1' }], edges: [], highlightSequence: ['1', '9'] }),
-    /highlightSequence references a missing node/,
+    /highlightSequence "9" references a missing node/,
   );
 });
 
@@ -60,9 +60,9 @@ test('graph rejects a trace step without a note', () => {
 
 test('graph rejects a trace pointer/current/visited referencing a missing node', () => {
   const base = { diagramType: 'graph', nodes: [{ id: '1' }], edges: [] };
-  assert.throws(() => validateDiagramContent({ ...base, trace: [{ note: 'x', current: '9' }] }), /trace step 0 current references a missing node/);
-  assert.throws(() => validateDiagramContent({ ...base, trace: [{ note: 'x', visited: ['9'] }] }), /trace step 0 visited references a missing node/);
-  assert.throws(() => validateDiagramContent({ ...base, trace: [{ note: 'x', pointers: { mid: '9' } }] }), /trace step 0 pointer references a missing node/);
+  assert.throws(() => validateDiagramContent({ ...base, trace: [{ note: 'x', current: '9' }] }), /trace step 0 current "9" references a missing node/);
+  assert.throws(() => validateDiagramContent({ ...base, trace: [{ note: 'x', visited: ['9'] }] }), /trace step 0 visited "9" references a missing node/);
+  assert.throws(() => validateDiagramContent({ ...base, trace: [{ note: 'x', pointers: { mid: '9' } }] }), /trace step 0 pointer "mid":"9" references a missing node/);
 });
 
 test('graph rejects an empty trace array', () => {

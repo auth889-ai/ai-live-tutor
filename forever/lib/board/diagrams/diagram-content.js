@@ -46,14 +46,18 @@ export function validateDiagramContent(content, context = 'diagram') {
     if (!Array.isArray(content.nodes) || content.nodes.length === 0) throw new Error(`${context} graph needs nodes[]`);
     if (!Array.isArray(content.edges)) throw new Error(`${context} graph needs edges[]`);
     const ids = new Set(content.nodes.map((n) => String(n.id)));
+    // Errors name the offending id AND the known ids — a repair pass can only fix what it can see.
+    const known = () => `(known node ids: ${[...ids].join(', ')})`;
     for (const e of content.edges) {
-      if (!ids.has(String(e.from)) || !ids.has(String(e.to))) throw new Error(`${context} graph edge references a missing node`);
+      if (!ids.has(String(e.from)) || !ids.has(String(e.to))) {
+        throw new Error(`${context} graph edge ${e.from}->${e.to} references a missing node ${known()}`);
+      }
     }
     // Optional traversal animation (BFS/DFS/visit order): node ids highlighted in sequence.
     if (content.highlightSequence !== undefined) {
       if (!Array.isArray(content.highlightSequence)) throw new Error(`${context} graph highlightSequence must be an array`);
       for (const nid of content.highlightSequence) {
-        if (!ids.has(String(nid))) throw new Error(`${context} graph highlightSequence references a missing node`);
+        if (!ids.has(String(nid))) throw new Error(`${context} graph highlightSequence "${nid}" references a missing node ${known()}`);
       }
     }
     // Optional DRY-RUN TRACE: the algorithm walking the structure step by step (VisuAlgo-style).
@@ -67,15 +71,17 @@ export function validateDiagramContent(content, context = 'diagram') {
         if (!step || typeof step !== 'object') throw new Error(`${context} graph trace step ${i} must be an object`);
         if (typeof step.note !== 'string' || !step.note.trim()) throw new Error(`${context} graph trace step ${i} needs a note`);
         if (step.current !== undefined && step.current !== null && !ids.has(String(step.current))) {
-          throw new Error(`${context} graph trace step ${i} current references a missing node`);
+          throw new Error(`${context} graph trace step ${i} current "${step.current}" references a missing node ${known()}`);
         }
         if (step.visited !== undefined) {
           if (!Array.isArray(step.visited)) throw new Error(`${context} graph trace step ${i} visited must be an array`);
-          for (const nid of step.visited) if (!ids.has(String(nid))) throw new Error(`${context} graph trace step ${i} visited references a missing node`);
+          for (const nid of step.visited) if (!ids.has(String(nid))) throw new Error(`${context} graph trace step ${i} visited "${nid}" references a missing node ${known()}`);
         }
         if (step.pointers !== undefined) {
           if (typeof step.pointers !== 'object' || Array.isArray(step.pointers)) throw new Error(`${context} graph trace step ${i} pointers must be an object`);
-          for (const nid of Object.values(step.pointers)) if (!ids.has(String(nid))) throw new Error(`${context} graph trace step ${i} pointer references a missing node`);
+          for (const [name, nid] of Object.entries(step.pointers)) {
+            if (!ids.has(String(nid))) throw new Error(`${context} graph trace step ${i} pointer "${name}":"${nid}" references a missing node ${known()}`);
+          }
         }
       });
     }
