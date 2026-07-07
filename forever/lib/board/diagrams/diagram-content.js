@@ -40,6 +40,20 @@ export function validateDiagramContent(content, context = 'diagram') {
   if (type === 'array') return validateArrayContent(content, context);
   if (type === 'comparison' || type === 'trace') {
     if (!Array.isArray(content.columns) || !Array.isArray(content.rows)) throw new Error(`${context} ${type} needs columns[] and rows[]`);
+    // Every row must FILL the table: label + one value per remaining column. A malformed
+    // row (values stuffed under an arbitrary key) rendered as EMPTY CELLS in production —
+    // reject it with a repairable message instead.
+    const expected = content.columns.length; // columns are VALUE headers; the label column is implicit
+    content.rows.forEach((row, i) => {
+      if (!row || typeof row !== 'object' || typeof row.label !== 'string' || !row.label.trim()) {
+        throw new Error(`${context} ${type} row ${i} needs a "label" string`);
+      }
+      if (!Array.isArray(row.values) || row.values.length !== expected) {
+        throw new Error(
+          `${context} ${type} row ${i} ("${row.label}") must have "values" as an array of exactly ${expected} entr${expected === 1 ? 'y' : 'ies'} — one per column (the label column is implicit; put cell text INSIDE values, never as extra keys)`,
+        );
+      }
+    });
     return content;
   }
   if (type === 'graph') {

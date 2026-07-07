@@ -71,3 +71,21 @@ test('graph rejects an empty trace array', () => {
     /trace must be a non-empty array/,
   );
 });
+
+test('comparison/trace rows must FILL the table — the empty-cells production bug is rejected', () => {
+  // the exact malformed shape that rendered blank cells: value text as a stray KEY
+  assert.throws(
+    () => validateDiagramContent({
+      diagramType: 'comparison',
+      columns: ['Pair', 'Match', 'Length'],
+      rows: [{ label: '(0, 0)', 'G=G then stop': ['5'] }],
+    }),
+    /row 0 \("\(0, 0\)"\) must have "values" as an array of exactly 2/,
+  );
+  // the correct shape passes: label column implicit, one value per header
+  validateDiagramContent({
+    diagramType: 'comparison',
+    columns: ['Match', 'Length'],
+    rows: [{ label: '(0, 0)', values: ['G=G then stop', '5'] }],
+  });
+});

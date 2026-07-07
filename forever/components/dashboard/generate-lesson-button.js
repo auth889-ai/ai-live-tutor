@@ -60,7 +60,12 @@ export function GenerateLessonButton({ courseId, outlineLessonId, initialJobId =
   }
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-      {error && <span style={{ fontSize: 11.5, color: '#a33d2e' }}>{error}</span>}
+      {error && (
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#a33d2e', background: '#fdf0ee', border: '1px solid #efc7bf', borderRadius: 999, padding: '4px 12px', maxWidth: 260, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+          title={error}>
+          {/max requests limit/i.test(error) ? 'Queue is resting (Redis quota) — retry later' : error.slice(0, 80)}
+        </span>
+      )}
       <button onClick={start}
         style={{ border: '1.5px solid #f47368', color: '#e8604c', background: '#fff', borderRadius: 999, padding: '6px 16px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>
         ⚡ Generate
