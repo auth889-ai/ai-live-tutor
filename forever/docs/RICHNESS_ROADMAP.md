@@ -30,3 +30,24 @@ highlight sync, F1>92%). What's DONE vs NEXT:
    eliminations another — a persistent signaling channel across the whole course.
 4. PROSODY + PAUSES. Deliberate beat after every question ("pause and think — where can the
    answer NOT be?"); reassurance at hard moments. Prompt-level in the Voice Writer.
+
+
+## Static-board richness plan (researched 2026-07-08, ranked by impact/effort)
+1. DONE — Mermaid `look: handDrawn` + fixed seed (Wood et al. 2012: sketchy rendering
+   raises engagement and invites annotation; strokes only, never data-encoding sizes).
+2. DRAW-ON ENGINE: one clock-driven stroke-dashoffset reveal for ALL SVG (Mermaid output,
+   shortcuts, structures, annotations): per path L=getTotalLength(), dashoffset = L*(1-p(t))
+   — seekable because OUR clock drives it. CRITICAL nuance (Fiorella & Mayer 2016): dynamic
+   drawing only beats static when a HAND/pen tip is visible — ride a pen cursor on
+   path.getPointAtLength(p*L).
+3. staticStructure BOARD OBJECT: LLM emits pure {binaryTree|graph, nodes, edges,
+   annotations} JSON; d3-hierarchy tidy-tree / existing dagre layout does geometry;
+   rough.js strokes (seeded). Never LLM coordinates (DiagrammerGPT).
+4. CLASSIFY-THEN-CONSTRAIN diagram choice: cheap classifier maps concept -> structure class
+   (hierarchy|graph|sequence|comparison|state-cycle|set|timeline); board schema constrains
+   diagramType per class — a tree concept CANNOT emit a flowchart (StructEval: LLMs
+   unreliable at free-form Mermaid; emit node/edge JSON for structures).
+5. ANNOTATION OVERLAY (7 verbs): encircle, underline, arrow+label, cross-out, highlight
+   sweep, label callout, moving pointer — rough.js paths on an overlay SVG anchored by
+   target bbox, revealed by engine #2 at narration timestamps. Also solves PDF/website
+   image annotation (image + timed overlays, tldraw pattern).

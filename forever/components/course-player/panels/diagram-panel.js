@@ -12,7 +12,10 @@ import { toMermaid } from '../../../lib/board/diagrams/to-mermaid.js';
 import { GraphView } from './graph-view.js';
 import { ArrayView } from './array-view.js';
 
-mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'strict', flowchart: { htmlLabels: true, curve: 'basis' } });
+// Hand-drawn look (Mermaid v11, rough.js under the hood): evidence-backed teacherly feel
+// (Wood et al. 2012 — sketchy rendering raises engagement + invites annotation). Fixed
+// seed keeps re-renders stable so the board never flickers between shapes.
+mermaid.initialize({ startOnLoad: false, look: 'handDrawn', handDrawnSeed: 7, theme: 'neutral', securityLevel: 'strict', flowchart: { htmlLabels: true, curve: 'basis' } });
 
 export function DiagramPanel({ content, progress = 1, activeNode = null, activeStep = null }) {
   if (content.diagramType === 'comparison') return <ComparisonTable content={content} />;
