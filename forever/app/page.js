@@ -113,6 +113,15 @@ function Landing() {
           <span style={chip}>🔗 Drop a web article</span>
           <span style={chip}>🖼 Teach from an image</span>
         </div>
+
+        {/* hero visual — study anywhere */}
+        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'flex-end', marginTop: 38, flexWrap: 'wrap' }}>
+          {[['/images/study-26.png', 'Learners in a grand library', -2.5, 150], ['/images/study-23.png', 'A laptop and notebook study setup', 0, 200], ['/images/study-25.png', 'Studying in a café', 2.5, 150]].map(([src, alt, tilt, h]) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={src} src={src} alt={alt}
+              style={{ height: h, width: 'auto', maxWidth: '85vw', objectFit: 'cover', borderRadius: 16, transform: `rotate(${tilt}deg)`, boxShadow: '0 16px 40px rgba(58,46,34,0.18)', border: '5px solid #fff' }} />
+          ))}
+        </div>
       </section>
 
       {/* scene types */}
@@ -171,6 +180,21 @@ function Landing() {
             <span key={agent} style={chip}>{agent}</span>
           ))}
         </div>
+      </section>
+
+      {/* closing CTA band */}
+      <section
+        style={{
+          marginTop: 40, borderRadius: 20, overflow: 'hidden', position: 'relative', textAlign: 'center',
+          backgroundImage: 'linear-gradient(180deg, rgba(30,20,12,0.55), rgba(30,20,12,0.7)), url(/images/study-27.png)',
+          backgroundSize: 'cover', backgroundPosition: 'center', color: '#fff', padding: '54px 20px',
+        }}
+      >
+        <h2 style={{ fontSize: 30, margin: 0 }}>Learn anything. Forever.</h2>
+        <p style={{ opacity: 0.9, maxWidth: 480, margin: '10px auto 22px', fontSize: 15 }}>
+          Your first course is minutes away — bring the material you already have.
+        </p>
+        <a href="/login" style={{ ...btn(true), fontSize: 16, padding: '13px 32px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)' }}>Start free</a>
       </section>
 
       <footer style={{ borderTop: `1px solid ${UI.border}`, marginTop: 44, padding: '22px 0', textAlign: 'center', color: UI.muted, fontSize: 13 }}>
