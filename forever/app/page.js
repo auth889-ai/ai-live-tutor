@@ -6,6 +6,7 @@ import { cookies } from 'next/headers';
 
 import { listLessons } from '../lib/storage/lesson-store.js';
 import { SESSION_COOKIE, verifySessionToken } from '../lib/auth/session.js';
+import { DashboardSidebar } from '../components/dashboard/sidebar.js';
 
 const UI = {
   text: '#3a2e22', muted: '#8a6d3b', border: '#f0e2d0', card: '#fff',
@@ -18,28 +19,50 @@ export default async function HomePage() {
   const session = token ? verifySessionToken(token) : null;
   const lessons = session ? await listLessons({ forUser: session.userId }) : [];
 
-  return (
-    <main style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 20px', color: UI.text }}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 30 }}>
-        <span style={{ width: 34, height: 34, borderRadius: 10, background: UI.accent, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 17 }}>F</span>
-        <span style={{ fontWeight: 800, fontSize: 20 }}>Forever <span style={{ fontWeight: 500, fontSize: 13, color: UI.muted }}>AI Tutor</span></span>
-        <span style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-          {session ? (
-            <a href="/studio" style={btn(true)}>+ New course</a>
-          ) : (
-            <a href="/login" style={btn(true)}>Sign in</a>
-          )}
-        </span>
-      </header>
-
-      {!session ? (
+  // Visitors get the cover page; signed-in users get the sidebar dashboard (mockup layout).
+  if (!session) {
+    return (
+      <main style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 20px', color: UI.text }}>
+        <header style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 30 }}>
+          <span style={{ width: 34, height: 34, borderRadius: 10, background: UI.accent, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 17 }}>F</span>
+          <span style={{ fontWeight: 800, fontSize: 20 }}>Forever <span style={{ fontWeight: 500, fontSize: 13, color: UI.muted }}>AI Tutor</span></span>
+          <span style={{ marginLeft: 'auto' }}><a href="/login" style={btn(true)}>Sign in</a></span>
+        </header>
         <Landing />
-      ) : (
-        <>
-          <h1 style={{ fontSize: 26, marginBottom: 4 }}>My Courses</h1>
-          <p style={{ color: UI.muted, marginTop: 0, marginBottom: 20 }}>
-            {lessons.length ? 'Keep learning — pick up where you left off.' : 'No courses yet. Create your first one from any material.'}
-          </p>
+      </main>
+    );
+  }
+
+  const firstName = (session.email || '').split('@')[0].split(/[._-]/)[0];
+  const latest = lessons[0] ?? null;
+
+  return (
+    <div style={{ display: 'flex', gap: 18, maxWidth: 1280, margin: '0 auto', padding: 16, alignItems: 'flex-start', color: UI.text }}>
+      <DashboardSidebar email={session.email} active="home" />
+
+      <main style={{ flex: 1, minWidth: 0 }}>
+        <header style={{ margin: '10px 0 22px' }}>
+          <h1 style={{ fontSize: 28, margin: 0, textTransform: 'capitalize' }}>Welcome back, {firstName}! 👋</h1>
+          <p style={{ color: UI.muted, margin: '6px 0 0' }}>Keep learning and stay consistent. You're doing great!</p>
+        </header>
+
+        {latest && (
+          <section style={{ background: UI.card, border: `1px solid ${UI.border}`, borderRadius: 18, padding: 20, marginBottom: 18, display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', boxShadow: '0 1px 2px rgba(58,46,34,0.05)' }}>
+            <div style={{ width: 92, height: 92, borderRadius: 16, background: UI.bgSoft, display: 'grid', placeItems: 'center', fontSize: 38, flexShrink: 0 }}>▶</div>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: UI.accent, letterSpacing: 0.5, marginBottom: 4 }}>CONTINUE LEARNING</div>
+              <div style={{ fontWeight: 800, fontSize: 17, lineHeight: 1.3 }}>{latest.title}</div>
+              <div style={{ fontSize: 13, color: UI.muted, marginTop: 4 }}>{latest.scenes} scenes · {fmt(latest.durationMs)}{latest.voiced ? ' · 🔊 voiced' : ''}</div>
+            </div>
+            <a href={`/course/${latest.id}`} style={{ ...btn(true), padding: '12px 24px', whiteSpace: 'nowrap' }}>Continue learning ▶</a>
+          </section>
+        )}
+
+        <section id="courses">
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+            <h2 style={{ fontSize: 19, margin: 0 }}>My Courses</h2>
+            <a href="/studio" style={{ color: UI.accent, fontWeight: 700, fontSize: 13.5, textDecoration: 'none' }}>+ New course</a>
+          </div>
 
           {lessons.length === 0 ? (
             <a href="/studio" style={{ display: 'block', border: `2px dashed ${UI.border}`, borderRadius: 16, padding: '48px 20px', textAlign: 'center', textDecoration: 'none', color: UI.muted, background: UI.bgSoft }}>
@@ -48,10 +71,10 @@ export default async function HomePage() {
               <div style={{ fontSize: 13 }}>PDF · text · URL · image</div>
             </a>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 14 }}>
               {lessons.map((lesson) => (
                 <a key={lesson.id} href={`/course/${lesson.id}`}
-                  style={{ border: `1px solid ${UI.border}`, borderRadius: 16, padding: 18, background: UI.card, textDecoration: 'none', color: UI.text }}>
+                  style={{ border: `1px solid ${UI.border}`, borderRadius: 16, padding: 18, background: UI.card, textDecoration: 'none', color: UI.text, boxShadow: '0 1px 2px rgba(58,46,34,0.05)' }}>
                   <div style={{ width: 42, height: 42, borderRadius: 12, background: UI.bgSoft, display: 'grid', placeItems: 'center', fontSize: 20, marginBottom: 12 }}>🎓</div>
                   <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.3, marginBottom: 6 }}>{lesson.title}</div>
                   <div style={{ fontSize: 12, color: UI.muted }}>
@@ -61,9 +84,9 @@ export default async function HomePage() {
               ))}
             </div>
           )}
-        </>
-      )}
-    </main>
+        </section>
+      </main>
+    </div>
   );
 }
 

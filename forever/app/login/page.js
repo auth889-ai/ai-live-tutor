@@ -48,7 +48,7 @@ export default function LoginPage() {
         className="login-cover"
         style={{
           flex: 1.2, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-          backgroundImage: 'linear-gradient(180deg, rgba(30,20,12,0.15) 30%, rgba(30,20,12,0.72)), url(/images/study-22.jpg)',
+          backgroundImage: 'linear-gradient(200deg, rgba(26,16,8,0.05) 25%, rgba(26,16,8,0.55) 70%, rgba(20,12,6,0.85)), url(/images/study-28.png)',
           backgroundSize: 'cover', backgroundPosition: 'center', padding: 44, color: '#fff',
         }}
       >
@@ -56,14 +56,17 @@ export default function LoginPage() {
           <span style={{ width: 34, height: 34, borderRadius: 10, background: UI.accent, display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 17 }}>F</span>
           <span style={{ fontWeight: 800, fontSize: 19 }}>Forever <span style={{ fontWeight: 500, fontSize: 13, opacity: 0.85 }}>AI Tutor</span></span>
         </div>
-        <blockquote style={{ margin: 0, maxWidth: 520 }}>
-          <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.25 }}>
+        <blockquote style={{ margin: 0, maxWidth: 540 }}>
+          <div style={{ display: 'inline-block', background: 'rgba(244,115,104,0.92)', borderRadius: 999, padding: '5px 14px', fontSize: 12, fontWeight: 800, letterSpacing: 0.6, marginBottom: 14 }}>
+            YOUR PERSONAL FACULTY OF AI TEACHERS
+          </div>
+          <div style={{ fontSize: 31, fontWeight: 800, lineHeight: 1.25, textShadow: '0 2px 14px rgba(0,0,0,0.45)' }}>
             Bring any material.<br />Leave with a course that teaches like the best.
           </div>
-          <div style={{ display: 'flex', gap: 14, marginTop: 18, fontSize: 13.5, opacity: 0.92, flexWrap: 'wrap' }}>
-            <span>✓ Narrated live board</span>
-            <span>✓ Real code, really executed</span>
-            <span>✓ Source-proofed claims</span>
+          <div style={{ display: 'flex', gap: 10, marginTop: 18, fontSize: 13, fontWeight: 600, flexWrap: 'wrap' }}>
+            {['🖊️ Narrated live board', '⚙️ Real code, really executed', '📎 Source-proofed claims'].map((t) => (
+              <span key={t} style={{ background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(4px)', borderRadius: 999, padding: '6px 13px' }}>{t}</span>
+            ))}
           </div>
         </blockquote>
       </section>
