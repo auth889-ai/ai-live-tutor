@@ -22,7 +22,7 @@ export function DiagramPanel({ content, progress = 1, activeNode = null, activeS
   if (content.diagramType === 'trace') return <TraceTable content={content} />;
   if (content.diagramType === 'array') return <ArrayView content={content} progress={progress} activeStep={activeStep} />; // array dry-run (binary search / two-pointer)
   if (content.diagramType === 'graph') return <GraphView content={content} progress={progress} activeNode={activeNode} activeStep={activeStep} />; // React Flow + dagre (+ voice-synced trace)
-  return <MermaidDiagram content={content} />;
+  return <MermaidDiagram content={content} progress={progress} />;
 }
 
 // Step-by-step variable trace (the Striver dry-run) from REAL execution.
@@ -58,7 +58,7 @@ function TraceTable({ content }) {
   );
 }
 
-function MermaidDiagram({ content }) {
+function MermaidDiagram({ content, progress = 1 }) {
   const ref = useRef(null);
   const [error, setError] = useState(null);
 
@@ -80,6 +80,56 @@ function MermaidDiagram({ content }) {
       cancelled = true;
     };
   }, [content]);
+
+  // DRAW-ON ENGINE (research: Fiorella & Mayer 2016 — watching drawing beats static, but
+  // ONLY with a visible pen). Clock-driven, therefore seekable: each SVG stroke reveals via
+  // stroke-dashoffset staggered across the diagram by the object's write progress, text pops
+  // as its group finishes, and a pen dot rides the tip of the stroke being drawn NOW.
+  useEffect(() => {
+    const svg = ref.current?.querySelector('svg');
+    if (!svg) return;
+    const strokes = Array.from(svg.querySelectorAll('path, line, polyline, polygon, circle, ellipse, rect'))
+      .filter((el) => el.getTotalLength ? true : false);
+    const texts = Array.from(svg.querySelectorAll('text, foreignObject'));
+    const n = strokes.length;
+    if (!n) return;
+
+    let pen = svg.querySelector('#forever-pen');
+    if (!pen) {
+      pen = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      pen.setAttribute('id', 'forever-pen');
+      pen.setAttribute('r', '5');
+      pen.setAttribute('fill', '#e8604c');
+      svg.appendChild(pen);
+    }
+
+    const span = 1 / n; // each stroke owns an equal slice of the reveal window
+    let penPlaced = false;
+    strokes.forEach((el, i) => {
+      let length = 0;
+      try { length = el.getTotalLength(); } catch { /* unmeasurable element */ }
+      if (!length) return;
+      const local = Math.max(0, Math.min(1, (progress - i * span) / span));
+      el.style.strokeDasharray = `${length}`;
+      el.style.strokeDashoffset = `${length * (1 - local)}`;
+      if (!penPlaced && local > 0 && local < 1) {
+        try {
+          const tip = el.getPointAtLength(length * local);
+          pen.setAttribute('cx', tip.x);
+          pen.setAttribute('cy', tip.y);
+          pen.setAttribute('opacity', '1');
+          penPlaced = true;
+        } catch { /* no tip for this element */ }
+      }
+    });
+    if (!penPlaced) pen.setAttribute('opacity', '0'); // finished (or not started): pen down
+
+    // Text appears once the surrounding strokes are underway (clip-wipe is stroke-only).
+    texts.forEach((el, i) => {
+      const local = (progress - (i / Math.max(texts.length, 1)) * 0.8) * 3;
+      el.style.opacity = `${Math.max(0, Math.min(1, local))}`;
+    });
+  }, [progress, content]);
 
   if (error) return <div style={{ color: '#c0392b', fontSize: 13 }}>diagram unavailable</div>;
   return <div ref={ref} style={{ display: 'flex', justifyContent: 'center', padding: 12, background: '#fffdf8', borderRadius: 12, border: '1px solid #e8ddc9' }} />;
