@@ -2,7 +2,7 @@
 
 Forever is an AI-powered human tutor course platform. It turns source material into a course-series experience: episodes, scenes, tutor narration, timed whiteboard writing, source proof, quizzes, notebook pages, and resumable playback.
 
-This repository follows an OpenMAIC-style root architecture, but the product goal is different: Forever is a source-grounded Udemy/Coursera-style tutor course-series player, not a slide generator and not a fake video generator.
+This repository follows an OpenM11AIC-style root architecture, but the product goal is different: Forever is a source-grounded Udemy/Coursera-style tutor course-series player, not a slide generator and not a fake video generator.
 
 ## Current Phase
 
