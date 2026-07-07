@@ -13,6 +13,7 @@ export function useLessonClock(scenes) {
   const [sceneIndex, setSceneIndex] = useState(0);
   const [tMs, setTMs] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [rate, setRateState] = useState(1);
   const audioRef = useRef(null);
   const manualRef = useRef(null);
   const holdRef = useRef(false);
@@ -51,6 +52,7 @@ export function useLessonClock(scenes) {
   useEffect(() => {
     const clock = getClock();
     clock.seek(0);
+    clock.setRate(rate); // a fresh <audio> element resets to 1x — keep the chosen speed
     setTMs(0);
     if (playing) clock.play();
   }, [sceneIndex]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -80,6 +82,17 @@ export function useLessonClock(scenes) {
     seek(ms) {
       getClock().seek(ms);
       setTMs(ms);
+    },
+    skip(deltaMs) {
+      const clock = getClock();
+      const next = Math.min(Math.max(0, clock.currentTimeMs() + deltaMs), durationMs);
+      clock.seek(next);
+      setTMs(next);
+    },
+    rate,
+    setRate(nextRate) {
+      getClock().setRate(nextRate);
+      setRateState(nextRate);
     },
     goToScene(index) {
       setSceneIndex(index);

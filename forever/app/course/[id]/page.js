@@ -1,15 +1,19 @@
-// The REAL course route (production structure). It loads a stored lesson by id and
-// hands it to the reusable player. Lesson persistence (RDS/OSS) lands in Phase 5;
-// until then this route documents the intended shape and 404s for unknown ids.
+// The REAL course route (production structure). It loads a stored lesson by id — scoped
+// to the signed-in user, so an owned lesson renders for its owner and 404s for everyone
+// else (same privacy rule as the API) — and hands it to the reusable player.
 
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 
 import { LessonPlayer } from '../../../components/course-player/player/lesson-player.js';
 import { loadLesson } from '../../../lib/storage/lesson-store.js';
+import { SESSION_COOKIE, verifySessionToken } from '../../../lib/auth/session.js';
 
 export default async function CoursePage({ params }) {
   const { id } = await params;
-  const lesson = await loadLesson(id);
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const session = token ? verifySessionToken(token) : null;
+  const lesson = await loadLesson(id, { forUser: session?.userId ?? null });
   if (!lesson) notFound();
   return <LessonPlayer lesson={lesson} />;
 }
