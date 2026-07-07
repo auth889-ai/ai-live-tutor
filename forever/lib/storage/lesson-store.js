@@ -1,23 +1,50 @@
-// Lesson persistence seam. Phase 5 backs this with ApsaraDB RDS (metadata) + OSS
-// (manifests/audio). For now it is a filesystem store under .data/lessons so the real
-// app/course/[id] route works end to end without cloud infra — same interface, so the
-// swap to RDS/OSS is one implementation change, not a route change.
+// Lesson persistence. TWO backends behind one interface, selected explicitly by env
+// (same pattern as the queue): MONGODB_URI set -> MongoDB (Atlas in dev, Alibaba ApsaraDB
+// for MongoDB in production; the lesson document plus denormalized card facts for cheap
+// library listing); unset -> filesystem under .data/lessons so local dev and tests need
+// no database. PRIVACY lives in THIS data layer (never middleware-only): every lesson
+// records its owner and every read is scoped IN THE QUERY, so one user can never see
+// another user's courses.
 
 import { mkdir, readFile, writeFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
+import { dbEnabled, lessonsCollection } from './db.js';
+
 const ROOT = path.join(process.cwd(), '.data', 'lessons');
 
-// PRIVACY: every lesson records its owner; reads are scoped in THIS data layer (not
-// middleware-only) so one user can never see another user's courses or notes.
-export async function saveLesson(id, lesson, { ownerId = null } = {}) {
+function lessonFacts(lesson) {
+  return {
+    title: lesson.lessonTitle ?? 'Untitled lesson',
+    scenes: lesson.scenes?.length ?? 0,
+    durationMs: (lesson.scenes ?? []).reduce((n, s) => n + (s.durationMs || 0), 0),
+    voiced: lesson.voiced === true,
+  };
+}
+
+export async function saveLesson(id, lesson, { ownerId = null, collection = lessonsCollection } = {}) {
+  const stored = { ...lesson, ownerId };
+  if (dbEnabled()) {
+    const lessons = await collection();
+    await lessons.replaceOne(
+      { _id: id },
+      { _id: id, ownerId, ...lessonFacts(lesson), payload: stored, updatedAt: new Date() },
+      { upsert: true }, // idempotent: a retried job overwrites the same lesson
+    );
+    return id;
+  }
   await mkdir(ROOT, { recursive: true });
-  await writeFile(path.join(ROOT, `${id}.json`), JSON.stringify({ ...lesson, ownerId }));
+  await writeFile(path.join(ROOT, `${id}.json`), JSON.stringify(stored));
   return id;
 }
 
-// Returns the lesson only if it belongs to forUser (legacy ownerless lessons stay readable).
-export async function loadLesson(id, { forUser = null } = {}) {
+// Returns the lesson only if it belongs to forUser (ownerless lessons stay readable).
+export async function loadLesson(id, { forUser = null, collection = lessonsCollection } = {}) {
+  if (dbEnabled()) {
+    const lessons = await collection();
+    const doc = await lessons.findOne({ _id: sanitize(id), $or: [{ ownerId: null }, { ownerId: forUser }] });
+    return doc?.payload ?? null;
+  }
   try {
     const lesson = JSON.parse(await readFile(path.join(ROOT, `${sanitize(id)}.json`), 'utf8'));
     if (lesson.ownerId && lesson.ownerId !== forUser) return null; // not yours -> as if it doesn't exist
@@ -27,25 +54,27 @@ export async function loadLesson(id, { forUser = null } = {}) {
   }
 }
 
-export async function listLessonIds({ forUser = null } = {}) {
-  return (await listLessons({ forUser })).map((lesson) => lesson.id);
+export async function listLessonIds({ forUser = null, collection = lessonsCollection } = {}) {
+  return (await listLessons({ forUser, collection })).map((lesson) => lesson.id);
 }
 
-// Library cards for the dashboard: id + the display facts, never full scene payloads.
-export async function listLessons({ forUser = null } = {}) {
+// Library cards for the dashboard: id + display facts, never full lesson payloads.
+export async function listLessons({ forUser = null, collection = lessonsCollection } = {}) {
+  if (dbEnabled()) {
+    const lessons = await collection();
+    const docs = await lessons
+      .find({ $or: [{ ownerId: null }, { ownerId: forUser }] }, { projection: { title: 1, scenes: 1, durationMs: 1, voiced: 1, updatedAt: 1 } })
+      .sort({ updatedAt: -1 })
+      .toArray();
+    return docs.map((doc) => ({ id: doc._id, title: doc.title, scenes: doc.scenes, voiced: doc.voiced === true, durationMs: doc.durationMs ?? 0 }));
+  }
   try {
     const ids = (await readdir(ROOT)).filter((name) => name.endsWith('.json')).map((name) => name.replace(/\.json$/, ''));
     const visible = [];
     for (const id of ids) {
       const lesson = await loadLesson(id, { forUser });
       if (!lesson) continue;
-      visible.push({
-        id,
-        title: lesson.lessonTitle ?? id,
-        scenes: lesson.scenes?.length ?? 0,
-        voiced: lesson.voiced === true,
-        durationMs: (lesson.scenes ?? []).reduce((n, s) => n + (s.durationMs || 0), 0),
-      });
+      visible.push({ id, ...lessonFacts(lesson) });
     }
     return visible;
   } catch {
