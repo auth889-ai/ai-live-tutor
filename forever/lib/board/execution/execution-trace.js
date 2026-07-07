@@ -62,8 +62,59 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     if (step.variables !== undefined && (typeof step.variables !== 'object' || Array.isArray(step.variables))) {
       throw new Error(`${at} variables must be an object`);
     }
+    // Clock-driven timing (optional): the player maps audio time -> step via [startMs, endMs).
+    if (step.startMs !== undefined && !(Number.isFinite(step.startMs) && step.startMs >= 0)) throw new Error(`${at} startMs must be a non-negative number`);
+    if (step.endMs !== undefined && !(Number.isFinite(step.endMs) && step.endMs > (step.startMs ?? 0))) throw new Error(`${at} endMs must be greater than startMs`);
+    if (step.voiceLineId !== undefined && typeof step.voiceLineId !== 'string') throw new Error(`${at} voiceLineId must be a string`);
+    // Active edge being traversed THIS step (e.g. A -> B in a BFS): [fromId, toId], both real nodes.
+    if (step.activeEdge !== undefined && step.activeEdge !== null) {
+      if (!Array.isArray(step.activeEdge) || step.activeEdge.length !== 2) throw new Error(`${at} activeEdge must be [fromId, toId]`);
+      if (!graphIds) throw new Error(`${at} has activeEdge but no views.graph is declared`);
+      for (const nid of step.activeEdge) if (!graphIds.has(String(nid))) throw new Error(`${at} activeEdge references a missing node`);
+    }
+    if (step.traceRow !== undefined && (typeof step.traceRow !== 'object' || Array.isArray(step.traceRow))) {
+      throw new Error(`${at} traceRow must be an object`);
+    }
   });
+
+  // If ANY step is timed, ALL must be, and windows must be ascending + non-overlapping — so the
+  // clock maps to exactly one step (deterministic seek).
+  const timedCount = trace.steps.filter((s) => s.startMs !== undefined).length;
+  if (timedCount > 0 && timedCount !== trace.steps.length) {
+    throw new Error(`${context}: either all steps carry startMs or none do (got ${timedCount}/${trace.steps.length})`);
+  }
+  if (timedCount === trace.steps.length && timedCount > 0) {
+    for (let i = 1; i < trace.steps.length; i += 1) {
+      if (trace.steps[i].startMs < (trace.steps[i - 1].endMs ?? trace.steps[i - 1].startMs)) {
+        throw new Error(`${context} step ${i}: startMs must not precede the previous step's end (windows must be ordered)`);
+      }
+    }
+  }
   return trace;
+}
+
+// Clock-driven, DETERMINISTIC: given audio time tMs, return the active step + accumulated history
+// (visited persists, trace-table rows revealed so far). Pure — seeking to the same tMs always
+// yields the same state, and it never uses setTimeout. Requires timed steps (startMs on each).
+export function traceStateAtMs(trace, tMs) {
+  const steps = trace.steps;
+  if (!steps.length) return null;
+  if (steps[0].startMs === undefined) {
+    throw new Error('traceStateAtMs requires timed steps (each step needs startMs); use traceStateAt(progress) for untimed traces');
+  }
+  // Last step whose window has started at or before tMs (clamps to 0 before the first, last after).
+  let index = 0;
+  for (let i = 0; i < steps.length; i += 1) {
+    if (tMs >= steps[i].startMs) index = i;
+    else break;
+  }
+  const history = steps.slice(0, index + 1).map((s, i) => ({
+    step: i + 1,
+    line: s.line,
+    variables: s.variables ?? {},
+    traceRow: s.traceRow ?? null,
+  }));
+  return { index, step: steps[index], history };
 }
 
 function validateArrayState(state, inBounds, at) {

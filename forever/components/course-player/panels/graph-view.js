@@ -124,9 +124,11 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
         fontFamily: 'ui-monospace, monospace',
         fontWeight: 600,
         fontSize: pointers ? 12 : 14,
-        boxShadow: isCurrent ? '0 0 0 6px rgba(211,84,0,0.32), 0 2px 10px rgba(211,84,0,0.35)' : 'none',
-        transform: isCurrent ? 'scale(1.12)' : 'scale(1)',
-        transition: 'background 0.3s, border-color 0.3s, color 0.3s, box-shadow 0.3s, transform 0.3s',
+        // NOTE: never put `transform` here — ReactFlow uses transform:translate() to POSITION the
+        // node, so a scale() would clobber the position (nodes collapse to the origin). Emphasis
+        // is via border width + glow only.
+        boxShadow: isCurrent ? '0 0 0 6px rgba(211,84,0,0.32), 0 2px 12px rgba(211,84,0,0.4)' : 'none',
+        transition: 'background 0.3s, border-color 0.3s, color 0.3s, box-shadow 0.3s',
       },
     };
   });
