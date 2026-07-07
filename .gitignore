@@ -21,6 +21,7 @@ tests/
 client/
 docs/
 google_agent/
+server/
 scripts/
 agent_output/
 notes/
