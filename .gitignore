@@ -34,6 +34,7 @@ forever/**/*.md
 !forever/README.md
 !forever/tests/
 !forever/tests/**
+!forever/lib/**
 *.pem
 *.key
 *.json.key
@@ -85,3 +86,13 @@ tmp/
 *.db
 
 
+
+# Forever is the shipped product — nothing inside it may be silently ignored by legacy rules above
+!forever/lib/**
+!forever/tests/
+!forever/tests/**
+!forever/components/**
+!forever/app/**
+!forever/eval/**
+!forever/scripts/**
+!forever/fixtures/**
