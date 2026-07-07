@@ -31,6 +31,9 @@ forever/**/*.md
 !forever/.env.example
 !forever/docs/
 !forever/docs/**/*.md
+!forever/README.md
+!forever/tests/
+!forever/tests/**
 *.pem
 *.key
 *.json.key

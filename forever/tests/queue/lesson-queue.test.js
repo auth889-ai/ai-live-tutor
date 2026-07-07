@@ -13,11 +13,14 @@ test('validateJobInput requires 60+ characters of material', () => {
   assert.equal(ok.text.length, 60);
 });
 
-test('makeProgress interpolates the scene span during generation', () => {
+test('makeProgress interpolates the scene span during generation and voicing', () => {
   assert.equal(makeProgress({ phase: 'queued' }).percent, 0);
   assert.equal(makeProgress({ phase: 'generating', sceneDone: 0, sceneTotal: 8 }).percent, 30);
-  assert.equal(makeProgress({ phase: 'generating', sceneDone: 4, sceneTotal: 8 }).percent, 61); // 30 + 0.5*62
-  assert.equal(makeProgress({ phase: 'generating', sceneDone: 8, sceneTotal: 8 }).percent, 92);
+  assert.equal(makeProgress({ phase: 'generating', sceneDone: 4, sceneTotal: 8 }).percent, 50); // 30 + 0.5*40
+  assert.equal(makeProgress({ phase: 'generating', sceneDone: 8, sceneTotal: 8 }).percent, 70);
+  assert.equal(makeProgress({ phase: 'voicing', sceneDone: 0, sceneTotal: 0 }).percent, 70);
+  assert.equal(makeProgress({ phase: 'voicing', sceneDone: 1, sceneTotal: 2 }).percent, 81); // 70 + 0.5*22
+  assert.equal(makeProgress({ phase: 'voicing', sceneDone: 2, sceneTotal: 2 }).percent, 92);
   assert.equal(makeProgress({ phase: 'done' }).percent, 100);
 });
 
@@ -30,10 +33,11 @@ test('makeProgress rejects an unknown phase; isTerminal flags done/failed', () =
 
 // --- processor (injected society + store) ---
 
-test('processLessonJob forwards society progress and returns a saved lesson id', async () => {
+test('processLessonJob generates, VOICES, and saves the voiced lesson (not the silent one)', async () => {
   const saved = {};
   const progress = [];
   const fakeLesson = { sourcePackId: 'sp_ABC123', lessonTitle: 'Binary Search', scenes: [{}, {}], skippedScenes: 0 };
+  const fakeVoiced = { ...fakeLesson, voiced: true };
   const result = await processLessonJob(
     { text: 'x'.repeat(80) },
     {
@@ -44,6 +48,12 @@ test('processLessonJob forwards society progress and returns a saved lesson id',
           onProgress({ phase: 'generating', sceneDone: 2, sceneTotal: 2 });
           return fakeLesson;
         },
+        voice: async (lesson, { onProgress }) => {
+          assert.equal(lesson, fakeLesson);
+          onProgress({ sceneDone: 1, sceneTotal: 2 });
+          onProgress({ sceneDone: 2, sceneTotal: 2 });
+          return fakeVoiced;
+        },
         save: async (id, lesson) => { saved[id] = lesson; },
       },
     },
@@ -51,9 +61,30 @@ test('processLessonJob forwards society progress and returns a saved lesson id',
 
   assert.equal(result.lessonId, lessonIdFor('sp_ABC123'));
   assert.equal(result.scenes, 2);
-  assert.equal(saved[result.lessonId], fakeLesson);
+  assert.equal(result.voiced, true);
+  assert.equal(saved[result.lessonId], fakeVoiced); // the VOICED lesson is what persists
   assert.equal(progress.at(-1).phase, 'done');
-  assert.ok(progress.some((p) => p.phase === 'generating' && p.percent === 92));
+  assert.ok(progress.some((p) => p.phase === 'generating' && p.percent === 70));
+  assert.ok(progress.some((p) => p.phase === 'voicing' && p.percent === 81)); // real per-scene voicing progress
+  assert.ok(progress.some((p) => p.phase === 'voicing' && p.percent === 92));
+});
+
+test('processLessonJob honours the explicit DISABLE_TTS=1 dev opt-out (never a silent default)', async () => {
+  const saved = {};
+  const fakeLesson = { sourcePackId: 'sp_QUIET1', lessonTitle: 'Q', scenes: [{}], skippedScenes: 0 };
+  const result = await processLessonJob(
+    { text: 'x'.repeat(80) },
+    {
+      deps: {
+        generate: async () => fakeLesson,
+        voice: async () => { throw new Error('voice must NOT be called when DISABLE_TTS=1'); },
+        save: async (id, lesson) => { saved[id] = lesson; },
+        env: { DISABLE_TTS: '1' },
+      },
+    },
+  );
+  assert.equal(result.voiced, false);
+  assert.equal(saved[result.lessonId], fakeLesson);
 });
 
 // --- in-process backend (the full async flow) ---

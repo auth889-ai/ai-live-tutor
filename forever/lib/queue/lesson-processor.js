@@ -4,6 +4,7 @@
 // is derived from the source, so re-running a job overwrites the same lesson (safe on retry).
 
 import { generateLessonFromText } from '../generation/lesson/generate-lesson.js';
+import { voiceLesson } from '../tts/voice-lesson.js';
 import { saveLesson } from '../storage/lesson-store.js';
 import { validateJobInput, makeProgress } from './job-contract.js';
 
@@ -15,7 +16,9 @@ export function lessonIdFor(sourcePackId) {
 // tests run without the real society or filesystem.
 export async function processLessonJob(rawInput, { report = () => {}, deps = {} } = {}) {
   const generate = deps.generate ?? generateLessonFromText;
+  const voice = deps.voice ?? voiceLesson;
   const save = deps.save ?? saveLesson;
+  const env = deps.env ?? process.env;
 
   const { text, ownerId } = validateJobInput(rawInput);
   report(makeProgress({ phase: 'routing', message: 'Starting' }));
@@ -25,11 +28,32 @@ export async function processLessonJob(rawInput, { report = () => {}, deps = {} 
     onProgress: (p) => report(makeProgress(p)),
   });
 
-  const lessonId = lessonIdFor(lesson.sourcePackId);
-  report(makeProgress({ phase: 'saving', message: 'Saving lesson' }));
-  await save(lessonId, lesson, { ownerId }); // saved under its owner — privacy at the data layer
+  // Give the tutor its real voice: synthesize narration + reconcile the timeline to the
+  // real audio, per scene. This IS the product (silent lessons don't ship); the only
+  // escape hatch is an EXPLICIT env opt-out for offline dev — never a silent fallback.
+  let finalLesson = lesson;
+  if (env.DISABLE_TTS === '1') {
+    report(makeProgress({ phase: 'voicing', message: 'Voice disabled (DISABLE_TTS=1) — shipping a silent lesson' }));
+  } else {
+    const sceneTotal = lesson.scenes.length;
+    report(makeProgress({ phase: 'voicing', message: 'Synthesizing the tutor voice', sceneDone: 0, sceneTotal }));
+    finalLesson = await voice(lesson, {
+      onProgress: ({ sceneDone }) =>
+        report(makeProgress({ phase: 'voicing', message: `Voiced scene ${sceneDone}/${sceneTotal}`, sceneDone, sceneTotal })),
+    });
+  }
 
-  const result = { lessonId, lessonTitle: lesson.lessonTitle, scenes: lesson.scenes.length, skippedScenes: lesson.skippedScenes ?? 0 };
+  const lessonId = lessonIdFor(finalLesson.sourcePackId);
+  report(makeProgress({ phase: 'saving', message: 'Saving lesson' }));
+  await save(lessonId, finalLesson, { ownerId }); // saved under its owner — privacy at the data layer
+
+  const result = {
+    lessonId,
+    lessonTitle: finalLesson.lessonTitle,
+    scenes: finalLesson.scenes.length,
+    skippedScenes: finalLesson.skippedScenes ?? 0,
+    voiced: finalLesson.voiced === true,
+  };
   report(makeProgress({ phase: 'done', message: 'Lesson ready', lessonId }));
   return result;
 }

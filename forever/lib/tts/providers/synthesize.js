@@ -6,6 +6,19 @@
 import { qwenConfig } from '../../qwen/client.js';
 import { measureAudioDurationMs } from '../audio/measure-duration.js';
 
+// TTS model availability is REGIONAL: a workspace that serves the chat models may not serve
+// any TTS model (the Frankfurt workspace doesn't). A dedicated TTS workspace can be
+// configured via ALIBABA_TTS_API_KEY + ALIBABA_TTS_BASE_URL; placeholders are ignored.
+function ttsEndpoint(env) {
+  const key = (env.ALIBABA_TTS_API_KEY || '').trim();
+  const base = (env.ALIBABA_TTS_BASE_URL || '').trim();
+  if (key && base && !/^your[_-]/i.test(key)) {
+    return { apiKey: key, nativeBase: `${base.replace(/\/$/, '')}/api/v1` };
+  }
+  const { apiKey, baseUrl } = qwenConfig(env);
+  return { apiKey, nativeBase: baseUrl.replace(/\/compatible-mode\/v1$/, '/api/v1') };
+}
+
 export async function synthesizeLine({
   text,
   voice = process.env.TTS_VOICE_ID || 'Cherry',
@@ -14,8 +27,7 @@ export async function synthesizeLine({
   timeoutMs = 60_000,
   env = process.env,
 }) {
-  const { apiKey, baseUrl } = qwenConfig(env);
-  const nativeBase = baseUrl.replace(/\/compatible-mode\/v1$/, '/api/v1');
+  const { apiKey, nativeBase } = ttsEndpoint(env);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {

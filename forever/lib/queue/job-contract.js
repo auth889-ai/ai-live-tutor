@@ -10,10 +10,13 @@ export const JOB_NAME = 'generate-lesson';
 export const WORKER_HEARTBEAT_KEY = 'forever:worker:heartbeat';
 
 // Lifecycle phases the browser can render as a real progress bar (not a fake spinner).
-export const PHASES = Object.freeze(['queued', 'routing', 'planning', 'generating', 'saving', 'done', 'failed']);
+export const PHASES = Object.freeze(['queued', 'routing', 'planning', 'generating', 'voicing', 'saving', 'done', 'failed']);
 
-// Coarse percent floor per phase; scene generation fills 30->90 as scenes complete.
-const PHASE_FLOOR = Object.freeze({ queued: 0, routing: 5, planning: 15, generating: 30, saving: 92, done: 100, failed: 100 });
+// Coarse percent floor per phase; generation fills 30->70 and voicing 70->92 as scenes complete.
+const PHASE_FLOOR = Object.freeze({ queued: 0, routing: 5, planning: 15, generating: 30, voicing: 70, saving: 92, done: 100, failed: 100 });
+
+// Phases whose percent interpolates per-scene toward the NEXT phase's floor.
+const PHASE_SPAN_END = Object.freeze({ generating: 'voicing', voicing: 'saving' });
 
 export function validateJobInput(input) {
   if (!input || typeof input !== 'object') throw new Error('job input must be an object');
@@ -25,14 +28,14 @@ export function validateJobInput(input) {
   return { text, ownerId };
 }
 
-// Build a normalized progress object. During "generating" the percent interpolates across
-// scenes so the bar advances as each scene finishes (real progress, from the society).
+// Build a normalized progress object. During "generating" and "voicing" the percent
+// interpolates across scenes so the bar advances as each scene finishes (real progress).
 export function makeProgress({ phase, message = '', sceneDone = 0, sceneTotal = 0, lessonId = null }) {
   if (!PHASES.includes(phase)) throw new Error(`unknown job phase: ${phase}`);
   let percent = PHASE_FLOOR[phase];
-  if (phase === 'generating' && sceneTotal > 0) {
-    const span = PHASE_FLOOR.saving - PHASE_FLOOR.generating; // 30 -> 92
-    percent = PHASE_FLOOR.generating + Math.round((Math.min(sceneDone, sceneTotal) / sceneTotal) * span);
+  if (PHASE_SPAN_END[phase] && sceneTotal > 0) {
+    const span = PHASE_FLOOR[PHASE_SPAN_END[phase]] - PHASE_FLOOR[phase];
+    percent = PHASE_FLOOR[phase] + Math.round((Math.min(sceneDone, sceneTotal) / sceneTotal) * span);
   }
   return { phase, percent, message, sceneDone, sceneTotal, lessonId };
 }
