@@ -15,12 +15,15 @@ import '@xyflow/react/dist/style.css';
 
 import { layoutGraph } from '../../../lib/board/diagrams/graph-layout.js';
 
-// Resolve the visual state at the current clock position: prefer the step-based trace,
-// then fall back to the older highlightSequence, then to a single activeNode.
-function resolveState({ content, progress, activeNode }) {
+// Resolve the visual state at the current clock position. Prefer an EXPLICIT step bound to the
+// active narration line (activeStep) — that's true voice-sync; the current node marks exactly
+// when the tutor says it. Fall back to write-progress, then highlightSequence, then activeNode.
+function resolveState({ content, progress, activeNode, activeStep }) {
   const trace = Array.isArray(content.trace) && content.trace.length ? content.trace : null;
   if (trace) {
-    const idx = Math.min(trace.length - 1, Math.floor(progress * trace.length + 1e-9));
+    const idx = activeStep != null
+      ? Math.max(0, Math.min(trace.length - 1, activeStep))
+      : Math.min(trace.length - 1, Math.floor(progress * trace.length + 1e-9));
     const step = trace[Math.max(0, idx)];
     // Accumulate every node marked current up to and including this step -> a growing visited path,
     // even when the model didn't spell out `visited` on each step.
@@ -65,7 +68,7 @@ export function GraphView(props) {
   );
 }
 
-function GraphViewInner({ content, progress = 1, activeNode = null }) {
+function GraphViewInner({ content, progress = 1, activeNode = null, activeStep = null }) {
   const laid = useMemo(() => {
     try {
       return layoutGraph({ nodes: content.nodes ?? [], edges: content.edges ?? [], direction: content.direction ?? 'TB' });
@@ -87,7 +90,7 @@ function GraphViewInner({ content, progress = 1, activeNode = null }) {
 
   if (!laid) return <div style={{ color: '#c0392b', fontSize: 13 }}>diagram unavailable</div>;
 
-  const { current, visited, pointerAt, note, stepNum, stepTotal } = resolveState({ content, progress, activeNode });
+  const { current, visited, pointerAt, note, stepNum, stepTotal } = resolveState({ content, progress, activeNode, activeStep });
   const hasTrace = Boolean(note);
 
   const nodeColor = (id) => {
@@ -121,8 +124,9 @@ function GraphViewInner({ content, progress = 1, activeNode = null }) {
         fontFamily: 'ui-monospace, monospace',
         fontWeight: 600,
         fontSize: pointers ? 12 : 14,
-        boxShadow: isCurrent ? '0 0 0 4px rgba(211,84,0,0.18)' : 'none',
-        transition: 'background 0.3s, border-color 0.3s, color 0.3s, box-shadow 0.3s',
+        boxShadow: isCurrent ? '0 0 0 6px rgba(211,84,0,0.32), 0 2px 10px rgba(211,84,0,0.35)' : 'none',
+        transform: isCurrent ? 'scale(1.12)' : 'scale(1)',
+        transition: 'background 0.3s, border-color 0.3s, color 0.3s, box-shadow 0.3s, transform 0.3s',
       },
     };
   });

@@ -6,11 +6,14 @@
 // grey out, the current cell highlights orange, and the step note is captioned — synced to the
 // tutor's words so it feels like a teacher moving their finger across the array.
 
-// Resolve the visual state at the current clock position.
-function resolveState({ content, progress }) {
+// Resolve the visual state at the current clock position. activeStep (bound to the active
+// narration line) wins over write-progress so pointers move exactly as the tutor speaks.
+function resolveState({ content, progress, activeStep }) {
   const trace = Array.isArray(content.trace) && content.trace.length ? content.trace : null;
   if (!trace) return { pointerAt: new Map(), eliminated: new Set(), current: null, note: null, stepNum: 0, stepTotal: 0 };
-  const idx = Math.min(trace.length - 1, Math.max(0, Math.floor(progress * trace.length + 1e-9)));
+  const idx = activeStep != null
+    ? Math.max(0, Math.min(trace.length - 1, activeStep))
+    : Math.min(trace.length - 1, Math.max(0, Math.floor(progress * trace.length + 1e-9)));
   const step = trace[idx];
   const eliminated = new Set((step.eliminated ?? []).map(Number));
   const pointerAt = new Map(); // cell index -> ['low','mid'] labels
@@ -29,11 +32,11 @@ function resolveState({ content, progress }) {
   };
 }
 
-export function ArrayView({ content, progress = 1 }) {
+export function ArrayView({ content, progress = 1, activeStep = null }) {
   const values = Array.isArray(content.values) ? content.values : [];
   if (!values.length) return <div style={{ color: '#c0392b', fontSize: 13 }}>array unavailable</div>;
 
-  const { pointerAt, eliminated, current, note, stepNum, stepTotal } = resolveState({ content, progress });
+  const { pointerAt, eliminated, current, note, stepNum, stepTotal } = resolveState({ content, progress, activeStep });
   const hasTrace = Boolean(note);
 
   return (

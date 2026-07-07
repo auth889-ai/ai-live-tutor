@@ -31,6 +31,13 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
   const focusObj = scene.objects.find((o) => o.id === lastFocus.current) || scene.objects[0];
   const subtitle = activeLine?.text ?? '';
 
+  // Voice-synced trace step: the Nth narration line that targets this diagram drives the Nth
+  // trace step, so the current node / pointer marks EXACTLY as the tutor speaks that step —
+  // instead of drifting off a fuzzy write-reveal progress.
+  const diagramLines = focusObj ? scene.voiceLines.filter((l) => l.targetObjectId === focusObj.id) : [];
+  const stepIndex = state.activeSpeech ? diagramLines.findIndex((l) => l.id === state.activeSpeech) : -1;
+  const activeStep = stepIndex >= 0 ? stepIndex : null;
+
   // Hold playback while an unanswered quiz is on screen.
   const quizBlocking = focusObj?.renderHint === 'quiz' && !answered.has(focusObj.id);
   useEffect(() => {
@@ -58,6 +65,7 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
                 object={focusObj}
                 state={state}
                 focusRef={activeLine?.targetObjectId === focusObj.id ? activeLine?.focusRef : undefined}
+                activeStep={activeStep}
                 onQuizAnswered={() => setAnswered((prev) => new Set(prev).add(focusObj.id))}
               />
             )}
@@ -71,7 +79,7 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
   );
 }
 
-function Focus({ object, state, focusRef, onQuizAnswered }) {
+function Focus({ object, state, focusRef, activeStep, onQuizAnswered }) {
   if (object.renderHint === 'quiz') {
     return <QuizView content={object.content} onAnswered={onQuizAnswered} />;
   }
@@ -82,7 +90,7 @@ function Focus({ object, state, focusRef, onQuizAnswered }) {
   }
   if (object.renderHint === 'diagram') {
     const progress = state.writing.get(object.id)?.progress ?? 1;
-    return <div style={{ maxWidth: 720, margin: '0 auto' }}><DiagramPanel content={object.content} progress={progress} activeNode={focusRef != null ? String(focusRef) : null} /></div>;
+    return <div style={{ maxWidth: 720, margin: '0 auto' }}><DiagramPanel content={object.content} progress={progress} activeNode={focusRef != null ? String(focusRef) : null} activeStep={activeStep} /></div>;
   }
   if (object.renderHint === 'math') {
     return <MathView content={object.content} />;

@@ -14,11 +14,11 @@ import { ArrayView } from './array-view.js';
 
 mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'strict', flowchart: { htmlLabels: true, curve: 'basis' } });
 
-export function DiagramPanel({ content, progress = 1, activeNode = null }) {
+export function DiagramPanel({ content, progress = 1, activeNode = null, activeStep = null }) {
   if (content.diagramType === 'comparison') return <ComparisonTable content={content} />;
   if (content.diagramType === 'trace') return <TraceTable content={content} />;
-  if (content.diagramType === 'array') return <ArrayView content={content} progress={progress} />; // array dry-run (binary search / two-pointer)
-  if (content.diagramType === 'graph') return <GraphView content={content} progress={progress} activeNode={activeNode} />; // React Flow + dagre (+ sync highlight)
+  if (content.diagramType === 'array') return <ArrayView content={content} progress={progress} activeStep={activeStep} />; // array dry-run (binary search / two-pointer)
+  if (content.diagramType === 'graph') return <GraphView content={content} progress={progress} activeNode={activeNode} activeStep={activeStep} />; // React Flow + dagre (+ voice-synced trace)
   return <MermaidDiagram content={content} />;
 }
 
