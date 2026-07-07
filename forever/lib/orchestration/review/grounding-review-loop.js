@@ -37,35 +37,43 @@ export async function runGroundingReview({
   );
 
   for (let round = 0; round <= rounds; round += 1) {
-    // Two independent critics review each round: grounding (facts) + pedagogy (teaching
-    // quality). Their objections merge — the board must satisfy BOTH to pass.
+    // Two independent critics. GROUNDING is the HARD gate (facts must be right, else the
+    // scene cannot ship). PEDAGOGY is ADVISORY — it drives revision to improve teaching, but
+    // a well-grounded scene is never dropped just because the critic wants it richer.
     const [grounding, pedagogy] = await Promise.all([
       agents.auditGrounding({ sceneId, objects: board.objects, sourcePack }),
       agents.auditPedagogy
         ? agents.auditPedagogy({ sceneId, objects: board.objects, brief })
         : Promise.resolve({ objections: [], usage: null }),
     ]);
-    const audit = { objections: [...grounding.objections, ...pedagogy.objections] };
     usages.push(grounding.usage, pedagogy.usage);
-    transcript.push(...audit.objections);
+    transcript.push(...grounding.objections, ...pedagogy.objections);
+    const allObjections = [...grounding.objections, ...pedagogy.objections];
 
-    if (audit.objections.length === 0) {
+    // Pass when grounded. Only on the FIRST round do we also revise for pedagogy (to lift
+    // quality); after that, grounded-and-shippable beats endless pedagogy nitpicks.
+    const mustRevise = grounding.objections.length > 0 || (round === 0 && pedagogy.objections.length > 0);
+    if (!mustRevise) {
       transcript.push(
         createSocietyMessage({
           id: `msg_verdict_${sceneId}_${round}`,
           kind: 'verdict',
           fromRole: FOREVER_AGENT_ROLES.arbiter,
           sceneId,
-          body: `Grounding accepted after ${round} revision round(s).`,
+          body: `Accepted after ${round} revision round(s) (grounded${pedagogy.objections.length ? '; pedagogy notes remain' : ''}).`,
           verdict: { decision: 'accept', binding: true },
         }),
       );
       return { objects: board.objects, transcript, usages, rounds: round };
     }
 
-    if (round === rounds) break; // out of revision budget
+    if (round === rounds) {
+      // Out of budget: ship if grounded (pedagogy is advisory); only fail if still ungrounded.
+      if (grounding.objections.length === 0) return { objects: board.objects, transcript, usages, rounds: round };
+      break;
+    }
 
-    board = await agents.reviseBoard({ sourcePack, layout, previousObjects: board.objects, objections: audit.objections, brief });
+    board = await agents.reviseBoard({ sourcePack, layout, previousObjects: board.objects, objections: allObjections, brief });
     usages.push(board.usage);
     transcript.push(
       createSocietyMessage({
@@ -73,7 +81,7 @@ export async function runGroundingReview({
         kind: 'revision',
         fromRole: FOREVER_AGENT_ROLES.boardDirector,
         sceneId,
-        body: `Revised the board to address ${audit.objections.length} grounding objection(s).`,
+        body: `Revised the board to address ${allObjections.length} objection(s).`,
       }),
     );
   }
