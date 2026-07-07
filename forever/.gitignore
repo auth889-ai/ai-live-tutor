@@ -1,6 +1,8 @@
 .env
 .env.*
 !.env.example
+*.pdf
+.pdf
 __pycache__/
 .pytest_cache/
 .ruff_cache/
