@@ -19,7 +19,10 @@ export function validateJobInput(input) {
   if (!input || typeof input !== 'object') throw new Error('job input must be an object');
   const text = typeof input.text === 'string' ? input.text.trim() : '';
   if (text.length < 60) throw new Error('job input needs at least 60 characters of learning material');
-  return { text };
+  // ownerId is set by the SERVER from the session (never trusted from the client body) so the
+  // worker can save the lesson under its owner — user privacy flows through the whole job.
+  const ownerId = typeof input.ownerId === 'string' && input.ownerId.trim() ? input.ownerId : null;
+  return { text, ownerId };
 }
 
 // Build a normalized progress object. During "generating" the percent interpolates across

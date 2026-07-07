@@ -8,8 +8,14 @@
 
 import { enqueueLesson } from '../../../lib/queue/lesson-queue.js';
 import { validateJobInput } from '../../../lib/queue/job-contract.js';
+import { sessionFromRequest } from '../../../lib/auth/session.js';
 
 export async function POST(request) {
+  // Auth is enforced IN the route (never middleware-only). Generation costs real tokens, and the
+  // resulting lesson must belong to someone.
+  const session = sessionFromRequest(request);
+  if (!session) return Response.json({ error: 'Sign in to generate a course' }, { status: 401 });
+
   let body;
   try {
     body = await request.json();
@@ -19,7 +25,8 @@ export async function POST(request) {
 
   let input;
   try {
-    input = validateJobInput(body);
+    // ownerId comes from the verified session — a client-supplied ownerId is ignored.
+    input = validateJobInput({ text: body.text, ownerId: session.userId });
   } catch (error) {
     return Response.json({ error: String(error.message || error) }, { status: 400 });
   }

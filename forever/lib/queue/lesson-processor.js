@@ -17,7 +17,7 @@ export async function processLessonJob(rawInput, { report = () => {}, deps = {} 
   const generate = deps.generate ?? generateLessonFromText;
   const save = deps.save ?? saveLesson;
 
-  const { text } = validateJobInput(rawInput);
+  const { text, ownerId } = validateJobInput(rawInput);
   report(makeProgress({ phase: 'routing', message: 'Starting' }));
 
   const lesson = await generate(text, {
@@ -27,7 +27,7 @@ export async function processLessonJob(rawInput, { report = () => {}, deps = {} 
 
   const lessonId = lessonIdFor(lesson.sourcePackId);
   report(makeProgress({ phase: 'saving', message: 'Saving lesson' }));
-  await save(lessonId, lesson);
+  await save(lessonId, lesson, { ownerId }); // saved under its owner — privacy at the data layer
 
   const result = { lessonId, lessonTitle: lesson.lessonTitle, scenes: lesson.scenes.length, skippedScenes: lesson.skippedScenes ?? 0 };
   report(makeProgress({ phase: 'done', message: 'Lesson ready', lessonId }));

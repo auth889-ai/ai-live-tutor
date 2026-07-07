@@ -6,10 +6,25 @@ import { GET } from '../../app/api/jobs/[id]/route.js';
 import { createInProcessQueue } from '../../lib/queue/backends/in-process.js';
 import { __setLessonQueue } from '../../lib/queue/lesson-queue.js';
 import { makeProgress } from '../../lib/queue/job-contract.js';
+import { createSessionToken, SESSION_COOKIE } from '../../lib/auth/session.js';
 
-function jsonRequest(body) {
-  return new Request('http://test/api/jobs', { method: 'POST', body: JSON.stringify(body) });
+// Routes read the session with the process-env secret, so set one for the test run.
+process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'jobs-route-test-secret';
+const sessionCookieHeader = `${SESSION_COOKIE}=${encodeURIComponent(createSessionToken({ userId: 'user_test', email: 't@t.co' }))}`;
+
+function jsonRequest(body, { signedIn = true } = {}) {
+  return new Request('http://test/api/jobs', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: signedIn ? { cookie: sessionCookieHeader } : {},
+  });
 }
+
+test('POST without a session is rejected with 401 (generation is private)', async () => {
+  __setLessonQueue(createInProcessQueue({ process: async () => ({ lessonId: 'x' }) }));
+  const res = await POST(jsonRequest({ text: 'x'.repeat(80) }, { signedIn: false }));
+  assert.equal(res.status, 401);
+});
 
 test('POST rejects material under 60 chars with 400', async () => {
   __setLessonQueue(createInProcessQueue({ process: async () => ({ lessonId: 'x' }) }));

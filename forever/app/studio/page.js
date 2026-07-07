@@ -5,14 +5,23 @@
 // enqueues it, then an EventSource on /api/jobs/:id/events streams live progress (real per-scene
 // percent, not a fake spinner), and on completion we navigate to the finished lesson.
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function StudioPage() {
   const [text, setText] = useState('');
   const [progress, setProgress] = useState(null); // { phase, percent, message } | null
   const [error, setError] = useState(null);
   const [done, setDone] = useState(null); // { lessonId, lessonTitle, scenes }
+  const [user, setUser] = useState(undefined); // undefined = checking, null = signed out
   const sourceRef = useRef(null);
+
+  // Private studio: your generated courses belong to your account. Signed-out visitors go sign in.
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setUser)
+      .catch(() => setUser(null));
+  }, []);
 
   async function startJob() {
     setError(null);
@@ -52,9 +61,31 @@ export default function StudioPage() {
 
   const busy = progress !== null;
 
+  if (user === null) {
+    return (
+      <main style={{ maxWidth: 760, margin: '80px auto', padding: '0 16px', textAlign: 'center' }}>
+        <h1 style={{ fontSize: 24 }}>Forever Studio</h1>
+        <p style={{ color: '#8a6d3b' }}>Sign in to generate courses — your library is private to your account.</p>
+        <a href="/login" style={{ display: 'inline-block', marginTop: 12, padding: '10px 28px', borderRadius: 8, background: '#d35400', color: '#fff', textDecoration: 'none', fontWeight: 600 }}>
+          Sign in / Create account
+        </a>
+      </main>
+    );
+  }
+
   return (
     <main style={{ maxWidth: 760, margin: '32px auto', padding: '0 16px' }}>
-      <h1 style={{ fontSize: 24 }}>Forever Studio</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <h1 style={{ fontSize: 24 }}>Forever Studio</h1>
+        {user?.email && (
+          <span style={{ fontSize: 13, color: '#8a6d3b' }}>
+            {user.email} ·{' '}
+            <a href="#" onClick={async (e) => { e.preventDefault(); await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/login'; }} style={{ color: '#d35400' }}>
+              sign out
+            </a>
+          </span>
+        )}
+      </div>
       <p style={{ color: '#8a6d3b' }}>Paste any learning material. The AI tutor faculty turns it into a course lesson.</p>
       <textarea
         value={text}
