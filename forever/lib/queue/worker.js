@@ -38,12 +38,23 @@ worker.on('failed', (job, err) => console.error(`[worker] job ${job?.id} failed:
 worker.on('error', (err) => console.error(`[worker] error: ${err?.message}`));
 
 async function shutdown(signal) {
-  console.log(`[worker] ${signal} received — closing gracefully (finishing in-flight jobs)`);
+  console.log(`[worker] ${signal} received — closing (drain timeout ${DRAIN_TIMEOUT_MS / 1000}s)`);
   clearInterval(heartbeat);
-  await worker.close(); // stops taking new jobs, waits for active ones
-  await connection.quit();
+  // Graceful close waits for active jobs — but lessons run for MINUTES, and an unbounded
+  // wait deadlocks restarts (node --watch, deploys) into a half-dead worker. Bounded drain:
+  // after the timeout, force-close. Safe because the processor is IDEMPOTENT and BullMQ
+  // re-queues stalled jobs — the retried job overwrites the same lesson.
+  await Promise.race([
+    worker.close(),
+    new Promise((resolve) => setTimeout(resolve, DRAIN_TIMEOUT_MS)).then(() => {
+      console.log('[worker] drain timeout — force closing (stalled jobs will be retried)');
+      return worker.close(true);
+    }),
+  ]);
+  await connection.quit().catch(() => {});
   process.exit(0);
 }
+const DRAIN_TIMEOUT_MS = Number(process.env.WORKER_DRAIN_TIMEOUT_MS || 10_000);
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
