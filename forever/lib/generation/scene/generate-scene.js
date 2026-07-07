@@ -8,6 +8,7 @@ import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
 import { runGroundingReview } from '../../orchestration/review/grounding-review-loop.js';
 import { writeVoice } from '../../orchestration/agents/authoring/voice-writer.js';
 import { generateExecutedCode } from '../../orchestration/agents/coding/code-runner.js';
+import { traceExecution } from '../../orchestration/agents/coding/execution-tracer.js';
 import { compileProvisionalTimeline } from '../timeline/timeline-compiler.js';
 
 const CODE_ROLES = new Set(['worked_example', 'dry_run']);
@@ -18,21 +19,43 @@ export async function generateSceneFromSourcePack(
 ) {
   const id = sceneId ?? `gen_${sourcePack.id.slice(3)}`;
   const runCodeAgent = agents.generateExecutedCode ?? generateExecutedCode;
+  const traceAgent = agents.traceExecution ?? traceExecution;
+  const sourceText = sourcePack.chunks.map((chunk) => chunk.text).join('\n');
 
   // Board goes through the society's grounding review cycle (generate -> audit -> revise)
   // before it is allowed to be narrated. Ungrounded boards never reach the student.
   const review = await runGroundingReview({ sceneId: id, sourcePack, layout, brief });
   const objects = [...review.objects];
 
-  // For code-teaching scenes, the Code Runner writes a runnable program, EXECUTES it, and
-  // the real output goes on the board. Honest: if it can't run, we skip the demo (never
-  // show fake output) rather than fail the whole scene.
-  if (brief && CODE_ROLES.has(brief.pedagogicalRole) && layout === 'teacher_notebook_code') {
+  // DRY-RUN scenes get the ELITE path: the Execution Tracer runs the real algorithm and
+  // compiles an ExecutionTrace, rendered by the clock-driven AlgorithmStage (code + structure +
+  // pointers + stack/queue + trace table, all synced). Honest: if no real trace, we fall back to
+  // a plain executed-code demo rather than fake an animation.
+  let algorithmObject = null;
+  if (brief?.pedagogicalRole === 'dry_run' && layout === 'teacher_notebook_code') {
     try {
-      const demo = await runCodeAgent({
-        directive: brief.directive,
-        sourceText: sourcePack.chunks.map((chunk) => chunk.text).join('\n'),
-      });
+      const traced = await traceAgent({ directive: brief.directive, sourceText });
+      if (traced?.trace) {
+        algorithmObject = {
+          id: 'obj_algo_trace',
+          objectType: 'algorithm_dry_run',
+          renderHint: 'algorithm',
+          region: 'code_panel',
+          content: traced.trace,
+          sourceRef: { chunkId: sourcePack.chunks[0].id },
+        };
+        objects.push(algorithmObject);
+      }
+    } catch {
+      // fall through to the plain code demo below
+    }
+  }
+
+  // For code-teaching scenes with no elite trace, the Code Runner writes a runnable program,
+  // EXECUTES it, and the real output goes on the board. Honest: if it can't run, skip the demo.
+  if (!algorithmObject && brief && CODE_ROLES.has(brief.pedagogicalRole) && layout === 'teacher_notebook_code') {
+    try {
+      const demo = await runCodeAgent({ directive: brief.directive, sourceText });
       objects.push({
         id: 'obj_code_demo',
         objectType: 'executed_code_demo',
@@ -47,11 +70,25 @@ export async function generateSceneFromSourcePack(
     }
   }
 
-  const voice = await writeVoice({ objects, sourcePack });
-  const { timeline, durationMs } = compileProvisionalTimeline({ sceneId: id, objects, voiceLines: voice.voiceLines });
+  // Narration. The Voice Writer narrates the NON-algorithm board; the algorithm object's lines are
+  // generated DIRECTLY from its trace steps (one line per step, tagged with traceStep) so the words
+  // are guaranteed to match the animated state — single source of truth, no drift.
+  const narratable = objects.filter((o) => o.renderHint !== 'algorithm');
+  const voice = narratable.length ? await writeVoice({ objects: narratable, sourcePack }) : { voiceLines: [], usage: null };
+  const algoLines = algorithmObject
+    ? algorithmObject.content.steps.map((step, i) => ({
+        id: `${algorithmObject.id}_step_${i}`,
+        text: step.explanation,
+        targetObjectId: algorithmObject.id,
+        traceStep: i,
+        sourceRef: algorithmObject.sourceRef,
+      }))
+    : [];
+  const voiceLines = [...voice.voiceLines, ...algoLines];
+  const { timeline, durationMs } = compileProvisionalTimeline({ sceneId: id, objects, voiceLines });
 
   return {
-    scene: { sceneId: id, layout, objects, voiceLines: voice.voiceLines },
+    scene: { sceneId: id, layout, objects, voiceLines },
     timeline,
     durationMs,
     sourcePack,
