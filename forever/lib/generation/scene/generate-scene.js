@@ -31,26 +31,24 @@ export async function generateSceneFromSourcePack(
 
   // DRY-RUN scenes get the ELITE path: the Execution Tracer runs the real algorithm and
   // compiles an ExecutionTrace, rendered by the clock-driven AlgorithmStage (code + structure +
-  // pointers + stack/queue + trace table, all synced). Honest: if no real trace, we fall back to
-  // a plain executed-code demo rather than fake an animation.
+  // pointers + stack/queue + trace table, all synced). HARD RULE: a dry-run without a real
+  // trace never ships — a text-only "trace" is exactly the mediocrity Forever exists to beat.
+  // The scene fails honestly (the lesson keeps its other scenes and reports the skip).
   let algorithmObject = null;
   if (brief?.pedagogicalRole === 'dry_run' && layout === 'teacher_notebook_code') {
-    try {
-      const traced = await traceAgent({ directive: brief.directive, sourceText });
-      if (traced?.trace) {
-        algorithmObject = {
-          id: 'obj_algo_trace',
-          objectType: 'algorithm_dry_run',
-          renderHint: 'algorithm',
-          region: 'code_panel',
-          content: traced.trace,
-          sourceRef: { chunkId: sourcePack.chunks[0].id },
-        };
-        objects.push(algorithmObject);
-      }
-    } catch {
-      // fall through to the plain code demo below
+    const traced = await traceAgent({ directive: brief.directive, sourceText });
+    if (!traced?.trace) {
+      throw new Error(`Scene ${sceneId}: dry-run could not produce a REAL ExecutionTrace — refusing to ship a text-only trace`);
     }
+    algorithmObject = {
+      id: 'obj_algo_trace',
+      objectType: 'algorithm_dry_run',
+      renderHint: 'algorithm',
+      region: 'code_panel',
+      content: traced.trace,
+      sourceRef: { chunkId: sourcePack.chunks[0].id },
+    };
+    objects.push(algorithmObject);
   }
 
   // For code-teaching scenes with no elite trace, the Code Runner writes a runnable program,

@@ -52,6 +52,9 @@ TYPE C — FRAMEWORK / PROJECT (React state, Express routes, RabbitMQ pub/sub, D
  6. edge_cases     — what goes wrong in production (stale state, lost messages, race) and the guard.
  7. practice       — "now add the same for Y yourself" challenge, then the solution diff.
  8. recap          — the project's growing feature checklist + next step teaser.
+For REACT specifically: break the UI into a component tree diagram, show props/state as a flow diagram, and walk the
+event flow user click → state update → re-render as a sequence; before/after UI states on the board
+("App → TodoInput → TodoList → TodoItem; user types → setState → list re-renders").
 
 TYPE D — SYSTEMS / ARCHITECTURE (microservices, caching, load balancing...):
  1. motivate       — the failure story at scale ("before" architecture with the pain point in red).
@@ -62,6 +65,38 @@ TYPE D — SYSTEMS / ARCHITECTURE (microservices, caching, load balancing...):
  6. complexity     — trade-offs table: when to use, when NOT, alternatives.
  7. practice       — 2 MCQs on the flow + one "what breaks if X dies?" scenario question.
  8. recap          — this pattern's place in the bigger system + spiral hook ("next we add retries to this same system").
+For MESSAGE BROKERS (RabbitMQ/Kafka): the flow is producer → exchange → queue (routing key) → consumer; the dry_run
+walks ONE message end to end; the failure beat covers retry + dead-letter; the demo is two tiny services and the logs
+proving the message moved ("order service publishes order.created, email service consumes it").
+
+TYPE E — BACKEND / API (REST endpoints, auth, validation...):
+ 1. motivate       — the real API problem + the client → server → database flow drawn as a sequence.
+ 2. worked_example — the endpoint CONTRACT first: method, path, request body and response JSON, before any code.
+ 3. worked_example — the route/controller code with input validation, then RUN the request and show the real response.
+ 4. edge_cases     — the error paths with their actual responses (invalid body 400, missing auth 401, crash 500) + the security/performance note (injection, N+1, rate limits).
+ 5. practice       — extend the endpoint or predict the response for a given request; a test for the route.
+ 6. recap          — the contract recap + next endpoint hook.
+
+TYPE F — DATABASE / SQL (schema design, queries, indexes...):
+ 1. motivate       — a real app's data problem ("find total sales per customer").
+ 2. visualize      — the ER diagram (erDiagram) with relationships explained in words.
+ 3. worked_example — the SQL query, RUN it, show the RESULT TABLE (never a query without its result).
+ 4. complexity     — indexes/scan-vs-seek when the source covers performance.
+ 5. edge_cases     — the classic wrong query (missing JOIN condition, NULL trap, cartesian product) with its wrong result shown.
+ 6. practice       — write the query for a stated question; predict the result rows.
+ 7. recap.
+
+TYPE G — TESTING / SQA (unit tests, boundaries, TDD...):
+ 1. motivate       — the requirement card, verbatim.
+ 2. intuition      — deriving test scenarios from the requirement (boundaries, equivalence classes).
+ 3. worked_example — the test-case table, then the unit test code — RUN it, watch it FAIL, fix the code, watch it PASS (red-green on screen).
+ 4. edge_cases     — the boundary values everyone misses (min/max/empty/duplicate) each as a test row.
+ 5. practice       — write the missing test for a planted bug.
+ 6. recap          — coverage picture + next requirement hook.
+
+If the material fits none of these exactly, blend the closest arcs over the universal spine:
+why it matters → mental model diagram → small concrete example → code walkthrough → run output →
+trace/dry-run/debug → common mistake → practice checkpoint → production note → recap + next-step hook.
 
 CROSS-CUTTING RULES (what makes ALL beloved teachers beloved — apply to every scene):
 - concrete example before any abstraction or notation; notation late, one symbol at a time;
