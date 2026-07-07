@@ -9,8 +9,8 @@
 // driven by the lesson clock (progress -> step index) so it's synced to the tutor's words.
 // This is "point and explain while the algorithm walks the tree", not a static picture.
 
-import { useMemo } from 'react';
-import { ReactFlow, Background, MarkerType } from '@xyflow/react';
+import { useEffect, useMemo } from 'react';
+import { ReactFlow, ReactFlowProvider, Background, MarkerType, useNodesInitialized, useReactFlow } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { layoutGraph } from '../../../lib/board/diagrams/graph-layout.js';
@@ -55,7 +55,17 @@ function resolveState({ content, progress, activeNode }) {
   };
 }
 
-export function GraphView({ content, progress = 1, activeNode = null }) {
+// ReactFlow needs a ReactFlowProvider ABOVE the component that calls its hooks, so the exported
+// GraphView is a thin provider wrapper around the real inner view.
+export function GraphView(props) {
+  return (
+    <ReactFlowProvider>
+      <GraphViewInner {...props} />
+    </ReactFlowProvider>
+  );
+}
+
+function GraphViewInner({ content, progress = 1, activeNode = null }) {
   const laid = useMemo(() => {
     try {
       return layoutGraph({ nodes: content.nodes ?? [], edges: content.edges ?? [], direction: content.direction ?? 'TB' });
@@ -63,6 +73,17 @@ export function GraphView({ content, progress = 1, activeNode = null }) {
       return null;
     }
   }, [content]);
+
+  // THE FIX for "tree invisible while playing, appears on pause": the `fitView` prop only fits on
+  // the first render, which — inside the player's animated/crossfading container — happens before
+  // the nodes are measured, so it fits to nothing. useNodesInitialized() fires once the nodes have
+  // real width/height; we then fitView() for real. Re-runs on every (re)mount and layout change.
+  const nodesInitialized = useNodesInitialized();
+  const { fitView } = useReactFlow();
+  const nodeCount = laid?.nodes.length ?? 0;
+  useEffect(() => {
+    if (nodesInitialized && nodeCount > 0) fitView({ padding: 0.2, duration: 0 });
+  }, [nodesInitialized, nodeCount, fitView]);
 
   if (!laid) return <div style={{ color: '#c0392b', fontSize: 13 }}>diagram unavailable</div>;
 
