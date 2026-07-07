@@ -220,6 +220,19 @@ While the line is the active speech, the object's renderer highlights that sub-e
 per line; GraphView/CodePanel/TraceTable/ImageView highlight the active focusRef. This is the
 single biggest step toward real-teacher quality.
 
+### Graph trace-step animation findings (2026-07-07) — DECIDED
+
+User: showing a static tree isn't teaching — a real dry-run WALKS the structure (pointer
+moves, visited nodes stay marked, current node highlights, values change), animated + synced.
+Research (VisuAlgo/algorithm-visualizer): algorithms emit a SEQUENCE OF STEPS, each a full
+visual STATE (current/visited nodes, pointers, variables); the player animates through them;
+group micro-steps into logical steps. DECISION: a graph diagram carries an optional
+`trace: [{note, current, visited[], pointers{}}]`. GraphView animates through steps driven by
+the clock (progress -> step index): current node orange, visited green, pointer labels on
+nodes, step note as caption, Framer-Motion transitions. Board Director emits the trace for
+traversal/search scenes (ideally from the Code Runner's REAL execution trace). This is the
+VisuAlgo-quality dry-run — the core DSA teaching-quality unlock.
+
 ### Phase 6 findings (2026-07-05, from the old server's proven code) — DECIDED EARLY
 
 **PDF page rendering** (port of `server/services/googleAgent/pdfPageImageRenderer.service.js`):

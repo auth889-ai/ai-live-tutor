@@ -53,6 +53,29 @@ export function validateDiagramContent(content, context = 'diagram') {
         if (!ids.has(String(nid))) throw new Error(`${context} graph highlightSequence references a missing node`);
       }
     }
+    // Optional DRY-RUN TRACE: the algorithm walking the structure step by step (VisuAlgo-style).
+    // Each step is a full visual STATE — current node, visited set, named pointers (low/mid/high,
+    // slow/fast) — animated on the graph and narrated. This is the real dry-run, not a static tree.
+    if (content.trace !== undefined) {
+      if (!Array.isArray(content.trace) || content.trace.length === 0) {
+        throw new Error(`${context} graph trace must be a non-empty array of steps`);
+      }
+      content.trace.forEach((step, i) => {
+        if (!step || typeof step !== 'object') throw new Error(`${context} graph trace step ${i} must be an object`);
+        if (typeof step.note !== 'string' || !step.note.trim()) throw new Error(`${context} graph trace step ${i} needs a note`);
+        if (step.current !== undefined && step.current !== null && !ids.has(String(step.current))) {
+          throw new Error(`${context} graph trace step ${i} current references a missing node`);
+        }
+        if (step.visited !== undefined) {
+          if (!Array.isArray(step.visited)) throw new Error(`${context} graph trace step ${i} visited must be an array`);
+          for (const nid of step.visited) if (!ids.has(String(nid))) throw new Error(`${context} graph trace step ${i} visited references a missing node`);
+        }
+        if (step.pointers !== undefined) {
+          if (typeof step.pointers !== 'object' || Array.isArray(step.pointers)) throw new Error(`${context} graph trace step ${i} pointers must be an object`);
+          for (const nid of Object.values(step.pointers)) if (!ids.has(String(nid))) throw new Error(`${context} graph trace step ${i} pointer references a missing node`);
+        }
+      });
+    }
     return content;
   }
   throw new Error(`${context} has unknown diagramType: ${type}`);

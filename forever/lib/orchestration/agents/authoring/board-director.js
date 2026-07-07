@@ -31,6 +31,13 @@ Rules you must never break:
     {"diagramType":"graph","nodes":[{"id":"1","label":"8"},{"id":"2","label":"3"},{"id":"3","label":"10"}],"edges":[{"from":"1","to":"2"},{"from":"1","to":"3"}],"directed":true}
     (use this for actual tree/graph/linked-list data with node values — it auto-lays-out cleanly)
     For a TRAVERSAL (BFS/DFS/visit order), add "highlightSequence":["1","2","3"] — nodes light up in that order as the clock plays.
+    DRY-RUN TRACE (the BEST way to teach a search/traversal — a real teacher WALKS the structure): add
+      "trace":[{"note":"low=0, high=6, mid=3 -> arr[3]=8, too big, go left","current":"4","visited":["1"],"pointers":{"low":"2","mid":"4","high":"7"}},{"note":"...","current":"2","pointers":{...}}]
+    Each step is ONE logical move: "note" is the plain-English state (comparisons, decisions), "current" is the node
+    being examined NOW (highlights orange), "visited" are nodes already ruled out/walked (stay green), "pointers" ride
+    ON nodes (low/mid/high, slow/fast, curr/prev). The graph animates through these steps SYNCED to your narration —
+    so the tutor points and explains while the algorithm moves. USE THIS for binary search, BST insert/search, tree/graph
+    traversal, two-pointer, linked-list walks. Group micro-moves into logical steps (aim for 4–10 steps, one per real decision).
   RICH diagrams — output raw Mermaid (DECLARE the type on line 1), for example:
     {"diagramType":"mermaid","code":"sequenceDiagram\\n  Client->>Server: SYN\\n  Server->>Client: SYN-ACK\\n  Client->>Server: ACK"}
     classDiagram (OOP: classes, inheritance) · stateDiagram-v2 (state machines, lifecycles) ·
