@@ -18,13 +18,26 @@ export function reconcileTimeline({ sceneId, objects, voiceLines, clips, audioUr
     durationById.set(clip.voiceLineId, clip.durationMs);
   }
 
-  // Assign each line its true offset in the gapless concatenated audio.
+  // Assign each line its true offset in the gapless concatenated audio. When the TTS
+  // returned word timings, shift them to ABSOLUTE clock times too — word-level sync
+  // (karaoke subtitles, word-anchored highlights) rides on these.
+  const wordsById = new Map();
+  for (const clip of clips) {
+    if (Array.isArray(clip.wordTimings) && clip.wordTimings.length) wordsById.set(clip.voiceLineId, clip.wordTimings);
+  }
   const timingByLine = new Map();
+  const enrichedLines = [];
   let offset = 0;
   for (const line of voiceLines) {
     const durationMs = durationById.get(line.id);
     if (!(durationMs > 0)) throw new Error(`reconcileTimeline: no measured clip for voice line ${line.id}`);
     timingByLine.set(line.id, { startMs: offset, durationMs });
+    const words = wordsById.get(line.id);
+    enrichedLines.push(
+      words
+        ? { ...line, words: words.map((w) => ({ word: w.word, startMs: w.startMs + offset, endMs: w.endMs + offset })) }
+        : line,
+    );
     offset += durationMs;
   }
   const totalMs = offset;
@@ -75,5 +88,5 @@ export function reconcileTimeline({ sceneId, objects, voiceLines, clips, audioUr
   actions.sort((a, b) => a.startMs - b.startMs || a.id.localeCompare(b.id));
   const timeline = { sceneId, timingSource: 'reconciled', audio: { url: audioUrl, durationMs: totalMs }, actions };
   validateTimeline(timeline, { objects, voiceLines });
-  return { timeline, durationMs: totalMs };
+  return { timeline, durationMs: totalMs, voiceLines: enrichedLines };
 }

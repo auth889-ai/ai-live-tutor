@@ -56,7 +56,7 @@ export async function voiceLesson(
     for (const line of scene.voiceLines) {
       const clip = await synthesizeWithRetry(doSynth, line.text, { attempts });
       buffers.push(clip.bytes);
-      clips.push({ voiceLineId: line.id, durationMs: clip.durationMs });
+      clips.push({ voiceLineId: line.id, durationMs: clip.durationMs, wordTimings: clip.wordTimings ?? null });
     }
 
     const { bytes, extension } = concatAudioClips(buffers);
@@ -64,14 +64,14 @@ export async function voiceLesson(
     await mkdir(outDir, { recursive: true });
     await writeFile(path.join(outDir, `${scene.sceneId}.${extension}`), bytes);
 
-    const { timeline, durationMs } = reconcileTimeline({
+    const { timeline, durationMs, voiceLines } = reconcileTimeline({
       sceneId: scene.sceneId,
       objects: scene.objects,
       voiceLines: scene.voiceLines,
       clips,
       audioUrl,
     });
-    scenes.push({ ...scene, timeline, durationMs, audioUrl });
+    scenes.push({ ...scene, voiceLines, timeline, durationMs, audioUrl });
     done += 1;
     onProgress({ sceneDone: done, sceneTotal });
   }

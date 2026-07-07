@@ -80,7 +80,17 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
         </AnimatePresence>
       </div>
       <div style={{ minHeight: 54, padding: '12px 24px', background: '#fffdf8', borderTop: '1px solid #efe6d3', color: '#5a4a2a', fontSize: 18, textAlign: 'center', lineHeight: 1.5 }}>
-        {subtitle}
+        {/* Karaoke sync: when TTS word timings exist, the word being SPOKEN right now lights
+            up (Mayer's temporal contiguity — eye and ear on the same thing). Fallback: prose. */}
+        {activeLine?.words?.length ? (
+          activeLine.words.map((w, i) => (
+            <span key={i} style={tMs >= w.startMs && tMs < w.endMs
+              ? { background: '#fdeaa7', borderRadius: 4, padding: '0 2px', color: '#2b211a', fontWeight: 700 }
+              : tMs >= w.endMs ? { color: '#2b211a' } : undefined}>
+              {w.word}{' '}
+            </span>
+          ))
+        ) : subtitle}
       </div>
       {/* Student practice: the scene's code seeds an editable sandbox run (Koedinger: doing
           beats watching). Shown for code demos and algorithm trace scenes. */}

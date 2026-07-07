@@ -62,3 +62,19 @@ test('a missing clip for any voice line is an honest failure', () => {
 test('reconciliation is deterministic', () => {
   assert.deepEqual(reconcile(), reconcile());
 });
+
+test('word timings shift to ABSOLUTE clock times per line (karaoke/word-anchor substrate)', () => {
+  const objects = [{ id: 'o1', renderHint: 'text' }];
+  const voiceLines = [
+    { id: 'v1', text: 'first line', targetObjectId: 'o1' },
+    { id: 'v2', text: 'second line', targetObjectId: 'o1' },
+  ];
+  const clips = [
+    { voiceLineId: 'v1', durationMs: 2000, wordTimings: [{ word: 'first', startMs: 0, endMs: 800 }, { word: 'line', startMs: 900, endMs: 1900 }] },
+    { voiceLineId: 'v2', durationMs: 1500, wordTimings: [{ word: 'second', startMs: 100, endMs: 700 }] },
+  ];
+  const { voiceLines: enriched } = reconcileTimeline({ sceneId: 'sc', objects, voiceLines, clips, audioUrl: '/a.mp3' });
+  assert.deepEqual(enriched[0].words[1], { word: 'line', startMs: 900, endMs: 1900 });
+  // second clip starts after the first (offset 2000) -> its words shift by 2000
+  assert.deepEqual(enriched[1].words[0], { word: 'second', startMs: 2100, endMs: 2700 });
+});
