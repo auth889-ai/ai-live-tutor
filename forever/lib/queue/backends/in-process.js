@@ -35,9 +35,14 @@ export function createInProcessQueue({ process = processLessonJob } = {}) {
     return job ? { ...job } : null;
   }
 
+  async function health() {
+    // No external deps and the "worker" is this same process, so it's ready whenever the app is.
+    return { backend: 'in-process', redis: 'n/a', worker: 'in-process' };
+  }
+
   async function close() {
     jobs.clear();
   }
 
-  return { enqueue, getJob, close, backend: 'in-process' };
+  return { enqueue, getJob, health, close, backend: 'in-process' };
 }

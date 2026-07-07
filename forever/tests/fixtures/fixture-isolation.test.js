@@ -4,11 +4,12 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 // THE GUARANTEE: fixture content can never become product content. Fixtures may only
-// be imported by tests/ and the dev-only player page — never by lib/, packages/, or
-// workers/. If a generation or playback module ever references fixtures/, this test
-// fails the build. (Guards against the old System 1 "fake templated lesson" mistake.)
+// be imported by tests/ and the dev-only player page — never by the product domain
+// layer (lib/, which includes the queue worker). If a generation or playback module
+// ever references fixtures/, this test fails the build. (Guards against the old
+// System 1 "fake templated lesson" mistake.)
 
-const FORBIDDEN_ROOTS = ['lib', 'packages', 'workers'];
+const FORBIDDEN_ROOTS = ['lib'];
 
 function walk(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

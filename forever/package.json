@@ -11,6 +11,8 @@
     "start": "next start",
     "worker": "node --env-file=.env lib/queue/worker.js",
     "test": "node --test",
+    "test:unit": "node --test --test-name-pattern='.' tests/board tests/execution tests/generation tests/orchestration tests/playback tests/queue tests/source-pack tests/tts tests/course-series tests/fixtures",
+    "test:e2e": "node --test tests/e2e",
     "check:contracts": "node --test tests/**/*.test.js"
   },
   "engines": {

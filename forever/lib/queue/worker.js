@@ -7,7 +7,7 @@
 import { Worker } from 'bullmq';
 import IORedis from 'ioredis';
 
-import { JOB_NAME } from './job-contract.js';
+import { JOB_NAME, WORKER_HEARTBEAT_KEY } from './job-contract.js';
 import { processLessonJob } from './lesson-processor.js';
 
 const redisUrl = process.env.REDIS_URL;
@@ -25,6 +25,13 @@ const worker = new Worker(
   { connection, concurrency },
 );
 
+// Heartbeat: refresh a short-TTL key so /api/health can tell a worker is alive. If the worker
+// dies, the key expires and health flips to worker:down — no more silent "0% forever".
+const beat = () => connection.set(WORKER_HEARTBEAT_KEY, String(Date.now()), 'EX', 30).catch(() => {});
+beat();
+const heartbeat = setInterval(beat, 10_000);
+heartbeat.unref?.();
+
 worker.on('completed', (job) => console.log(`[worker] job ${job.id} completed`));
 worker.on('failed', (job, err) => console.error(`[worker] job ${job?.id} failed: ${err?.message}`));
 // Without an error listener BullMQ can stop processing on an emitted error — always attach one.
@@ -32,6 +39,7 @@ worker.on('error', (err) => console.error(`[worker] error: ${err?.message}`));
 
 async function shutdown(signal) {
   console.log(`[worker] ${signal} received — closing gracefully (finishing in-flight jobs)`);
+  clearInterval(heartbeat);
   await worker.close(); // stops taking new jobs, waits for active ones
   await connection.quit();
   process.exit(0);

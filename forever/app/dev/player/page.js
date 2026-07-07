@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { boardStateAt } from '../../../lib/playback/engine/action-engine.js';
 import { createManualClock } from '../../../lib/playback/clock/manual-clock.js';
-import { renderBoardSvg } from '../../../packages/@forever/renderer/src/board-svg.js';
+import { renderBoardSvg } from '../../../lib/board/renderer/board-svg.js';
 import {
   nestedLoopsScene,
   nestedLoopsTimeline,

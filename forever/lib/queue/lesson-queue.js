@@ -36,6 +36,12 @@ export async function getLessonJob(jobId) {
   return lessonQueue().getJob(jobId);
 }
 
+// Readiness for /api/health — Redis reachability + worker liveness (or in-process).
+export async function getQueueHealth() {
+  const queue = lessonQueue();
+  return queue.health ? queue.health() : { backend: queue.backend };
+}
+
 // Test seam: reset the memoized backend so a suite can inject its own.
 export function __setLessonQueue(queue) {
   singleton = queue;

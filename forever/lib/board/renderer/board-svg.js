@@ -11,8 +11,8 @@
 
 import rough from 'roughjs';
 
-import { BOARD_WIDTH, BOARD_HEIGHT, getRegion } from '../../../../lib/board/layout/layout-regions.js';
-import { layoutDiagram } from '../../../../lib/board/diagrams/diagram-layout.js';
+import { BOARD_WIDTH, BOARD_HEIGHT, getRegion } from '../layout/layout-regions.js';
+import { layoutDiagram } from '../diagrams/diagram-layout.js';
 
 const INK = '#c0392b'; // primary handwriting ink (mockups: warm red)
 const PAPER = '#fdf8f0';

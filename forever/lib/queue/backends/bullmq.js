@@ -10,7 +10,7 @@
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 
-import { JOB_NAME } from '../job-contract.js';
+import { JOB_NAME, WORKER_HEARTBEAT_KEY } from '../job-contract.js';
 
 const JOB_OPTS = {
   attempts: 2,
@@ -41,10 +41,23 @@ export function createBullQueue({ redisUrl }) {
     };
   }
 
+  // Readiness: can we reach Redis, and has a worker checked in recently?
+  async function health() {
+    let redis = 'down';
+    let worker = 'down';
+    try {
+      redis = (await connection.ping()) === 'PONG' ? 'up' : 'down';
+    } catch { /* redis down */ }
+    try {
+      if (await connection.get(WORKER_HEARTBEAT_KEY)) worker = 'up';
+    } catch { /* treated as no worker */ }
+    return { backend: 'bullmq', redis, worker };
+  }
+
   async function close() {
     await queue.close();
     await connection.quit();
   }
 
-  return { enqueue, getJob, close, backend: 'bullmq' };
+  return { enqueue, getJob, health, close, backend: 'bullmq' };
 }

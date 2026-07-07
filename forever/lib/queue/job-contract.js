@@ -5,6 +5,10 @@
 
 export const JOB_NAME = 'generate-lesson';
 
+// The worker refreshes this Redis key on a short TTL; /api/health reads it to know a worker is
+// alive (this is what makes a "no worker -> 0% forever" state observable instead of silent).
+export const WORKER_HEARTBEAT_KEY = 'forever:worker:heartbeat';
+
 // Lifecycle phases the browser can render as a real progress bar (not a fake spinner).
 export const PHASES = Object.freeze(['queued', 'routing', 'planning', 'generating', 'saving', 'done', 'failed']);
 

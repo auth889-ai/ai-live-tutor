@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { renderBoardSvg, seedFrom } from '../../packages/@forever/renderer/src/board-svg.js';
-import { boardStateAt } from '../../lib/playback/engine/action-engine.js';
+import { renderBoardSvg, seedFrom } from '../../../lib/board/renderer/board-svg.js';
+import { boardStateAt } from '../../../lib/playback/engine/action-engine.js';
 
 const scene = {
   layout: 'teacher_notebook_code',
