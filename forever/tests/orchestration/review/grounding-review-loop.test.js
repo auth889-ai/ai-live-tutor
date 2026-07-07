@@ -76,3 +76,26 @@ test('persistent ungrounded content raises rather than shipping', async () => {
     SceneQualityError,
   );
 });
+
+test('a pedagogy objection also triggers a revision (two critics)', async () => {
+  let audits = 0;
+  let revised = 0;
+  const result = await runGroundingReview({
+    sceneId: 'sc_p',
+    sourcePack,
+    agents: {
+      designBoard: async () => goodBoard,
+      auditGrounding: async () => ({ objections: [], usage: null }),
+      auditPedagogy: async () => {
+        audits += 1;
+        return { objections: audits === 1 ? [objection('sc_p', 0)] : [], usage: null };
+      },
+      reviseBoard: async () => {
+        revised += 1;
+        return goodBoard;
+      },
+    },
+  });
+  assert.equal(revised, 1, 'pedagogy objection caused a revision');
+  assert.ok(result.transcript.some((m) => m.kind === 'objection'));
+});

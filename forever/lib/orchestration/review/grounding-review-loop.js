@@ -5,6 +5,7 @@
 
 import { designBoard, reviseBoard } from '../agents/authoring/board-director.js';
 import { auditGrounding } from '../agents/critics/grounding-auditor.js';
+import { auditPedagogy } from '../agents/critics/pedagogy-critic.js';
 import { createSocietyMessage } from '../messages/society-messages.js';
 import { FOREVER_AGENT_ROLES } from '../roles/agent-roles.js';
 
@@ -17,7 +18,7 @@ export async function runGroundingReview({
   brief = null,
   maxRounds,
   // Agents are injectable so the state machine is unit-testable without spending tokens.
-  agents = { designBoard, reviseBoard, auditGrounding },
+  agents = { designBoard, reviseBoard, auditGrounding, auditPedagogy },
 }) {
   const rounds = maxRounds ?? Number(process.env.MAX_DEBATE_ROUNDS || 2);
   const transcript = [];
@@ -36,8 +37,16 @@ export async function runGroundingReview({
   );
 
   for (let round = 0; round <= rounds; round += 1) {
-    const audit = await agents.auditGrounding({ sceneId, objects: board.objects, sourcePack });
-    usages.push(audit.usage);
+    // Two independent critics review each round: grounding (facts) + pedagogy (teaching
+    // quality). Their objections merge — the board must satisfy BOTH to pass.
+    const [grounding, pedagogy] = await Promise.all([
+      agents.auditGrounding({ sceneId, objects: board.objects, sourcePack }),
+      agents.auditPedagogy
+        ? agents.auditPedagogy({ sceneId, objects: board.objects, brief })
+        : Promise.resolve({ objections: [], usage: null }),
+    ]);
+    const audit = { objections: [...grounding.objections, ...pedagogy.objections] };
+    usages.push(grounding.usage, pedagogy.usage);
     transcript.push(...audit.objections);
 
     if (audit.objections.length === 0) {
