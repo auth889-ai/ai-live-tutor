@@ -46,7 +46,7 @@ export async function processLessonJob(rawInput, { report = () => {}, deps = {} 
     const lessonJobs = {};
     for (const episode of outline.episodes) {
       for (const lesson of episode.lessons) {
-        const { jobId } = await enqueue({ input: { type: 'course-lesson', courseId, outlineLessonId: lesson.id }, ownerId });
+        const { jobId } = await enqueue({ input: { type: 'course-lesson', courseId, outlineLessonId: lesson.id }, ownerId }, { priority: 10 }); // batch: interactive jobs jump ahead
         lessonJobs[lesson.id] = { jobId, queuedAt: new Date().toISOString() };
       }
     }

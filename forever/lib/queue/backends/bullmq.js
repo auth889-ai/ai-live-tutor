@@ -23,8 +23,10 @@ export function createBullQueue({ redisUrl }) {
   const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
   const queue = new Queue(JOB_NAME, { connection });
 
-  async function enqueue(input) {
-    const job = await queue.add(JOB_NAME, input, JOB_OPTS);
+  async function enqueue(input, { priority } = {}) {
+    // BullMQ: lower number = higher priority. Interactive jobs (a user waiting at the
+    // Studio) must never sit behind a batch course fan-out.
+    const job = await queue.add(JOB_NAME, input, priority ? { ...JOB_OPTS, priority } : JOB_OPTS);
     return { jobId: String(job.id) };
   }
 

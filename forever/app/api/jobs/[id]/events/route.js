@@ -40,11 +40,17 @@ export async function GET(_request, { params }) {
             lastPercent = p.percent;
             send('progress', p);
           }
-          // Guard against the silent "0% forever" hang: if the job is still waiting/queued after
-          // a few seconds, no worker is picking it up — tell the user instead of spinning.
+          // Guard against the silent "0% forever" hang — but tell the TRUTH: a live worker
+          // with a backlog is "you're in line", not "start the worker".
           if (!warnedNoWorker && (job.state === 'waiting' || p?.phase === 'queued') && Date.now() - started > NO_WORKER_MS) {
             warnedNoWorker = true;
-            send('progress', { phase: 'queued', percent: 0, message: 'Still queued — is the worker running? Start it with: npm run worker' });
+            let message = 'Still queued — is the worker running? Start it with: npm run worker';
+            try {
+              const { getQueueHealth } = await import('../../../../../lib/queue/lesson-queue.js');
+              const h = await getQueueHealth();
+              if (h?.worker === 'up') message = 'Queued — the worker is busy with earlier jobs; yours starts as soon as a slot frees.';
+            } catch { /* keep the generic hint */ }
+            send('progress', { phase: 'queued', percent: 0, message });
           }
           if (job.state === 'completed') {
             send('done', job.result ?? {});

@@ -28,8 +28,8 @@ export function lessonQueue() {
 
 // async so the same call works for both backends (BullMQ's add/getJob are async; the
 // in-process backend returns plain values that await through unchanged).
-export async function enqueueLesson(input) {
-  return lessonQueue().enqueue(input);
+export async function enqueueLesson(input, options = {}) {
+  return lessonQueue().enqueue(input, options);
 }
 
 export async function getLessonJob(jobId) {

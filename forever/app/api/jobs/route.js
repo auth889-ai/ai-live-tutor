@@ -48,6 +48,6 @@ export async function POST(request) {
     return Response.json({ error: String(error.message || error) }, { status: 400 });
   }
 
-  const { jobId } = await enqueueLesson(input);
+  const { jobId } = await enqueueLesson(input, { priority: 1 }); // a user is WAITING on this one
   return Response.json({ jobId }, { status: 202 });
 }
