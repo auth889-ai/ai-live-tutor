@@ -48,7 +48,7 @@ export default function LoginPage() {
         className="login-cover"
         style={{
           flex: 1.2, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-          backgroundImage: 'linear-gradient(200deg, rgba(26,16,8,0.05) 25%, rgba(26,16,8,0.55) 70%, rgba(20,12,6,0.85)), url(/images/study-28.png)',
+          backgroundImage: 'linear-gradient(200deg, rgba(26,16,8,0.05) 25%, rgba(26,16,8,0.55) 70%, rgba(20,12,6,0.85)), url(/images/study-28.jpg)',
           backgroundSize: 'cover', backgroundPosition: 'center', padding: 44, color: '#fff',
         }}
       >

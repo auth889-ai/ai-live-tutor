@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import { DashboardSidebar } from '../../components/dashboard/sidebar.js';
 
 const UI = {
-  text: '#2b211a', muted: '#8a6d3b', border: '#f0e2d0', card: '#fff',
+  text: '#2b211a', muted: '#8a6d3b', border: '#f5e6d9', card: '#fff',
   accent: '#f47368', accentDark: '#e8604c', bgSoft: '#fdf6ee',
 };
 

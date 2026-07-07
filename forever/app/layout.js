@@ -19,7 +19,7 @@ export default function RootLayout({ children }) {
           :root { --caveat: ${caveat.style.fontFamily}; }
         `}</style>
       </head>
-      <body style={{ margin: 0, background: '#faf5ec', fontFamily: 'system-ui, sans-serif' }}>{children}</body>
+      <body style={{ margin: 0, background: '#fff8f2', fontFamily: 'system-ui, sans-serif' }}>{children}</body>
     </html>
   );
 }

@@ -5,7 +5,7 @@
 // is presentation. Items that aren't built yet are shown disabled ("soon") — honest UI,
 // no dead links.
 
-const UI = { text: '#2b211a', muted: '#8a6d3b', border: '#f0e2d0', accent: '#f47368', soft: '#fdece8' };
+const UI = { text: '#2b211a', muted: '#8a6d3b', border: '#f5e6d9', accent: '#f47368', soft: '#fdece8' };
 
 export function DashboardSidebar({ email, active = 'home' }) {
   const nav = [
@@ -55,7 +55,16 @@ export function DashboardSidebar({ email, active = 'home' }) {
         </span>
       ))}
 
-      <div style={{ marginTop: 'auto', borderTop: `1px solid ${UI.border}`, paddingTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+      <a href="/studio" style={{ marginTop: 'auto', display: 'block', borderRadius: 14, overflow: 'hidden', textDecoration: 'none', color: UI.text, border: `1px solid ${UI.border}`, marginBottom: 10 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/images/study-33.png" alt="" style={{ width: '100%', height: 74, objectFit: 'cover', display: 'block' }} />
+        <span style={{ display: 'block', padding: '10px 12px', background: UI.soft }}>
+          <span style={{ display: 'block', fontWeight: 800, fontSize: 13 }}>✨ Build a new course</span>
+          <span style={{ display: 'block', fontSize: 11.5, color: UI.muted, marginTop: 2 }}>From any PDF, article or notes.</span>
+        </span>
+      </a>
+
+      <div style={{ borderTop: `1px solid ${UI.border}`, paddingTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ width: 34, height: 34, borderRadius: '50%', background: UI.soft, color: UI.accent, display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 15, textTransform: 'uppercase' }}>
           {(name || 'u')[0]}
         </span>
