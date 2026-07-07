@@ -5,7 +5,9 @@ import { spawn } from 'node:child_process';
 
 const procs = [
   { name: 'web   ', cmd: 'next', args: ['dev'] },
-  { name: 'worker', cmd: 'node', args: ['--env-file=.env', 'lib/queue/worker.js'] },
+  // --watch: the worker restarts on code changes like the web process does — otherwise a
+  // long dev session silently runs jobs on STALE code (a real bug we hit).
+  { name: 'worker', cmd: 'node', args: ['--watch', '--env-file=.env', 'lib/queue/worker.js'] },
 ].map(({ name, cmd, args }) => {
   const child = spawn(cmd, args, { stdio: 'inherit', shell: true, env: process.env });
   child.on('exit', (code) => {
