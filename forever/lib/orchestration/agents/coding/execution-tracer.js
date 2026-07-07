@@ -93,6 +93,18 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
       if (process.env.TRACE_DEBUG) console.error(`[tracer] attempt ${attempt}: ${lastError}\n--steps--\n${JSON.stringify(steps).slice(0, 500)}\n--views--\n${JSON.stringify(views)}`);
       continue;
     }
+    // QUALITY GATE, not just validity: an elite dry-run shows pointers RIDING the structure
+    // (low/mid/high, slow/fast, curr) at every step — a trace without them is a lecture,
+    // not a VisuAlgo-grade animation. One repair pass demands them.
+    if (attempt < maxFixes) {
+      const stateful = steps.filter((s) => s.array || s.graph);
+      const withPointers = stateful.filter((s) => s.array?.pointers || s.graph?.pointers);
+      if (stateful.length > 0 && withPointers.length < stateful.length) {
+        lastError = `Only ${withPointers.length}/${stateful.length} steps carry "pointers" — EVERY array/graph step must include its pointer positions (e.g. {"low":0,"mid":3,"high":6}) so they visibly move on the structure.`;
+        if (process.env.TRACE_DEBUG) console.error(`[tracer] attempt ${attempt}: ${lastError}`);
+        continue;
+      }
+    }
     return { trace, usage, fixes: attempt };
   }
 
