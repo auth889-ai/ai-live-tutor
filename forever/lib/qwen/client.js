@@ -23,9 +23,25 @@ export async function callQwenJson({
   temperature = 0.4,
   maxTokens = 4000,
   timeoutMs = 150_000,
+  retries = 2,
   env = process.env,
 }) {
   const { apiKey, baseUrl } = qwenConfig(env);
+  let lastError;
+  // Retry transient failures (timeout/abort, network, 429/5xx) with backoff — the workspace
+  // API is intermittently slow, and a whole lesson shouldn't die on one flaky call.
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await callOnce();
+    } catch (error) {
+      lastError = error;
+      if (!isTransient(error) || attempt === retries) throw error;
+      await sleep(1000 * (attempt + 1));
+    }
+  }
+  throw lastError;
+
+  async function callOnce() {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -61,4 +77,18 @@ export async function callQwenJson({
   } finally {
     clearTimeout(timer);
   }
+  }
+}
+
+function isTransient(error) {
+  const m = String(error?.message || error);
+  return (
+    error?.name === 'AbortError' ||
+    /aborted|network|fetch failed|ECONNRESET|ETIMEDOUT|socket/i.test(m) ||
+    /HTTP (429|500|502|503|504)/.test(m)
+  );
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
