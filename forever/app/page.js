@@ -88,6 +88,15 @@ function Landing() {
         </div>
       </section>
 
+      {/* study-anywhere photo strip — the photos AND the video both live */}
+      <section style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'flex-end', margin: '0 0 34px', flexWrap: 'wrap' }}>
+        {[['/images/study-26.png', 'Learners in a grand library', -2.5, 150], ['/images/study-23.png', 'A laptop and notebook study setup', 0, 200], ['/images/study-25.png', 'Studying in a café', 2.5, 150]].map(([src, alt, tilt, h]) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={src} src={src} alt={alt}
+            style={{ height: h, width: 'auto', maxWidth: '85vw', objectFit: 'cover', borderRadius: 16, transform: `rotate(${tilt}deg)`, boxShadow: '0 16px 40px rgba(58,46,34,0.18)', border: '5px solid #fff' }} />
+        ))}
+      </section>
+
       {/* scene types */}
       <section style={{ padding: '28px 0' }}>
         <h2 style={h2}>One lesson, four kinds of scenes</h2>
