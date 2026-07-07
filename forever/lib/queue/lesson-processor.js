@@ -44,13 +44,17 @@ export async function processLessonJob(rawInput, { report = () => {}, deps = {} 
 
     const enqueue = deps.enqueue ?? (await import('./lesson-queue.js')).enqueueLesson;
     const lessonJobs = {};
+    let first = true;
     for (const episode of outline.episodes) {
       for (const lesson of episode.lessons) {
         const { jobId } = await enqueue(
           { input: { type: 'course-lesson', courseId, outlineLessonId: lesson.id }, ownerId },
-          { priority: 10, jobId: `cl-${courseId}-${lesson.id}` }, // batch priority + idempotent id: never double-queued
+          // TIME-TO-FIRST-PLAYABLE: lesson 1.1 jumps the batch (priority 3) so the student
+          // has something to WATCH within minutes; the rest fill in behind (priority 10).
+          { priority: first ? 3 : 10, jobId: `cl-${courseId}-${lesson.id}` },
         );
         lessonJobs[lesson.id] = { jobId, queuedAt: new Date().toISOString() };
+        first = false;
       }
     }
     // Topic cover art (Pexels/Pixabay, free-license) — enrichment, never a failure point.
