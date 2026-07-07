@@ -4,6 +4,31 @@
 
 const DEFAULT_BASE_URL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
 
+// Process-wide usage ledger: every call records its real token usage per agent, so cost
+// is MEASURED (benchmark tables, ops dashboards), never estimated.
+const ledger = { calls: 0, inputTokens: 0, outputTokens: 0, byAgent: {} };
+
+export function recordUsage(agent, usage) {
+  ledger.calls += 1;
+  ledger.inputTokens += usage?.prompt_tokens ?? 0;
+  ledger.outputTokens += usage?.completion_tokens ?? 0;
+  const slot = (ledger.byAgent[agent] ??= { calls: 0, inputTokens: 0, outputTokens: 0 });
+  slot.calls += 1;
+  slot.inputTokens += usage?.prompt_tokens ?? 0;
+  slot.outputTokens += usage?.completion_tokens ?? 0;
+}
+
+export function resetUsageLedger() {
+  ledger.calls = 0;
+  ledger.inputTokens = 0;
+  ledger.outputTokens = 0;
+  ledger.byAgent = {};
+}
+
+export function readUsageLedger() {
+  return JSON.parse(JSON.stringify(ledger));
+}
+
 export function qwenConfig(env = process.env) {
   const apiKey = env.DASHSCOPE_API_KEY;
   if (!apiKey?.trim()) throw new Error('DASHSCOPE_API_KEY is not set');
@@ -73,6 +98,7 @@ export async function callQwenJson({
     } catch {
       throw new Error(`Agent "${agent}" returned invalid JSON: ${text.slice(0, 300)}`);
     }
+    recordUsage(agent, payload.usage);
     return { json, usage: payload.usage ?? null, model };
   } finally {
     clearTimeout(timer);

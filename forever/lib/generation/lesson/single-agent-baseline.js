@@ -41,6 +41,7 @@ Every object must cite a real chunkId. Aim for 5-8 scenes.`;
   return {
     approach: 'single-agent',
     lessonTitle: String(json.lessonTitle || sourcePack.title),
+    scenes, // raw output — the benchmark judge must see the REAL baseline lesson, not a summary
     totalScenes: scenes.length,
     validScenes,
     groundingRate: totalObjects ? groundedObjects / totalObjects : 0,
