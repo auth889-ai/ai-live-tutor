@@ -185,7 +185,7 @@ export default function StudioPage() {
           </label>
         )}
 
-        <button onClick={startJob} disabled={!canStart}
+        <button onClick={startJob} disabled={!canStart} className={canStart ? 'forever-glow' : undefined}
           style={{
             marginTop: 16, padding: '13px 30px', borderRadius: 12, border: 'none', fontSize: 15.5, fontWeight: 800,
             background: canStart ? UI.accent : '#f0e2d0', color: canStart ? '#fff' : UI.muted, cursor: canStart ? 'pointer' : 'default',

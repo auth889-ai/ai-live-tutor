@@ -47,7 +47,10 @@ export default async function CourseSyllabusPage({ params }) {
 
         {outline.episodes.map((episode, epIndex) => (
           <section key={episode.id} style={{ background: UI.card, border: `1px solid ${UI.border}`, borderRadius: 18, marginBottom: 14, overflow: 'hidden', boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
-            <div style={{ padding: '14px 18px', background: UI.bgSoft, display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <div style={{ padding: '12px 18px', background: UI.bgSoft, display: 'flex', alignItems: 'center', gap: 12 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={['/images/study-29.png', '/images/study-31.png', '/images/study-33.png'][epIndex % 3]} alt=""
+                style={{ width: 52, height: 40, objectFit: 'cover', borderRadius: 10, flexShrink: 0, border: '2px solid #fff', boxShadow: '0 2px 8px rgba(58,46,34,0.15)' }} />
               <span style={{ fontWeight: 800, fontSize: 15.5 }}>Episode {epIndex + 1} · {episode.title}</span>
               <span style={{ fontSize: 12, color: UI.muted, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
                 ~{episode.estimatedMinutes} min · quiz of {episode.quizQuestionCount}

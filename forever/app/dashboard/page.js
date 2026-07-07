@@ -59,7 +59,7 @@ export default async function DashboardPage() {
               <div style={{ fontWeight: 800, fontSize: 17, lineHeight: 1.3 }}>{latest.title}</div>
               <div style={{ fontSize: 13, color: UI.muted, marginTop: 5 }}>🎬 {latest.scenes} scenes · ⏱ {fmtDuration(latest.durationMs)}{latest.voiced ? ' · 🔊 voiced' : ''}</div>
             </div>
-            <a href={`/course/${latest.id}`} style={{ background: UI.accent, color: '#fff', padding: '13px 26px', borderRadius: 12, textDecoration: 'none', fontWeight: 800, whiteSpace: 'nowrap', boxShadow: '0 8px 20px rgba(244,115,104,0.35)' }}>
+            <a className="forever-glow" href={`/course/${latest.id}`} style={{ background: UI.accent, color: '#fff', padding: '13px 26px', borderRadius: 12, textDecoration: 'none', fontWeight: 800, whiteSpace: 'nowrap', boxShadow: '0 8px 20px rgba(244,115,104,0.35)' }}>
               Continue learning ▶
             </a>
           </section>
