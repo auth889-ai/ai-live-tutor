@@ -38,6 +38,22 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
       if (!graphIds.has(String(e.from)) || !graphIds.has(String(e.to))) throw new Error(`${context} views.graph edge references a missing node`);
     }
   }
+  // Array2DTracer equivalent: a grid / DP table (Fibonacci memo, LCS, knapsack, matrices, grids).
+  let grid = null;
+  if (views.array2d !== undefined) {
+    const rows = views.array2d.rows;
+    const cols = views.array2d.cols;
+    if (!Number.isInteger(rows) || rows <= 0 || !Number.isInteger(cols) || cols <= 0) {
+      throw new Error(`${context} views.array2d needs positive integer rows and cols`);
+    }
+    if (views.array2d.rowLabels !== undefined && (!Array.isArray(views.array2d.rowLabels) || views.array2d.rowLabels.length !== rows)) {
+      throw new Error(`${context} views.array2d.rowLabels must be an array of length rows`);
+    }
+    if (views.array2d.colLabels !== undefined && (!Array.isArray(views.array2d.colLabels) || views.array2d.colLabels.length !== cols)) {
+      throw new Error(`${context} views.array2d.colLabels must be an array of length cols`);
+    }
+    grid = { rows, cols };
+  }
 
   if (!Array.isArray(trace.steps) || trace.steps.length === 0) throw new Error(`${context} needs a non-empty steps[]`);
   const arrIn = (i) => Number.isInteger(i) && i >= 0 && i < arrayLen;
@@ -56,6 +72,10 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     if (step.graph !== undefined) {
       if (!graphIds) throw new Error(`${at} has graph state but no views.graph is declared`);
       validateGraphState(step.graph, graphIds, at);
+    }
+    if (step.array2d !== undefined) {
+      if (!grid) throw new Error(`${at} has array2d state but no views.array2d is declared`);
+      validateGridState(step.array2d, grid, at);
     }
     if (step.stack !== undefined && !Array.isArray(step.stack)) throw new Error(`${at} stack must be an array`);
     if (step.queue !== undefined && !Array.isArray(step.queue)) throw new Error(`${at} queue must be an array`);
@@ -127,6 +147,36 @@ function validateArrayState(state, inBounds, at) {
   if (state.pointers !== undefined) {
     if (typeof state.pointers !== 'object' || Array.isArray(state.pointers)) throw new Error(`${at} array pointers must be an object`);
     for (const i of Object.values(state.pointers)) if (!inBounds(i)) throw new Error(`${at} array pointer index out of bounds`);
+  }
+  // Sorting markers (Array1DTracer's select/patch): cells being compared, just swapped, or locked
+  // in their final sorted position — the whole vocabulary of a sorting animation.
+  for (const key of ['comparing', 'swapped', 'sorted']) {
+    if (state[key] !== undefined) {
+      if (!Array.isArray(state[key])) throw new Error(`${at} array ${key} must be an array of indices`);
+      for (const i of state[key]) if (!inBounds(i)) throw new Error(`${at} array ${key} index out of bounds`);
+    }
+  }
+}
+
+// A grid / DP-table state (Array2DTracer): which cell is being computed now, which are filled,
+// which are highlighted as dependencies, plus optional value updates {r,c,value}.
+function validateGridState(state, grid, at) {
+  if (typeof state !== 'object' || Array.isArray(state)) throw new Error(`${at} array2d state must be an object`);
+  const cellIn = (cell) =>
+    Array.isArray(cell) && cell.length === 2 && Number.isInteger(cell[0]) && Number.isInteger(cell[1]) &&
+    cell[0] >= 0 && cell[0] < grid.rows && cell[1] >= 0 && cell[1] < grid.cols;
+  if (state.current !== undefined && state.current !== null && !cellIn(state.current)) throw new Error(`${at} array2d current cell out of bounds`);
+  for (const key of ['filled', 'highlight']) {
+    if (state[key] !== undefined) {
+      if (!Array.isArray(state[key])) throw new Error(`${at} array2d ${key} must be an array of [row,col] cells`);
+      for (const cell of state[key]) if (!cellIn(cell)) throw new Error(`${at} array2d ${key} cell out of bounds`);
+    }
+  }
+  if (state.values !== undefined) {
+    if (!Array.isArray(state.values)) throw new Error(`${at} array2d values must be an array of [row,col,value]`);
+    for (const v of state.values) {
+      if (!Array.isArray(v) || v.length !== 3 || !cellIn([v[0], v[1]])) throw new Error(`${at} array2d value must be [row,col,value] within the grid`);
+    }
   }
 }
 

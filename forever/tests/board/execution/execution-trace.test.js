@@ -135,6 +135,43 @@ test('traceStateAtMs refuses an untimed trace (points you at the progress API)',
   assert.throws(() => traceStateAtMs(BINARY_SEARCH, 1000), /requires timed steps/);
 });
 
+// --- generic views: DP table (array2d) + sorting markers (array1d) ---
+
+const DP_FIB = {
+  language: 'python',
+  code: 'def fib(n):\n    dp=[0,1]\n    for i in range(2,n+1):\n        dp.append(dp[i-1]+dp[i-2])\n    return dp[n]',
+  views: { array2d: { rows: 1, cols: 6, colLabels: ['0', '1', '2', '3', '4', '5'] } },
+  steps: [
+    { line: 4, explanation: 'dp[2] = dp[1]+dp[0] = 1', array2d: { current: [0, 2], filled: [[0, 0], [0, 1]], highlight: [[0, 0], [0, 1]], values: [[0, 2, 1]] } },
+    { line: 4, explanation: 'dp[3] = dp[2]+dp[1] = 2', array2d: { current: [0, 3], filled: [[0, 0], [0, 1], [0, 2]], highlight: [[0, 1], [0, 2]], values: [[0, 3, 2]] } },
+  ],
+};
+
+const SORT = {
+  language: 'python',
+  code: 'for i in range(n):\n  for j in range(n-1):\n    if a[j]>a[j+1]: a[j],a[j+1]=a[j+1],a[j]',
+  views: { array: { values: [5, 2, 8, 1] } },
+  steps: [
+    { line: 3, explanation: 'compare 5 and 2 -> swap', array: { comparing: [0, 1], swapped: [0, 1] } },
+    { line: 3, explanation: '1 is locked in place', array: { sorted: [0], comparing: [1, 2] } },
+  ],
+};
+
+test('accepts a DP-table (array2d) trace: current cell, filled, dependency highlight, value updates', () => {
+  const t = validateExecutionTrace(DP_FIB);
+  assert.equal(t.steps.length, 2);
+});
+
+test('rejects array2d state with no views.array2d, and out-of-bounds cells', () => {
+  assert.throws(() => validateExecutionTrace({ language: 'python', code: 'x=1', steps: [{ line: 1, explanation: 'x', array2d: { current: [0, 0] } }] }), /has array2d state but no views.array2d/);
+  assert.throws(() => validateExecutionTrace({ ...DP_FIB, steps: [{ line: 4, explanation: 'x', array2d: { current: [5, 5] } }] }), /array2d current cell out of bounds/);
+});
+
+test('accepts sorting markers (comparing / swapped / sorted) and rejects out-of-bounds ones', () => {
+  validateExecutionTrace(SORT);
+  assert.throws(() => validateExecutionTrace({ ...SORT, steps: [{ line: 3, explanation: 'x', array: { comparing: [9, 9] } }] }), /array comparing index out of bounds/);
+});
+
 test('traceStateAt maps clock progress to the active step and accumulates variable history', () => {
   const start = traceStateAt(BINARY_SEARCH, 0);
   assert.equal(start.index, 0);
