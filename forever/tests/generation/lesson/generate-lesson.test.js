@@ -10,6 +10,7 @@ const TEXT =
 test('a lesson decomposes into ordered scenes, each generated from its focused chunks', async () => {
   const lesson = await generateLessonFromText(TEXT, {
     agents: {
+      routeDomain: async () => ({ domain: 'general', usage: null }),
       designPedagogy: async ({ sourcePack }) => ({
         lessonTitle: 'Alpha and Beta',
         scenes: [

@@ -6,6 +6,7 @@
 import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
 import { focusSourcePack } from '../../source-pack/build/focus-source-pack.js';
 import { designPedagogy as designPedagogyAgent } from '../../orchestration/agents/planning/teacher.js';
+import { routeDomain as routeDomainAgent } from '../../orchestration/agents/planning/domain-router.js';
 import { generateSceneFromSourcePack as generateScene } from '../scene/generate-scene.js';
 
 export async function generateLessonFromText(text, options = {}) {
@@ -16,9 +17,12 @@ export async function generateLessonFromText(text, options = {}) {
 // type flows through the same society pipeline.
 export async function generateLessonFromSourcePack(sourcePack, { agents = {} } = {}) {
   const designPedagogy = agents.designPedagogy ?? designPedagogyAgent;
+  const routeDomain = agents.routeDomain ?? routeDomainAgent;
   const genScene = agents.generateScene ?? generateScene;
 
-  const { lessonTitle, scenes: briefs } = await designPedagogy({ sourcePack });
+  // Route the subject so the Teacher teaches it as a SPECIALIST (Striver for DSA, Ng for ML...).
+  const { domain } = await routeDomain({ sourcePack });
+  const { lessonTitle, scenes: briefs } = await designPedagogy({ sourcePack, domain });
 
   // Scenes are independent -> generate in parallel (the production BullMQ model). Each
   // carries its teaching brief (role + directive) so it goes deep. RESILIENT: one scene

@@ -18,10 +18,13 @@ export const PEDAGOGICAL_ROLES = [
   'practice',
 ];
 
-export async function designPedagogy({ sourcePack, minScenes = 5, maxScenes = 9 }) {
+export async function designPedagogy({ sourcePack, minScenes = 5, maxScenes = 9, domain = 'general' }) {
   const chunkIds = new Set(sourcePack.chunks.map((chunk) => chunk.id));
+  const { teachingFor } = await import('./domain-teaching.js');
 
-  const system = `You are the Teacher of an AI tutor — a world-class instructor (Striver for code, Andrew Ng for concepts).
+  const system = `You are the Teacher of an AI tutor — a world-class SPECIALIST in this domain (${domain}).
+DOMAIN TEACHING STYLE (teach exactly this way): ${teachingFor(domain)}
+
 Design a DEEP teaching sequence: ${minScenes}-${maxScenes} scenes that TEACH, not summarize.
 Follow EVIDENCE-BASED pedagogy (this is what makes it elite, not average):
 1. CONCRETE BEFORE ABSTRACT — open with a specific, relatable example (real numbers / a tiny scenario),
