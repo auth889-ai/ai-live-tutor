@@ -19,7 +19,7 @@ export async function GET(_request, { params }) {
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event, data) => controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
-      const started = Date.now();
+      let started = Date.now();
       let lastPhase = null;
       let lastPercent = -1;
       let warnedNoWorker = false;
@@ -48,9 +48,15 @@ export async function GET(_request, { params }) {
             try {
               const { getQueueHealth } = await import('../../../../../lib/queue/lesson-queue.js');
               const h = await getQueueHealth();
-              if (h?.worker === 'up') message = 'Queued — the worker is busy with earlier jobs; yours starts as soon as a slot frees.';
+              if (h?.worker === 'up') {
+                message = job.queuePosition
+                  ? `In line: #${job.queuePosition} — the workers are finishing earlier lessons; yours starts automatically.`
+                  : 'Queued — the worker is busy with earlier jobs; yours starts as soon as a slot frees.';
+              }
             } catch { /* keep the generic hint */ }
             send('progress', { phase: 'queued', percent: 0, message });
+            started = Date.now(); // re-arm: refresh the position note periodically while waiting
+            warnedNoWorker = false;
           }
           if (job.state === 'completed') {
             send('done', job.result ?? {});

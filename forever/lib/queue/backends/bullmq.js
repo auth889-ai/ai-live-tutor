@@ -35,10 +35,21 @@ export function createBullQueue({ redisUrl }) {
   async function getJob(jobId) {
     const job = await queue.getJob(jobId);
     if (!job) return null;
-    const state = await job.getState(); // waiting | active | completed | failed | delayed
+    const state = await job.getState(); // waiting | active | completed | failed | delayed | prioritized
+    // Honest queueing UX: a waiting job reports its PLACE IN LINE so the UI can say
+    // "#2 in line" instead of a dead-looking 0%.
+    let queuePosition = null;
+    if (state === 'waiting' || state === 'prioritized') {
+      try {
+        const ahead = await queue.getJobs(['waiting'], 0, 50);
+        const index = ahead.findIndex((j) => String(j.id) === String(job.id));
+        queuePosition = index >= 0 ? index + 1 : ahead.length + 1; // prioritized jobs queue behind all waiting
+      } catch { /* position is decoration — never fail the status for it */ }
+    }
     return {
       id: String(job.id),
       state,
+      queuePosition,
       progress: typeof job.progress === 'object' ? job.progress : null,
       result: job.returnvalue ?? null,
       error: job.failedReason ?? null,
