@@ -3,6 +3,8 @@
 // the Board Director can render sequence/class/state/ER/architecture/timeline/... diagrams.
 // "Mermaid-First" (research): raw mermaid must DECLARE a known diagram type on line one.
 
+import { validateArrayContent } from '../arrays/array-content.js';
+
 export const STRUCTURED_TYPES = Object.freeze(['flowchart', 'cycle', 'tree', 'comparison', 'trace']);
 
 // Diagram-type keywords Mermaid understands (first token of the code).
@@ -35,6 +37,7 @@ export function validateDiagramContent(content, context = 'diagram') {
     if (!content.root?.label) throw new Error(`${context} tree needs root.label`);
     return content;
   }
+  if (type === 'array') return validateArrayContent(content, context);
   if (type === 'comparison' || type === 'trace') {
     if (!Array.isArray(content.columns) || !Array.isArray(content.rows)) throw new Error(`${context} ${type} needs columns[] and rows[]`);
     return content;

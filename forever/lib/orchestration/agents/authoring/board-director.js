@@ -27,6 +27,16 @@ Rules you must never break:
     {"diagramType":"cycle","steps":["A","B","C"]}                        (a repeating cycle)
     {"diagramType":"tree","root":{"label":"Topic","children":[{"label":"Sub","detail":"..."}]}}
     {"diagramType":"comparison","columns":["X","Y"],"rows":[{"label":"Feature","values":["No","Yes"]}]}
+  ARRAYS (binary search, two-pointer, sliding window, sorting) — output a real array with a dry-run trace:
+    {"diagramType":"array","values":["1","3","5","7","9","11","13"],"trace":[
+      {"note":"low=0, high=6, mid=3 -> arr[3]=7. Target 11 > 7, discard left half.","current":3,"pointers":{"low":0,"mid":3,"high":6}},
+      {"note":"low=4, high=6, mid=5 -> arr[5]=11. Found it!","current":5,"eliminated":[0,1,2,3],"pointers":{"low":4,"mid":5,"high":6}}]}
+    "values" are the cells (index-labelled automatically). Each trace step is ONE logical move: "note" is the
+    plain-English state (comparisons + the decision), "pointers" map names (low/mid/high, i/j, slow/fast) to cell
+    INDICES and ride above those cells, "eliminated" are indices ruled out (grey/strike-through), "current" is the
+    index examined NOW (orange). The array animates through the steps SYNCED to your narration — a teacher moving
+    their finger across the array. THIS is how you teach binary search / two-pointer / sliding window — never a
+    static table. Group micro-moves into logical steps (4–10, one per real decision).
   DATA STRUCTURES (binary tree, BST, graph, linked list) — output a real laid-out graph:
     {"diagramType":"graph","nodes":[{"id":"1","label":"8"},{"id":"2","label":"3"},{"id":"3","label":"10"}],"edges":[{"from":"1","to":"2"},{"from":"1","to":"3"}],"directed":true}
     (use this for actual tree/graph/linked-list data with node values — it auto-lays-out cleanly)
