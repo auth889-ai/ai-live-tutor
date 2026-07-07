@@ -20,7 +20,9 @@ FACTUAL/technical claims inside them: object when a device CONTRADICTS the chunk
 specific technical fact/number the chunk does not support — never because the device itself
 "is not in the source".
 Output ONLY JSON: {"objections":[{"objectId","reason","citedChunkId"}]}. Empty array means everything is grounded.
-Be strict but fair — do not object to correct teaching just because it is concise.`;
+Be strict but fair — do not object to correct teaching just because it is concise.
+VERDICTS ONLY: each reason is ONE short sentence naming the unsupported claim. Never restate
+the scene, never quote long passages — output tokens are latency.`;
 
   const user = JSON.stringify({
     task: 'Audit each board object against its cited source chunk.',
@@ -38,6 +40,7 @@ Be strict but fair — do not object to correct teaching just because it is conc
     user,
     model: process.env.MODEL_FAST || 'qwen3.6-flash',
     temperature: 0.1,
+    maxTokens: 700, // verdicts, not essays — decode time dominates wall time
   });
 
   const rawObjections = Array.isArray(json.objections) ? json.objections : [];

@@ -24,7 +24,9 @@ SPECIFIC rubric item violated:
    code for mechanics, table for comparison, trace for behaviour) — a wall of prose is a violation.
 6. STRUCTURED, SCREENSHOT-ABLE NOTES — numbered/short lines a student would photograph, not essay text.
 Output ONLY JSON: {"objections":[{"objectId","reason"}]}. Empty array means the teaching is strong.
-Be a fair but demanding reviewer — do NOT object to good, concise teaching.`;
+Be a fair but demanding reviewer — do NOT object to good, concise teaching.
+VERDICTS ONLY: each reason is ONE short sentence naming the rubric item + what to change.
+Never restate the scene — output tokens are latency.`;
 
   const user = JSON.stringify({
     task: 'Review the teaching quality of these board objects.',
@@ -37,6 +39,7 @@ Be a fair but demanding reviewer — do NOT object to good, concise teaching.`;
     user,
     model: process.env.MODEL_FAST || 'qwen3.6-flash',
     temperature: 0.2,
+    maxTokens: 700, // verdicts, not essays
   });
 
   const objectIds = new Set(objects.map((o) => o.id));
