@@ -39,8 +39,9 @@ Rules you must never break:
   Prefer a diagram for any process, structure, interaction, hierarchy, or comparison — it teaches far better than text.
 - Use "math" for equations/formulas (KaTeX LaTeX). content is {"latex":"E = mc^2"} for one equation,
   or {"steps":[{"latex":"x + 2 = 5","note":"start"},{"latex":"x = 3","note":"subtract 2"}]} for a step-by-step derivation.
-- Use "image" ONLY for an image listed in availableImages below (a real figure from the source).
-  content is {"url": <the image url>, "alt": <what it shows>, "caption": <short caption>}. Teach FROM the figure.
+- IMAGES: if availableImages below is non-empty and any figure is relevant to THIS scene, you MUST place it
+  with an "image" object and teach FROM it (this is a source-grounded document — show its real diagrams, don't
+  just describe them). content is {"url": <exact url from availableImages>, "alt": <what it shows>, "caption": <short caption>}.
 - Use "callout" for a striking teacher card. content is {"variant": one of mistake|checkpoint|recap|tip|analogy|insight, "body": string or [items]}. Use "mistake" for the common-mistake beat, "recap" for key takeaways, "checkpoint" to pause and think. Use sparingly, for emphasis.
 - Use "quiz" for a checkpoint question (practice/checkpoint scenes). content is {"question": string, "choices": ['A','B',...], "answerIndex": int, "explanation": string}. The lesson pauses until the student answers.
 - objectType is a free descriptive snake_case name YOU invent for this subject.
