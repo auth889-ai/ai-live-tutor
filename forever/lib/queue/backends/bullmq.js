@@ -23,10 +23,12 @@ export function createBullQueue({ redisUrl }) {
   const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
   const queue = new Queue(JOB_NAME, { connection });
 
-  async function enqueue(input, { priority } = {}) {
+  async function enqueue(input, { priority, jobId } = {}) {
     // BullMQ semantics: jobs WITHOUT priority are picked FIRST; among prioritized jobs,
     // lower number wins. So: interactive jobs get NO priority, batch fan-out gets 10.
-    const job = await queue.add(JOB_NAME, input, priority ? { ...JOB_OPTS, priority } : JOB_OPTS);
+    // A custom jobId makes the enqueue IDEMPOTENT (BullMQ ignores duplicates) — fan-out
+    // uses it so re-creating a course can never double-queue the same lesson.
+    const job = await queue.add(JOB_NAME, input, { ...JOB_OPTS, ...(priority ? { priority } : {}), ...(jobId ? { jobId } : {}) });
     return { jobId: String(job.id) };
   }
 
