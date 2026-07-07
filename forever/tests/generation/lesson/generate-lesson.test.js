@@ -38,3 +38,31 @@ test('a lesson decomposes into ordered scenes, each generated from its focused c
   assert.deepEqual(lesson.scenes.map((s) => s.title), ['Alpha', 'Beta']);
   assert.deepEqual(lesson.scenes.map((s) => s.sceneId), ['sc_01', 'sc_02']);
 });
+
+test('coding material is architected by the Coding Instructor, not the general Teacher', async () => {
+  const planners = [];
+  const fakeScene = async (_focused, { sceneId }) => ({
+    scene: { sceneId, layout: 'teacher_notebook_code', objects: [], voiceLines: [] },
+    timeline: { sceneId, timingSource: 'provisional', actions: [] },
+    durationMs: 1000,
+    reviewRounds: 0,
+  });
+  const plan = (name) => async ({ sourcePack }) => {
+    planners.push(name);
+    return {
+      lessonTitle: name,
+      scenes: [{ title: 'S', pedagogicalRole: 'dry_run', directive: 'd', focusChunkIds: [sourcePack.chunks[0].id] }],
+      usage: null,
+    };
+  };
+
+  const coding = await generateLessonFromText(TEXT, {
+    agents: { routeDomain: async () => ({ domain: 'dsa' }), designCodingLesson: plan('instructor'), generateScene: fakeScene },
+  });
+  assert.equal(coding.lessonTitle, 'instructor');
+
+  await generateLessonFromText(TEXT, {
+    agents: { routeDomain: async () => ({ domain: 'ml_ai' }), designPedagogy: plan('teacher'), generateScene: fakeScene },
+  });
+  assert.deepEqual(planners, ['instructor', 'teacher']);
+});

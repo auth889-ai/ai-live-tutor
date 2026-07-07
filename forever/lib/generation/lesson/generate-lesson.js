@@ -6,6 +6,7 @@
 import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
 import { focusSourcePack } from '../../source-pack/build/focus-source-pack.js';
 import { designPedagogy as designPedagogyAgent } from '../../orchestration/agents/planning/teacher.js';
+import { designCodingLesson as designCodingLessonAgent, isCodingDomain } from '../../orchestration/agents/planning/coding-instructor.js';
 import { routeDomain as routeDomainAgent } from '../../orchestration/agents/planning/domain-router.js';
 import { generateSceneFromSourcePack as generateScene } from '../scene/generate-scene.js';
 
@@ -20,11 +21,15 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
   const routeDomain = agents.routeDomain ?? routeDomainAgent;
   const genScene = agents.generateScene ?? generateScene;
 
-  // Route the subject so the Teacher teaches it as a SPECIALIST (Striver for DSA, Ng for ML...).
+  // Route the subject so the RIGHT planning specialist architects the lesson: coding/DSA
+  // material goes to the Coding Instructor (brute->better->optimal arc with mandatory
+  // dry-run traces); everything else to the general Teacher. Same brief contract out.
   onProgress({ phase: 'routing', message: 'Identifying the subject domain' });
   const { domain } = await routeDomain({ sourcePack });
-  onProgress({ phase: 'planning', message: 'Designing the teaching sequence' });
-  const { lessonTitle, scenes: briefs } = await designPedagogy({ sourcePack, domain });
+  const planLesson = agents.designPedagogy
+    ?? (isCodingDomain(domain) ? (agents.designCodingLesson ?? designCodingLessonAgent) : designPedagogy);
+  onProgress({ phase: 'planning', message: isCodingDomain(domain) ? 'The Coding Instructor is architecting the lesson' : 'Designing the teaching sequence' });
+  const { lessonTitle, scenes: briefs } = await planLesson({ sourcePack, domain });
 
   // Scenes are independent -> generate in parallel (the production BullMQ model). Each
   // carries its teaching brief (role + directive) so it goes deep. RESILIENT: one scene
