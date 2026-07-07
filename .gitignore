@@ -5,19 +5,28 @@ server/node_modules/
 
 # env / secrets
 
+
 .png
 *.png
+*.txt
 *.md
 .env
+*.pdf
+.pdf
 .env.*
 !.env.example
 secrets/
 docs/
+tests/
+client/
+docs/
+google_agent/
+scripts/
+agent_output/
 notes/
 OpenMAIC/
 forever/**/*.md
 !forever/LICENSE
-!forever/README.md
 !forever/.env.example
 !forever/docs/
 !forever/docs/**/*.md
@@ -70,4 +79,5 @@ tmp/
 *.sqlite
 *.sqlite3
 *.db
-.data/
+
+
