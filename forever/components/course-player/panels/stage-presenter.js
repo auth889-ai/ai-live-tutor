@@ -16,6 +16,7 @@ import { MathView } from './math-view.js';
 import { ImageView } from './image-view.js';
 import { CalloutView } from './callout-view.js';
 import { QuizView } from './quiz-view.js';
+import { TryItPanel } from './try-it-panel.js';
 import { AlgorithmStage } from '../algorithm-stage/algorithm-stage.js';
 
 export function StagePresenter({ scene, tMs, title, setHold }) {
@@ -81,6 +82,15 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
       <div style={{ minHeight: 54, padding: '12px 24px', background: '#fffdf8', borderTop: '1px solid #efe6d3', color: '#5a4a2a', fontSize: 18, textAlign: 'center', lineHeight: 1.5 }}>
         {subtitle}
       </div>
+      {/* Student practice: the scene's code seeds an editable sandbox run (Koedinger: doing
+          beats watching). Shown for code demos and algorithm trace scenes. */}
+      {(focusObj?.renderHint === 'code' || focusObj?.renderHint === 'algorithm') && (
+        <TryItPanel
+          key={focusObj.id}
+          seedCode={focusObj.renderHint === 'algorithm' ? focusObj.content?.code ?? '' : String(focusObj.content ?? '')}
+          language={focusObj.renderHint === 'algorithm' ? focusObj.content?.language ?? 'python' : 'python'}
+        />
+      )}
     </div>
   );
 }
