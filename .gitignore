@@ -8,6 +8,8 @@ server/node_modules/
 
 .png
 *.png
+*.mp4
+.mp4
 *.txt
 *.md
 .env
