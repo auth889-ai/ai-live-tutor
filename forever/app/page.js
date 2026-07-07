@@ -47,43 +47,48 @@ function Landing() {
 
   return (
     <>
-      {/* video hero */}
-      <section style={{ position: 'relative', borderRadius: 26, overflow: 'hidden', margin: '18px 0 40px', color: '#fff', background: '#1a100a', boxShadow: '0 24px 70px rgba(58,46,34,0.28)' }}>
-        <video autoPlay muted loop playsInline poster="/images/study-23.png"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}>
-          <source src="/videos/hero.mp4" type="video/mp4" />
-        </video>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(18,11,6,0.62), rgba(18,11,6,0.3) 45%, rgba(18,11,6,0.82))' }} />
+      {/* top nav */}
+      <nav style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '22px 0 8px' }}>
+        <span style={{ width: 34, height: 34, borderRadius: 10, background: UI.accent, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 17 }}>F</span>
+        <span style={{ fontWeight: 800, fontSize: 19 }}>Forever <span style={{ fontWeight: 500, fontSize: 13, color: UI.muted }}>AI Tutor</span></span>
+        <a href="/login" style={{ marginLeft: 'auto', padding: '9px 22px', borderRadius: 999, textDecoration: 'none', fontWeight: 700, fontSize: 14, background: UI.accent, color: '#fff', boxShadow: '0 6px 18px rgba(244,115,104,0.35)' }}>Sign in</a>
+      </nav>
 
-        <div style={{ position: 'relative', padding: '26px 44px 62px' }}>
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 64 }}>
-            <span style={{ width: 34, height: 34, borderRadius: 10, background: UI.accent, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 17 }}>F</span>
-            <span style={{ fontWeight: 800, fontSize: 19 }}>Forever <span style={{ fontWeight: 500, fontSize: 13, opacity: 0.85 }}>AI Tutor</span></span>
-            <a href="/login" style={{ marginLeft: 'auto', padding: '9px 20px', borderRadius: 999, textDecoration: 'none', fontWeight: 700, fontSize: 14, color: '#fff', border: '1.5px solid rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(6px)' }}>Sign in</a>
-          </nav>
+      {/* hero */}
+      <section style={{ textAlign: 'center', padding: '46px 0 34px' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fdece8', border: '1px solid #f6cfc8', color: UI.accentDark, borderRadius: 999, padding: '6px 16px', fontSize: 12, fontWeight: 800, letterSpacing: 0.8, marginBottom: 20 }}>
+          ● QWEN AGENT SOCIETY · OPEN SOURCE · HACKATHON TRACK 3
+        </div>
+        <h1 style={{ fontSize: 50, lineHeight: 1.1, margin: 0, letterSpacing: -1.2, fontWeight: 800 }}>
+          Any material becomes a course
+          <br />
+          <span style={{ color: UI.accent }}>taught like the best teacher you ever had.</span>
+        </h1>
+        <p style={{ color: UI.muted, fontSize: 18, lineHeight: 1.55, maxWidth: 640, margin: '20px auto 30px' }}>
+          A society of AI teachers turns your PDFs, articles, notes and images into narrated,
+          interactive lessons — a tutor that writes on a board, runs real code, animates algorithms
+          step by step, and proves every claim against your source.
+        </p>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
+          <a href="/login" style={{ padding: '14px 34px', borderRadius: 12, textDecoration: 'none', fontWeight: 800, fontSize: 16, background: UI.accent, color: '#fff', boxShadow: '0 10px 30px rgba(244,115,104,0.4)' }}>Get started — it's free</a>
+          <a href="#how" style={{ padding: '14px 34px', borderRadius: 12, textDecoration: 'none', fontWeight: 700, fontSize: 16, color: UI.text, border: `1.5px solid ${UI.border}`, background: '#fff' }}>How it works</a>
+        </div>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', fontSize: 13, fontWeight: 600 }}>
+          {['✏️ Paste text', '📄 Upload a PDF', '🔗 Drop a web article', '🖼 Teach from an image'].map((t) => (
+            <span key={t} style={{ background: '#fff', border: `1px solid ${UI.border}`, borderRadius: 999, padding: '7px 15px', color: UI.text }}>{t}</span>
+          ))}
+        </div>
+      </section>
 
-          <div style={{ maxWidth: 760 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(244,115,104,0.95)', borderRadius: 999, padding: '6px 16px', fontSize: 12, fontWeight: 800, letterSpacing: 0.8, marginBottom: 20 }}>
-              ● QWEN AGENT SOCIETY · OPEN SOURCE · HACKATHON TRACK 3
-            </div>
-            <h1 style={{ fontSize: 54, lineHeight: 1.08, margin: 0, letterSpacing: -1.2, fontWeight: 800, textShadow: '0 2px 20px rgba(0,0,0,0.35)' }}>
-              Any material becomes a course<br />
-              <span style={{ color: '#ffb3a8' }}>taught like the best teacher you ever had.</span>
-            </h1>
-            <p style={{ color: 'rgba(255,255,255,0.88)', fontSize: 18, lineHeight: 1.55, maxWidth: 620, margin: '20px 0 30px' }}>
-              A society of AI teachers turns your PDFs, articles, notes and images into narrated,
-              interactive lessons — a tutor that writes on a board, runs real code, animates algorithms
-              step by step, and proves every claim against your source.
-            </p>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 26 }}>
-              <a href="/login" style={{ padding: '14px 34px', borderRadius: 12, textDecoration: 'none', fontWeight: 800, fontSize: 16, background: UI.accent, color: '#fff', boxShadow: '0 10px 30px rgba(244,115,104,0.45)' }}>Get started — it's free</a>
-              <a href="#how" style={{ padding: '14px 34px', borderRadius: 12, textDecoration: 'none', fontWeight: 700, fontSize: 16, color: '#fff', border: '1.5px solid rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(6px)' }}>How it works</a>
-            </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 13, fontWeight: 600 }}>
-              {['✏️ Paste text', '📄 Upload a PDF', '🔗 Drop a web article', '🖼 Teach from an image'].map((t) => (
-                <span key={t} style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.28)', backdropFilter: 'blur(4px)', borderRadius: 999, padding: '7px 15px' }}>{t}</span>
-              ))}
-            </div>
+      {/* cinematic media card — the video in its own frame */}
+      <section style={{ margin: '0 0 44px' }}>
+        <div style={{ position: 'relative', borderRadius: 24, overflow: 'hidden', boxShadow: '0 26px 70px rgba(58,46,34,0.28)', border: '6px solid #fff' }}>
+          <video autoPlay muted loop playsInline poster="/images/study-23.png" style={{ display: 'block', width: '100%', height: 'auto' }}>
+            <source src="/videos/hero.mp4" type="video/mp4" />
+          </video>
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '38px 24px 16px', background: 'linear-gradient(180deg, transparent, rgba(18,11,6,0.72))', color: '#fff', display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700 }}>
+            <span style={{ width: 34, height: 34, borderRadius: '50%', background: UI.accent, display: 'grid', placeItems: 'center', flexShrink: 0 }}>▶</span>
+            Learning, the way it should feel — narrated board, real code runs, live algorithm traces.
           </div>
         </div>
       </section>

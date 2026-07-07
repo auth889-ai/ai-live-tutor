@@ -43,19 +43,15 @@ export default function LoginPage() {
     <main style={{ minHeight: '100vh', display: 'flex', background: '#fdf6ee', color: UI.text }}>
       <style>{`@media (max-width: 860px) { .login-cover { display: none !important; } }`}</style>
 
-      {/* video cover */}
+      {/* image cover */}
       <section
         className="login-cover"
         style={{
           flex: 1.2, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-          overflow: 'hidden', padding: 44, color: '#fff', background: '#1a100a',
+          backgroundImage: 'linear-gradient(200deg, rgba(26,16,8,0.05) 25%, rgba(26,16,8,0.55) 70%, rgba(20,12,6,0.85)), url(/images/study-28.png)',
+          backgroundSize: 'cover', backgroundPosition: 'center', padding: 44, color: '#fff',
         }}
       >
-        <video autoPlay muted loop playsInline poster="/images/study-28.png"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}>
-          <source src="/videos/login.mp4" type="video/mp4" />
-        </video>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(200deg, rgba(26,16,8,0.1) 25%, rgba(26,16,8,0.55) 70%, rgba(18,10,5,0.88))' }} />
         <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ width: 34, height: 34, borderRadius: 10, background: UI.accent, display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 17 }}>F</span>
