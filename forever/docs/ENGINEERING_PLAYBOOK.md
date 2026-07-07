@@ -220,6 +220,24 @@ While the line is the active speech, the object's renderer highlights that sub-e
 per line; GraphView/CodePanel/TraceTable/ImageView highlight the active focusRef. This is the
 single biggest step toward real-teacher quality.
 
+### Production backbone: async job queue (2026-07-07) — DECIDED & BUILT (Phase 2)
+
+Problem the user flagged: no queue/Redis/BullMQ — generation is ~8 min but ran SYNCHRONOUSLY
+in POST /api/generate (maxDuration 300 -> times out). This is the #1 production hole.
+Research (BullMQ going-to-production, graceful-shutdown, connections docs): separate worker
+process (crash isolation), job.updateProgress() with structured stage data, QueueEvents over
+Redis pub/sub, ioredis maxRetriesPerRequest:null, removeOnComplete/Fail TTLs, idempotent jobs,
+attempts+exponential backoff, SIGINT/SIGTERM graceful close + a worker error listener.
+DECISION: ONE queue interface (lib/queue/lesson-queue.js), TWO backends behind it (same seam
+as lesson-store): BullMQ+Redis when REDIS_URL is set (backends/bullmq.js + worker.js separate
+process), else an in-process runner (backends/in-process.js) so local/dev/tests need no Redis.
+Shared PROCESSOR (lesson-processor.js) is the single idempotent unit both backends call —
+identical behaviour everywhere. Real per-scene progress: generate-lesson fires onProgress as
+each scene settles (not a fake spinner). Routes: POST /api/generate -> 202 {jobId};
+GET /api/generate/:id -> status; GET /api/generate/:id/stream -> SSE progress (polls
+getLessonJob, backend-agnostic). npm run worker starts the BullMQ worker. Next: Postgres/RDS
+persistence behind the lesson-store seam; then resume teaching-depth (Execution Tracer agent).
+
 ### Graph trace-step animation findings (2026-07-07) — DECIDED
 
 User: showing a static tree isn't teaching — a real dry-run WALKS the structure (pointer

@@ -8,6 +8,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "worker": "node --env-file=.env lib/queue/worker.js",
     "test": "node --test",
     "check:contracts": "node --test tests/**/*.test.js"
   },
@@ -17,6 +18,8 @@
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
     "@xyflow/react": "^12.11.2",
+    "bullmq": "^5.79.2",
+    "ioredis": "^5.11.1",
     "katex": "^0.17.0",
     "mermaid": "^11.16.0",
     "motion": "^12.42.2",

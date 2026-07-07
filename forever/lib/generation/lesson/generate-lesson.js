@@ -15,26 +15,38 @@ export async function generateLessonFromText(text, options = {}) {
 
 // Accepts a prebuilt SourcePack (text OR multimodal from a PDF/URL/YouTube) so every input
 // type flows through the same society pipeline.
-export async function generateLessonFromSourcePack(sourcePack, { agents = {} } = {}) {
+export async function generateLessonFromSourcePack(sourcePack, { agents = {}, onProgress = () => {} } = {}) {
   const designPedagogy = agents.designPedagogy ?? designPedagogyAgent;
   const routeDomain = agents.routeDomain ?? routeDomainAgent;
   const genScene = agents.generateScene ?? generateScene;
 
   // Route the subject so the Teacher teaches it as a SPECIALIST (Striver for DSA, Ng for ML...).
+  onProgress({ phase: 'routing', message: 'Identifying the subject domain' });
   const { domain } = await routeDomain({ sourcePack });
+  onProgress({ phase: 'planning', message: 'Designing the teaching sequence' });
   const { lessonTitle, scenes: briefs } = await designPedagogy({ sourcePack, domain });
 
   // Scenes are independent -> generate in parallel (the production BullMQ model). Each
   // carries its teaching brief (role + directive) so it goes deep. RESILIENT: one scene
   // failing (timeout, a stubborn grounding audit) must not kill the whole lesson —
   // successful scenes are kept in order; the lesson fails only if none succeed.
+  let done = 0;
+  const sceneTotal = briefs.length;
+  onProgress({ phase: 'generating', message: `Generating ${sceneTotal} scenes`, sceneDone: 0, sceneTotal });
   const settled = await Promise.allSettled(
     briefs.map((brief, index) => {
       const focused = focusSourcePack(sourcePack, brief.focusChunkIds);
       return genScene(focused, {
         sceneId: `sc_${String(index + 1).padStart(2, '0')}`,
         brief,
-      }).then((result) => ({ title: brief.title, pedagogicalRole: brief.pedagogicalRole, ...result }));
+      })
+        .then((result) => ({ title: brief.title, pedagogicalRole: brief.pedagogicalRole, ...result }))
+        .finally(() => {
+          done += 1;
+          // Real progress: fires as EACH scene finishes (success or failure), so the bar
+          // reflects the society's actual throughput rather than a guess.
+          onProgress({ phase: 'generating', message: `Scene ${done}/${sceneTotal} done`, sceneDone: done, sceneTotal });
+        });
     }),
   );
   const scenes = settled.filter((r) => r.status === 'fulfilled').map((r) => r.value);
