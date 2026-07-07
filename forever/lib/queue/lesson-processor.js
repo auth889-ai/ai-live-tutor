@@ -15,6 +15,7 @@ import { voiceLesson } from '../tts/voice-lesson.js';
 import { publishLessonAssets } from '../storage/asset-publisher.js';
 import { saveLesson } from '../storage/lesson-store.js';
 import { saveCourse, loadCourse, linkCourseLesson, courseIdFor } from '../storage/course-store.js';
+import { findTopicImage } from '../media/topic-image.js';
 import { validateJobInput, makeProgress } from './job-contract.js';
 
 export function lessonIdFor(sourcePackId) {
@@ -49,7 +50,9 @@ export async function processLessonJob(rawInput, { report = () => {}, deps = {} 
         lessonJobs[lesson.id] = { jobId, queuedAt: new Date().toISOString() };
       }
     }
-    await (deps.saveCourse ?? saveCourse)(courseId, { outline, sourcePack, lessonLinks: {}, lessonJobs }, { ownerId });
+    // Topic cover art (Pexels/Pixabay, free-license) — enrichment, never a failure point.
+    const coverImage = await (deps.findTopicImage ?? findTopicImage)(outline.title).catch(() => null);
+    await (deps.saveCourse ?? saveCourse)(courseId, { outline, sourcePack, lessonLinks: {}, lessonJobs, coverImage }, { ownerId });
 
     const lessonsPlanned = outline.episodes.reduce((n, ep) => n + ep.lessons.length, 0);
     report(makeProgress({ phase: 'done', message: `Course architected — ${lessonsPlanned} lessons generating in parallel` }));
@@ -120,6 +123,9 @@ async function produceLesson({ sourcePack, outlineLesson = null, episode = null,
       courseRef: { courseId, episodeId: episode?.id ?? null, outlineLessonId: outlineLesson.id, episodeTitle: episode?.title ?? null },
     };
   }
+
+  const coverImage = await (deps.findTopicImage ?? findTopicImage)(finalLesson.lessonTitle).catch(() => null);
+  if (coverImage) finalLesson = { ...finalLesson, coverImage };
 
   const lessonId = lessonIdFor(outlineLesson ? `${sourcePack.id}_${outlineLesson.id}` : finalLesson.sourcePackId);
   await (deps.save ?? saveLesson)(lessonId, finalLesson, { ownerId });

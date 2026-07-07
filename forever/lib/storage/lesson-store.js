@@ -19,6 +19,7 @@ function lessonFacts(lesson) {
     scenes: lesson.scenes?.length ?? 0,
     durationMs: (lesson.scenes ?? []).reduce((n, s) => n + (s.durationMs || 0), 0),
     voiced: lesson.voiced === true,
+    coverImage: lesson.coverImage?.url ?? null,
   };
 }
 
@@ -63,10 +64,10 @@ export async function listLessons({ forUser = null, collection = lessonsCollecti
   if (dbEnabled()) {
     const lessons = await collection();
     const docs = await lessons
-      .find({ $or: [{ ownerId: null }, { ownerId: forUser }] }, { projection: { title: 1, scenes: 1, durationMs: 1, voiced: 1, updatedAt: 1 } })
+      .find({ $or: [{ ownerId: null }, { ownerId: forUser }] }, { projection: { title: 1, scenes: 1, durationMs: 1, voiced: 1, coverImage: 1, updatedAt: 1 } })
       .sort({ updatedAt: -1 })
       .toArray();
-    return docs.map((doc) => ({ id: doc._id, title: doc.title, scenes: doc.scenes, voiced: doc.voiced === true, durationMs: doc.durationMs ?? 0 }));
+    return docs.map((doc) => ({ id: doc._id, title: doc.title, scenes: doc.scenes, voiced: doc.voiced === true, durationMs: doc.durationMs ?? 0, coverImage: doc.coverImage ?? null }));
   }
   try {
     const ids = (await readdir(ROOT)).filter((name) => name.endsWith('.json')).map((name) => name.replace(/\.json$/, ''));

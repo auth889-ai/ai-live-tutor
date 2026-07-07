@@ -55,6 +55,7 @@ export async function listCourses({ forUser = null, collection = coursesCollecti
       episodes: course.outline?.episodes?.length ?? 0,
       lessons: lessons.length,
       ready: lessons.filter((lesson) => course.lessonLinks?.[lesson.id]?.lessonId).length,
+      coverImage: course.coverImage?.url ?? null,
     };
   };
   if (dbEnabled()) {

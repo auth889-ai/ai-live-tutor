@@ -38,10 +38,16 @@ export default async function CoursesPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
               {courses.map((course) => (
                 <a key={course.id} href={`/courses/${course.id}`}
-                  style={{ border: '1px solid #f5e6d9', borderRadius: 18, padding: 20, background: 'linear-gradient(115deg, #fff 55%, #fdf1ea)', textDecoration: 'none', color: '#2b211a', boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
+                  style={{ border: '1px solid #f5e6d9', borderRadius: 18, overflow: 'hidden', background: '#fff', textDecoration: 'none', color: '#2b211a', boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
+                  {course.coverImage && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={course.coverImage} alt="" style={{ width: '100%', height: 110, objectFit: 'cover', display: 'block' }} />
+                  )}
+                  <div style={{ padding: 20, background: 'linear-gradient(115deg, #fff 55%, #fdf1ea)' }}>
                   <div style={{ fontSize: 11.5, fontWeight: 800, color: '#e8604c', letterSpacing: 0.8, marginBottom: 8 }}>📚 FULL COURSE</div>
                   <div style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.35, marginBottom: 8 }}>{course.title}</div>
                   <div style={{ fontSize: 12.5, color: '#8a6d3b' }}>{course.episodes} episode{course.episodes === 1 ? '' : 's'} · {course.ready}/{course.lessons} lessons ready</div>
+                  </div>
                 </a>
               ))}
             </div>

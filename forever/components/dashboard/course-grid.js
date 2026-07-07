@@ -29,7 +29,7 @@ export function CourseGrid({ lessons }) {
           style={{ border: `1px solid ${UI.border}`, borderRadius: 18, overflow: 'hidden', background: UI.card, textDecoration: 'none', color: UI.text, boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
           <div style={{ position: 'relative', height: 116, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={COVERS[index % COVERS.length]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <img src={lesson.coverImage || COVERS[index % COVERS.length]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             <span style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(255,255,255,0.92)', borderRadius: 999, padding: '4px 12px', fontSize: 11, fontWeight: 800, color: UI.accent }}>
               {lesson.voiced ? '🔊 VOICED' : 'COURSE'}
             </span>
