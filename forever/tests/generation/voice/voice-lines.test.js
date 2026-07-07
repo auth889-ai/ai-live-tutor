@@ -33,3 +33,20 @@ test('duplicate voice line ids are rejected', () => {
   const line = { id: 'vl_1', text: 'Repeated line.', targetObjectId: 'obj_rules' };
   assert.throws(() => validateVoiceLines([line, { ...line }], objects), /Duplicate voice line id/);
 });
+
+test('a voice line may carry a focusRef (sub-element to highlight while spoken)', () => {
+  validateVoiceLines(
+    [
+      { id: 'vl_1', text: 'We compare node 8 to the target.', targetObjectId: 'obj_tree', focusRef: '8' },
+      { id: 'vl_2', text: 'Line 5 computes the middle index.', targetObjectId: 'obj_code', focusRef: 5 },
+    ],
+    [{ id: 'obj_tree' }, { id: 'obj_code' }],
+  );
+});
+
+test('a non-string/number focusRef is rejected', () => {
+  assert.throws(
+    () => validateVoiceLines([{ id: 'vl_1', text: 'x', targetObjectId: 'o', focusRef: { bad: true } }], [{ id: 'o' }]),
+    /focusRef must be a string or number/,
+  );
+});

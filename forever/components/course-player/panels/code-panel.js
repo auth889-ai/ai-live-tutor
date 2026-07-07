@@ -20,11 +20,17 @@ SyntaxHighlighter.registerLanguage('java', java);
 
 const EXT = { javascript: 'main.js', js: 'main.js', node: 'main.js', python: 'main.py', cpp: 'main.cpp', java: 'Main.java' };
 
-export function CodePanel({ codeObject, revealProgress = 1, outputShown = false }) {
+export function CodePanel({ codeObject, revealProgress = 1, outputShown = false, activeLine = null }) {
   const language = normalizeLang(codeObject.language || guessLang(codeObject));
   const allLines = String(codeObject.content).split('\n');
   const visibleCount = Math.max(1, Math.floor(revealProgress * allLines.length + 1e-9));
   const shown = allLines.slice(0, visibleCount).join('\n');
+
+  // Highlight the line the tutor is currently explaining (focusRef -> line number).
+  const lineProps = (lineNumber) =>
+    activeLine && lineNumber === activeLine
+      ? { style: { display: 'block', background: 'rgba(229,192,123,0.22)', borderLeft: '3px solid #e5c07b', margin: '0 -8px', padding: '0 5px', transition: 'background 0.2s' } }
+      : { style: { display: 'block' } };
 
   return (
     <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #2b3240', background: '#282c34' }}>
@@ -38,6 +44,8 @@ export function CodePanel({ codeObject, revealProgress = 1, outputShown = false 
         language={language}
         style={oneDark}
         showLineNumbers
+        wrapLines
+        lineProps={lineProps}
         customStyle={{ margin: 0, background: '#282c34', fontSize: 13, padding: '12px 8px' }}
         codeTagProps={{ style: { fontFamily: 'ui-monospace, Menlo, monospace' } }}
       >

@@ -57,6 +57,7 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
               <Focus
                 object={focusObj}
                 state={state}
+                focusRef={activeLine?.targetObjectId === focusObj.id ? activeLine?.focusRef : undefined}
                 onQuizAnswered={() => setAnswered((prev) => new Set(prev).add(focusObj.id))}
               />
             )}
@@ -70,16 +71,18 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
   );
 }
 
-function Focus({ object, state, onQuizAnswered }) {
+function Focus({ object, state, focusRef, onQuizAnswered }) {
   if (object.renderHint === 'quiz') {
     return <QuizView content={object.content} onAnswered={onQuizAnswered} />;
   }
   if (object.renderHint === 'code') {
-    return <CodePanel codeObject={object} revealProgress={state.codeReveal.get(object.id)?.progress ?? 1} outputShown={state.outputShown.has(object.id)} />;
+    // focusRef = the line number the tutor is currently discussing (highlight it).
+    const activeLine = focusRef != null ? Number(focusRef) : null;
+    return <CodePanel codeObject={object} revealProgress={state.codeReveal.get(object.id)?.progress ?? 1} outputShown={state.outputShown.has(object.id)} activeLine={activeLine} />;
   }
   if (object.renderHint === 'diagram') {
     const progress = state.writing.get(object.id)?.progress ?? 1;
-    return <div style={{ maxWidth: 720, margin: '0 auto' }}><DiagramPanel content={object.content} progress={progress} /></div>;
+    return <div style={{ maxWidth: 720, margin: '0 auto' }}><DiagramPanel content={object.content} progress={progress} activeNode={focusRef != null ? String(focusRef) : null} /></div>;
   }
   if (object.renderHint === 'math') {
     return <MathView content={object.content} />;

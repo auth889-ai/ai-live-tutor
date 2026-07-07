@@ -207,6 +207,19 @@ abstract rule, one idea per scene, a misconception beat, brute->better->optimal 
 and Voice Writer (each point: the why + a concrete example/analogy + the common mistake,
 one clear idea per line). Prompt-level quality upgrade; structure stays contract-valid.
 
+### Sub-element sync findings (2026-07-07) — DECIDED (the biggest teaching-quality gap)
+
+User: the tutor can't highlight node 8 while SAYING "node 8", or arr[mid] while saying it —
+so it feels like a slideshow, not Abdul Bari/Striver pointing at the board. Research
+(VisuAlgo, manim-voiceover, VAlgoLang): elite algorithm teaching is STEP-SYNCHRONIZED —
+each spoken line is bound to a specific visual element that highlights at that exact moment.
+DECISION: each voice line carries an optional `focusRef` = the id of the SUB-ELEMENT within
+its target object being discussed (graph node id, code line number, trace row, image bbox).
+While the line is the active speech, the object's renderer highlights that sub-element —
+"point and explain simultaneously". Voice Writer sees the object structure and emits focusRef
+per line; GraphView/CodePanel/TraceTable/ImageView highlight the active focusRef. This is the
+single biggest step toward real-teacher quality.
+
 ### Phase 6 findings (2026-07-05, from the old server's proven code) — DECIDED EARLY
 
 **PDF page rendering** (port of `server/services/googleAgent/pdfPageImageRenderer.service.js`):

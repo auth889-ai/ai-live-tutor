@@ -7,6 +7,11 @@ export function validateVoiceLine(line) {
   if (!line.targetObjectId?.trim()) {
     throw new Error(`${context} must be bound to a board object via targetObjectId — narration always points at something`);
   }
+  // Optional sub-element the tutor points at WHILE saying this line (graph node id, code
+  // line number, trace row, image bbox) — enables "highlight and explain simultaneously".
+  if (line.focusRef !== undefined && !(typeof line.focusRef === 'string' || typeof line.focusRef === 'number')) {
+    throw new Error(`${context}.focusRef must be a string or number (a sub-element id)`);
+  }
   if (line.sourceRef !== undefined) validateSourceRef(line.sourceRef, `${context}.sourceRef`);
   return line;
 }

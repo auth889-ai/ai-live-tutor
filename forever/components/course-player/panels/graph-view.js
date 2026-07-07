@@ -10,7 +10,7 @@ import '@xyflow/react/dist/style.css';
 
 import { layoutGraph } from '../../../lib/board/diagrams/graph-layout.js';
 
-export function GraphView({ content, progress = 1 }) {
+export function GraphView({ content, progress = 1, activeNode = null }) {
   const laid = useMemo(() => {
     try {
       return layoutGraph({ nodes: content.nodes ?? [], edges: content.edges ?? [], direction: content.direction ?? 'TB' });
@@ -28,8 +28,10 @@ export function GraphView({ content, progress = 1 }) {
   const currentId = seq && visitedCount > 0 ? seq[visitedCount - 1] : null;
 
   const nodeColor = (id) => {
+    // The node the tutor is SAYING right now wins — "point and explain simultaneously".
+    if (activeNode != null && id === String(activeNode)) return { border: '#d35400', bg: '#ffd9a8', fg: '#8a3a12' };
     if (!seq) return { border: '#c0392b', bg: '#fffdf8', fg: '#3a3327' };
-    if (id === currentId) return { border: '#d35400', bg: '#ffe6cc', fg: '#8a3a12' }; // current
+    if (id === currentId) return { border: '#d35400', bg: '#ffe6cc', fg: '#8a3a12' }; // current in sequence
     if (visited.has(id)) return { border: '#27ae60', bg: '#eafaf0', fg: '#1c6b3a' }; // visited
     return { border: '#b8b0a0', bg: '#fbf8f2', fg: '#8a8172' }; // unvisited
   };
