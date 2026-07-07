@@ -44,7 +44,7 @@ Hard requirements:
 }
 
 // Runs the tracker for real and compiles a validated ExecutionTrace, or null on honest failure.
-export async function traceExecution({ directive, sourceText = '', language = 'python', maxFixes = 2, deps = {} } = {}) {
+export async function traceExecution({ directive, sourceText = '', language = 'python', maxFixes = 3, deps = {} } = {}) {
   const call = deps.callQwenJson ?? callQwenJson;
   const exec = deps.runCode ?? runCode;
   const lang = RUNNABLE_LANGUAGES.includes(language) ? language : 'python';

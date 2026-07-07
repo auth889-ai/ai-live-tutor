@@ -9,16 +9,18 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { DashboardSidebar } from '../../components/dashboard/sidebar.js';
+
 const UI = {
-  text: '#3a2e22', muted: '#8a6d3b', border: '#f0e2d0', card: '#fff',
-  accent: '#f47368', bgSoft: '#fdf6ee',
+  text: '#2b211a', muted: '#8a6d3b', border: '#f0e2d0', card: '#fff',
+  accent: '#f47368', accentDark: '#e8604c', bgSoft: '#fdf6ee',
 };
 
 const TABS = [
-  { key: 'text', label: '✏️ Text' },
-  { key: 'pdf', label: '📄 PDF' },
-  { key: 'url', label: '🔗 URL' },
-  { key: 'image', label: '🖼 Image' },
+  { key: 'text', icon: '✏️', label: 'Text', hint: 'Paste notes or an article' },
+  { key: 'pdf', icon: '📄', label: 'PDF', hint: 'Figures & pages included' },
+  { key: 'url', icon: '🔗', label: 'URL', hint: 'Any web article' },
+  { key: 'image', icon: '🖼', label: 'Image', hint: 'Diagram or slide photo' },
 ];
 
 export default function StudioPage() {
@@ -115,35 +117,38 @@ export default function StudioPage() {
   );
 
   return (
-    <main style={{ maxWidth: 760, margin: '0 auto', padding: '28px 20px', color: UI.text }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <a href="/" style={{ textDecoration: 'none', color: UI.muted, fontSize: 13 }}>← My Courses</a>
-        {user?.email && (
-          <span style={{ fontSize: 13, color: UI.muted }}>
-            {user.email} ·{' '}
-            <a href="#" onClick={async (e) => { e.preventDefault(); await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/login'; }} style={{ color: UI.accent }}>
-              sign out
-            </a>
-          </span>
-        )}
-      </div>
-      <h1 style={{ fontSize: 26, margin: '10px 0 4px' }}>Create a course</h1>
-      <p style={{ color: UI.muted, marginTop: 0 }}>Bring any material — a society of AI teachers turns it into an interactive course.</p>
+    <div style={{ display: 'flex', gap: 18, maxWidth: 1280, margin: '0 auto', padding: 16, alignItems: 'flex-start', color: UI.text }}>
+      <DashboardSidebar email={user?.email} active="studio" />
 
-      <div style={{ display: 'flex', gap: 8, margin: '18px 0 14px' }}>
-        {TABS.map((t) => (
-          <button key={t.key} onClick={() => { setTab(t.key); setFile(null); setError(null); }} disabled={busy}
-            style={{
-              padding: '9px 16px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer',
-              border: `1px solid ${tab === t.key ? UI.accent : UI.border}`,
-              background: tab === t.key ? '#fdece8' : '#fff', color: UI.text,
-            }}>
-            {t.label}
-          </button>
-        ))}
+      <main style={{ flex: 1, minWidth: 0, maxWidth: 860 }}>
+      <header style={{ margin: '10px 0 22px' }}>
+        <h1 style={{ fontSize: 28, margin: 0 }}>Create a course ✨</h1>
+        <p style={{ color: UI.muted, margin: '6px 0 0', fontSize: 15 }}>
+          Bring any material — your faculty of AI teachers turns it into an interactive, narrated course.
+        </p>
+      </header>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, margin: '0 0 14px' }}>
+        {TABS.map((t) => {
+          const activeTab = tab === t.key;
+          return (
+            <button key={t.key} onClick={() => { setTab(t.key); setFile(null); setError(null); }} disabled={busy}
+              style={{
+                textAlign: 'left', padding: '12px 14px', borderRadius: 14, cursor: 'pointer',
+                border: `2px solid ${activeTab ? UI.accent : UI.border}`,
+                background: activeTab ? '#fdece8' : '#fff',
+                boxShadow: activeTab ? '0 4px 14px rgba(244,115,104,0.18)' : '0 1px 2px rgba(58,46,34,0.05)',
+                transition: 'all 0.15s',
+              }}>
+              <span style={{ fontSize: 20 }}>{t.icon}</span>
+              <span style={{ display: 'block', fontWeight: 800, fontSize: 14.5, marginTop: 4, color: activeTab ? UI.accentDark : UI.text }}>{t.label}</span>
+              <span style={{ display: 'block', fontSize: 11.5, color: UI.muted, marginTop: 2 }}>{t.hint}</span>
+            </button>
+          );
+        })}
       </div>
 
-      <div style={{ background: UI.card, border: `1px solid ${UI.border}`, borderRadius: 16, padding: 18 }}>
+      <div style={{ background: UI.card, border: `1px solid ${UI.border}`, borderRadius: 18, padding: 22, boxShadow: '0 1px 2px rgba(58,46,34,0.05)' }}>
         {tab === 'text' && (
           <textarea value={text} onChange={(e) => setText(e.target.value)} disabled={busy}
             placeholder="Paste your learning material (notes, an article, a chapter — at least 60 characters)…"
@@ -173,11 +178,15 @@ export default function StudioPage() {
 
         <button onClick={startJob} disabled={!canStart}
           style={{
-            marginTop: 14, padding: '12px 26px', borderRadius: 10, border: 'none', fontSize: 15, fontWeight: 700,
+            marginTop: 16, padding: '13px 30px', borderRadius: 12, border: 'none', fontSize: 15.5, fontWeight: 800,
             background: canStart ? UI.accent : '#f0e2d0', color: canStart ? '#fff' : UI.muted, cursor: canStart ? 'pointer' : 'default',
+            boxShadow: canStart ? '0 6px 18px rgba(244,115,104,0.35)' : 'none', transition: 'all 0.15s',
           }}>
-          {busy ? 'Generating…' : 'Generate course'}
+          {busy ? 'Generating…' : '✨ Generate course'}
         </button>
+        <span style={{ marginLeft: 12, fontSize: 12.5, color: UI.muted }}>
+          ~5–10 minutes · live progress below · lands in My Courses
+        </span>
       </div>
 
       {progress && (
@@ -206,6 +215,7 @@ export default function StudioPage() {
           </a>
         </div>
       )}
-    </main>
+      </main>
+    </div>
   );
 }
