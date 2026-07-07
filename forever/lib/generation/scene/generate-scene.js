@@ -20,11 +20,13 @@ export async function generateSceneFromSourcePack(
   const id = sceneId ?? `gen_${sourcePack.id.slice(3)}`;
   const runCodeAgent = agents.generateExecutedCode ?? generateExecutedCode;
   const traceAgent = agents.traceExecution ?? traceExecution;
+  const reviewAgent = agents.runGroundingReview ?? runGroundingReview;
+  const voiceAgent = agents.writeVoice ?? writeVoice;
   const sourceText = sourcePack.chunks.map((chunk) => chunk.text).join('\n');
 
   // Board goes through the society's grounding review cycle (generate -> audit -> revise)
   // before it is allowed to be narrated. Ungrounded boards never reach the student.
-  const review = await runGroundingReview({ sceneId: id, sourcePack, layout, brief });
+  const review = await reviewAgent({ sceneId: id, sourcePack, layout, brief });
   const objects = [...review.objects];
 
   // DRY-RUN scenes get the ELITE path: the Execution Tracer runs the real algorithm and
@@ -74,7 +76,7 @@ export async function generateSceneFromSourcePack(
   // generated DIRECTLY from its trace steps (one line per step, tagged with traceStep) so the words
   // are guaranteed to match the animated state — single source of truth, no drift.
   const narratable = objects.filter((o) => o.renderHint !== 'algorithm');
-  const voice = narratable.length ? await writeVoice({ objects: narratable, sourcePack }) : { voiceLines: [], usage: null };
+  const voice = narratable.length ? await voiceAgent({ objects: narratable, sourcePack }) : { voiceLines: [], usage: null };
   const algoLines = algorithmObject
     ? algorithmObject.content.steps.map((step, i) => ({
         id: `${algorithmObject.id}_step_${i}`,
