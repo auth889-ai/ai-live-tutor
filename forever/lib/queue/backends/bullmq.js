@@ -24,8 +24,8 @@ export function createBullQueue({ redisUrl }) {
   const queue = new Queue(JOB_NAME, { connection });
 
   async function enqueue(input, { priority } = {}) {
-    // BullMQ: lower number = higher priority. Interactive jobs (a user waiting at the
-    // Studio) must never sit behind a batch course fan-out.
+    // BullMQ semantics: jobs WITHOUT priority are picked FIRST; among prioritized jobs,
+    // lower number wins. So: interactive jobs get NO priority, batch fan-out gets 10.
     const job = await queue.add(JOB_NAME, input, priority ? { ...JOB_OPTS, priority } : JOB_OPTS);
     return { jobId: String(job.id) };
   }

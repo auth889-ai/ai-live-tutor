@@ -32,6 +32,6 @@ export async function POST(request, { params }) {
     return Response.json({ error: String(error.message || error) }, { status: 400 });
   }
 
-  const { jobId } = await enqueueLesson(input, { priority: 2 }); // user-clicked: ahead of batch, behind fresh material
+  const { jobId } = await enqueueLesson(input); // no priority = highest: a user clicked and is watching
   return Response.json({ jobId }, { status: 202 });
 }

@@ -10,7 +10,7 @@ import { isTerminal } from '../../../../../lib/queue/job-contract.js';
 export const dynamic = 'force-dynamic';
 
 const POLL_MS = 1000;
-const MAX_MS = 20 * 60 * 1000; // stop streaming after 20 min — a job this long has failed
+const MAX_MS = 45 * 60 * 1000; // stop streaming after 45 min (queue wait + full generation)
 
 export async function GET(_request, { params }) {
   const { id } = await params;
