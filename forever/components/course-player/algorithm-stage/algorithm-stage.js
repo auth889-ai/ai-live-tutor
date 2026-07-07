@@ -16,10 +16,15 @@ import { GraphView } from '../panels/graph-view.js';
 import { GridView } from './grid-view.js';
 import { TraceTable } from './trace-table.js';
 
-export function AlgorithmStage({ trace, tMs = 0, progress = 1 }) {
+export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null }) {
   if (!trace?.steps?.length) return null;
-  const timed = trace.steps[0]?.startMs !== undefined;
-  const { index, step } = timed ? traceStateAtMs(trace, tMs) : traceStateAt(trace, progress);
+  // Priority: an explicit step (voice-synced, one line per step) > timed clock (startMs/endMs) >
+  // write-progress fallback. All deterministic; none use setTimeout.
+  let index;
+  if (stepIndex != null) index = Math.max(0, Math.min(trace.steps.length - 1, stepIndex));
+  else if (trace.steps[0]?.startMs !== undefined) index = traceStateAtMs(trace, tMs).index;
+  else index = traceStateAt(trace, progress).index;
+  const step = trace.steps[index];
   const historySteps = trace.steps.slice(0, index + 1); // full step objects, for accumulation
   const views = trace.views ?? {};
 

@@ -25,6 +25,20 @@ test('objectType is a free string so agents can invent subject-specific objects'
   assert.ok(!RENDER_HINTS.includes(object.objectType));
 });
 
+test('an "algorithm" board object carrying a valid ExecutionTrace passes; an invalid trace is rejected', () => {
+  const trace = {
+    language: 'python',
+    code: 'def f(a,t):\n  lo,hi=0,len(a)-1',
+    views: { array: { values: [1, 3, 5] } },
+    steps: [{ line: 2, explanation: 'start', array: { current: 0 } }],
+  };
+  const obj = { ...validObject(), objectType: 'binary_search_dry_run', renderHint: 'algorithm', content: trace };
+  validateBoardObject(obj, 'teacher_notebook');
+  // a trace whose step points at a non-existent array index must be rejected at the board level
+  const bad = { ...obj, content: { ...trace, steps: [{ line: 2, explanation: 'x', array: { current: 9 } }] } };
+  assert.throws(() => validateBoardObject(bad, 'teacher_notebook'), /out of bounds/);
+});
+
 test('raw x/y coordinates are rejected — the non-negotiable rule is enforced in code', () => {
   assert.throws(() => validateBoardObject({ ...validObject(), x: 120, y: 300 }, 'teacher_notebook'), /must not carry raw x\/y/);
 });

@@ -16,6 +16,7 @@ import { MathView } from './math-view.js';
 import { ImageView } from './image-view.js';
 import { CalloutView } from './callout-view.js';
 import { QuizView } from './quiz-view.js';
+import { AlgorithmStage } from '../algorithm-stage/algorithm-stage.js';
 
 export function StagePresenter({ scene, tMs, title, setHold }) {
   const state = useMemo(() => boardStateAt(scene.timeline, tMs), [scene, tMs]);
@@ -96,6 +97,11 @@ function Focus({ object, state, focusRef, activeStep, onQuizAnswered }) {
   if (object.renderHint === 'diagram') {
     const progress = state.writing.get(object.id)?.progress ?? 1;
     return <div style={{ maxWidth: 720, margin: '0 auto' }}><DiagramPanel content={object.content} progress={progress} activeNode={focusRef != null ? String(focusRef) : null} activeStep={activeStep} /></div>;
+  }
+  if (object.renderHint === 'algorithm') {
+    // The elite DSA/ML dry run: one ExecutionTrace, all panels synced. The active voice line's
+    // traceStep drives the step (voice-synced); write-progress is the fallback before audio timing.
+    return <AlgorithmStage trace={object.content} stepIndex={activeStep} progress={state.writing.get(object.id)?.progress ?? 1} />;
   }
   if (object.renderHint === 'math') {
     return <MathView content={object.content} />;
