@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { POST } from '../../app/api/generate/route.js';
-import { GET } from '../../app/api/generate/[id]/route.js';
+import { POST } from '../../app/api/jobs/route.js';
+import { GET } from '../../app/api/jobs/[id]/route.js';
 import { createInProcessQueue } from '../../lib/queue/backends/in-process.js';
 import { __setLessonQueue } from '../../lib/queue/lesson-queue.js';
 import { makeProgress } from '../../lib/queue/job-contract.js';
 
 function jsonRequest(body) {
-  return new Request('http://test/api/generate', { method: 'POST', body: JSON.stringify(body) });
+  return new Request('http://test/api/jobs', { method: 'POST', body: JSON.stringify(body) });
 }
 
 test('POST rejects material under 60 chars with 400', async () => {

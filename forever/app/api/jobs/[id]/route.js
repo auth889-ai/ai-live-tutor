@@ -1,6 +1,6 @@
-// GET /api/generate/:id -> current job status { id, state, progress, result, error }. The
-// browser polls this (or uses /stream) after POST /api/generate. When state is "completed",
-// result.lessonId points at the finished lesson to load from /api/lessons/:id.
+// GET /api/jobs/:id -> current job status { id, state, progress, result, error }. The client
+// polls this (or subscribes to /api/jobs/:id/events) after POST /api/jobs. When state is
+// "completed", result.lessonId points at the finished lesson to load from /api/lessons/:id.
 
 import { getLessonJob } from '../../../../lib/queue/lesson-queue.js';
 

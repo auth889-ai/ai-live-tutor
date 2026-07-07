@@ -235,7 +235,10 @@ Shared PROCESSOR (lesson-processor.js) is the single idempotent unit both backen
 identical behaviour everywhere. Real per-scene progress: generate-lesson fires onProgress as
 each scene settles (not a fake spinner). Routes: POST /api/generate -> 202 {jobId};
 GET /api/generate/:id -> status; GET /api/generate/:id/stream -> SSE progress (polls
-getLessonJob, backend-agnostic). npm run worker starts the BullMQ worker. Next: Postgres/RDS
+getLessonJob, backend-agnostic). REST design (2026-07-07): resources not verbs — POST /api/jobs
+(create generation job) -> 202 {jobId}; GET /api/jobs/:id (status); GET /api/jobs/:id/events (SSE);
+/api/lessons + /api/lessons/:id are the finished-output resource. Studio page uses EventSource for
+a real progress bar. npm run worker starts the BullMQ worker. Next: Postgres/RDS
 persistence behind the lesson-store seam; then resume teaching-depth (Execution Tracer agent).
 
 ### Graph trace-step animation findings (2026-07-07) — DECIDED

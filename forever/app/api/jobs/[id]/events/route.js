@@ -1,8 +1,8 @@
-// GET /api/generate/:id/stream -> Server-Sent Events of live job progress. Emits one "progress"
-// event per poll (phase + percent + scene counts) and a final "done" or "error" event, then
-// closes. Backend-agnostic: it polls getLessonJob, so it works identically over BullMQ+Redis
-// (worker updates job.progress) and the in-process backend. The browser renders a real progress
-// bar from these events instead of a fake spinner.
+// GET /api/jobs/:id/events -> Server-Sent Events of live job progress (consumed by the browser's
+// EventSource). Emits a "progress" event per change (phase + percent + scene counts) and a final
+// "done" or "error" event, then closes. Backend-agnostic: it polls getLessonJob, so it works
+// identically over BullMQ+Redis (worker updates job.progress) and the in-process backend. The
+// browser renders a real progress bar from these events instead of a fake spinner.
 
 import { getLessonJob } from '../../../../../lib/queue/lesson-queue.js';
 import { isTerminal } from '../../../../../lib/queue/job-contract.js';
