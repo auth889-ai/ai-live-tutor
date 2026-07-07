@@ -12,6 +12,11 @@ export function validateVoiceLine(line) {
   if (line.focusRef !== undefined && !(typeof line.focusRef === 'string' || typeof line.focusRef === 'number')) {
     throw new Error(`${context}.focusRef must be a string or number (a sub-element id)`);
   }
+  // Optional: for a traced diagram (dry run), the 0-based trace step THIS line narrates. Binds
+  // the animation to the words — the marked node/pointer is guaranteed to match what is spoken.
+  if (line.traceStep !== undefined && !(Number.isInteger(line.traceStep) && line.traceStep >= 0)) {
+    throw new Error(`${context}.traceStep must be a non-negative integer (the 0-based trace step this line narrates)`);
+  }
   if (line.sourceRef !== undefined) validateSourceRef(line.sourceRef, `${context}.sourceRef`);
   return line;
 }

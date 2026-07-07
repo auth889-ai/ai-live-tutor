@@ -31,12 +31,17 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
   const focusObj = scene.objects.find((o) => o.id === lastFocus.current) || scene.objects[0];
   const subtitle = activeLine?.text ?? '';
 
-  // Voice-synced trace step: the Nth narration line that targets this diagram drives the Nth
-  // trace step, so the current node / pointer marks EXACTLY as the tutor speaks that step —
-  // instead of drifting off a fuzzy write-reveal progress.
+  // Voice-synced trace step. Best: the active line's EXPLICIT traceStep (the Voice Writer wrote
+  // one line per step, so the words are guaranteed to match the marked node). Fallback: the Nth
+  // line targeting the diagram drives the Nth step. Either way the marking tracks the narration,
+  // not a fuzzy write-reveal.
   const diagramLines = focusObj ? scene.voiceLines.filter((l) => l.targetObjectId === focusObj.id) : [];
-  const stepIndex = state.activeSpeech ? diagramLines.findIndex((l) => l.id === state.activeSpeech) : -1;
-  const activeStep = stepIndex >= 0 ? stepIndex : null;
+  const orderIndex = state.activeSpeech ? diagramLines.findIndex((l) => l.id === state.activeSpeech) : -1;
+  const activeStep = Number.isInteger(activeLine?.traceStep) && activeLine.targetObjectId === focusObj?.id
+    ? activeLine.traceStep
+    : orderIndex >= 0
+      ? orderIndex
+      : null;
 
   // Hold playback while an unanswered quiz is on screen.
   const quizBlocking = focusObj?.renderHint === 'quiz' && !answered.has(focusObj.id);

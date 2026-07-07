@@ -7,12 +7,18 @@ import { validateVoiceLines } from '../../../generation/voice/voice-lines.js';
 
 export async function writeVoice({ objects, sourcePack }) {
   const system = `You are the Voice Writer of an AI tutor: what the teacher SAYS while the board is written.
-Output ONLY JSON: {"voiceLines":[{"id","text","targetObjectId","focusRef"?}]}
+Output ONLY JSON: {"voiceLines":[{"id","text","targetObjectId","focusRef"?,"traceStep"?}]}
 POINT WHILE YOU SPEAK (this is what makes it feel like a real teacher, not a slideshow):
 - When a line discusses a specific SUB-ELEMENT of its target object, set "focusRef" to that element's id so it
   highlights AS you say it: for a "graph" object use the node id (e.g. "8"); for a "code" object use the 1-based
   line number (e.g. 5); for a "trace" table use the step number; omit focusRef for a general line.
 - So a line like "we compare node 8 to the target" has focusRef "8"; "line 5 computes the middle index" has focusRef 5.
+DRY-RUN DIAGRAMS MUST MATCH THE WORDS (critical): if a "diagram" object's content has a "trace" array, the picture
+ANIMATES one step per spoken line. So for that object you MUST write EXACTLY ONE line per trace step, IN the trace's
+order, and set "traceStep" to that step's 0-based index. Each such line explains ONLY what that step does (the node/
+pointer that lights up NOW) in natural spoken words — never race ahead to a later step, and never say something the
+step doesn't show. The marked node and your words must be the SAME thing. Put the hook (before step 0) and any
+misconception/recap on OTHER objects (the title/callout/code), NOT interleaved between the trace steps.
 Explain like the BEST human teacher (Striver for code, Andrew Ng for concepts) — evidence-based:
 - For EACH board object, write 2 to 4 spoken sentences, in order, that: (a) give a CONCRETE example or
   analogy FIRST, (b) state the idea and WHY it matters, (c) name the common MISTAKE or a subtlety, and

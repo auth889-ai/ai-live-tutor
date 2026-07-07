@@ -50,3 +50,24 @@ test('a non-string/number focusRef is rejected', () => {
     /focusRef must be a string or number/,
   );
 });
+
+test('a voice line may carry a traceStep binding it to a dry-run step', () => {
+  validateVoiceLines(
+    [
+      { id: 'vl_1', text: 'Start at the root.', targetObjectId: 'obj_tree', traceStep: 0 },
+      { id: 'vl_2', text: 'Move to its left child.', targetObjectId: 'obj_tree', traceStep: 1 },
+    ],
+    [{ id: 'obj_tree' }],
+  );
+});
+
+test('a negative or non-integer traceStep is rejected', () => {
+  assert.throws(
+    () => validateVoiceLines([{ id: 'vl_1', text: 'x', targetObjectId: 'o', traceStep: -1 }], [{ id: 'o' }]),
+    /traceStep must be a non-negative integer/,
+  );
+  assert.throws(
+    () => validateVoiceLines([{ id: 'vl_1', text: 'x', targetObjectId: 'o', traceStep: 1.5 }], [{ id: 'o' }]),
+    /traceStep must be a non-negative integer/,
+  );
+});
