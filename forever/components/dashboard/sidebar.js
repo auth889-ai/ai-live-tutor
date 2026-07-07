@@ -9,9 +9,9 @@ const UI = { text: '#2b211a', muted: '#8a6d3b', border: '#f0e2d0', accent: '#f47
 
 export function DashboardSidebar({ email, active = 'home' }) {
   const nav = [
-    { key: 'home', icon: '🏠', label: 'Home', href: '/' },
+    { key: 'home', icon: '🏠', label: 'Home', href: '/dashboard' },
     { key: 'studio', icon: '✨', label: 'New course', href: '/studio' },
-    { key: 'courses', icon: '📚', label: 'My Courses', href: '#courses' },
+    { key: 'courses', icon: '📚', label: 'My Courses', href: '/courses' },
   ];
   const soon = [
     ['📓', 'Notebook'],
@@ -32,7 +32,7 @@ export function DashboardSidebar({ email, active = 'home' }) {
       background: '#fff', border: `1px solid ${UI.border}`, borderRadius: 18, padding: 16,
       position: 'sticky', top: 16, alignSelf: 'flex-start', minHeight: 'calc(100vh - 32px)', boxSizing: 'border-box',
     }}>
-      <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', color: UI.text, marginBottom: 14, padding: '4px 6px' }}>
+      <a href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', color: UI.text, marginBottom: 14, padding: '4px 6px' }}>
         <span style={{ width: 32, height: 32, borderRadius: 10, background: UI.accent, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 16 }}>F</span>
         <span style={{ fontWeight: 800, fontSize: 18 }}>Forever <span style={{ display: 'block', fontWeight: 500, fontSize: 11, color: UI.muted }}>AI Tutor</span></span>
       </a>

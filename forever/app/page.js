@@ -1,92 +1,28 @@
-// Home = the signed-in dashboard (mockup: My Courses / Continue Learning), or a landing
-// hero for visitors. Lessons are read owner-scoped in the data layer — this page can only
-// ever show YOUR courses.
+// / — the COVER page (OpenMAIC-style landing) for visitors. Signed-in users are sent to
+// /dashboard: one route, one job. The app shell (dashboard/courses/studio) lives on its
+// own routes.
 
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
-import { listLessons } from '../lib/storage/lesson-store.js';
 import { SESSION_COOKIE, verifySessionToken } from '../lib/auth/session.js';
-import { DashboardSidebar } from '../components/dashboard/sidebar.js';
 
 const UI = {
   text: '#3a2e22', muted: '#8a6d3b', border: '#f0e2d0', card: '#fff',
   accent: '#f47368', accentDark: '#e8604c', bgSoft: '#fdf6ee',
 };
-const fmt = (ms) => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
 export default async function HomePage() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const session = token ? verifySessionToken(token) : null;
-  const lessons = session ? await listLessons({ forUser: session.userId }) : [];
-
-  // Visitors get the cover page; signed-in users get the sidebar dashboard (mockup layout).
-  if (!session) {
-    return (
-      <main style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 20px', color: UI.text }}>
-        <header style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 30 }}>
-          <span style={{ width: 34, height: 34, borderRadius: 10, background: UI.accent, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 17 }}>F</span>
-          <span style={{ fontWeight: 800, fontSize: 20 }}>Forever <span style={{ fontWeight: 500, fontSize: 13, color: UI.muted }}>AI Tutor</span></span>
-          <span style={{ marginLeft: 'auto' }}><a href="/login" style={btn(true)}>Sign in</a></span>
-        </header>
-        <Landing />
-      </main>
-    );
-  }
-
-  const firstName = (session.email || '').split('@')[0].split(/[._-]/)[0];
-  const latest = lessons[0] ?? null;
+  if (session) redirect('/dashboard');
 
   return (
-    <div style={{ display: 'flex', gap: 18, maxWidth: 1280, margin: '0 auto', padding: 16, alignItems: 'flex-start', color: UI.text }}>
-      <DashboardSidebar email={session.email} active="home" />
-
-      <main style={{ flex: 1, minWidth: 0 }}>
-        <header style={{ margin: '10px 0 22px' }}>
-          <h1 style={{ fontSize: 28, margin: 0, textTransform: 'capitalize' }}>Welcome back, {firstName}! 👋</h1>
-          <p style={{ color: UI.muted, margin: '6px 0 0' }}>Keep learning and stay consistent. You're doing great!</p>
-        </header>
-
-        {latest && (
-          <section style={{ background: UI.card, border: `1px solid ${UI.border}`, borderRadius: 18, padding: 20, marginBottom: 18, display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', boxShadow: '0 1px 2px rgba(58,46,34,0.05)' }}>
-            <div style={{ width: 92, height: 92, borderRadius: 16, background: UI.bgSoft, display: 'grid', placeItems: 'center', fontSize: 38, flexShrink: 0 }}>▶</div>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: UI.accent, letterSpacing: 0.5, marginBottom: 4 }}>CONTINUE LEARNING</div>
-              <div style={{ fontWeight: 800, fontSize: 17, lineHeight: 1.3 }}>{latest.title}</div>
-              <div style={{ fontSize: 13, color: UI.muted, marginTop: 4 }}>{latest.scenes} scenes · {fmt(latest.durationMs)}{latest.voiced ? ' · 🔊 voiced' : ''}</div>
-            </div>
-            <a href={`/course/${latest.id}`} style={{ ...btn(true), padding: '12px 24px', whiteSpace: 'nowrap' }}>Continue learning ▶</a>
-          </section>
-        )}
-
-        <section id="courses">
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h2 style={{ fontSize: 19, margin: 0 }}>My Courses</h2>
-            <a href="/studio" style={{ color: UI.accent, fontWeight: 700, fontSize: 13.5, textDecoration: 'none' }}>+ New course</a>
-          </div>
-
-          {lessons.length === 0 ? (
-            <a href="/studio" style={{ display: 'block', border: `2px dashed ${UI.border}`, borderRadius: 16, padding: '48px 20px', textAlign: 'center', textDecoration: 'none', color: UI.muted, background: UI.bgSoft }}>
-              <div style={{ fontSize: 34, marginBottom: 8 }}>＋</div>
-              <div style={{ fontWeight: 700, color: UI.text }}>Generate your first course</div>
-              <div style={{ fontSize: 13 }}>PDF · text · URL · image</div>
-            </a>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 14 }}>
-              {lessons.map((lesson) => (
-                <a key={lesson.id} href={`/course/${lesson.id}`}
-                  style={{ border: `1px solid ${UI.border}`, borderRadius: 16, padding: 18, background: UI.card, textDecoration: 'none', color: UI.text, boxShadow: '0 1px 2px rgba(58,46,34,0.05)' }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 12, background: UI.bgSoft, display: 'grid', placeItems: 'center', fontSize: 20, marginBottom: 12 }}>🎓</div>
-                  <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.3, marginBottom: 6 }}>{lesson.title}</div>
-                  <div style={{ fontSize: 12, color: UI.muted }}>
-                    {lesson.scenes} scenes · {fmt(lesson.durationMs)}{lesson.voiced ? ' · 🔊 voiced' : ''}
-                  </div>
-                </a>
-              ))}
-            </div>
-          )}
-        </section>
-      </main>
-    </div>
+    <main style={{ color: UI.text }}>
+      <div style={{ maxWidth: 1120, margin: '0 auto', padding: '0 20px' }}>
+        <Landing />
+      </div>
+    </main>
   );
 }
 
@@ -111,39 +47,44 @@ function Landing() {
 
   return (
     <>
-      {/* hero */}
-      <section style={{ textAlign: 'center', padding: '56px 0 40px' }}>
-        <div style={{ ...chip, background: UI.bgSoft, marginBottom: 18 }}>
-          <span style={{ color: UI.accent }}>●</span> Qwen agent society · AGPL-3.0 · Global AI Hackathon Track 3
-        </div>
-        <h1 style={{ fontSize: 46, lineHeight: 1.15, margin: 0 }}>
-          Any material becomes a course
-          <br />
-          <span style={{ color: UI.accent }}>taught like the best teacher you ever had</span>
-        </h1>
-        <p style={{ color: UI.muted, fontSize: 17, maxWidth: 640, margin: '18px auto 26px' }}>
-          A society of AI teachers turns your PDFs, articles, notes and images into narrated interactive
-          lessons — a tutor that writes on a board, runs real code, animates algorithms step by step,
-          asks questions, and proves every claim against your source.
-        </p>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 22 }}>
-          <a href="/login" style={{ ...btn(true), fontSize: 16, padding: '12px 28px' }}>Get started</a>
-          <a href="#how" style={{ ...btn(false), fontSize: 16, padding: '12px 28px' }}>How it works</a>
-        </div>
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <span style={chip}>✏️ Paste text</span>
-          <span style={chip}>📄 Upload a PDF</span>
-          <span style={chip}>🔗 Drop a web article</span>
-          <span style={chip}>🖼 Teach from an image</span>
-        </div>
+      {/* video hero */}
+      <section style={{ position: 'relative', borderRadius: 26, overflow: 'hidden', margin: '18px 0 40px', color: '#fff', background: '#1a100a', boxShadow: '0 24px 70px rgba(58,46,34,0.28)' }}>
+        <video autoPlay muted loop playsInline poster="/images/study-23.png"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}>
+          <source src="/videos/hero.mp4" type="video/mp4" />
+        </video>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(18,11,6,0.62), rgba(18,11,6,0.3) 45%, rgba(18,11,6,0.82))' }} />
 
-        {/* hero visual — study anywhere */}
-        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'flex-end', marginTop: 38, flexWrap: 'wrap' }}>
-          {[['/images/study-26.png', 'Learners in a grand library', -2.5, 150], ['/images/study-23.png', 'A laptop and notebook study setup', 0, 200], ['/images/study-25.png', 'Studying in a café', 2.5, 150]].map(([src, alt, tilt, h]) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={src} src={src} alt={alt}
-              style={{ height: h, width: 'auto', maxWidth: '85vw', objectFit: 'cover', borderRadius: 16, transform: `rotate(${tilt}deg)`, boxShadow: '0 16px 40px rgba(58,46,34,0.18)', border: '5px solid #fff' }} />
-          ))}
+        <div style={{ position: 'relative', padding: '26px 44px 62px' }}>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 64 }}>
+            <span style={{ width: 34, height: 34, borderRadius: 10, background: UI.accent, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 17 }}>F</span>
+            <span style={{ fontWeight: 800, fontSize: 19 }}>Forever <span style={{ fontWeight: 500, fontSize: 13, opacity: 0.85 }}>AI Tutor</span></span>
+            <a href="/login" style={{ marginLeft: 'auto', padding: '9px 20px', borderRadius: 999, textDecoration: 'none', fontWeight: 700, fontSize: 14, color: '#fff', border: '1.5px solid rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(6px)' }}>Sign in</a>
+          </nav>
+
+          <div style={{ maxWidth: 760 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(244,115,104,0.95)', borderRadius: 999, padding: '6px 16px', fontSize: 12, fontWeight: 800, letterSpacing: 0.8, marginBottom: 20 }}>
+              ● QWEN AGENT SOCIETY · OPEN SOURCE · HACKATHON TRACK 3
+            </div>
+            <h1 style={{ fontSize: 54, lineHeight: 1.08, margin: 0, letterSpacing: -1.2, fontWeight: 800, textShadow: '0 2px 20px rgba(0,0,0,0.35)' }}>
+              Any material becomes a course<br />
+              <span style={{ color: '#ffb3a8' }}>taught like the best teacher you ever had.</span>
+            </h1>
+            <p style={{ color: 'rgba(255,255,255,0.88)', fontSize: 18, lineHeight: 1.55, maxWidth: 620, margin: '20px 0 30px' }}>
+              A society of AI teachers turns your PDFs, articles, notes and images into narrated,
+              interactive lessons — a tutor that writes on a board, runs real code, animates algorithms
+              step by step, and proves every claim against your source.
+            </p>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 26 }}>
+              <a href="/login" style={{ padding: '14px 34px', borderRadius: 12, textDecoration: 'none', fontWeight: 800, fontSize: 16, background: UI.accent, color: '#fff', boxShadow: '0 10px 30px rgba(244,115,104,0.45)' }}>Get started — it's free</a>
+              <a href="#how" style={{ padding: '14px 34px', borderRadius: 12, textDecoration: 'none', fontWeight: 700, fontSize: 16, color: '#fff', border: '1.5px solid rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(6px)' }}>How it works</a>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 13, fontWeight: 600 }}>
+              {['✏️ Paste text', '📄 Upload a PDF', '🔗 Drop a web article', '🖼 Teach from an image'].map((t) => (
+                <span key={t} style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.28)', backdropFilter: 'blur(4px)', borderRadius: 999, padding: '7px 15px' }}>{t}</span>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
