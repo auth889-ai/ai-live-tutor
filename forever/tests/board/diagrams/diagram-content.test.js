@@ -80,7 +80,7 @@ test('comparison/trace rows must FILL the table — the empty-cells production b
       columns: ['Pair', 'Match', 'Length'],
       rows: [{ label: '(0, 0)', 'G=G then stop': ['5'] }],
     }),
-    /row 0 \("\(0, 0\)"\) must have "values" as an array of exactly 2/,
+    /row 0 \("\(0, 0\)"\) must have "values" as an array of exactly 3/,
   );
   // the correct shape passes: label column implicit, one value per header
   validateDiagramContent({
