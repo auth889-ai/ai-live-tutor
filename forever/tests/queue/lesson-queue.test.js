@@ -114,7 +114,7 @@ test('processLessonJob honours the explicit DISABLE_TTS=1 dev opt-out (never a s
   assert.equal(saved[result.lessonId], fakeLesson);
 });
 
-test('course mode: Dean outline -> course saved -> FIRST lesson generated and linked', async () => {
+test('course mode is FAN-OUT: Dean outline -> course saved -> every lesson enqueued as its own job', async () => {
   const saved = {};
   const outline = {
     title: 'BFS Course',
@@ -126,18 +126,15 @@ test('course mode: Dean outline -> course saved -> FIRST lesson generated and li
       ],
     }],
   };
-  const links = [];
+  const enqueued = [];
   const result = await processLessonJob(
     { input: { type: 'text', text: 'x'.repeat(80), course: true }, ownerId: 'u1' },
     {
       deps: {
         designCourseOutline: async () => ({ outline, usage: null }),
-        generate: async (pack) => ({ sourcePackId: pack.id, lessonTitle: 'generated title', scenes: [{ durationMs: 1000 }] }),
-        voice: async (l) => l,
-        publishAssets: async (l) => l,
         saveCourse: async (id, course) => { saved[id] = course; },
-        linkCourseLesson: async (id, outlineLessonId, lessonId) => links.push({ id, outlineLessonId, lessonId }),
-        save: async (id, lesson) => { saved[id] = lesson; },
+        enqueue: async (payload) => { enqueued.push(payload); return { jobId: `job_${enqueued.length}` }; },
+        generate: async () => { throw new Error('course job must NOT generate lessons inline'); },
         env: { DISABLE_TTS: '1' },
       },
     },
@@ -145,12 +142,14 @@ test('course mode: Dean outline -> course saved -> FIRST lesson generated and li
 
   assert.equal(result.courseTitle, 'BFS Course');
   assert.equal(result.lessonsPlanned, 2);
-  assert.equal(links.length, 1);
-  assert.equal(links[0].outlineLessonId, 'ep_01_l_01');
-  assert.equal(result.firstLessonId, links[0].lessonId);
-  const firstLesson = saved[links[0].lessonId];
-  assert.equal(firstLesson.lessonTitle, 'Why BFS'); // the Dean's title wins in a course
-  assert.equal(firstLesson.courseRef.courseId, result.courseId);
+  assert.equal(result.enqueued, 2);
+  // one queued job per outline lesson, owner carried through
+  assert.deepEqual(enqueued.map((e) => e.input.outlineLessonId), ['ep_01_l_01', 'ep_01_l_02']);
+  assert.ok(enqueued.every((e) => e.input.type === 'course-lesson' && e.ownerId === 'u1'));
+  // the saved course records each lesson's jobId so the syllabus can follow live progress
+  const course = saved[result.courseId];
+  assert.equal(course.lessonJobs['ep_01_l_01'].jobId, 'job_1');
+  assert.equal(course.lessonJobs['ep_01_l_02'].jobId, 'job_2');
 });
 
 test('course-lesson mode: generates ONE more lesson of an existing course, owner-scoped', async () => {

@@ -4,12 +4,33 @@
 // its live progress over SSE, and reloads the page when the lesson is ready so the row
 // becomes a play link. One button, honest states: idle -> generating(x%) -> error/reload.
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-export function GenerateLessonButton({ courseId, outlineLessonId }) {
-  const [progress, setProgress] = useState(null); // null | {percent, phase}
+export function GenerateLessonButton({ courseId, outlineLessonId, initialJobId = null }) {
+  const [progress, setProgress] = useState(initialJobId ? { percent: 0, phase: 'queued' } : null);
   const [error, setError] = useState(null);
   const sourceRef = useRef(null);
+
+  // Fan-out mode: the course job already enqueued this lesson — follow that job from mount.
+  useEffect(() => {
+    if (initialJobId) watch(initialJobId);
+    return () => sourceRef.current?.close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialJobId]);
+
+  function watch(jobId) {
+    const es = new EventSource(`/api/jobs/${jobId}/events`);
+    sourceRef.current = es;
+    es.addEventListener('progress', (e) => setProgress(JSON.parse(e.data)));
+    es.addEventListener('done', () => { es.close(); window.location.reload(); });
+    es.addEventListener('error', (e) => {
+      let message = 'Generation failed';
+      try { message = JSON.parse(e.data).error || message; } catch { /* connection-level */ }
+      setError(message);
+      setProgress(null);
+      es.close();
+    });
+  }
 
   async function start() {
     setError(null);
@@ -22,17 +43,7 @@ export function GenerateLessonButton({ courseId, outlineLessonId }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not start generation');
-      const es = new EventSource(`/api/jobs/${data.jobId}/events`);
-      sourceRef.current = es;
-      es.addEventListener('progress', (e) => setProgress(JSON.parse(e.data)));
-      es.addEventListener('done', () => { es.close(); window.location.reload(); });
-      es.addEventListener('error', (e) => {
-        let message = 'Generation failed';
-        try { message = JSON.parse(e.data).error || message; } catch { /* connection-level */ }
-        setError(message);
-        setProgress(null);
-        es.close();
-      });
+      watch(data.jobId);
     } catch (err) {
       setError(err.message);
       setProgress(null);

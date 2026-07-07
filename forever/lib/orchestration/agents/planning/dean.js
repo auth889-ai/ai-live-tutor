@@ -42,14 +42,26 @@ STRUCTURE RULES (from real course calibration — violations are rejected):
 
   let problem = '';
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const { json, usage } = await call({
+    let json;
+    let usage;
+    try {
+      ({ json, usage } = await call({
       agent: 'dean',
       system: problem ? `${system}\n\nYOUR PREVIOUS OUTLINE WAS REJECTED: ${problem}\nOutput the corrected full JSON.` : system,
       user,
       model: process.env.MODEL_PLANNER || 'qwen3.7-max',
       temperature: 0.4,
-      maxTokens: 3500,
-    });
+      maxTokens: 7000,
+    }));
+    } catch (error) {
+      // Truncated output is a REPAIRABLE planning failure (the model wrote too much), not
+      // a dead job: tell it to be concise and try once more.
+      if (/invalid JSON/i.test(String(error?.message))) {
+        problem = 'your output was cut off mid-JSON — write SHORTER directives (2 sentences max) and output the complete valid JSON.';
+        continue;
+      }
+      throw error;
+    }
 
     const outline = {
       title: String(json.title || sourcePack.title).trim(),

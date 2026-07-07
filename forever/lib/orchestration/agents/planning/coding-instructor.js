@@ -148,14 +148,26 @@ HARD RULES:
   // exact problem and fixes it; a second failure raises (never a fake plan).
   let problem = '';
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const { json, usage } = await call({
+    let json;
+    let usage;
+    try {
+      ({ json, usage } = await call({
       agent: 'coding_instructor',
       system: problem ? `${system}\n\nYOUR PREVIOUS PLAN WAS REJECTED: ${problem}\nOutput the corrected full JSON.` : system,
       user,
       model: process.env.MODEL_PLANNER || 'qwen3.7-max',
       temperature: 0.4,
-      maxTokens: 3500,
-    });
+      maxTokens: 7000,
+    }));
+    } catch (error) {
+      // Truncated output is a REPAIRABLE planning failure (the model wrote too much), not
+      // a dead job: tell it to be concise and try once more.
+      if (/invalid JSON/i.test(String(error?.message))) {
+        problem = 'your output was cut off mid-JSON — write SHORTER directives (2 sentences max) and output the complete valid JSON.';
+        continue;
+      }
+      throw error;
+    }
 
     const scenes = (Array.isArray(json.scenes) ? json.scenes : [])
       .map((scene) => ({

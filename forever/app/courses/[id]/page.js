@@ -22,7 +22,7 @@ export default async function CourseSyllabusPage({ params }) {
   const course = await loadCourse(id, { forUser: session.userId });
   if (!course) notFound();
 
-  const { outline, lessonLinks = {} } = course;
+  const { outline, lessonLinks = {}, lessonJobs = {} } = course;
   const allLessons = outline.episodes.flatMap((episode) => episode.lessons);
   const readyCount = allLessons.filter((lesson) => lessonLinks[lesson.id]?.lessonId).length;
   const pct = Math.round((readyCount / allLessons.length) * 100);
@@ -73,7 +73,7 @@ export default async function CourseSyllabusPage({ params }) {
                       ▶ Play
                     </a>
                   ) : (
-                    <GenerateLessonButton courseId={id} outlineLessonId={lesson.id} />
+                    <GenerateLessonButton courseId={id} outlineLessonId={lesson.id} initialJobId={lessonJobs[lesson.id]?.jobId ?? null} />
                   )}
                 </div>
               );

@@ -31,25 +31,29 @@ export async function processLessonJob(rawInput, { report = () => {}, deps = {} 
   const sourcePack = await (deps.buildPack ?? buildSourcePackFromInput)(input, { env: deps.env ?? process.env });
 
   if (input.course) {
-    // FULL COURSE: the Dean architects episodes/lessons, the course is saved with its
-    // material embedded, and the first lesson generates immediately; the rest generate
-    // on demand from the library (each a cheap, focused job).
+    // FULL COURSE = FAN-OUT (production design): this job only ingests + architects. The
+    // Dean plans the outline, the course is saved with its material embedded, and EVERY
+    // lesson is enqueued as its own job — workers process them in PARALLEL and the
+    // syllabus page follows each job's live progress. No lesson generates inline here.
     report(makeProgress({ phase: 'planning', message: 'The Dean is architecting your course' }));
     const { outline } = await (deps.designCourseOutline ?? designCourseOutline)({ sourcePack });
     const courseId = courseIdFor(sourcePack.id);
-    await (deps.saveCourse ?? saveCourse)(courseId, { outline, sourcePack, lessonLinks: {} }, { ownerId });
+    // Save FIRST so the course exists before any fanned-out lesson job starts.
+    await (deps.saveCourse ?? saveCourse)(courseId, { outline, sourcePack, lessonLinks: {}, lessonJobs: {} }, { ownerId });
 
-    const episode = outline.episodes[0];
-    const first = episode.lessons[0];
-    const { lessonId } = await produceLesson({
-      sourcePack, outlineLesson: first, episode, courseId, ownerId, report, deps,
-    });
-    await (deps.linkCourseLesson ?? linkCourseLesson)(courseId, first.id, lessonId, { forUser: ownerId });
+    const enqueue = deps.enqueue ?? (await import('./lesson-queue.js')).enqueueLesson;
+    const lessonJobs = {};
+    for (const episode of outline.episodes) {
+      for (const lesson of episode.lessons) {
+        const { jobId } = await enqueue({ input: { type: 'course-lesson', courseId, outlineLessonId: lesson.id }, ownerId });
+        lessonJobs[lesson.id] = { jobId, queuedAt: new Date().toISOString() };
+      }
+    }
+    await (deps.saveCourse ?? saveCourse)(courseId, { outline, sourcePack, lessonLinks: {}, lessonJobs }, { ownerId });
 
     const lessonsPlanned = outline.episodes.reduce((n, ep) => n + ep.lessons.length, 0);
-    const result = { courseId, courseTitle: outline.title, episodes: outline.episodes.length, lessonsPlanned, firstLessonId: lessonId };
-    report(makeProgress({ phase: 'done', message: 'Course ready — first lesson generated', lessonId }));
-    return result;
+    report(makeProgress({ phase: 'done', message: `Course architected — ${lessonsPlanned} lessons generating in parallel` }));
+    return { courseId, courseTitle: outline.title, episodes: outline.episodes.length, lessonsPlanned, enqueued: lessonsPlanned };
   }
 
   const { lessonId, lesson } = await produceLesson({ sourcePack, ownerId, report, deps });

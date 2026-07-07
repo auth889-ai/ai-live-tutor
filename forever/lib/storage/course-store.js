@@ -75,13 +75,28 @@ export async function listCourses({ forUser = null, collection = coursesCollecti
   }
 }
 
-// Record that an outline lesson now has a generated lesson behind it.
-export async function linkCourseLesson(id, outlineLessonId, lessonId, { forUser = null } = {}) {
+// Record that an outline lesson now has a generated lesson behind it. ATOMIC on the DB
+// backend ($set of one key) — lesson jobs run in PARALLEL, and a read-modify-write here
+// would lose links when two lessons finish at once.
+export async function linkCourseLesson(id, outlineLessonId, lessonId, { forUser = null, collection = coursesCollection } = {}) {
+  if (dbEnabled()) {
+    const courses = await collection();
+    const res = await courses.updateOne(
+      { _id: sanitize(id), $or: [{ ownerId: null }, { ownerId: forUser }] },
+      {
+        $set: {
+          [`payload.lessonLinks.${outlineLessonId}`]: { lessonId, generatedAt: new Date().toISOString() },
+          updatedAt: new Date(),
+        },
+      },
+    );
+    if (res.matchedCount === 0) throw new Error(`Course ${id} not found`);
+    return;
+  }
   const course = await loadCourse(id, { forUser });
   if (!course) throw new Error(`Course ${id} not found`);
   course.lessonLinks = { ...(course.lessonLinks ?? {}), [outlineLessonId]: { lessonId, generatedAt: new Date().toISOString() } };
   await saveCourse(id, course, { ownerId: course.ownerId ?? null });
-  return course;
 }
 
 function sanitize(id) {
