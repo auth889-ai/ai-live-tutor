@@ -18,14 +18,41 @@ const PHASE_FLOOR = Object.freeze({ queued: 0, routing: 5, planning: 15, generat
 // Phases whose percent interpolates per-scene toward the NEXT phase's floor.
 const PHASE_SPAN_END = Object.freeze({ generating: 'voicing', voicing: 'saving' });
 
-export function validateJobInput(input) {
-  if (!input || typeof input !== 'object') throw new Error('job input must be an object');
-  const text = typeof input.text === 'string' ? input.text.trim() : '';
-  if (text.length < 60) throw new Error('job input needs at least 60 characters of learning material');
-  // ownerId is set by the SERVER from the session (never trusted from the client body) so the
-  // worker can save the lesson under its owner — user privacy flows through the whole job.
-  const ownerId = typeof input.ownerId === 'string' && input.ownerId.trim() ? input.ownerId : null;
-  return { text, ownerId };
+// A job's material is a TYPED input spec — { type: text|pdf|url|image, ... } — matching the
+// source-pack dispatcher. Legacy { text } bodies normalize to the text type so old callers
+// keep working. File paths are resolved by the SERVER from the caller's own uploads (a raw
+// client path is never trusted); ownerId likewise comes from the verified session only.
+export function validateJobInput(raw) {
+  if (!raw || typeof raw !== 'object') throw new Error('job input must be an object');
+  const ownerId = typeof raw.ownerId === 'string' && raw.ownerId.trim() ? raw.ownerId : null;
+  const spec = raw.input && typeof raw.input === 'object'
+    ? raw.input
+    : typeof raw.text === 'string' ? { type: 'text', text: raw.text } : null;
+  if (!spec) throw new Error('job needs an input: { type: text|pdf|url|image, ... }');
+
+  if (spec.type === 'text') {
+    const text = (spec.text || '').trim();
+    if (text.length < 60) throw new Error('job input needs at least 60 characters of learning material');
+    const title = (spec.title || '').trim();
+    return { input: { type: 'text', text, ...(title ? { title } : {}) }, ownerId };
+  }
+  if (spec.type === 'pdf' || spec.type === 'image') {
+    const path = (spec.path || '').trim();
+    if (!path) throw new Error(`${spec.type} input needs an uploaded file`);
+    const text = (spec.text || '').trim();
+    return { input: { type: spec.type, path, ...(text ? { text } : {}) }, ownerId };
+  }
+  if (spec.type === 'url') {
+    let url;
+    try {
+      url = new URL(String(spec.url || ''));
+    } catch {
+      throw new Error('url input needs a valid web address');
+    }
+    if (!/^https?:$/.test(url.protocol)) throw new Error('Only http(s) URLs are supported');
+    return { input: { type: 'url', url: url.href }, ownerId };
+  }
+  throw new Error(`Unknown input type: ${spec.type}`);
 }
 
 // Build a normalized progress object. During "generating" and "voicing" the percent

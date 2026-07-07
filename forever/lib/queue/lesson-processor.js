@@ -3,7 +3,8 @@
 // so behaviour is identical everywhere; only WHERE it runs differs. Idempotent: the lessonId
 // is derived from the source, so re-running a job overwrites the same lesson (safe on retry).
 
-import { generateLessonFromText } from '../generation/lesson/generate-lesson.js';
+import { generateLessonFromSourcePack } from '../generation/lesson/generate-lesson.js';
+import { buildSourcePackFromInput } from '../source-pack/build/dispatch-source-pack.js';
 import { voiceLesson } from '../tts/voice-lesson.js';
 import { saveLesson } from '../storage/lesson-store.js';
 import { validateJobInput, makeProgress } from './job-contract.js';
@@ -15,15 +16,20 @@ export function lessonIdFor(sourcePackId) {
 // report(progress): called with normalized progress objects throughout. deps are injectable so
 // tests run without the real society or filesystem.
 export async function processLessonJob(rawInput, { report = () => {}, deps = {} } = {}) {
-  const generate = deps.generate ?? generateLessonFromText;
+  const buildPack = deps.buildPack ?? buildSourcePackFromInput;
+  const generate = deps.generate ?? generateLessonFromSourcePack;
   const voice = deps.voice ?? voiceLesson;
   const save = deps.save ?? saveLesson;
   const env = deps.env ?? process.env;
 
-  const { text, ownerId } = validateJobInput(rawInput);
-  report(makeProgress({ phase: 'routing', message: 'Starting' }));
+  const { input, ownerId } = validateJobInput(rawInput);
 
-  const lesson = await generate(text, {
+  // Resolve the material FIRST (PDF parse / URL fetch / image vision / text chunking) —
+  // every input type flows through the same dispatcher into the same society pipeline.
+  report(makeProgress({ phase: 'routing', message: `Reading your ${input.type} material` }));
+  const sourcePack = await buildPack(input, { env });
+
+  const lesson = await generate(sourcePack, {
     // The society's phase/scene progress is normalized and forwarded upward untouched.
     onProgress: (p) => report(makeProgress(p)),
   });

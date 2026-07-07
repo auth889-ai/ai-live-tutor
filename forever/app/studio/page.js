@@ -1,42 +1,76 @@
 'use client';
 
-// Studio: paste any learning material -> the agent society generates a course lesson -> jump to
-// the player. The real product entry point. Generation is a background JOB (~8 min): POST /api/jobs
-// enqueues it, then an EventSource on /api/jobs/:id/events streams live progress (real per-scene
-// percent, not a fake spinner), and on completion we navigate to the finished lesson.
+// Studio — the real product entry point: bring ANY material (paste text, upload a PDF or
+// image, drop a URL) and the agent society turns it into a course. Generation is a
+// background JOB: POST /api/jobs enqueues, an EventSource streams real per-scene progress
+// (routing -> planning -> generating -> voicing -> saving), and completion links to the
+// finished course. PDFs/images go through POST /api/uploads first, then the job references
+// the uploadId — the server resolves it inside the caller's own upload store.
 
 import { useEffect, useRef, useState } from 'react';
 
+const UI = {
+  text: '#3a2e22', muted: '#8a6d3b', border: '#f0e2d0', card: '#fff',
+  accent: '#f47368', bgSoft: '#fdf6ee',
+};
+
+const TABS = [
+  { key: 'text', label: '✏️ Text' },
+  { key: 'pdf', label: '📄 PDF' },
+  { key: 'url', label: '🔗 URL' },
+  { key: 'image', label: '🖼 Image' },
+];
+
 export default function StudioPage() {
+  const [tab, setTab] = useState('text');
   const [text, setText] = useState('');
+  const [url, setUrl] = useState('');
+  const [file, setFile] = useState(null);
   const [progress, setProgress] = useState(null); // { phase, percent, message } | null
   const [error, setError] = useState(null);
-  const [done, setDone] = useState(null); // { lessonId, lessonTitle, scenes }
+  const [done, setDone] = useState(null); // { lessonId, lessonTitle, scenes, voiced }
   const [user, setUser] = useState(undefined); // undefined = checking, null = signed out
   const sourceRef = useRef(null);
 
-  // Private studio: your generated courses belong to your account. Signed-out visitors go sign in.
+  // Private studio: your generated courses belong to your account.
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => (r.ok ? r.json() : null))
       .then(setUser)
       .catch(() => setUser(null));
+    return () => sourceRef.current?.close();
   }, []);
 
   async function startJob() {
     setError(null);
     setDone(null);
-    setProgress({ phase: 'queued', percent: 0, message: 'Queued…' });
+    setProgress({ phase: 'queued', percent: 0, message: 'Preparing…' });
     try {
+      let input;
+      if (tab === 'text') {
+        input = { type: 'text', text };
+      } else if (tab === 'url') {
+        input = { type: 'url', url };
+      } else {
+        if (!file) throw new Error(`Choose a ${tab.toUpperCase()} file first`);
+        setProgress({ phase: 'queued', percent: 0, message: 'Uploading your file…' });
+        const form = new FormData();
+        form.append('file', file);
+        const up = await fetch('/api/uploads', { method: 'POST', body: form });
+        const upData = await up.json();
+        if (!up.ok) throw new Error(upData.error || 'Upload failed');
+        // The optional notes textarea gives the vision agent context for image lessons.
+        input = { type: tab, uploadId: upData.uploadId, ...(tab === 'image' && text.trim() ? { text } : {}) };
+      }
+
       const response = await fetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ input }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not start the job');
 
-      // Subscribe to live progress. The server emits progress/done/error SSE events.
       const es = new EventSource(`/api/jobs/${data.jobId}/events`);
       sourceRef.current = es;
       es.addEventListener('progress', (e) => setProgress(JSON.parse(e.data)));
@@ -46,7 +80,6 @@ export default function StudioPage() {
         es.close();
       });
       es.addEventListener('error', (e) => {
-        // SSE 'error' can be our payload or a raw connection drop; handle both.
         let message = 'The job failed';
         try { message = JSON.parse(e.data).error || message; } catch { /* connection-level */ }
         setError(message);
@@ -59,69 +92,117 @@ export default function StudioPage() {
     }
   }
 
-  const busy = progress !== null;
-
+  if (user === undefined) {
+    return <main style={{ minHeight: '60vh', display: 'grid', placeItems: 'center', color: UI.muted }}>Checking your session…</main>;
+  }
   if (user === null) {
     return (
-      <main style={{ maxWidth: 760, margin: '80px auto', padding: '0 16px', textAlign: 'center' }}>
+      <main style={{ maxWidth: 760, margin: '80px auto', padding: '0 16px', textAlign: 'center', color: UI.text }}>
         <h1 style={{ fontSize: 24 }}>Forever Studio</h1>
-        <p style={{ color: '#8a6d3b' }}>Sign in to generate courses — your library is private to your account.</p>
-        <a href="/login" style={{ display: 'inline-block', marginTop: 12, padding: '10px 28px', borderRadius: 8, background: '#d35400', color: '#fff', textDecoration: 'none', fontWeight: 600 }}>
+        <p style={{ color: UI.muted }}>Sign in to generate courses — your library is private to your account.</p>
+        <a href="/login" style={{ display: 'inline-block', marginTop: 12, padding: '10px 28px', borderRadius: 10, background: UI.accent, color: '#fff', textDecoration: 'none', fontWeight: 700 }}>
           Sign in / Create account
         </a>
       </main>
     );
   }
 
+  const busy = progress !== null;
+  const canStart = !busy && (
+    (tab === 'text' && text.trim().length >= 60) ||
+    (tab === 'url' && /^https?:\/\/./.test(url.trim())) ||
+    ((tab === 'pdf' || tab === 'image') && Boolean(file))
+  );
+
   return (
-    <main style={{ maxWidth: 760, margin: '32px auto', padding: '0 16px' }}>
+    <main style={{ maxWidth: 760, margin: '0 auto', padding: '28px 20px', color: UI.text }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h1 style={{ fontSize: 24 }}>Forever Studio</h1>
+        <a href="/" style={{ textDecoration: 'none', color: UI.muted, fontSize: 13 }}>← My Courses</a>
         {user?.email && (
-          <span style={{ fontSize: 13, color: '#8a6d3b' }}>
+          <span style={{ fontSize: 13, color: UI.muted }}>
             {user.email} ·{' '}
-            <a href="#" onClick={async (e) => { e.preventDefault(); await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/login'; }} style={{ color: '#d35400' }}>
+            <a href="#" onClick={async (e) => { e.preventDefault(); await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/login'; }} style={{ color: UI.accent }}>
               sign out
             </a>
           </span>
         )}
       </div>
-      <p style={{ color: '#8a6d3b' }}>Paste any learning material. The AI tutor faculty turns it into a course lesson.</p>
-      <textarea
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-        rows={10}
-        placeholder="Paste notes, an article, code, or a topic explanation (60+ characters)..."
-        style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #e8ddc9', fontFamily: 'inherit', fontSize: 14 }}
-      />
-      <button
-        onClick={startJob}
-        disabled={text.trim().length < 60 || busy}
-        style={{ marginTop: 12, padding: '10px 24px', fontSize: 16, borderRadius: 8, cursor: busy ? 'default' : 'pointer' }}
-      >
-        {busy ? 'Generating…' : 'Generate lesson'}
-      </button>
+      <h1 style={{ fontSize: 26, margin: '10px 0 4px' }}>Create a course</h1>
+      <p style={{ color: UI.muted, marginTop: 0 }}>Bring any material — a society of AI teachers turns it into an interactive course.</p>
+
+      <div style={{ display: 'flex', gap: 8, margin: '18px 0 14px' }}>
+        {TABS.map((t) => (
+          <button key={t.key} onClick={() => { setTab(t.key); setFile(null); setError(null); }} disabled={busy}
+            style={{
+              padding: '9px 16px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              border: `1px solid ${tab === t.key ? UI.accent : UI.border}`,
+              background: tab === t.key ? '#fdece8' : '#fff', color: UI.text,
+            }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ background: UI.card, border: `1px solid ${UI.border}`, borderRadius: 16, padding: 18 }}>
+        {tab === 'text' && (
+          <textarea value={text} onChange={(e) => setText(e.target.value)} disabled={busy}
+            placeholder="Paste your learning material (notes, an article, a chapter — at least 60 characters)…"
+            style={{ width: '100%', minHeight: 220, border: `1px solid ${UI.border}`, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} />
+        )}
+        {tab === 'url' && (
+          <input value={url} onChange={(e) => setUrl(e.target.value)} disabled={busy}
+            placeholder="https://example.com/article-to-learn-from"
+            style={{ width: '100%', border: `1px solid ${UI.border}`, borderRadius: 10, padding: 12, fontSize: 14, boxSizing: 'border-box' }} />
+        )}
+        {(tab === 'pdf' || tab === 'image') && (
+          <div>
+            <label style={{ display: 'block', border: `2px dashed ${UI.border}`, borderRadius: 12, padding: '34px 16px', textAlign: 'center', cursor: 'pointer', background: UI.bgSoft }}>
+              <input type="file" accept={tab === 'pdf' ? 'application/pdf' : 'image/png,image/jpeg,image/webp'}
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)} disabled={busy} style={{ display: 'none' }} />
+              <div style={{ fontSize: 26, marginBottom: 6 }}>{tab === 'pdf' ? '📄' : '🖼'}</div>
+              <div style={{ fontWeight: 700 }}>{file ? file.name : `Choose a ${tab === 'pdf' ? 'PDF' : 'PNG / JPEG / WebP'} file`}</div>
+              <div style={{ fontSize: 12, color: UI.muted, marginTop: 4 }}>max 30 MB{tab === 'pdf' ? ' · text, figures and page images are all used' : ''}</div>
+            </label>
+            {tab === 'image' && (
+              <textarea value={text} onChange={(e) => setText(e.target.value)} disabled={busy}
+                placeholder="Optional: add context about this image (what course it belongs to, what to focus on)…"
+                style={{ width: '100%', minHeight: 70, marginTop: 10, border: `1px solid ${UI.border}`, borderRadius: 10, padding: 10, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+            )}
+          </div>
+        )}
+
+        <button onClick={startJob} disabled={!canStart}
+          style={{
+            marginTop: 14, padding: '12px 26px', borderRadius: 10, border: 'none', fontSize: 15, fontWeight: 700,
+            background: canStart ? UI.accent : '#f0e2d0', color: canStart ? '#fff' : UI.muted, cursor: canStart ? 'pointer' : 'default',
+          }}>
+          {busy ? 'Generating…' : 'Generate course'}
+        </button>
+      </div>
 
       {progress && (
-        <div style={{ marginTop: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#7a4a12', marginBottom: 6 }}>
-            <span>{progress.message || progress.phase}</span>
-            <span>{progress.percent}%</span>
+        <div style={{ marginTop: 16, background: UI.card, border: `1px solid ${UI.border}`, borderRadius: 14, padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 8 }}>
+            <span style={{ fontWeight: 700, textTransform: 'capitalize' }}>{progress.phase}</span>
+            <span style={{ color: UI.muted }}>{progress.percent}%</span>
           </div>
-          <div style={{ height: 10, borderRadius: 6, background: '#f3eee2', overflow: 'hidden' }}>
-            <div style={{ width: `${progress.percent}%`, height: '100%', background: '#d35400', transition: 'width 0.4s' }} />
+          <div style={{ height: 8, borderRadius: 4, background: '#f0e6d2' }}>
+            <div style={{ width: `${progress.percent}%`, height: '100%', borderRadius: 4, background: UI.accent, transition: 'width 0.4s' }} />
           </div>
+          <div style={{ fontSize: 13, color: UI.muted, marginTop: 8 }}>{progress.message}</div>
         </div>
       )}
-
-      {error && <p style={{ marginTop: 16, color: '#c0392b' }}>Failed: {error}</p>}
-
+      {error && (
+        <div style={{ marginTop: 16, border: '1px solid #e5b8b0', background: '#fdf0ee', color: '#a33d2e', borderRadius: 12, padding: 14, fontSize: 14 }}>
+          {error}
+        </div>
+      )}
       {done && (
-        <div style={{ marginTop: 16, padding: 16, borderRadius: 8, background: '#fdeaa7' }}>
-          <div style={{ fontWeight: 700 }}>{done.lessonTitle}</div>
-          <div style={{ fontSize: 13, color: '#7a4a12' }}>{done.scenes} scenes generated.</div>
-          <a href={`/course/${done.lessonId}`} style={{ display: 'inline-block', marginTop: 8, fontWeight: 600 }}>
-            ▶ Watch the lesson
+        <div style={{ marginTop: 16, border: `1px solid ${UI.border}`, background: UI.card, borderRadius: 14, padding: 16 }}>
+          <div style={{ fontWeight: 800, marginBottom: 4 }}>🎉 {done.lessonTitle}</div>
+          <div style={{ fontSize: 13, color: UI.muted, marginBottom: 12 }}>{done.scenes} scenes generated{done.voiced ? ' · voiced' : ''}</div>
+          <a href={`/course/${done.lessonId}`} style={{ background: UI.accent, color: '#fff', padding: '10px 20px', borderRadius: 10, textDecoration: 'none', fontWeight: 700 }}>
+            ▶ Start learning
           </a>
         </div>
       )}

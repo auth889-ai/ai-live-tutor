@@ -9,6 +9,7 @@
 import { enqueueLesson } from '../../../lib/queue/lesson-queue.js';
 import { validateJobInput } from '../../../lib/queue/job-contract.js';
 import { sessionFromRequest } from '../../../lib/auth/session.js';
+import { resolveUpload } from '../../../lib/storage/upload-store.js';
 
 export async function POST(request) {
   // Auth is enforced IN the route (never middleware-only). Generation costs real tokens, and the
@@ -20,13 +21,29 @@ export async function POST(request) {
   try {
     body = await request.json();
   } catch {
-    return Response.json({ error: 'Body must be JSON { text }' }, { status: 400 });
+    return Response.json({ error: 'Body must be JSON: { input: { type, ... } } or { text }' }, { status: 400 });
+  }
+
+  // Typed input spec ({ input: { type: text|pdf|url|image } }); bare { text } still accepted.
+  const spec = body.input && typeof body.input === 'object'
+    ? { ...body.input }
+    : typeof body.text === 'string' ? { type: 'text', text: body.text } : null;
+  if (!spec) return Response.json({ error: 'Provide { input: { type: text|pdf|url|image, ... } }' }, { status: 400 });
+
+  // An uploadId resolves ONLY inside the caller's own upload store — cross-user file
+  // access is structurally impossible, and raw client paths are never accepted.
+  delete spec.path;
+  if (spec.uploadId) {
+    const resolved = await resolveUpload(session.userId, spec.uploadId);
+    if (!resolved) return Response.json({ error: 'Upload not found — upload the file first' }, { status: 400 });
+    spec.path = resolved;
+    delete spec.uploadId;
   }
 
   let input;
   try {
     // ownerId comes from the verified session — a client-supplied ownerId is ignored.
-    input = validateJobInput({ text: body.text, ownerId: session.userId });
+    input = validateJobInput({ input: spec, ownerId: session.userId });
   } catch (error) {
     return Response.json({ error: String(error.message || error) }, { status: 400 });
   }

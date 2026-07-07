@@ -7,10 +7,28 @@ import { createInProcessQueue } from '../../lib/queue/backends/in-process.js';
 
 // --- job contract ---
 
-test('validateJobInput requires 60+ characters of material', () => {
+test('validateJobInput requires 60+ characters of material (legacy {text} normalizes)', () => {
   assert.throws(() => validateJobInput({ text: 'too short' }), /at least 60 characters/);
   const ok = validateJobInput({ text: 'x'.repeat(60) });
-  assert.equal(ok.text.length, 60);
+  assert.equal(ok.input.type, 'text');
+  assert.equal(ok.input.text.length, 60);
+});
+
+test('validateJobInput accepts every typed input and rejects malformed ones', () => {
+  const pdf = validateJobInput({ input: { type: 'pdf', path: '.data/uploads/u1/up_a.pdf' }, ownerId: 'u1' });
+  assert.deepEqual(pdf, { input: { type: 'pdf', path: '.data/uploads/u1/up_a.pdf' }, ownerId: 'u1' });
+
+  const image = validateJobInput({ input: { type: 'image', path: '/up/b.png', text: 'context notes' } });
+  assert.equal(image.input.text, 'context notes');
+
+  const url = validateJobInput({ input: { type: 'url', url: 'https://example.com/a?b=1' } });
+  assert.equal(url.input.url, 'https://example.com/a?b=1');
+
+  assert.throws(() => validateJobInput({ input: { type: 'pdf' } }), /needs an uploaded file/);
+  assert.throws(() => validateJobInput({ input: { type: 'url', url: 'not a url' } }), /valid web address/);
+  assert.throws(() => validateJobInput({ input: { type: 'url', url: 'ftp://x.com/f' } }), /Only http\(s\)/);
+  assert.throws(() => validateJobInput({ input: { type: 'video' } }), /Unknown input type/);
+  assert.throws(() => validateJobInput({}), /needs an input/);
 });
 
 test('makeProgress interpolates the scene span during generation and voicing', () => {
