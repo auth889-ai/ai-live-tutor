@@ -54,7 +54,7 @@ test('listLessons returns cards from denormalized fields, owner-scoped, no paylo
     },
   };
   const cards = await listLessons({ forUser: 'user_a', collection: async () => fake });
-  assert.deepEqual(cards, [{ id: 'lesson_x', title: 'T', scenes: 2, voiced: false, durationMs: 90_000 }]);
+  assert.deepEqual(cards, [{ id: 'lesson_x', title: 'T', scenes: 2, voiced: false, durationMs: 90_000, coverImage: null }]);
   assert.deepEqual(filter, { $or: [{ ownerId: null }, { ownerId: 'user_a' }] });
   assert.equal(projection.payload, undefined); // library listing never drags full payloads
 });
