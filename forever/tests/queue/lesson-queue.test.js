@@ -16,7 +16,14 @@ test('validateJobInput requires 60+ characters of material (legacy {text} normal
 
 test('validateJobInput accepts every typed input and rejects malformed ones', () => {
   const pdf = validateJobInput({ input: { type: 'pdf', path: '.data/uploads/u1/up_a.pdf' }, ownerId: 'u1' });
-  assert.deepEqual(pdf, { input: { type: 'pdf', path: '.data/uploads/u1/up_a.pdf' }, ownerId: 'u1' });
+  assert.deepEqual(pdf, { input: { type: 'pdf', path: '.data/uploads/u1/up_a.pdf', course: false }, ownerId: 'u1' });
+
+  // course mode + on-demand course lessons
+  const course = validateJobInput({ input: { type: 'text', text: 'y'.repeat(80), course: true } });
+  assert.equal(course.input.course, true);
+  const cl = validateJobInput({ input: { type: 'course-lesson', courseId: 'course_x', outlineLessonId: 'ep_01_l_02' }, ownerId: 'u1' });
+  assert.deepEqual(cl.input, { type: 'course-lesson', courseId: 'course_x', outlineLessonId: 'ep_01_l_02' });
+  assert.throws(() => validateJobInput({ input: { type: 'course-lesson', courseId: 'course_x' } }), /needs courseId and outlineLessonId/);
 
   const image = validateJobInput({ input: { type: 'image', path: '/up/b.png', text: 'context notes' } });
   assert.equal(image.input.text, 'context notes');
@@ -105,6 +112,77 @@ test('processLessonJob honours the explicit DISABLE_TTS=1 dev opt-out (never a s
   );
   assert.equal(result.voiced, false);
   assert.equal(saved[result.lessonId], fakeLesson);
+});
+
+test('course mode: Dean outline -> course saved -> FIRST lesson generated and linked', async () => {
+  const saved = {};
+  const outline = {
+    title: 'BFS Course',
+    episodes: [{
+      id: 'ep_01', title: 'Fundamentals', estimatedMinutes: 40, quizQuestionCount: 3,
+      lessons: [
+        { id: 'ep_01_l_01', title: 'Why BFS', lessonType: 'concept', estimatedMinutes: 8, focusChunkIds: ['chunk_0001'] },
+        { id: 'ep_01_l_02', title: 'Dry Run', lessonType: 'see_it', estimatedMinutes: 9, focusChunkIds: ['chunk_0001'] },
+      ],
+    }],
+  };
+  const links = [];
+  const result = await processLessonJob(
+    { input: { type: 'text', text: 'x'.repeat(80), course: true }, ownerId: 'u1' },
+    {
+      deps: {
+        designCourseOutline: async () => ({ outline, usage: null }),
+        generate: async (pack) => ({ sourcePackId: pack.id, lessonTitle: 'generated title', scenes: [{ durationMs: 1000 }] }),
+        voice: async (l) => l,
+        publishAssets: async (l) => l,
+        saveCourse: async (id, course) => { saved[id] = course; },
+        linkCourseLesson: async (id, outlineLessonId, lessonId) => links.push({ id, outlineLessonId, lessonId }),
+        save: async (id, lesson) => { saved[id] = lesson; },
+        env: { DISABLE_TTS: '1' },
+      },
+    },
+  );
+
+  assert.equal(result.courseTitle, 'BFS Course');
+  assert.equal(result.lessonsPlanned, 2);
+  assert.equal(links.length, 1);
+  assert.equal(links[0].outlineLessonId, 'ep_01_l_01');
+  assert.equal(result.firstLessonId, links[0].lessonId);
+  const firstLesson = saved[links[0].lessonId];
+  assert.equal(firstLesson.lessonTitle, 'Why BFS'); // the Dean's title wins in a course
+  assert.equal(firstLesson.courseRef.courseId, result.courseId);
+});
+
+test('course-lesson mode: generates ONE more lesson of an existing course, owner-scoped', async () => {
+  const outline = {
+    title: 'C', episodes: [{ id: 'ep_01', title: 'E', estimatedMinutes: 40, quizQuestionCount: 3,
+      lessons: [{ id: 'ep_01_l_02', title: 'Dry Run', lessonType: 'see_it', estimatedMinutes: 9, focusChunkIds: ['chunk_0001'] }] }],
+  };
+  const sourcePack = {
+    id: 'sp_c1', title: 'T',
+    documents: [{ id: 'src_1', type: 'text', title: 'T', metadata: {} }],
+    chunks: [{ id: 'chunk_0001', sourceId: 'src_1', text: 'material', sourceRef: 'r', tokenEstimate: 1, orderIndex: 0, metadata: {} }],
+  };
+  const links = [];
+  const result = await processLessonJob(
+    { input: { type: 'course-lesson', courseId: 'course_c1', outlineLessonId: 'ep_01_l_02' }, ownerId: 'u1' },
+    {
+      deps: {
+        loadCourse: async (id, { forUser }) => {
+          assert.equal(forUser, 'u1'); // privacy: loaded as the owner
+          return { outline, sourcePack, lessonLinks: {} };
+        },
+        generate: async (pack) => ({ sourcePackId: pack.id, lessonTitle: 'g', scenes: [{ durationMs: 1000 }] }),
+        voice: async (l) => l,
+        publishAssets: async (l) => l,
+        linkCourseLesson: async (id, outlineLessonId, lessonId) => links.push({ outlineLessonId, lessonId }),
+        save: async () => {},
+        env: { DISABLE_TTS: '1' },
+      },
+    },
+  );
+  assert.equal(result.outlineLessonId, 'ep_01_l_02');
+  assert.equal(links[0].lessonId, result.lessonId);
 });
 
 // --- in-process backend (the full async flow) ---

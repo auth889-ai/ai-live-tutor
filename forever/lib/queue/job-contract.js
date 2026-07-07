@@ -30,17 +30,21 @@ export function validateJobInput(raw) {
     : typeof raw.text === 'string' ? { type: 'text', text: raw.text } : null;
   if (!spec) throw new Error('job needs an input: { type: text|pdf|url|image, ... }');
 
+  // course: true on any material spec = build a FULL course (Dean outline + first lesson)
+  // instead of a single lesson. Boolean-coerced here so the worker never sees junk.
+  const course = spec.course === true;
+
   if (spec.type === 'text') {
     const text = (spec.text || '').trim();
     if (text.length < 60) throw new Error('job input needs at least 60 characters of learning material');
     const title = (spec.title || '').trim();
-    return { input: { type: 'text', text, ...(title ? { title } : {}) }, ownerId };
+    return { input: { type: 'text', text, course, ...(title ? { title } : {}) }, ownerId };
   }
   if (spec.type === 'pdf' || spec.type === 'image') {
     const path = (spec.path || '').trim();
     if (!path) throw new Error(`${spec.type} input needs an uploaded file`);
     const text = (spec.text || '').trim();
-    return { input: { type: spec.type, path, ...(text ? { text } : {}) }, ownerId };
+    return { input: { type: spec.type, path, course, ...(text ? { text } : {}) }, ownerId };
   }
   if (spec.type === 'url') {
     let url;
@@ -50,7 +54,14 @@ export function validateJobInput(raw) {
       throw new Error('url input needs a valid web address');
     }
     if (!/^https?:$/.test(url.protocol)) throw new Error('Only http(s) URLs are supported');
-    return { input: { type: 'url', url: url.href }, ownerId };
+    return { input: { type: 'url', url: url.href, course }, ownerId };
+  }
+  // Generate ONE lesson of an existing course on demand (the library shows Generate buttons).
+  if (spec.type === 'course-lesson') {
+    const courseId = (spec.courseId || '').trim();
+    const outlineLessonId = (spec.outlineLessonId || '').trim();
+    if (!courseId || !outlineLessonId) throw new Error('course-lesson input needs courseId and outlineLessonId');
+    return { input: { type: 'course-lesson', courseId, outlineLessonId }, ownerId };
   }
   throw new Error(`Unknown input type: ${spec.type}`);
 }

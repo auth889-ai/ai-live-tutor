@@ -25,6 +25,7 @@ const TABS = [
 
 export default function StudioPage() {
   const [tab, setTab] = useState('text');
+  const [fullCourse, setFullCourse] = useState(true);
   const [text, setText] = useState('');
   const [url, setUrl] = useState('');
   const [file, setFile] = useState(null);
@@ -48,11 +49,12 @@ export default function StudioPage() {
     setDone(null);
     setProgress({ phase: 'queued', percent: 0, message: 'Preparing…' });
     try {
+      const course = fullCourse && tab !== 'image';
       let input;
       if (tab === 'text') {
-        input = { type: 'text', text };
+        input = { type: 'text', text, course };
       } else if (tab === 'url') {
-        input = { type: 'url', url };
+        input = { type: 'url', url, course };
       } else {
         if (!file) throw new Error(`Choose a ${tab.toUpperCase()} file first`);
         setProgress({ phase: 'queued', percent: 0, message: 'Uploading your file…' });
@@ -62,7 +64,7 @@ export default function StudioPage() {
         const upData = await up.json();
         if (!up.ok) throw new Error(upData.error || 'Upload failed');
         // The optional notes textarea gives the vision agent context for image lessons.
-        input = { type: tab, uploadId: upData.uploadId, ...(tab === 'image' && text.trim() ? { text } : {}) };
+        input = { type: tab, uploadId: upData.uploadId, course, ...(tab === 'image' && text.trim() ? { text } : {}) };
       }
 
       const response = await fetch('/api/jobs', {
@@ -176,6 +178,13 @@ export default function StudioPage() {
           </div>
         )}
 
+        {tab !== 'image' && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, cursor: 'pointer', fontSize: 13.5, fontWeight: 700 }}>
+            <input type="checkbox" checked={fullCourse} onChange={(e) => setFullCourse(e.target.checked)} disabled={busy} style={{ accentColor: UI.accent, width: 16, height: 16 }} />
+            📚 Build a full course (the Dean plans episodes & lessons; the first lesson generates now, the rest on demand)
+          </label>
+        )}
+
         <button onClick={startJob} disabled={!canStart}
           style={{
             marginTop: 16, padding: '13px 30px', borderRadius: 12, border: 'none', fontSize: 15.5, fontWeight: 800,
@@ -208,10 +217,14 @@ export default function StudioPage() {
       )}
       {done && (
         <div style={{ marginTop: 16, border: `1px solid ${UI.border}`, background: UI.card, borderRadius: 14, padding: 16 }}>
-          <div style={{ fontWeight: 800, marginBottom: 4 }}>🎉 {done.lessonTitle}</div>
-          <div style={{ fontSize: 13, color: UI.muted, marginBottom: 12 }}>{done.scenes} scenes generated{done.voiced ? ' · voiced' : ''}</div>
-          <a href={`/course/${done.lessonId}`} style={{ background: UI.accent, color: '#fff', padding: '10px 20px', borderRadius: 10, textDecoration: 'none', fontWeight: 700 }}>
-            ▶ Start learning
+          <div style={{ fontWeight: 800, marginBottom: 4 }}>🎉 {done.courseTitle ?? done.lessonTitle}</div>
+          <div style={{ fontSize: 13, color: UI.muted, marginBottom: 12 }}>
+            {done.courseId
+              ? `${done.episodes} episode${done.episodes === 1 ? '' : 's'} · ${done.lessonsPlanned} lessons planned · first lesson ready`
+              : `${done.scenes} scenes generated${done.voiced ? ' · voiced' : ''}`}
+          </div>
+          <a href={done.courseId ? `/courses/${done.courseId}` : `/course/${done.lessonId}`} style={{ background: UI.accent, color: '#fff', padding: '10px 20px', borderRadius: 10, textDecoration: 'none', fontWeight: 700 }}>
+            {done.courseId ? '📚 Open the course' : '▶ Start learning'}
           </a>
         </div>
       )}

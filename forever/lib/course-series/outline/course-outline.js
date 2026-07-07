@@ -52,7 +52,12 @@ function validateLesson(lesson, episode) {
   if (lesson.estimatedMinutes > 12 && !lesson.longFormJustification?.trim()) {
     throw new Error(`Lesson ${lesson.id} exceeds 12 minutes — the Dean must state a longFormJustification`);
   }
-  if (!lesson.scenes?.length) throw new Error(`Lesson ${lesson.id} requires scenes`);
+  // Focus chunks tie each lesson to its slice of the source (retrieval scope at outline
+  // time); scene-level planning belongs to the per-lesson Instructor and is OPTIONAL here.
+  if (!lesson.focusChunkIds?.length && !lesson.scenes?.length) {
+    throw new Error(`Lesson ${lesson.id} must reference focusChunkIds (or legacy scenes)`);
+  }
+  if (!lesson.scenes?.length) return;
 
   const sceneIds = new Set();
   let totalSeconds = 0;

@@ -23,6 +23,7 @@ function getDb(env = process.env) {
       await Promise.all([
         db.collection('users').createIndex({ email: 1 }, { unique: true }),
         db.collection('lessons').createIndex({ ownerId: 1 }),
+        db.collection('courses').createIndex({ ownerId: 1 }),
       ]);
       return db;
     });
@@ -36,6 +37,10 @@ export async function usersCollection(env = process.env) {
 
 export async function lessonsCollection(env = process.env) {
   return (await getDb(env)).collection('lessons');
+}
+
+export async function coursesCollection(env = process.env) {
+  return (await getDb(env)).collection('courses');
 }
 
 export async function closeDb() {
