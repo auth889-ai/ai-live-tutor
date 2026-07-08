@@ -8,8 +8,16 @@
 // pointers (low/mid/high, slow/fast) ride ON the nodes, and the step note is captioned — all
 // driven by the lesson clock (progress -> step index) so it's synced to the tutor's words.
 // This is "point and explain while the algorithm walks the tree", not a static picture.
+//
+// PLAYBACK-VISIBILITY CONTRACT (the "tree invisible while playing" fix, studied at source in
+// the recursion-tree-visualizer): the renderer must be a pure function of ONE scalar (the step
+// index) over pre-baked data. Concretely: (1) GraphView is memo()ed so the player's clock ticks
+// don't reach it — it re-renders only when the step actually changes; (2) the nodes/edges arrays
+// handed to ReactFlow are useMemo()ed — every render used to mint brand-new arrays, feeding
+// ReactFlow unmeasured elements many times a second so it never settled while playing and only
+// painted on pause; (3) layout runs once per structure, never per tick.
 
-import { useEffect, useMemo } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { ReactFlow, ReactFlowProvider, Background, MarkerType, useNodesInitialized, useReactFlow } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -53,7 +61,7 @@ function resolveState({ content, progress, activeNode, activeStep }) {
     const visited = new Set(seq.slice(0, n));
     const current = n > 0 ? seq[n - 1] : null;
     if (current) visited.delete(current);
-    return { current, visited, pointerAt: new Map(), note: null, stepNum: 0, stepTotal: 0 };
+    return { current, visited, pointerAt: new Map(), note: null, stepNum: 0, stepTotal: 0, activeEdge: null, revealed: null, returned: {}, memo: new Set() };
   }
   return {
     current: activeNode != null ? String(activeNode) : null,
@@ -62,46 +70,18 @@ function resolveState({ content, progress, activeNode, activeStep }) {
     note: null,
     stepNum: 0,
     stepTotal: 0,
+    activeEdge: null,
+    revealed: null,
+    returned: {},
+    memo: new Set(),
   };
 }
 
-// ReactFlow needs a ReactFlowProvider ABOVE the component that calls its hooks, so the exported
-// GraphView is a thin provider wrapper around the real inner view.
-export function GraphView(props) {
-  return (
-    <ReactFlowProvider>
-      <GraphViewInner {...props} />
-    </ReactFlowProvider>
-  );
-}
-
-function GraphViewInner({ content, progress = 1, activeNode = null, activeStep = null }) {
-  const laid = useMemo(() => {
-    try {
-      const spec = { nodes: content.nodes ?? [], edges: content.edges ?? [] };
-      // Branching rooted trees (BST, heap, recursion trees) get the tidy-tree layout — true
-      // left/right child positions. Everything else (cycles, DAGs, linked lists) stays on dagre.
-      return wantsTreeLayout(spec) ? layoutTree(spec) : layoutGraph({ ...spec, direction: content.direction ?? 'TB' });
-    } catch {
-      return null;
-    }
-  }, [content]);
-
-  // THE FIX for "tree invisible while playing, appears on pause": the `fitView` prop only fits on
-  // the first render, which — inside the player's animated/crossfading container — happens before
-  // the nodes are measured, so it fits to nothing. useNodesInitialized() fires once the nodes have
-  // real width/height; we then fitView() for real. Re-runs on every (re)mount and layout change.
-  const nodesInitialized = useNodesInitialized();
-  const { fitView } = useReactFlow();
-  const nodeCount = laid?.nodes.length ?? 0;
-  useEffect(() => {
-    if (nodesInitialized && nodeCount > 0) fitView({ padding: 0.2, duration: 0 });
-  }, [nodesInitialized, nodeCount, fitView]);
-
-  if (!laid) return <div style={{ color: '#c0392b', fontSize: 13 }}>diagram unavailable</div>;
-
-  const { current, visited, pointerAt, note, stepNum, stepTotal, activeEdge = null, revealed = null, returned = {}, memo = new Set() } = resolveState({ content, progress, activeNode, activeStep });
-  const hasTrace = stepTotal > 0; // (was Boolean(note) — AlgorithmStage passes note:'' and lost the trace styling)
+// Build the ReactFlow node/edge arrays for one resolved step. Pure: same (laid, content, state)
+// -> same arrays. Called only from a useMemo so element identity is stable between clock ticks.
+function buildFlowElements(laid, content, state) {
+  const { current, visited, pointerAt, activeEdge, revealed, returned, memo } = state;
+  const hasTrace = state.stepTotal > 0;
 
   const nodeColor = (id) => {
     if (id === current) return { border: '#d35400', bg: '#ffd9a8', fg: '#8a3a12' }; // where the tutor is now
@@ -213,6 +193,63 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
     };
   });
 
+  return { nodes, edges };
+}
+
+// ReactFlow needs a ReactFlowProvider ABOVE the component that calls its hooks, so the exported
+// GraphView is a thin provider wrapper around the real inner view. memo(): the lesson clock
+// re-renders the whole stage many times a second; this view only changes when its props do
+// (content identity is stable per trace, activeStep changes once per step) — without memo the
+// per-tick churn kept ReactFlow perpetually re-measuring and the tree stayed invisible in play.
+export const GraphView = memo(function GraphView(props) {
+  return (
+    <ReactFlowProvider>
+      <GraphViewInner {...props} />
+    </ReactFlowProvider>
+  );
+});
+
+function GraphViewInner({ content, progress = 1, activeNode = null, activeStep = null }) {
+  const laid = useMemo(() => {
+    try {
+      const spec = { nodes: content.nodes ?? [], edges: content.edges ?? [] };
+      // Branching rooted trees (BST, heap, recursion trees) get the tidy-tree layout — true
+      // left/right child positions. Everything else (cycles, DAGs, linked lists) stays on dagre.
+      return wantsTreeLayout(spec) ? layoutTree(spec) : layoutGraph({ ...spec, direction: content.direction ?? 'TB' });
+    } catch {
+      return null;
+    }
+  }, [content]);
+
+  // One resolved step -> one stable {nodes, edges} pair. Recomputed only when the step (or the
+  // structure) changes, never on unrelated parent renders.
+  const state = useMemo(
+    () => resolveState({ content, progress, activeNode, activeStep }),
+    [content, progress, activeNode, activeStep],
+  );
+  const flow = useMemo(() => (laid ? buildFlowElements(laid, content, state) : null), [laid, content, state]);
+
+  // The `fitView` prop only fits on the first render, which — inside the player's animated/
+  // crossfading container — happens before the nodes are measured, so it fits to nothing.
+  // useNodesInitialized() fires once the nodes have real width/height; we then fitView() for
+  // real, and once more after the crossfade settles (a fit fired mid-animation measured the
+  // container mid-transition and could still frame the wrong box — the "appears on pause" tail).
+  const nodesInitialized = useNodesInitialized();
+  const { fitView } = useReactFlow();
+  const nodeCount = laid?.nodes.length ?? 0;
+  useEffect(() => {
+    if (!nodesInitialized || nodeCount === 0) return undefined;
+    fitView({ padding: 0.2, duration: 0 });
+    const settle = setTimeout(() => fitView({ padding: 0.2, duration: 0 }), 420);
+    return () => clearTimeout(settle);
+  }, [nodesInitialized, nodeCount, fitView]);
+
+  if (!laid || !flow) return <div style={{ color: '#c0392b', fontSize: 13 }}>diagram unavailable</div>;
+
+  const { nodes, edges } = flow;
+  const { note, stepNum, stepTotal } = state;
+  const hasTrace = stepTotal > 0; // (was Boolean(note) — AlgorithmStage passes note:'' and lost the trace styling)
+
   const height = Math.min(460, Math.max(200, laid.height + 40));
   return (
     <div>
@@ -221,8 +258,8 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
           <LegendChip swatch={{ background: '#ffd9a8', border: '2px solid #d35400' }} label="current" />
           <LegendChip swatch={{ background: '#eafaf0', border: '2px solid #27ae60' }} label="visited" />
           <LegendChip swatch={{ background: '#fbf8f2', border: '2px solid #b8b0a0' }} label="not yet" />
-          {memo.size > 0 ? <LegendChip swatch={{ background: '#f3e8fb', border: '2px solid #8e44ad' }} label="from memo" /> : null}
-          {Object.keys(returned).length > 0 ? <LegendChip swatch={{ background: '#eafaf0', border: '2px solid #27ae60' }} label="= returned value" /> : null}
+          {state.memo.size > 0 ? <LegendChip swatch={{ background: '#f3e8fb', border: '2px solid #8e44ad' }} label="from memo" /> : null}
+          {Object.keys(state.returned).length > 0 ? <LegendChip swatch={{ background: '#eafaf0', border: '2px solid #27ae60' }} label="= returned value" /> : null}
           <LegendChip swatch={{ background: 'transparent', borderBottom: '3px solid #e8604c', borderRadius: 0, height: 3, marginTop: 6 }} label="active edge" />
         </div>
       ) : null}

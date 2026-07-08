@@ -94,7 +94,10 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
           <ArrayView content={{ values: views.array.values, trace: [{ note: '', ...step.array }] }} activeStep={0} />
         ) : null}
         {views.array2d && step.array2d ? <GridView view={views.array2d} step={step} history={historySteps} /> : null}
-        {graphContent && step.graph ? <GraphView content={graphContent} activeStep={index} /> : null}
+        {/* Mounted for the WHOLE trace, never per-step: unmounting on a step without `graph`
+            state forces ReactFlow to remount, re-measure and re-fit — the flicker/invisible
+            class of bugs. A step with no graph payload simply renders the tree unhighlighted. */}
+        {graphContent ? <GraphView content={graphContent} activeStep={index} /> : null}
         {views.graph ? <OrderStrip step={step} nodes={views.graph.nodes ?? []} /> : null}
         <TraceTable history={historySteps} allSteps={trace.steps} />
       </div>
