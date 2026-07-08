@@ -22,7 +22,8 @@ for real and emitting its state at each step. Output ONLY JSON with FOUR fields:
 {
   "language": "${lang}",
   "code": "<the CLEAN algorithm, exactly as shown to the student, 1 statement per line>",
-  "views": { "array": {"values":[...]}  OR  "graph": {"nodes":[{"id":"1","label":"8"}],"edges":[{"from":"1","to":"2"}],"directed":true} },
+  "views": { "array": {"values":[...]}  OR  "graph": {"nodes":[{"id":"1","label":"8"}],"edges":[{"from":"1","to":"2"}],"directed":true}
+             OR "array2d": {"rows":5,"cols":5,"rowLabels":["","A","B","C","D"],"colLabels":["","A","C","D","G"]} },
   "program": "<a runnable ${lang} program that RUNS 'code' on ONE concrete example and prints the trace>"
 }
 Rules for "program" — it must print, at each LOGICAL step (each comparison/decision/loop turn), exactly one line:
@@ -30,6 +31,9 @@ Rules for "program" — it must print, at each LOGICAL step (each comparison/dec
 where <state...> is the fields that apply this step:
   - array algorithms: "array": {"current": <index>, "eliminated": [<indices ruled out>], "pointers": {"low":0,"mid":3,"high":6}}
   - tree/graph algorithms: "graph": {"current": "<nodeId>", "visited": ["<nodeId>"...], "pointers": {"curr":"<nodeId>"}}
+  - DP/table algorithms: "array2d": {"current":[i,j], "values":[[i,j,v]] (cells WRITTEN this step),
+    "highlight":[[i-1,j-1]] (dependency cells READ this step), "max":[i,j] (running best, when tracked)}
+    — ONE step per cell write: the reads and the write belong to the SAME step (that is the dry run).
   - if it uses a stack or queue: "stack": [...]  and/or  "queue": [...]
   - "variables": {"i":2,"low":0,"mid":3,"high":6}   (only the key variables a student tracks)
 Hard requirements:

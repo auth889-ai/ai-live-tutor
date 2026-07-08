@@ -19,12 +19,19 @@ export function GridView({ view, step, history = [] }) {
   const current = s.current ? `${s.current[0]},${s.current[1]}` : null;
   const filled = new Set((s.filled ?? []).map(([r, c]) => `${r},${c}`));
   const highlight = new Set((s.highlight ?? []).map(([r, c]) => `${r},${c}`));
+  const maxCell = s.max ? `${s.max[0]},${s.max[1]}` : null; // running max/min: persistent outline (dpvis)
 
   const colLabels = view.colLabels ?? Array.from({ length: cols }, (_, i) => String(i));
   const rowLabels = view.rowLabels ?? (rows > 1 ? Array.from({ length: rows }, (_, i) => String(i)) : null);
 
   return (
     <div style={{ overflowX: 'auto', border: '1px solid #e8ddc9', borderRadius: 12, background: '#fffdf8', padding: 10 }}>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 6, fontSize: 11, fontFamily: 'ui-monospace, monospace', color: '#5a4a2a' }}>
+        <span>🟧 write (now)</span>
+        <span>🟨 reads (deps)</span>
+        <span>🟩 filled</span>
+        <span style={{ color: '#8e44ad', fontWeight: 700 }}>◎ running max</span>
+      </div>
       <table style={{ borderCollapse: 'separate', borderSpacing: 4, fontFamily: 'ui-monospace, monospace', fontSize: 13 }}>
         <thead>
           <tr>
@@ -43,6 +50,7 @@ export function GridView({ view, step, history = [] }) {
                 const isCurrent = key === current;
                 const isFilled = filled.has(key);
                 const isHi = highlight.has(key);
+                const isMax = key === maxCell;
                 const border = isCurrent ? '#d35400' : isHi ? '#c9a227' : isFilled ? '#27ae60' : '#e0d6c2';
                 const bg = isCurrent ? '#ffd9a8' : isHi ? '#fdeaa7' : isFilled ? '#eafaf0' : '#fffdf8';
                 const val = valueAt.has(key) ? String(valueAt.get(key)) : '';
@@ -58,7 +66,11 @@ export function GridView({ view, step, history = [] }) {
                       background: bg,
                       color: '#3a3327',
                       fontWeight: 700,
-                      boxShadow: isCurrent ? '0 0 0 4px rgba(211,84,0,0.22)' : 'none',
+                      boxShadow: isCurrent
+                        ? '0 0 0 4px rgba(211,84,0,0.22)'
+                        : isMax
+                          ? '0 0 0 3px rgba(142,68,173,0.45)' // the answer-so-far never loses its ring
+                          : 'none',
                       transition: 'background 0.3s, border-color 0.3s, box-shadow 0.3s',
                     }}
                   >
