@@ -14,6 +14,7 @@ import { runCode } from '../../../execution/run-code.js';
 import { parseStepEvents, countMalformedStepLines } from '../../../execution/trace/parse-steps.js';
 import { assembleRecursionProgram, parseCallTree, compileRecursionTrace } from '../../../execution/trace/engines.js';
 import { compileTraversalTrace } from '../../../execution/trace/engines.js';
+import { compileGraphWalk } from '../../../execution/trace/engines.js';
 import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../../../execution/trace/engines.js';
 import { compilePointerWalk } from '../../../execution/trace/engines.js';
 import { compileOperationsTrace } from '../../../execution/trace/engines.js';
@@ -52,6 +53,21 @@ tree or graph: INSTEAD of "program", output
                 "lines": {"init": <line that seeds the queue/stack>, "visit": <line that visits>, "done": <line after the loop>}}
 plus "views.graph" (edges carry "side" for binary trees) and "code" = the clean traversal function.
 Our engine executes the walk itself, exactly — do not write tracking code.
+
+GRAPH-WALK MODE (python only) — for ANY graph algorithm BEYOND plain BFS/DFS (Dijkstra,
+Bellman-Ford, topological sort/Kahn, Prim, union-find, cycle detection): INSTEAD of "program", output
+  "graphwalk": {"entry": "<ONE call expression invoking 'code' on the concrete graph>",
+                "lens": {"current": "u" (variable holding the node being processed),
+                         "dist": "dist" (tentative-distance dict, if any),
+                         "visited": "visited" (finalized set/list, if any),
+                         "pq": "pq" (heapq list) OR "queue": "q" OR "stack": "st" (the frontier, if any),
+                         "parent": "parent" (union-find parent map, if any),
+                         "indegree": "indeg" (Kahn's counts, if any)}}
+plus "views.graph" and "code" = the clean function. CRITICAL: node ids in views.graph MUST equal
+the node keys the code uses (dist/parent/indegree keys, visited elements, current values). Our
+engine runs the code for real under the tracer and derives every teaching moment (extract-min,
+relax old->new, finalize, union, indegree drop) from the actual variables — do not write
+tracking code. Declare every lens role that exists in the code; skip roles it doesn't have.
 
 POINTER-WALK MODE (python only) — for ARRAY algorithms driven by index pointers (binary search,
 two pointers, sliding window, in-place sorting/partitioning): INSTEAD of "program", output
@@ -186,6 +202,38 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Traversal trace failed: ${error.message}`;
+        logAttempt(attempt, lastError);
+        continue;
+      }
+    }
+
+    // GRAPH-WALK MODE: ANY graph algorithm — the student's REAL code runs under the tracer
+    // and the declared variable lens derives every teaching moment (extract-min, relax
+    // old->new, finalize, union, indegree drop). Dijkstra/topo-sort/DSU-grade dry runs.
+    if (json.graphwalk && typeof json.graphwalk === 'object' && lang === 'python' && views.graph && code) {
+      try {
+        const run = await exec({ language: 'python', source: assembleLineProgram({ code, entry: json.graphwalk.entry }) });
+        if (run.timedOut) throw new Error('graph walk timed out (likely an infinite loop)');
+        const payload = parseLineEvents(run.stdout);
+        if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(0, 300)}` : 'run printed no @@LINESIM line');
+        const trace = compileGraphWalk({
+          ...payload,
+          code,
+          entry: json.graphwalk.entry,
+          graph: views.graph,
+          lens: json.graphwalk.lens ?? {},
+          language: 'python',
+        });
+        assertDryRunQuality(trace, { directive, code, attempt, maxFixes });
+        // Live instrument: the student edits the entry call (their own graph weights/start)
+        // and the same lens re-walks their scenario.
+        trace.meta = {
+          tool: 'graphwalk',
+          params: { code, entry: json.graphwalk.entry, graph: views.graph, lens: json.graphwalk.lens ?? {} },
+        };
+        return { trace, usage, fixes: attempt };
+      } catch (error) {
+        lastError = `Graph walk failed: ${error.message}`;
         logAttempt(attempt, lastError);
         continue;
       }

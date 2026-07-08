@@ -107,8 +107,8 @@ export function RetracePanel({ meta, onTrace }) {
         </>
       )}
 
-      {meta.tool === 'pointerwalk' && (
-        <PointerWalkControls meta={meta} busy={busy} request={request} setError={setError} />
+      {(meta.tool === 'pointerwalk' || meta.tool === 'graphwalk') && (
+        <EntryCallControls meta={meta} busy={busy} request={request} setError={setError} />
       )}
 
       {busy && meta.tool === 'traversal' ? <span style={{ fontSize: 12, color: '#8a6d3b' }}>re-tracing…</span> : null}
@@ -117,9 +117,9 @@ export function RetracePanel({ meta, onTrace }) {
   );
 }
 
-// Pointer-walk: the student edits the CALL itself — their own array, their own target — and
-// the same settrace engine re-walks it (the array shown is derived from the real run).
-function PointerWalkControls({ meta, busy, request, setError }) {
+// Pointer-walk / graph-walk: the student edits the CALL itself — their own array, target,
+// weights or start node — and the same settrace engine re-walks their scenario for real.
+function EntryCallControls({ meta, busy, request, setError }) {
   const [entry, setEntry] = useState(String(meta?.params?.entry ?? ''));
   const chip = {
     border: '1px solid #e8ddc9', borderRadius: 8, background: '#fff', color: '#2b211a',

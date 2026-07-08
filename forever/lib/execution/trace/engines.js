@@ -8,6 +8,10 @@
 //
 // Coverage map (algorithm family -> engine):
 //   trees & graphs (BFS/DFS/level-order, any nodes/edges)  -> traversal-compiler (native walk)
+//   ANY other graph algorithm (Dijkstra, Bellman-Ford,     -> graph-walk-compiler (settrace
+//     Kahn's topo sort, Prim, union-find, cycle detection:    run of the STUDENT'S real code +
+//     extract-min, relax old->new, finalize, union,           declared variable lens; the dist
+//     indegree drops — all from the real run)                 table IS the trace table)
 //   recursion & divide-and-conquer (fib, subsets, merge     -> recursion-compiler (call-tree
 //     sort splits, top-down DP with memo hits)                 recording + Euler-tour playback)
 //   array pointer algorithms (binary search, two pointers,  -> pointer-walk-compiler (settrace
@@ -32,6 +36,7 @@
 //                                                              shipped weak on the graph view
 
 export { compileTraversalTrace, TRAVERSAL_KINDS } from './traversal/compiler.js';
+export { compileGraphWalk, GRAPH_LENS_ROLES } from './graph-walk/compiler.js';
 export { compileOperationsTrace, OPERATION_STRUCTURES } from './operations/compiler.js';
 export { compileRecursionTrace, assembleRecursionProgram, parseCallTree, RECURSION_TRACKER_PY } from './recursion/compiler.js';
 export { compilePointerWalk } from './pointer-walk/compiler.js';

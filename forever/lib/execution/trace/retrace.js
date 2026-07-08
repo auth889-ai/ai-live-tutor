@@ -7,10 +7,11 @@
 import { compileTraversalTrace } from './traversal/compiler.js';
 import { compileRecursionTrace, assembleRecursionProgram, parseCallTree } from './recursion/compiler.js';
 import { compilePointerWalk } from './pointer-walk/compiler.js';
+import { compileGraphWalk } from './graph-walk/compiler.js';
 import { assembleLineProgram, parseLineEvents } from './line-sim/compiler.js';
 import { runCode } from '../run-code.js';
 
-export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk']);
+export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk', 'graphwalk']);
 
 export async function retrace({ tool, params } = {}, deps = {}) {
   const exec = deps.runCode ?? runCode;
@@ -58,6 +59,20 @@ export async function retrace({ tool, params } = {}, deps = {}) {
     if (concrete.length > 40) throw new Error('array too large to retrace (max 40 values)');
     const trace = compilePointerWalk({ ...payload, code, array: concrete, pointers, examine, arrayVar, eliminatedOutside, window });
     trace.meta = { tool, params: { code, entry, array: concrete, pointers, examine, arrayVar, eliminatedOutside, window } };
+    return trace;
+  }
+
+  if (tool === 'graphwalk') {
+    const { code, entry, graph, lens } = params ?? {};
+    if ((graph?.nodes?.length ?? 0) > 40) throw new Error('graph too large to retrace (max 40 nodes)');
+    if (String(code ?? '').length > 4000) throw new Error('code too large to retrace');
+    if (String(entry ?? '').length > 200) throw new Error('entry expression too large to retrace');
+    const run = await exec({ language: 'python', source: assembleLineProgram({ code, entry }), timeoutMs: 8000 });
+    if (run.timedOut) throw new Error('the walk timed out — try a smaller input');
+    const payload = parseLineEvents(run.stdout);
+    if (!payload) throw new Error(run.stderr ? `the run errored: ${run.stderr.slice(0, 200)}` : 'no walk was recorded');
+    const trace = compileGraphWalk({ ...payload, code, entry, graph, lens });
+    trace.meta = { tool, params: { code, entry, graph, lens } };
     return trace;
   }
 
