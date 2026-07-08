@@ -15,6 +15,7 @@ import { parseStepEvents } from '../../../execution/trace/parse-steps.js';
 import { assembleRecursionProgram, parseCallTree, compileRecursionTrace } from '../../../execution/trace/recursion-compiler.js';
 import { compileTraversalTrace } from '../../../execution/trace/traversal-compiler.js';
 import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../../../execution/trace/line-simulator.js';
+import { compilePointerWalk } from '../../../execution/trace/pointer-walk-compiler.js';
 import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
 const RUNNABLE_LANGUAGES = ['python', 'javascript'];
@@ -50,6 +51,15 @@ tree or graph: INSTEAD of "program", output
                 "lines": {"init": <line that seeds the queue/stack>, "visit": <line that visits>, "done": <line after the loop>}}
 plus "views.graph" (edges carry "side" for binary trees) and "code" = the clean traversal function.
 Our engine executes the walk itself, exactly — do not write tracking code.
+
+POINTER-WALK MODE (python only) — for ARRAY algorithms driven by index pointers (binary search,
+two pointers, sliding window): INSTEAD of "program", output
+  "pointerwalk": {"entry": "<ONE call expression invoking 'code' on a concrete array>",
+                  "array": [the concrete array values], "pointers": ["low","mid","high"],
+                  "eliminatedOutside": ["low","high"] (optional, binary-search style: cells outside low..high dim),
+                  "window": ["left","right"] (optional, sliding-window style)}
+with "code" = the clean function definition. Our engine runs it for real and animates the
+pointers riding the array — do not write tracking code.
 
 LINE-SIM MODE (python only) — the SAFE fallback for any algorithm that fits neither mode above,
 or if your @@STEP program keeps failing: INSTEAD of "program", output
@@ -144,6 +154,31 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Traversal trace failed: ${error.message}`;
+        logAttempt(attempt, lastError);
+        continue;
+      }
+    }
+
+    // POINTER-WALK MODE: array algorithms — real run under settrace, compiled through the
+    // array lens (pointer arrows, eliminated half, window span; sentences from real values).
+    if (json.pointerwalk && typeof json.pointerwalk === 'object' && lang === 'python' && code) {
+      try {
+        const run = await exec({ language: 'python', source: assembleLineProgram({ code, entry: json.pointerwalk.entry }) });
+        if (run.timedOut) throw new Error('pointer walk timed out (likely an infinite loop)');
+        const payload = parseLineEvents(run.stdout);
+        if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(0, 300)}` : 'run printed no @@LINESIM line');
+        const trace = compilePointerWalk({
+          ...payload,
+          code,
+          language: 'python',
+          array: json.pointerwalk.array,
+          pointers: json.pointerwalk.pointers,
+          eliminatedOutside: json.pointerwalk.eliminatedOutside ?? null,
+          window: json.pointerwalk.window ?? null,
+        });
+        return { trace, usage, fixes: attempt };
+      } catch (error) {
+        lastError = `Pointer walk failed: ${error.message}`;
         logAttempt(attempt, lastError);
         continue;
       }

@@ -175,7 +175,9 @@ export function compileRecursionTrace({ callTree, code, language = 'python', lin
         line: lineOf(kind),
         current: String(id),
         activeEdge: [childId, String(id)],
-        variables: { [nameOf(child.id)]: child.value },
+        // STABLE table keys (call/returns) — per-child keys made the trace table grow a new
+        // column per node, shifting headers mid-lesson.
+        variables: { call: nameOf(child.id), returns: child.value },
         explanation: childV.memoized
           ? `${nameOf(child.id)} looks familiar — we already solved it earlier and stored its answer in the memo, so it hands back ${JSON.stringify(child.value)} instantly with no recomputation. Compare this single purple lookup with the whole subtree we grew the first time: that repeated work is exactly what memoization saves.`
           : (childV.children ?? []).length === 0
@@ -190,7 +192,7 @@ export function compileRecursionTrace({ callTree, code, language = 'python', lin
   steps.push(snap({
     line: lineOf('combine'),
     current: String(rootId),
-    variables: { [nameOf(rootId)]: result },
+    variables: { call: nameOf(rootId), returns: result },
     explanation: `Every branch has reported back, so ${nameOf(rootId)} combines its children's answers and returns ${JSON.stringify(result)} — the final result. Read the finished tree bottom-up: each node's value was built from its children${memo.length ? ', and every purple node marks an entire subtree of work the memo saved us from repeating' : ''}.`,
   }));
 
