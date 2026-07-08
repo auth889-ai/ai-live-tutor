@@ -142,7 +142,7 @@ export function compileRecursionTrace({ callTree, code, language = 'python', lin
   steps.push(snap({
     line: lineOf('call'),
     current: String(rootId),
-    explanation: `We call ${nameOf(rootId)} — nothing is known yet, the recursion tree starts here.`,
+    explanation: `We start by calling ${nameOf(rootId)}. Nothing is computed yet — its answer depends entirely on smaller subproblems we are about to open. Watch the tree grow downward: every node that appears is a fresh recursive call.`,
   }));
 
   (function tour(id) {
@@ -162,7 +162,7 @@ export function compileRecursionTrace({ callTree, code, language = 'python', lin
         line: lineOf('call'),
         current: childId,
         activeEdge: [String(id), childId],
-        explanation: `${nameOf(id)} needs ${nameOf(child.id)}, so it calls it — we go one level deeper.`,
+        explanation: `${nameOf(id)} cannot finish on its own — it needs ${nameOf(child.id)} first, so it calls it and pauses. Look at the call stack: ${nameOf(id)} is still there, waiting for this answer. We descend one level, and a new node appears on the tree.`,
       }));
 
       tour(child.id);
@@ -177,10 +177,10 @@ export function compileRecursionTrace({ callTree, code, language = 'python', lin
         activeEdge: [childId, String(id)],
         variables: { [nameOf(child.id)]: child.value },
         explanation: childV.memoized
-          ? `${nameOf(child.id)} is already in the memo — instant answer ${JSON.stringify(child.value)}, no recomputation. That is the whole DP win.`
+          ? `${nameOf(child.id)} looks familiar — we already solved it earlier and stored its answer in the memo, so it hands back ${JSON.stringify(child.value)} instantly with no recomputation. Compare this single purple lookup with the whole subtree we grew the first time: that repeated work is exactly what memoization saves.`
           : (childV.children ?? []).length === 0
-            ? `${nameOf(child.id)} hits the base case and returns ${JSON.stringify(child.value)} to ${nameOf(id)}.`
-            : `${nameOf(child.id)} finishes and returns ${JSON.stringify(child.value)} to ${nameOf(id)}.`,
+            ? `${nameOf(child.id)} hits the base case — the input is now small enough to answer directly, so it returns ${JSON.stringify(child.value)} without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and ${JSON.stringify(child.value)} travels along the edge to ${nameOf(id)}.`
+            : `${nameOf(child.id)} has finished: all of its own children have answered, and combining them gives ${JSON.stringify(child.value)}. That value now flows up the edge to ${nameOf(id)}, which is still waiting on the stack until every one of its children reports back.`,
       }));
     }
   })(rootId);
@@ -191,7 +191,7 @@ export function compileRecursionTrace({ callTree, code, language = 'python', lin
     line: lineOf('combine'),
     current: String(rootId),
     variables: { [nameOf(rootId)]: result },
-    explanation: `All sub-answers are in: ${nameOf(rootId)} returns ${JSON.stringify(result)}. Done.`,
+    explanation: `Every branch has reported back, so ${nameOf(rootId)} combines its children's answers and returns ${JSON.stringify(result)} — the final result. Read the finished tree bottom-up: each node's value was built from its children${memo.length ? ', and every purple node marks an entire subtree of work the memo saved us from repeating' : ''}.`,
   }));
 
   const trace = {
