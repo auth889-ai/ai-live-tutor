@@ -7,6 +7,7 @@ import { listLessons } from '../../lib/storage/lesson-store.js';
 import { listCourses } from '../../lib/storage/course-store.js';
 import { SESSION_COOKIE, verifySessionToken } from '../../lib/auth/session.js';
 import { DashboardSidebar } from '../../components/dashboard/sidebar.js';
+import { coverUrl } from '../../components/dashboard/course-grid.js';
 import { CourseGrid } from '../../components/dashboard/course-grid.js';
 
 const UI = { text: '#2b211a', muted: '#8a6d3b', accent: '#f47368' };
@@ -41,7 +42,7 @@ export default async function CoursesPage() {
                   style={{ border: '1px solid #f5e6d9', borderRadius: 18, overflow: 'hidden', background: '#fff', textDecoration: 'none', color: '#2b211a', boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
                   <div style={{ position: 'relative' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={course.coverImage || ['/images/study-30.png', '/images/study-32.png', '/images/study-26.png'][index % 3]} alt=""
+                    <img src={coverUrl(course.coverImage, ['/images/study-30.png', '/images/study-32.png', '/images/study-26.png'][index % 3])} alt=""
                       style={{ width: '100%', height: 120, objectFit: 'cover', display: 'block' }} />
                     <span className="forever-glow" style={{ position: 'absolute', top: 10, left: 10, background: '#f47368', color: '#fff', borderRadius: 999, padding: '5px 13px', fontSize: 11, fontWeight: 800, letterSpacing: 0.6 }}>
                       📚 FULL COURSE

@@ -7,6 +7,11 @@ const UI = { text: '#2b211a', muted: '#8a6d3b', border: '#f5e6d9', card: '#fff',
 
 const COVERS = ['/images/study-29.png', '/images/study-30.png', '/images/study-31.png', '/images/study-32.png', '/images/study-33.png'];
 
+// coverImage is {url, credit} from the stock-photo APIs (legacy: plain string). Anything else
+// falls back to the bundled study photos — a card must NEVER render a broken image.
+export const coverUrl = (coverImage, fallback) =>
+  coverImage?.url ?? (typeof coverImage === 'string' && coverImage ? coverImage : null) ?? fallback;
+
 export const fmtDuration = (ms) => {
   const s = Math.round(ms / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -29,7 +34,7 @@ export function CourseGrid({ lessons }) {
           style={{ border: `1px solid ${UI.border}`, borderRadius: 18, overflow: 'hidden', background: UI.card, textDecoration: 'none', color: UI.text, boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
           <div style={{ position: 'relative', height: 116, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={lesson.coverImage || COVERS[index % COVERS.length]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <img src={coverUrl(lesson.coverImage, COVERS[index % COVERS.length])} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             <span style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(255,255,255,0.92)', borderRadius: 999, padding: '4px 12px', fontSize: 11, fontWeight: 800, color: UI.accent }}>
               {lesson.voiced ? '🔊 VOICED' : 'COURSE'}
             </span>
