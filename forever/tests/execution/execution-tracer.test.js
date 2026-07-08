@@ -82,6 +82,33 @@ test('traceExecution returns null (honest) when no real valid trace can be produ
   assert.equal(result, null);
 });
 
+test('quality gate: a queue-driven algorithm must SHOW the queue at each step (repair demanded)', async () => {
+  const BFS_JSON = {
+    language: 'python',
+    code: 'from collections import deque\ndef bfs(root):\n    queue = deque([root])\n    while queue:\n        node = queue.popleft()',
+    views: { graph: { nodes: [{ id: '1' }, { id: '2' }], edges: [{ from: '1', to: '2', side: 'left' }], directed: true } },
+    program: 'print("...")',
+  };
+  const noQueue = `${STEP_MARKER}{"line":5,"explanation":"dequeue 1","graph":{"current":"1","visited":["1"],"pointers":{"curr":"1"}}}`;
+  const withQueue = `${STEP_MARKER}{"line":5,"explanation":"dequeue 1","graph":{"current":"1","visited":["1"],"pointers":{"curr":"1"}},"queue":["2"]}`;
+  const errors = [];
+  let call = 0;
+  const result = await traceExecution({
+    directive: 'BFS level order traversal',
+    deps: {
+      callQwenJson: async ({ system }) => {
+        if (call > 0) errors.push(system);
+        return { json: BFS_JSON, usage: null };
+      },
+      runCode: async () => ({ stdout: (call += 1) === 1 ? noQueue : withQueue, stderr: '', timedOut: false, exitCode: 0 }),
+    },
+  });
+  assert.ok(result, 'repaired trace accepted');
+  assert.equal(result.fixes, 1);
+  assert.match(errors[0], /NO step carries "queue"/);
+  assert.deepEqual(result.trace.steps[0].queue, ['2']);
+});
+
 test('traceExecution rejects a trace that references a node/index not in views', async () => {
   const badStdout = `${STEP_MARKER}{"line":4,"explanation":"oops","array":{"current":99}}`;
   const result = await traceExecution({

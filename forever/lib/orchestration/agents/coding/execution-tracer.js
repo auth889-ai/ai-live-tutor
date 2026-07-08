@@ -109,6 +109,18 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         if (process.env.TRACE_DEBUG) console.error(`[tracer] attempt ${attempt}: ${lastError}`);
         continue;
       }
+      // Same bar for the collection: a queue/stack-driven algorithm (BFS, iterative DFS) whose
+      // steps never SHOW the queue/stack is a dry run with the engine hidden — the student must
+      // watch it grow and shrink (mockup: "Queue (front → back)" panel at every step).
+      const algoText = `${directive}\n${code}`.toLowerCase();
+      const missingCollection = ['queue', 'stack'].find(
+        (kind) => new RegExp(`\\b${kind}\\b`).test(algoText) && !steps.some((s) => Array.isArray(s[kind])),
+      );
+      if (missingCollection) {
+        lastError = `The algorithm uses a ${missingCollection} but NO step carries "${missingCollection}" — every step must include the live ${missingCollection} contents (e.g. "${missingCollection}": ["2","3"]; use [] when empty) so the student watches it grow and shrink.`;
+        if (process.env.TRACE_DEBUG) console.error(`[tracer] attempt ${attempt}: ${lastError}`);
+        continue;
+      }
     }
     return { trace, usage, fixes: attempt };
   }

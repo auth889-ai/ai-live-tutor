@@ -28,27 +28,29 @@ export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null 
   const historySteps = trace.steps.slice(0, index + 1); // full step objects, for accumulation
   const views = trace.views ?? {};
 
+  // The VisuAlgo/mockup arrangement: the STRUCTURE owns the left (it is the lesson), with the
+  // visited-order strip and the growing trace table under it; the code rides the right with the
+  // step explanation and live variables directly beneath — the eye path a human tutor points:
+  // tree → order → table, code → why → state. One step object feeds both columns (atomic sync).
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <Caption index={index} total={trace.steps.length} text={step.explanation} />
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>
+      <div style={{ flex: '1.4 1 380px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {views.array && step.array ? (
+          <ArrayView content={{ values: views.array.values, trace: [{ note: '', ...step.array }] }} activeStep={0} />
+        ) : null}
+        {views.array2d && step.array2d ? <GridView view={views.array2d} step={step} history={historySteps} /> : null}
+        {views.graph && step.graph ? (
+          <GraphView content={{ nodes: views.graph.nodes, edges: views.graph.edges, directed: views.graph.directed, trace: [{ note: '', ...step.graph, activeEdge: step.activeEdge }] }} activeStep={0} />
+        ) : null}
+        {views.graph ? <OrderStrip step={step} nodes={views.graph.nodes ?? []} /> : null}
+        <TraceTable history={historySteps} />
+      </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>
-        <div style={{ flex: '1 1 340px', minWidth: 300 }}>
-          <CodePanel codeObject={{ content: trace.code, language: trace.language }} revealProgress={1} activeLine={step.line} />
-        </div>
-
-        <div style={{ flex: '1 1 340px', minWidth: 300, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {views.array && step.array ? (
-            <ArrayView content={{ values: views.array.values, trace: [{ note: '', ...step.array }] }} activeStep={0} />
-          ) : null}
-          {views.array2d && step.array2d ? <GridView view={views.array2d} step={step} history={historySteps} /> : null}
-          {views.graph && step.graph ? (
-            <GraphView content={{ nodes: views.graph.nodes, edges: views.graph.edges, directed: views.graph.directed, trace: [{ note: '', ...step.graph, activeEdge: step.activeEdge }] }} activeStep={0} />
-          ) : null}
-          <Vars step={step} />
-          <Collections step={step} />
-          <TraceTable history={historySteps} />
-        </div>
+      <div style={{ flex: '1 1 320px', minWidth: 300, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <CodePanel codeObject={{ content: trace.code, language: trace.language }} revealProgress={1} activeLine={step.line} />
+        <Caption index={index} total={trace.steps.length} text={step.explanation} />
+        <Vars step={step} />
+        <Collections step={step} />
       </div>
     </div>
   );
@@ -56,9 +58,49 @@ export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null 
 
 function Caption({ index, total, text }) {
   return (
-    <div style={{ padding: '10px 14px', borderRadius: 10, background: '#fffaf0', border: '1px solid #e8ddc9', fontSize: 14, color: '#5a4a2a', display: 'flex', gap: 10, alignItems: 'baseline' }}>
-      <span style={{ color: '#d35400', fontWeight: 700, whiteSpace: 'nowrap' }}>Step {index + 1}/{total}</span>
-      <span>{text}</span>
+    <div style={{ borderRadius: 10, background: '#fffaf0', border: '1px solid #e8ddc9', overflow: 'hidden' }}>
+      <div style={{ padding: '6px 14px', borderBottom: '1px solid #efe6d3', fontSize: 11, fontWeight: 700, color: '#d35400', fontFamily: 'ui-monospace, monospace' }}>
+        Output / Explanation · Step {index + 1} of {total}
+      </div>
+      <div style={{ padding: '10px 14px', fontSize: 14, color: '#5a4a2a', lineHeight: 1.5 }}>{text}</div>
+    </div>
+  );
+}
+
+// "BFS Order (so far)" strip from the mockup: one slot per node; visited nodes fill their slot
+// in VISIT ORDER as the trace reaches them, the rest stay empty outlines — the progress of the
+// traversal readable at a glance. step.graph.visited is cumulative in the trace contract.
+function OrderStrip({ step, nodes }) {
+  const labelOf = new Map(nodes.map((n) => [String(n.id), String(n.label ?? n.id)]));
+  const visited = (step.graph?.visited ?? []).map(String);
+  const slots = nodes.length;
+  if (slots === 0) return null;
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', border: '1px solid #e8ddc9', borderRadius: 10, background: '#fffdf8' }}>
+      <span style={{ fontSize: 12, fontWeight: 700, color: '#8a6d3b', fontFamily: 'ui-monospace, monospace', whiteSpace: 'nowrap' }}>Visit order (so far):</span>
+      {Array.from({ length: slots }, (_, i) => {
+        const id = visited[i];
+        const isCurrent = id != null && String(step.graph?.current) === id && i === visited.length - 1;
+        return (
+          <span
+            key={i}
+            style={{
+              minWidth: 34,
+              textAlign: 'center',
+              padding: '5px 8px',
+              borderRadius: 8,
+              fontFamily: 'ui-monospace, monospace',
+              fontWeight: 800,
+              fontSize: 13,
+              border: id != null ? (isCurrent ? '2px solid #e8604c' : '2px solid #2f7d4a') : '2px dashed #e0d5bf',
+              background: id != null ? (isCurrent ? '#fdf0ee' : '#eef7f0') : '#fff',
+              color: id != null ? '#2b211a' : '#c9bda1',
+            }}
+          >
+            {id != null ? labelOf.get(id) ?? id : ''}
+          </span>
+        );
+      })}
     </div>
   );
 }
