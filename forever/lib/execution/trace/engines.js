@@ -19,8 +19,16 @@
 //                                                              change of a real run — a dry run
 //                                                              can never be trace-less)
 
-export { compileTraversalTrace, TRAVERSAL_KINDS } from './traversal-compiler.js';
-export { compileRecursionTrace, assembleRecursionProgram, parseCallTree, RECURSION_TRACKER_PY } from './recursion-compiler.js';
-export { compilePointerWalk } from './pointer-walk-compiler.js';
-export { compileLineTrace, assembleLineProgram, parseLineEvents, LINE_TRACKER_PY } from './line-simulator.js';
+//   data structures THEMSELVES (stack push/pop, queue      -> operations/compiler (one frame
+//     enqueue/dequeue, hash map put/get: collisions,           per op, real hashes/chains,
+//     updates, misses, underflow taught as lessons)            underflow narrated)
+//   linked list (chain view with node insert/delete)       -> PLANNED: needs a dedicated
+//                                                              chain renderer first — not
+//                                                              shipped weak on the graph view
+
+export { compileTraversalTrace, TRAVERSAL_KINDS } from './traversal/compiler.js';
+export { compileOperationsTrace, OPERATION_STRUCTURES } from './operations/compiler.js';
+export { compileRecursionTrace, assembleRecursionProgram, parseCallTree, RECURSION_TRACKER_PY } from './recursion/compiler.js';
+export { compilePointerWalk } from './pointer-walk/compiler.js';
+export { compileLineTrace, assembleLineProgram, parseLineEvents, LINE_TRACKER_PY } from './line-sim/compiler.js';
 export { parseStepEvents, STEP_MARKER } from './parse-steps.js';

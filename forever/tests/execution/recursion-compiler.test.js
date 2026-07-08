@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { compileRecursionTrace, assembleRecursionProgram, parseCallTree, RECURSION_TRACKER_PY } from '../../lib/execution/trace/recursion-compiler.js';
+import { compileRecursionTrace, assembleRecursionProgram, parseCallTree, RECURSION_TRACKER_PY } from '../../lib/execution/trace/recursion/compiler.js';
 
 const CODE = 'def fib(n):\n    if n <= 1:\n        return n\n    # memo check happens here\n    return fib(n-1) + fib(n-2)';
 const LINES = { call: 5, base: 2, memo: 4, combine: 5 };

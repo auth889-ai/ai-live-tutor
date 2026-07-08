@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { assembleLineProgram, parseLineEvents, compileLineTrace, LINE_TRACKER_PY } from '../../lib/execution/trace/line-simulator.js';
+import { assembleLineProgram, parseLineEvents, compileLineTrace, LINE_TRACKER_PY } from '../../lib/execution/trace/line-sim/compiler.js';
 
 const CODE = 'def linear_search(arr, target):\n    for i in range(len(arr)):\n        if arr[i] == target:\n            return i\n    return -1';
 

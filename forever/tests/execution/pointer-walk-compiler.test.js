@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { compilePointerWalk } from '../../lib/execution/trace/pointer-walk-compiler.js';
+import { compilePointerWalk } from '../../lib/execution/trace/pointer-walk/compiler.js';
 
 const CODE = 'def binary_search(arr, target):\n    low, high = 0, len(arr) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if arr[mid] == target:\n            return mid\n        if arr[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1';
 const ARR = [2, 5, 8, 12, 16, 23, 38, 56];

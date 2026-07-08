@@ -12,10 +12,11 @@
 import { callQwenJson } from '../../../qwen/client.js';
 import { runCode } from '../../../execution/run-code.js';
 import { parseStepEvents } from '../../../execution/trace/parse-steps.js';
-import { assembleRecursionProgram, parseCallTree, compileRecursionTrace } from '../../../execution/trace/recursion-compiler.js';
-import { compileTraversalTrace } from '../../../execution/trace/traversal-compiler.js';
-import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../../../execution/trace/line-simulator.js';
-import { compilePointerWalk } from '../../../execution/trace/pointer-walk-compiler.js';
+import { assembleRecursionProgram, parseCallTree, compileRecursionTrace } from '../../../execution/trace/engines.js';
+import { compileTraversalTrace } from '../../../execution/trace/engines.js';
+import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../../../execution/trace/engines.js';
+import { compilePointerWalk } from '../../../execution/trace/engines.js';
+import { compileOperationsTrace } from '../../../execution/trace/engines.js';
 import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
 const RUNNABLE_LANGUAGES = ['python', 'javascript'];
@@ -60,6 +61,15 @@ two pointers, sliding window): INSTEAD of "program", output
                   "window": ["left","right"] (optional, sliding-window style)}
 with "code" = the clean function definition. Our engine runs it for real and animates the
 pointers riding the array — do not write tracking code.
+
+OPERATIONS MODE — when the lesson teaches a DATA STRUCTURE ITSELF (stack, queue, hash map —
+push/pop, enqueue/dequeue, put/get/remove with collisions): INSTEAD of "program", output
+  "operations": {"structure": "stack" | "queue" | "hash_map",
+                 "ops": [{"op":"push","value":7}, {"op":"pop"}, {"op":"put","key":"cat","value":1}, ...],
+                 "lines": {"push": <code line of push>, "pop": <...>, "put": <...>, "get": <...>}}
+with "code" = the short usage snippet shown to the student. Design the ops to TEACH: include a
+collision (hash_map), an update of an existing key, a miss, and one underflow (pop/dequeue on
+empty) — our engine executes every operation for real and narrates sizes, hashes and chains.
 
 LINE-SIM MODE (python only) — the SAFE fallback for any algorithm that fits neither mode above,
 or if your @@STEP program keeps failing: INSTEAD of "program", output
@@ -155,6 +165,25 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Traversal trace failed: ${error.message}`;
+        logAttempt(attempt, lastError);
+        continue;
+      }
+    }
+
+    // OPERATIONS MODE: the structure itself is the lesson — our engine executes every op.
+    if (json.operations && typeof json.operations === 'object' && code) {
+      try {
+        const trace = compileOperationsTrace({
+          structure: json.operations.structure,
+          ops: json.operations.ops,
+          code,
+          lines: json.operations.lines ?? {},
+          buckets: json.operations.buckets ?? 5,
+          language: lang,
+        });
+        return { trace, usage, fixes: attempt };
+      } catch (error) {
+        lastError = `Operations trace failed: ${error.message}`;
         logAttempt(attempt, lastError);
         continue;
       }
