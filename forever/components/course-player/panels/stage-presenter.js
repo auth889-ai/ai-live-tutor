@@ -127,7 +127,7 @@ function Focus({ object, state, focusRef, activeStep, onQuizAnswered }) {
     return <MathView content={object.content} />;
   }
   if (object.renderHint === 'image') {
-    return <ImageView content={object.content} />;
+    return <ImageView content={object.content} progress={state.writing.get(object.id)?.progress ?? 1} />;
   }
   if (object.renderHint === 'callout') {
     return <CalloutView content={object.content} />;

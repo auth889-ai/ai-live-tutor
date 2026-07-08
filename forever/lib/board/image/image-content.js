@@ -3,11 +3,14 @@
 // (bbox overlay, OpenMAIC full-image rule: never cropped, highlight drawn on top). Slice 1
 // = display; the vision pass (describe-image) supplies the caption/explanation.
 
+import { validateAnnotations } from '../annotations/annotation-content.js';
+
 export function validateImageContent(content, context = 'image') {
   if (!content || typeof content !== 'object') throw new Error(`${context} content must be an object`);
   if (typeof content.url !== 'string' || !content.url.trim()) throw new Error(`${context} needs a url`);
   if (typeof content.alt !== 'string' || !content.alt.trim()) throw new Error(`${context} needs alt text (what the image shows)`);
   if (content.bbox !== undefined) validateBbox(content.bbox, context);
+  validateAnnotations(content.annotations, context);
   return content;
 }
 
