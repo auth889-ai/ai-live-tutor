@@ -58,7 +58,7 @@ export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null 
         {views.array2d && step.array2d ? <GridView view={views.array2d} step={step} history={historySteps} /> : null}
         {graphContent && step.graph ? <GraphView content={graphContent} activeStep={index} /> : null}
         {views.graph ? <OrderStrip step={step} nodes={views.graph.nodes ?? []} /> : null}
-        <TraceTable history={historySteps} />
+        <TraceTable history={historySteps} allSteps={trace.steps} />
       </div>
 
       <div style={{ flex: '1 1 320px', minWidth: 300, display: 'flex', flexDirection: 'column', gap: 12 }}>
