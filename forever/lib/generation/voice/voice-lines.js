@@ -30,8 +30,28 @@ export function validateVoiceLines(lines, objects) {
     if (ids.has(line.id)) throw new Error(`Duplicate voice line id: ${line.id}`);
     ids.add(line.id);
     if (objects && !objectIds.has(line.targetObjectId)) {
-      throw new Error(`voiceLine ${line.id} targets missing board object ${line.targetObjectId}`);
+      throw new Error(`voiceLine ${line.id} targets missing board object "${line.targetObjectId}" — valid object ids: ${[...objectIds].join(', ')}`);
     }
   }
   return lines;
+}
+
+// Deterministic repair for the most common Voice Writer slip (measured live 2026-07-08: a
+// dry-run scene died because a line targeted tree node "n5" instead of the diagram that holds
+// it): when targetObjectId matches no object but IS a sub-element (graph/diagram node id) of
+// exactly ONE object, the intent is unambiguous — point at that object and keep the node as
+// focusRef. Ambiguous or unknown targets are left for validation to reject loudly.
+export function normalizeVoiceTargets(lines, objects) {
+  const objectIds = new Set((objects ?? []).map((object) => object.id));
+  const ownerOf = (elementId) => {
+    const owners = (objects ?? []).filter((o) =>
+      (o.content?.nodes ?? []).some((n) => String(n.id) === String(elementId)));
+    return owners.length === 1 ? owners[0] : null;
+  };
+  return (lines ?? []).map((line) => {
+    if (!line?.targetObjectId || objectIds.has(line.targetObjectId)) return line;
+    const owner = ownerOf(line.targetObjectId);
+    if (!owner) return line;
+    return { ...line, targetObjectId: owner.id, focusRef: line.focusRef ?? line.targetObjectId };
+  });
 }

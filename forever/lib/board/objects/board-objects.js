@@ -32,6 +32,10 @@ export function validateBoardObject(object, layout) {
     throw new Error(`${context} must not carry raw x/y coordinates — agents output layout/region/lineNumber only`);
   }
   if (!object.objectType?.trim()) throw new Error(`${context}.objectType is required`);
+  // Unambiguous synonyms are normalized instead of rejected (measured live: a practice scene
+  // died because the model wrote renderHint "graph" for a tree picture — it meant "diagram").
+  const HINT_ALIASES = { graph: 'diagram', tree: 'diagram', flowchart: 'diagram', chart: 'diagram', note: 'callout', bullet_list: 'list' };
+  if (HINT_ALIASES[object.renderHint]) object.renderHint = HINT_ALIASES[object.renderHint];
   if (!RENDER_HINTS.includes(object.renderHint)) {
     throw new Error(`${context}.renderHint must be one of ${RENDER_HINTS.join(', ')}`);
   }

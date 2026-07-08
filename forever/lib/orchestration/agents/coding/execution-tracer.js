@@ -14,6 +14,7 @@ import { runCode } from '../../../execution/run-code.js';
 import { parseStepEvents } from '../../../execution/trace/parse-steps.js';
 import { assembleRecursionProgram, parseCallTree, compileRecursionTrace } from '../../../execution/trace/recursion-compiler.js';
 import { compileTraversalTrace } from '../../../execution/trace/traversal-compiler.js';
+import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../../../execution/trace/line-simulator.js';
 import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
 const RUNNABLE_LANGUAGES = ['python', 'javascript'];
@@ -47,6 +48,12 @@ tree or graph: INSTEAD of "program", output
                 "lines": {"init": <line that seeds the queue/stack>, "visit": <line that visits>, "done": <line after the loop>}}
 plus "views.graph" (edges carry "side" for binary trees) and "code" = the clean traversal function.
 Our engine executes the walk itself, exactly — do not write tracking code.
+
+LINE-SIM MODE (python only) — the SAFE fallback for any algorithm that fits neither mode above,
+or if your @@STEP program keeps failing: INSTEAD of "program", output
+  "linesim": {"entry": "<ONE call expression invoking 'code', e.g. binary_search([2,5,8,12,16], 12)>"}
+and make "code" the clean runnable function definition. Our tracer executes it for real and
+records every line + variable change itself — this mode cannot produce a wrong trace.
 
 Rules for "program" — it must print, at each LOGICAL step (each comparison/decision/loop turn), exactly one line:
 @@STEP {"line": <1-based line in 'code' active now>, "explanation": "<2-3 full sentences in a warm human tutor voice: the ACTUAL action with its real values, the decision taken, and WHY it matters for the next step — never a stub like 'Visit node 1'>", <state...>}
@@ -135,6 +142,23 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Traversal trace failed: ${error.message}`;
+        logAttempt(attempt, lastError);
+        continue;
+      }
+    }
+
+    // LINE-SIM MODE: the guaranteed floor — our settrace harness runs the code and records
+    // every executed line + variable change; the trace cannot lie and cannot be malformed.
+    if (json.linesim && typeof json.linesim === 'object' && lang === 'python' && code) {
+      try {
+        const run = await exec({ language: 'python', source: assembleLineProgram({ code, entry: json.linesim.entry }) });
+        if (run.timedOut) throw new Error('simulation timed out (likely an infinite loop)');
+        const payload = parseLineEvents(run.stdout);
+        if (!payload) throw new Error(run.stderr ? `simulation errored: ${run.stderr.slice(0, 300)}` : 'simulation printed no @@LINESIM line');
+        const trace = compileLineTrace({ ...payload, code, language: 'python' });
+        return { trace, usage, fixes: attempt };
+      } catch (error) {
+        lastError = `Line simulation failed: ${error.message}`;
         logAttempt(attempt, lastError);
         continue;
       }

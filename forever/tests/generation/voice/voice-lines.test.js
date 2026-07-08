@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { validateVoiceLines } from '../../../lib/generation/voice/voice-lines.js';
+import { validateVoiceLines, normalizeVoiceTargets } from '../../../lib/generation/voice/voice-lines.js';
 
 const objects = [{ id: 'obj_rules' }, { id: 'obj_code' }];
 
@@ -70,4 +70,29 @@ test('a negative or non-integer traceStep is rejected', () => {
     () => validateVoiceLines([{ id: 'vl_1', text: 'x', targetObjectId: 'o', traceStep: 1.5 }], [{ id: 'o' }]),
     /traceStep must be a non-negative integer/,
   );
+});
+
+test('normalizeVoiceTargets: a line targeting a NODE id is retargeted to the object that holds it', () => {
+  const boards = [
+    { id: 'obj_tree', content: { nodes: [{ id: 'n5' }, { id: 'n6' }], edges: [] } },
+    { id: 'obj_code', content: 'code' },
+  ];
+  const fixed = normalizeVoiceTargets(
+    [
+      { id: 'vl_1', text: 'Node five is visited now, watch it turn green.', targetObjectId: 'n5' },
+      { id: 'vl_2', text: 'The code line moves on.', targetObjectId: 'obj_code' },
+    ],
+    boards,
+  );
+  assert.equal(fixed[0].targetObjectId, 'obj_tree', 'retargeted to the owning diagram');
+  assert.equal(fixed[0].focusRef, 'n5', 'the node becomes the pointed-at sub-element');
+  assert.equal(fixed[1].targetObjectId, 'obj_code', 'valid targets untouched');
+  validateVoiceLines(fixed, boards); // and the repaired lines now pass the contract
+  // Ambiguous (node in TWO objects) is NOT guessed — left for loud validation.
+  const two = [
+    { id: 'a', content: { nodes: [{ id: 'x' }] } },
+    { id: 'b', content: { nodes: [{ id: 'x' }] } },
+  ];
+  const left = normalizeVoiceTargets([{ id: 'vl', text: 'ambiguous target here.', targetObjectId: 'x' }], two);
+  assert.equal(left[0].targetObjectId, 'x');
 });

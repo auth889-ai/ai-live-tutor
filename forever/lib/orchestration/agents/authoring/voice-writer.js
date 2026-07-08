@@ -3,7 +3,7 @@
 // one repair round, honest failure.
 
 import { callQwenJson } from '../../../qwen/client.js';
-import { validateVoiceLines } from '../../../generation/voice/voice-lines.js';
+import { validateVoiceLines, normalizeVoiceTargets } from '../../../generation/voice/voice-lines.js';
 
 export async function writeVoice({ objects, sourcePack }) {
   const system = `You are the Voice Writer of an AI tutor: what the teacher SAYS while the board is written.
@@ -40,8 +40,11 @@ Explain like the BEST human teacher (Striver for code, Andrew Ng for concepts) â
     const repair = attempt === 0 ? '' : `\nYour previous output was rejected: ${lastError}. Fix exactly that and output the full JSON again.`;
     const { json, usage } = await callQwenJson({ agent: 'voice_writer', system: system + repair, user, temperature: 0.6 });
     try {
-      validateVoiceLines(json.voiceLines, objects);
-      return { voiceLines: json.voiceLines, usage };
+      // Unambiguous slips (targeting a node id instead of its object) are repaired
+      // structurally before validation â€” no model round-trip for a mechanical fix.
+      const voiceLines = normalizeVoiceTargets(json.voiceLines, objects);
+      validateVoiceLines(voiceLines, objects);
+      return { voiceLines, usage };
     } catch (error) {
       lastError = error.message;
     }
