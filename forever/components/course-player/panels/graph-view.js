@@ -103,16 +103,14 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
 
   const nodes = laid.nodes.map((n) => {
     const c = nodeColor(n.id);
-    const pointers = pointerAt.get(n.id);
-    const label = pointers ? `${n.label}\n▲ ${pointers.join(', ')}` : n.label;
     const isCurrent = n.id === current;
     return {
       id: n.id,
       position: { x: n.x, y: n.y },
-      data: { label },
+      data: { label: n.label },
       style: {
         width: n.width,
-        height: pointers ? n.height + 14 : n.height,
+        height: n.height,
         borderRadius: 10,
         border: `${isCurrent ? 3 : 2}px solid ${c.border}`,
         background: c.bg,
@@ -124,7 +122,7 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
         whiteSpace: 'pre-line',
         fontFamily: 'ui-monospace, monospace',
         fontWeight: 600,
-        fontSize: pointers ? 12 : 14,
+        fontSize: 14,
         // NOTE: never put `transform` here — ReactFlow uses transform:translate() to POSITION the
         // node, so a scale() would clobber the position (nodes collapse to the origin). Emphasis
         // is via border width + glow only.
@@ -133,6 +131,45 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
       },
     };
   });
+  const POINTER_COLORS = ['#8e44ad', '#2980b9', '#c0392b', '#16a085'];
+  let pointerIndex = 0;
+  for (const [nid, names] of pointerAt) {
+    const base = laid.nodes.find((n) => n.id === nid);
+    if (!base) continue;
+    for (const name of names) {
+      const color = POINTER_COLORS[pointerIndex % POINTER_COLORS.length];
+      const pad = 9 + (pointerIndex % 2) * 7; // two rings on one node stay visible
+      pointerIndex += 1;
+      nodes.push({
+        id: `ptr-${name}`, // STABLE identity per pointer -> glide, not teleport
+        position: { x: base.x - pad, y: base.y - pad },
+        data: { label: name },
+        draggable: false,
+        selectable: false,
+        focusable: false,
+        zIndex: 10,
+        style: {
+          width: base.width + pad * 2,
+          height: base.height + pad * 2,
+          borderRadius: 999,
+          border: `3px solid ${color}`,
+          background: 'transparent',
+          color,
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          paddingBottom: 1,
+          fontFamily: 'ui-monospace, monospace',
+          fontWeight: 800,
+          fontSize: 10,
+          pointerEvents: 'none',
+          boxShadow: `0 0 12px ${color}44`,
+          transition: 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s, height 0.3s',
+        },
+      });
+    }
+  }
+
   const isActiveEdge = (e) =>
     activeEdge && ((activeEdge[0] === e.from && activeEdge[1] === e.to) || (content.directed === false && activeEdge[0] === e.to && activeEdge[1] === e.from));
   const edges = laid.edges.map((e) => {
@@ -145,13 +182,21 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
       label: e.label,
       animated: traversing || e.from === current || e.to === current,
       markerEnd: content.directed !== false ? { type: MarkerType.ArrowClosed, color: active ? '#d35400' : '#8a6d3b' } : undefined,
-      style: { stroke: active ? '#d35400' : '#8a6d3b', strokeWidth: traversing ? 3.5 : active ? 2.5 : 1.5, transition: 'stroke 0.3s, stroke-width 0.3s' },
+      style: { stroke: traversing ? '#e8604c' : active ? '#d35400' : '#8a6d3b', strokeWidth: traversing ? 4 : active ? 2.5 : 1.5, transition: 'stroke 0.3s, stroke-width 0.3s' },
     };
   });
 
   const height = Math.min(460, Math.max(200, laid.height + 40));
   return (
     <div>
+      {hasTrace ? (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6, fontSize: 11.5, fontFamily: 'ui-monospace, monospace', color: '#5a4a2a' }}>
+          <LegendChip swatch={{ background: '#ffd9a8', border: '2px solid #d35400' }} label="current" />
+          <LegendChip swatch={{ background: '#eafaf0', border: '2px solid #27ae60' }} label="visited" />
+          <LegendChip swatch={{ background: '#fbf8f2', border: '2px solid #b8b0a0' }} label="not yet" />
+          <LegendChip swatch={{ background: 'transparent', borderBottom: '3px solid #e8604c', borderRadius: 0, height: 3, marginTop: 6 }} label="active edge" />
+        </div>
+      ) : null}
       <div style={{ height, border: '1px solid #e8ddc9', borderRadius: 12, background: '#fffdf8' }}>
         <ReactFlow
           nodes={nodes}
@@ -190,5 +235,14 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
         </div>
       ) : null}
     </div>
+  );
+}
+
+function LegendChip({ swatch, label }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+      <span style={{ width: 14, height: 14, borderRadius: 4, ...swatch }} />
+      {label}
+    </span>
   );
 }
