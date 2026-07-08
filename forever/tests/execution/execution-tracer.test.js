@@ -142,3 +142,58 @@ test('traceExecution rejects a trace that references a node/index not in views',
   });
   assert.equal(result, null); // validation caught the out-of-bounds index -> no fake trace
 });
+
+// --- no-downgrade contract (user's standing order: never fall back to a weaker trace) ---
+
+test('retry prompt NEVER advertises line-sim as an escape hatch; it forbids downgrading', async () => {
+  const prompts = [];
+  const result = await traceExecution({
+    directive: 'binary search',
+    maxFixes: 3,
+    deps: {
+      callQwenJson: async ({ system }) => {
+        prompts.push(system);
+        return { json: GOOD_JSON, usage: null };
+      },
+      runCode: async () => ({ stdout: prompts.length >= 4 ? GOOD_STDOUT : 'boom', stderr: 'Error', timedOut: false, exitCode: 1 }),
+    },
+  });
+  assert.ok(result, 'eventually succeeds without ever downgrading');
+  assert.equal(prompts.length, 4);
+  for (const p of prompts) {
+    assert.doesNotMatch(p, /SWITCH TO LINE-SIM/i, 'the escape hatch must stay dead');
+    assert.doesNotMatch(p, /cannot fail|cannot produce a wrong trace|SAFE fallback/i, 'line-sim is a classification, not a safety net');
+  }
+  assert.match(prompts[1], /never drop to a weaker representation/i);
+});
+
+test('quality gate applies to ENGINE traces too: line-sim of a stack algorithm is rejected, mode moves UP', async () => {
+  const LINESIM_JSON = {
+    language: 'python',
+    code: 'def demo():\n    stack = []\n    stack.append(7)\n    return stack',
+    views: {},
+    linesim: { entry: 'demo()' },
+  };
+  const OPS_JSON = {
+    language: 'python',
+    code: 'stack = []\nstack.append(7)\nstack.pop()',
+    views: {},
+    operations: { structure: 'stack', ops: [{ op: 'push', value: 7 }, { op: 'pop' }], lines: { push: 2, pop: 3 } },
+  };
+  const LINESIM_STDOUT = '@@LINESIM {"events":[{"line":2,"fn":"demo","locals":{}},{"line":3,"fn":"demo","locals":{"stack":[]}},{"line":4,"fn":"demo","locals":{"stack":[7]}}],"result":[7]}';
+  const prompts = [];
+  const result = await traceExecution({
+    directive: 'teach how a stack works with push and pop',
+    deps: {
+      callQwenJson: async ({ system }) => {
+        prompts.push(system);
+        return { json: prompts.length === 1 ? LINESIM_JSON : OPS_JSON, usage: null };
+      },
+      runCode: async () => ({ stdout: LINESIM_STDOUT, stderr: '', timedOut: false, exitCode: 0 }),
+    },
+  });
+  assert.ok(result, 'the richer operations trace is accepted');
+  assert.equal(result.fixes, 1);
+  assert.match(prompts[1], /NO step carries "stack"/, 'the gate names exactly what the weak trace hid');
+  assert.ok(result.trace.steps.every((s) => Array.isArray(s.stack)), 'the accepted trace SHOWS the stack at every step');
+});

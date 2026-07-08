@@ -54,13 +54,16 @@ plus "views.graph" (edges carry "side" for binary trees) and "code" = the clean 
 Our engine executes the walk itself, exactly — do not write tracking code.
 
 POINTER-WALK MODE (python only) — for ARRAY algorithms driven by index pointers (binary search,
-two pointers, sliding window): INSTEAD of "program", output
+two pointers, sliding window, in-place sorting/partitioning): INSTEAD of "program", output
   "pointerwalk": {"entry": "<ONE call expression invoking 'code' on a concrete array>",
                   "array": [the concrete array values], "pointers": ["low","mid","high"],
+                  "examine": "mid" (optional: the pointer whose cell the code READS each step — that cell gets the highlight),
+                  "arrayVar": "arr" (optional: the list variable the code mutates IN PLACE — swaps then animate with live values),
                   "eliminatedOutside": ["low","high"] (optional, binary-search style: cells outside low..high dim),
                   "window": ["left","right"] (optional, sliding-window style)}
 with "code" = the clean function definition. Our engine runs it for real and animates the
-pointers riding the array — do not write tracking code.
+pointers riding the array — do not write tracking code. For sorting ALWAYS set "arrayVar" so
+every swap is a visible flash, and set "examine" for search algorithms so the probed cell lights up.
 
 OPERATIONS MODE — when the lesson teaches a DATA STRUCTURE ITSELF (stack, queue, hash map —
 push/pop, enqueue/dequeue, put/get/remove with collisions): INSTEAD of "program", output
@@ -71,11 +74,14 @@ with "code" = the short usage snippet shown to the student. Design the ops to TE
 collision (hash_map), an update of an existing key, a miss, and one underflow (pop/dequeue on
 empty) — our engine executes every operation for real and narrates sizes, hashes and chains.
 
-LINE-SIM MODE (python only) — the SAFE fallback for any algorithm that fits neither mode above,
-or if your @@STEP program keeps failing: INSTEAD of "program", output
-  "linesim": {"entry": "<ONE call expression invoking 'code', e.g. binary_search([2,5,8,12,16], 12)>"}
+LINE-SIM MODE (python only) — ONLY for algorithms with genuinely NO structure to draw (pure math
+like GCD, string building, greedy counting): INSTEAD of "program", output
+  "linesim": {"entry": "<ONE call expression invoking 'code', e.g. gcd(48, 18)>"}
 and make "code" the clean runnable function definition. Our tracer executes it for real and
-records every line + variable change itself — this mode cannot produce a wrong trace.
+records every line + variable change. NEVER pick line-sim because another mode looks hard or a
+previous attempt failed — if the algorithm walks an array, tree, graph, stack, queue, DP table
+or call tree, it MUST use the matching mode above. A line-only animation of a structural
+algorithm is a quality failure, not a safe choice.
 
 Rules for "program" — it must print, at each LOGICAL step (each comparison/decision/loop turn), exactly one line:
 @@STEP {"line": <1-based line in 'code' active now>, "explanation": "<2-3 full sentences in a warm human tutor voice: the ACTUAL action with its real values, the decision taken, and WHY it matters for the next step — never a stub like 'Visit node 1'>", <state...>}
@@ -107,10 +113,13 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
   let lastError = '';
   let usage = null;
   for (let attempt = 0; attempt <= maxFixes; attempt += 1) {
+    // NO DOWNGRADE ON RETRY (user's standing order: real dynamic, never fallback normalization):
+    // a failed attempt fixes ITS error or moves to a RICHER representation — it never escapes to
+    // a weaker one to make the error go away. The old "switch to line-sim, it cannot fail" hatch
+    // funneled every hard algorithm into the poorest visual; honest failure beats quiet decay.
     const fix = attempt === 0
       ? ''
-      : `\nThe previous attempt failed: ${lastError}\nFix it and output the full JSON again (keep 'code' and 'program' line-aligned).${
-        attempt >= 2 ? ' If the @@STEP program keeps failing, SWITCH TO LINE-SIM MODE instead ("linesim": {"entry": "<one call>"}) — it cannot fail.' : ''}`;
+      : `\nThe previous attempt failed: ${lastError}\nFix THIS error and output the full JSON again (keep 'code' and 'program' line-aligned). If the error says the trace is missing structure (pointers, stack, queue), pick the mode that SHOWS that structure — never drop to a weaker representation to avoid the error.`;
     const res = await call({
       agent: 'execution_tracer',
       system: tracerSystem(lang) + fix,
@@ -142,6 +151,7 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
           throw new Error(run.stderr ? `tracker errored: ${run.stderr.slice(0, 300)}` : 'tracker printed no @@CALLTREE line');
         }
         const trace = compileRecursionTrace({ callTree, code, language: 'python', lines: json.recursion.lines ?? {} });
+        assertDryRunQuality(trace, { directive, code, attempt, maxFixes });
         // The trace carries its own recipe so the PLAYER can re-run this engine on
         // student-modified inputs (fib(7), memo on/off) — a live instrument, not a recording.
         trace.meta = {
@@ -168,6 +178,7 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
           language: lang,
           lines: json.traversal.lines ?? {},
         });
+        assertDryRunQuality(trace, { directive, code, attempt, maxFixes });
         trace.meta = {
           tool: 'traversal',
           params: { graph: views.graph, kind: json.traversal.kind, start: json.traversal.start, code, lines: json.traversal.lines ?? {} },
@@ -191,6 +202,7 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
           buckets: json.operations.buckets ?? 5,
           language: lang,
         });
+        assertDryRunQuality(trace, { directive, code, attempt, maxFixes });
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Operations trace failed: ${error.message}`;
@@ -213,9 +225,27 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
           language: 'python',
           array: json.pointerwalk.array,
           pointers: json.pointerwalk.pointers,
+          examine: json.pointerwalk.examine ?? null,
+          arrayVar: json.pointerwalk.arrayVar ?? null,
           eliminatedOutside: json.pointerwalk.eliminatedOutside ?? null,
           window: json.pointerwalk.window ?? null,
         });
+        assertDryRunQuality(trace, { directive, code, attempt, maxFixes });
+        // Live instrument: the student can re-run the same engine on their OWN entry call
+        // (their array, their target) — the whole stage re-animates their scenario.
+        trace.meta = {
+          tool: 'pointerwalk',
+          params: {
+            code,
+            entry: json.pointerwalk.entry,
+            array: json.pointerwalk.array,
+            pointers: json.pointerwalk.pointers,
+            examine: json.pointerwalk.examine ?? null,
+            arrayVar: json.pointerwalk.arrayVar ?? null,
+            eliminatedOutside: json.pointerwalk.eliminatedOutside ?? null,
+            window: json.pointerwalk.window ?? null,
+          },
+        };
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Pointer walk failed: ${error.message}`;
@@ -233,6 +263,9 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         const payload = parseLineEvents(run.stdout);
         if (!payload) throw new Error(run.stderr ? `simulation errored: ${run.stderr.slice(0, 300)}` : 'simulation printed no @@LINESIM line');
         const trace = compileLineTrace({ ...payload, code, language: 'python' });
+        // The gate is what keeps line-sim honest: a structural algorithm routed here fails the
+        // pointer/collection bar and the retry pushes the model UP to the matching engine mode.
+        assertDryRunQuality(trace, { directive, code, attempt, maxFixes });
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Line simulation failed: ${error.message}`;
@@ -270,34 +303,11 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
       if (process.env.TRACE_DEBUG) console.error(`[tracer] --steps--\n${JSON.stringify(steps).slice(0, 500)}\n--views--\n${JSON.stringify(views)}`);
       continue;
     }
-    // QUALITY GATE, not just validity: an elite dry-run shows pointers RIDING the structure
-    // (low/mid/high, slow/fast, curr) at every step — a trace without them is a lecture,
-    // not a VisuAlgo-grade animation. One repair pass demands them.
+    // QUALITY GATE, not just validity — see dryRunQualityIssue below. One repair pass demands it.
     if (attempt < maxFixes) {
-      const stateful = steps.filter((s) => s.array || s.graph);
-      const withPointers = stateful.filter((s) => s.array?.pointers || s.graph?.pointers);
-      if (stateful.length > 0 && withPointers.length < stateful.length) {
-        lastError = `Only ${withPointers.length}/${stateful.length} steps carry "pointers" — EVERY array/graph step must include its pointer positions (e.g. {"low":0,"mid":3,"high":6}) so they visibly move on the structure.`;
-        logAttempt(attempt, lastError);
-        continue;
-      }
-      // Same bar for the collection: a queue/stack-driven algorithm (BFS, iterative DFS) whose
-      // steps never SHOW the queue/stack is a dry run with the engine hidden — the student must
-      // watch it grow and shrink (mockup: "Queue (front → back)" panel at every step).
-      const algoText = `${directive}\n${code}`.toLowerCase();
-      const missingCollection = ['queue', 'stack'].find(
-        (kind) => new RegExp(`\\b${kind}\\b`).test(algoText) && !steps.some((s) => Array.isArray(s[kind])),
-      );
-      if (missingCollection) {
-        lastError = `The algorithm uses a ${missingCollection} but NO step carries "${missingCollection}" — every step must include the live ${missingCollection} contents (e.g. "${missingCollection}": ["2","3"]; use [] when empty) so the student watches it grow and shrink.`;
-        logAttempt(attempt, lastError);
-        continue;
-      }
-      // Elite bar for the WORDS, not just the state: the explanation IS the narration the
-      // student hears. A majority of one-liners ("Visit node 1") is a slideshow, not teaching.
-      const thin = steps.filter((s) => String(s.explanation ?? '').trim().length < 50);
-      if (thin.length > Math.floor(steps.length / 2)) {
-        lastError = `${thin.length}/${steps.length} explanations are one-line stubs — every step's "explanation" must be 2-3 full sentences in a human tutor voice: the actual values involved, the decision taken, and why it matters for the next step.`;
+      const issue = dryRunQualityIssue({ steps, directive, code });
+      if (issue) {
+        lastError = issue;
         logAttempt(attempt, lastError);
         continue;
       }
@@ -309,6 +319,43 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
   // refuses to fake an animation; the log tells us exactly what to fix.
   console.error(`[tracer] GAVE UP after ${maxFixes + 1} attempts: ${String(lastError).slice(0, 300)}`);
   return null;
+}
+
+// THE ELITE-QUALITY GATE — one bar for EVERY engine, raw @@STEP and deterministic tools alike
+// (previously only the @@STEP path was gated, so an engine output could ship unaudited).
+// A trace that merely validates is not automatically a lesson: pointers must ride the structure
+// at every stateful step, a stack/queue algorithm must SHOW its collection growing and
+// shrinking, and the words must teach — not caption. Returns the failure message, or null.
+export function dryRunQualityIssue({ steps, directive, code }) {
+  const stateful = steps.filter((s) => s.array || s.graph);
+  const withPointers = stateful.filter((s) => s.array?.pointers || s.graph?.pointers);
+  if (stateful.length > 0 && withPointers.length < stateful.length) {
+    return `Only ${withPointers.length}/${stateful.length} steps carry "pointers" — EVERY array/graph step must include its pointer positions (e.g. {"low":0,"mid":3,"high":6}) so they visibly move on the structure.`;
+  }
+  // A queue/stack-driven algorithm (BFS, iterative DFS) whose steps never SHOW the queue/stack
+  // is a dry run with the engine hidden — the student must watch it grow and shrink.
+  const algoText = `${directive}\n${code}`.toLowerCase();
+  const missingCollection = ['queue', 'stack'].find(
+    (kind) => new RegExp(`\\b${kind}\\b`).test(algoText) && !steps.some((s) => Array.isArray(s[kind])),
+  );
+  if (missingCollection) {
+    return `The algorithm uses a ${missingCollection} but NO step carries "${missingCollection}" — every step must include the live ${missingCollection} contents (e.g. "${missingCollection}": ["2","3"]; use [] when empty) so the student watches it grow and shrink.`;
+  }
+  // Elite bar for the WORDS, not just the state: the explanation IS the narration the
+  // student hears. A majority of one-liners ("Visit node 1") is a slideshow, not teaching.
+  const thin = steps.filter((s) => String(s.explanation ?? '').trim().length < 50);
+  if (thin.length > Math.floor(steps.length / 2)) {
+    return `${thin.length}/${steps.length} explanations are one-line stubs — every step's "explanation" must be 2-3 full sentences in a human tutor voice: the actual values involved, the decision taken, and why it matters for the next step.`;
+  }
+  return null;
+}
+
+// Gate an ENGINE-compiled trace: throws so the surrounding branch's catch retries the attempt
+// (same rules as @@STEP — the last attempt ships only after every earlier one logged loudly).
+function assertDryRunQuality(trace, { directive, code, attempt, maxFixes }) {
+  if (attempt >= maxFixes) return;
+  const issue = dryRunQualityIssue({ steps: trace.steps, directive, code });
+  if (issue) throw new Error(`quality gate: ${issue}`);
 }
 
 // Every failed attempt is visible in production logs (concise); TRACE_DEBUG adds the dumps.
