@@ -34,8 +34,8 @@ const GOOD_JSON = {
   program: 'print("...")',
 };
 const GOOD_STDOUT = [
-  `${STEP_MARKER}{"line":4,"explanation":"mid=2 -> 5 < 7, go right","array":{"current":2,"pointers":{"lo":0,"mid":2,"hi":4}},"variables":{"lo":0,"hi":4,"mid":2}}`,
-  `${STEP_MARKER}{"line":4,"explanation":"mid=3 -> 7 found","array":{"current":3,"eliminated":[0,1,2],"pointers":{"lo":3,"mid":3,"hi":4}},"variables":{"lo":3,"hi":4,"mid":3}}`,
+  `${STEP_MARKER}{"line":4,"explanation":"We probe the middle: mid=2 holds the value 5, and 5 is less than our target 7. The target must live in the right half, so low jumps to mid+1 and the left half is eliminated.","array":{"current":2,"pointers":{"lo":0,"mid":2,"hi":4}},"variables":{"lo":0,"hi":4,"mid":2}}`,
+  `${STEP_MARKER}{"line":4,"explanation":"The new middle: mid=3 holds exactly 7 — that is our target, so the search ends here and we return index 3. Notice how the pointers collapsed around the answer in just two probes.","array":{"current":3,"eliminated":[0,1,2],"pointers":{"lo":3,"mid":3,"hi":4}},"variables":{"lo":3,"hi":4,"mid":3}}`,
 ].join('\n');
 
 test('traceExecution compiles a validated ExecutionTrace from a real run', async () => {
@@ -89,8 +89,9 @@ test('quality gate: a queue-driven algorithm must SHOW the queue at each step (r
     views: { graph: { nodes: [{ id: '1' }, { id: '2' }], edges: [{ from: '1', to: '2', side: 'left' }], directed: true } },
     program: 'print("...")',
   };
-  const noQueue = `${STEP_MARKER}{"line":5,"explanation":"dequeue 1","graph":{"current":"1","visited":["1"],"pointers":{"curr":"1"}}}`;
-  const withQueue = `${STEP_MARKER}{"line":5,"explanation":"dequeue 1","graph":{"current":"1","visited":["1"],"pointers":{"curr":"1"}},"queue":["2"]}`;
+  const RICH = 'We dequeue node 1 from the front — it is the first node of this level, so we visit it and record it in the traversal order before looking at its children.';
+  const noQueue = `${STEP_MARKER}{"line":5,"explanation":"${RICH}","graph":{"current":"1","visited":["1"],"pointers":{"curr":"1"}}}`;
+  const withQueue = `${STEP_MARKER}{"line":5,"explanation":"${RICH}","graph":{"current":"1","visited":["1"],"pointers":{"curr":"1"}},"queue":["2"]}`;
   const errors = [];
   let call = 0;
   const result = await traceExecution({
@@ -107,6 +108,26 @@ test('quality gate: a queue-driven algorithm must SHOW the queue at each step (r
   assert.equal(result.fixes, 1);
   assert.match(errors[0], /NO step carries "queue"/);
   assert.deepEqual(result.trace.steps[0].queue, ['2']);
+});
+
+test('quality gate: one-line stub explanations are rejected and repaired to tutor voice', async () => {
+  const thin = `${STEP_MARKER}{"line":4,"explanation":"Visit node 1","array":{"current":0,"pointers":{"lo":0}}}`;
+  const errors = [];
+  let call = 0;
+  const result = await traceExecution({
+    directive: 'binary search',
+    deps: {
+      callQwenJson: async ({ system }) => {
+        if (call > 0) errors.push(system);
+        return { json: GOOD_JSON, usage: null };
+      },
+      runCode: async () => ({ stdout: (call += 1) === 1 ? thin : GOOD_STDOUT, stderr: '', timedOut: false, exitCode: 0 }),
+    },
+  });
+  assert.ok(result);
+  assert.equal(result.fixes, 1);
+  assert.match(errors[0], /one-line stubs/);
+  assert.ok(result.trace.steps.every((s) => s.explanation.length >= 50), 'repaired trace speaks in full sentences');
 });
 
 test('traceExecution rejects a trace that references a node/index not in views', async () => {

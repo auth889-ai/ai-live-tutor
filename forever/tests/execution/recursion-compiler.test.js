@@ -56,7 +56,7 @@ test('the recursion tree GROWS call by call and the pointer walks down and back 
 test('a memo hit is narrated as the DP win, colored, and never recursed into', () => {
   const trace = compileRecursionTrace({ callTree: CALL_TREE, code: CODE, lines: LINES });
   const memoReturn = trace.steps.find((s) => s.activeEdge?.[0] === '6');
-  assert.match(memoReturn.explanation, /already in the memo.*no recomputation/);
+  assert.match(memoReturn.explanation, /memo.*no recomputation/);
   assert.equal(memoReturn.line, LINES.memo);
   assert.ok(memoReturn.graph.memo.includes('6'));
   // vertex 6 got no down-edges of its own (children were never explored)

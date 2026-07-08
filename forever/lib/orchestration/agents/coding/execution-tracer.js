@@ -41,7 +41,7 @@ tracker supplies the memo and the animation shows every memo hit; the recursive 
 animation step — do not write tracking code.
 
 Rules for "program" — it must print, at each LOGICAL step (each comparison/decision/loop turn), exactly one line:
-@@STEP {"line": <1-based line in 'code' active now>, "explanation": "<plain English: the comparison + the decision>", <state...>}
+@@STEP {"line": <1-based line in 'code' active now>, "explanation": "<2-3 full sentences in a warm human tutor voice: the ACTUAL action with its real values, the decision taken, and WHY it matters for the next step — never a stub like 'Visit node 1'>", <state...>}
 where <state...> is the fields that apply this step:
   - array algorithms: "array": {"current": <index>, "eliminated": [<indices ruled out>], "pointers": {"low":0,"mid":3,"high":6}}
   - tree/graph algorithms: "graph": {"current": "<nodeId>", "visited": ["<nodeId>"...], "pointers": {"curr":"<nodeId>"}}
@@ -161,6 +161,14 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
       );
       if (missingCollection) {
         lastError = `The algorithm uses a ${missingCollection} but NO step carries "${missingCollection}" — every step must include the live ${missingCollection} contents (e.g. "${missingCollection}": ["2","3"]; use [] when empty) so the student watches it grow and shrink.`;
+        logAttempt(attempt, lastError);
+        continue;
+      }
+      // Elite bar for the WORDS, not just the state: the explanation IS the narration the
+      // student hears. A majority of one-liners ("Visit node 1") is a slideshow, not teaching.
+      const thin = steps.filter((s) => String(s.explanation ?? '').trim().length < 50);
+      if (thin.length > Math.floor(steps.length / 2)) {
+        lastError = `${thin.length}/${steps.length} explanations are one-line stubs — every step's "explanation" must be 2-3 full sentences in a human tutor voice: the actual values involved, the decision taken, and why it matters for the next step.`;
         logAttempt(attempt, lastError);
         continue;
       }
