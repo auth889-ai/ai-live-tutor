@@ -9,7 +9,7 @@
 // what the trace DECLARES (views.array / views.array2d / views.graph), so the same stage renders
 // arrays, sorting, DP, grids, trees, graphs, recursion and linked lists — one primitive, not many.
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { traceStateAtMs, traceStateAt } from '../../../lib/board/execution/execution-trace.js';
 import { CodePanel } from '../panels/code-panel.js';
@@ -18,7 +18,13 @@ import { GraphView } from '../panels/graph-view.js';
 import { GridView } from './grid-view.js';
 import { TraceTable } from './trace-table.js';
 
-export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null }) {
+export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null, setHold }) {
+  // EXPLORE MODE (research-backed: stepping beats speed control — Hansen JVLC; self-paced
+  // rewind/forward measurably improves comprehension). The student can leave the voice at any
+  // moment, walk the dry run step by step in BOTH directions (buttons or ←/→ keys), then jump
+  // back to the tutor. While exploring, playback holds — the voice never talks over the wrong
+  // frame. This is the interactivity a video teacher cannot offer.
+  const [explore, setExplore] = useState(null); // null = follow the voice
   // STABLE graph content, built ONCE per trace (the playback-visibility fix): the clock ticks
   // many times a second, and rebuilding this object every tick made ReactFlow re-layout and
   // re-measure continuously — the tree only painted when playback PAUSED. With a stable
@@ -34,13 +40,38 @@ export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null 
     };
   }, [trace]);
 
+  const total = trace?.steps?.length ?? 0;
+  // Playback holds while the student explores; releases the moment they rejoin the voice.
+  useEffect(() => {
+    setHold?.(explore !== null);
+    return () => setHold?.(false);
+  }, [explore, setHold]);
+  // ←/→ step the dry run while exploring (or ← starts exploring from the current frame).
+  useEffect(() => {
+    const onKey = (e) => {
+      if (total === 0) return;
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      e.preventDefault();
+      setExplore((cur) => {
+        const base = cur ?? currentClockIndex();
+        return Math.max(0, Math.min(total - 1, base + (e.key === 'ArrowRight' ? 1 : -1)));
+      });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
   if (!trace?.steps?.length) return null;
-  // Priority: an explicit step (voice-synced, one line per step) > timed clock (startMs/endMs) >
+  // Priority: the student's explore position > explicit voice-synced step > timed clock >
   // write-progress fallback. All deterministic; none use setTimeout.
-  let index;
-  if (stepIndex != null) index = Math.max(0, Math.min(trace.steps.length - 1, stepIndex));
-  else if (trace.steps[0]?.startMs !== undefined) index = traceStateAtMs(trace, tMs).index;
-  else index = traceStateAt(trace, progress).index;
+  function currentClockIndex() {
+    if (stepIndex != null) return Math.max(0, Math.min(trace.steps.length - 1, stepIndex));
+    if (trace.steps[0]?.startMs !== undefined) return traceStateAtMs(trace, tMs).index;
+    return traceStateAt(trace, progress).index;
+  }
+  const index = explore !== null ? Math.max(0, Math.min(total - 1, explore)) : currentClockIndex();
   const step = trace.steps[index];
   const historySteps = trace.steps.slice(0, index + 1); // full step objects, for accumulation
   const views = trace.views ?? {};
@@ -63,10 +94,58 @@ export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null 
 
       <div style={{ flex: '1 1 320px', minWidth: 300, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <CodePanel codeObject={{ content: trace.code, language: trace.language }} revealProgress={1} activeLine={step.line} />
+        <StepControls
+          index={index}
+          total={total}
+          exploring={explore !== null}
+          onStep={(delta) => setExplore(Math.max(0, Math.min(total - 1, index + delta)))}
+          onJump={(to) => setExplore(Math.max(0, Math.min(total - 1, to)))}
+          onFollow={() => setExplore(null)}
+        />
         <Caption index={index} total={trace.steps.length} text={step.explanation} />
         <Vars step={step} />
         <Collections step={step} />
       </div>
+    </div>
+  );
+}
+
+// Explore controls (research: stepping beats speed control): first/prev/next/last, a scrubber
+// over the steps, ←/→ keys, and a one-tap return to the voice. Prediction-friendly: a student
+// can pause before a step and guess what happens next — active engagement, not passive watching.
+function StepControls({ index, total, exploring, onStep, onJump, onFollow }) {
+  const btn = (disabled) => ({
+    border: '1px solid #e8ddc9', borderRadius: 8, background: disabled ? '#f7f2e8' : '#fff',
+    color: disabled ? '#c9bda1' : '#2b211a', padding: '4px 10px', fontSize: 13, fontWeight: 800,
+    cursor: disabled ? 'default' : 'pointer',
+  });
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', border: '1px solid #e8ddc9', borderRadius: 10, background: '#fffdf8', flexWrap: 'wrap' }}>
+      <button style={btn(index === 0)} disabled={index === 0} onClick={() => onJump(0)} title="First step">⏮</button>
+      <button style={btn(index === 0)} disabled={index === 0} onClick={() => onStep(-1)} title="Previous step (←)">◀</button>
+      <input
+        type="range"
+        min={0}
+        max={Math.max(0, total - 1)}
+        value={index}
+        onChange={(e) => onJump(Number(e.target.value))}
+        style={{ flex: '1 1 90px', accentColor: '#e8604c' }}
+        aria-label="Dry-run step"
+      />
+      <button style={btn(index >= total - 1)} disabled={index >= total - 1} onClick={() => onStep(1)} title="Next step (→)">▶</button>
+      <button style={btn(index >= total - 1)} disabled={index >= total - 1} onClick={() => onJump(total - 1)} title="Last step">⏭</button>
+      <span style={{ fontSize: 12, fontFamily: 'ui-monospace, monospace', color: '#8a6d3b', whiteSpace: 'nowrap' }}>step {index + 1}/{total}</span>
+      {exploring ? (
+        <button
+          onClick={onFollow}
+          style={{ border: 'none', borderRadius: 999, background: '#e8604c', color: '#fff', padding: '5px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+          title="Rejoin the tutor's voice"
+        >
+          ▶ resume voice
+        </button>
+      ) : (
+        <span style={{ fontSize: 11.5, color: '#b3a889' }}>following voice — step to explore</span>
+      )}
     </div>
   );
 }

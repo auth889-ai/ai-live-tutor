@@ -73,6 +73,7 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
                 state={state}
                 focusRef={activeLine?.targetObjectId === focusObj.id ? activeLine?.focusRef : undefined}
                 activeStep={activeStep}
+                setHold={setHold}
                 onQuizAnswered={() => setAnswered((prev) => new Set(prev).add(focusObj.id))}
               />
             )}
@@ -105,7 +106,7 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
   );
 }
 
-function Focus({ object, state, focusRef, activeStep, onQuizAnswered }) {
+function Focus({ object, state, focusRef, activeStep, setHold, onQuizAnswered }) {
   if (object.renderHint === 'quiz') {
     return <QuizView content={object.content} onAnswered={onQuizAnswered} />;
   }
@@ -120,8 +121,9 @@ function Focus({ object, state, focusRef, activeStep, onQuizAnswered }) {
   }
   if (object.renderHint === 'algorithm') {
     // The elite DSA/ML dry run: one ExecutionTrace, all panels synced. The active voice line's
-    // traceStep drives the step (voice-synced); write-progress is the fallback before audio timing.
-    return <AlgorithmStage trace={object.content} stepIndex={activeStep} progress={state.writing.get(object.id)?.progress ?? 1} />;
+    // traceStep drives the step (voice-synced); write-progress is the fallback before audio
+    // timing. setHold lets the student EXPLORE steps while playback waits.
+    return <AlgorithmStage trace={object.content} stepIndex={activeStep} progress={state.writing.get(object.id)?.progress ?? 1} setHold={setHold} />;
   }
   if (object.renderHint === 'math') {
     return <MathView content={object.content} />;
