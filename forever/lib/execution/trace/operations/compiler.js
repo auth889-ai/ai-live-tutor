@@ -4,6 +4,12 @@
 // the model declares only the structure and the operation list; THIS code executes every
 // operation on a real model of the structure and narrates from the actual state — sizes,
 // hashes, collisions, and mistakes (pop on empty) are computed, never imagined.
+//
+// STRUCTURAL VIEW, not chips-only (the depth audit's gap): stack/queue render as a row of
+// capacity slots the student watches fill and drain — live per-step values, a top / front+back
+// pointer riding the cells, and the touched cell highlighted at the moment of the op. The
+// hash map walks its collision chain one visible hop at a time, because that walk IS the
+// lesson about collision cost.
 
 import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
@@ -30,16 +36,33 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
   };
 
   const steps = [];
+  let views;
   if (structure === 'stack' || structure === 'queue') {
     const isStack = structure === 'stack';
+    // Capacity = the high-water mark of a dry simulation, so the slot row never resizes —
+    // cells fill and drain inside a fixed frame (the student sees SPACE as well as content).
+    let size = 0;
+    let cap = 1;
+    for (const { op } of ops) {
+      if (op === 'push' || op === 'enqueue') cap = Math.max(cap, (size += 1));
+      else if ((op === 'pop' || op === 'dequeue') && size > 0) size -= 1;
+    }
+
     const items = [];
+    const slotState = (touched) => ({
+      values: [...items, ...Array(cap - items.length).fill('')],
+      pointers: items.length === 0 ? {} : isStack ? { top: items.length - 1 } : { front: 0, back: items.length - 1 },
+      ...(touched != null ? { current: touched } : {}),
+    });
     for (const { op, value } of ops) {
       let explanation;
+      let touched = null;
       if (op === 'push' || op === 'enqueue') {
         items.push(value);
+        touched = items.length - 1;
         explanation = isStack
-          ? `push(${JSON.stringify(value)}): the new item lands on TOP of the stack — it sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now ${items.length}.`
-          : `enqueue(${JSON.stringify(value)}): the new item joins the BACK of the queue and must wait its turn behind ${items.length - 1} other${items.length === 2 ? '' : 's'} — First In, First Out, like any fair line. Size is now ${items.length}.`;
+          ? `push(${JSON.stringify(value)}): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now ${items.length}.`
+          : `enqueue(${JSON.stringify(value)}): the new item joins the BACK of the queue — the back arrow slides onto it — and must wait its turn behind ${items.length - 1} other${items.length === 2 ? '' : 's'}. First In, First Out, like any fair line. Size is now ${items.length}.`;
       } else if (op === 'pop' || op === 'dequeue') {
         if (items.length === 0) {
           explanation = isStack
@@ -47,28 +70,51 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
             : `dequeue() on an EMPTY queue — the classic underflow bug. Production code checks emptiness first; there is nothing at the front to hand back.`;
         } else {
           const out = isStack ? items.pop() : items.shift();
+          touched = isStack ? items.length : 0; // the slot the action just emptied / shifted into
           explanation = isStack
-            ? `pop(): ${JSON.stringify(out)} comes off the TOP — it was the most recent arrival, and it leaves first. Notice nothing below it moved; a stack only ever touches its top. Size is now ${items.length}.`
-            : `dequeue(): ${JSON.stringify(out)} leaves from the FRONT — it waited longest, so it is served first. Everyone behind shifts one place closer. Size is now ${items.length}.`;
+            ? `pop(): ${JSON.stringify(out)} comes off the TOP — it was the most recent arrival, and it leaves first. Its slot empties and the top arrow drops down one place; notice nothing below it moved — a stack only ever touches its top. Size is now ${items.length}.`
+            : `dequeue(): ${JSON.stringify(out)} leaves from the FRONT — it waited longest, so it is served first. Everyone behind shifts one place closer to the front arrow. Size is now ${items.length}.`;
         }
       } else if (op === 'peek' || op === 'front') {
+        touched = items.length === 0 ? null : isStack ? items.length - 1 : 0;
         explanation = items.length === 0
           ? `${op}() on an empty ${structure}: there is nothing to look at — another case your code must guard.`
-          : `${op}(): we look at ${JSON.stringify(isStack ? items[items.length - 1] : items[0])} WITHOUT removing it — reading costs nothing and changes nothing; the size stays ${items.length}.`;
+          : `${op}(): we look at ${JSON.stringify(isStack ? items[items.length - 1] : items[0])} WITHOUT removing it — the highlighted cell is only being read; reading costs nothing and changes nothing, and the size stays ${items.length}.`;
       } else {
         throw new Error(`unknown ${structure} operation "${op}"`);
       }
-      steps.push({ line: lineOf(op), explanation, [isStack ? 'stack' : 'queue']: [...items], variables: { size: items.length } });
+      steps.push({
+        line: lineOf(op),
+        explanation,
+        array: slotState(touched),
+        [isStack ? 'stack' : 'queue']: [...items],
+        variables: { size: items.length },
+      });
     }
+    views = { array: { values: Array(cap).fill('') } };
   } else {
     // hash_map: buckets rendered as a grid (row = bucket, columns = chained slots).
     const table = Array.from({ length: buckets }, () => []);
     const COLS = 4;
+    const col = (k) => Math.min(k, COLS - 1);
     const gridState = (current, highlight = []) => ({
       ...(current ? { current } : {}),
       values: table.flatMap((chain, b) => chain.slice(0, COLS).map((e, c) => [b, c, `${e.key}:${e.value}`])),
       ...(highlight.length ? { highlight } : {}),
     });
+    const mapSize = () => table.reduce((a, c) => a + c.length, 0);
+    // The collision walk, one visible hop per chained entry — this walk IS the collision cost.
+    const walkChain = (op, key, b, upto) => {
+      const chain = table[b];
+      for (let k = 0; k < upto; k += 1) {
+        steps.push({
+          line: lineOf(op),
+          explanation: `${op}(${JSON.stringify(key)}): hash(${JSON.stringify(key)}) = ${b}, and bucket ${b} is chained — slot ${k} holds ${JSON.stringify(chain[k].key)}, which is not our key, so we follow the link to the next entry. Every one of these hops is the price of a collision; a good hash function keeps this walk short.`,
+          array2d: gridState([b, col(k)], chain.slice(0, k + 1).map((_, i) => [b, col(i)])),
+          variables: { bucket: b, chainSlot: k, size: mapSize() },
+        });
+      }
+    };
     for (const { op, key, value } of ops) {
       const b = hashOf(key, buckets);
       const chain = table[b];
@@ -76,23 +122,26 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
       let explanation;
       let current = null;
       if (op === 'put') {
+        walkChain(op, key, b, at >= 0 ? at : chain.length);
         if (at >= 0) {
           chain[at] = { key, value };
-          current = [b, at];
+          current = [b, col(at)];
           explanation = `put(${JSON.stringify(key)}, ${JSON.stringify(value)}): hash(${JSON.stringify(key)}) = ${b}, and ${JSON.stringify(key)} is ALREADY in bucket ${b} — so this is an update, not an insert. The old value is overwritten in place; a map holds one value per key.`;
         } else {
           chain.push({ key, value });
-          current = [b, Math.min(chain.length - 1, COLS - 1)];
+          current = [b, col(chain.length - 1)];
           explanation = chain.length > 1
             ? `put(${JSON.stringify(key)}, ${JSON.stringify(value)}): hash(${JSON.stringify(key)}) = ${b}, but bucket ${b} already holds ${chain.length - 1} entr${chain.length === 2 ? 'y' : 'ies'} — a COLLISION. We chain the new entry behind the others; lookups in this bucket now walk the chain, which is exactly why too many collisions degrade a hash map toward a list.`
             : `put(${JSON.stringify(key)}, ${JSON.stringify(value)}): the hash function turns the key into a bucket number — hash(${JSON.stringify(key)}) = ${b} — and the entry drops straight into empty bucket ${b}. No searching: that single jump is the O(1) magic.`;
         }
       } else if (op === 'get') {
-        current = at >= 0 ? [b, Math.min(at, COLS - 1)] : null;
+        walkChain(op, key, b, at >= 0 ? at : chain.length);
+        current = at >= 0 ? [b, col(at)] : null;
         explanation = at >= 0
           ? `get(${JSON.stringify(key)}): hash straight to bucket ${b}, ${at > 0 ? `walk ${at + 1} chained entr${at === 0 ? 'y' : 'ies'} (the collision cost), ` : ''}and find ${JSON.stringify(key)} = ${JSON.stringify(chain[at].value)}. One hash, ${at + 1} look${at === 0 ? '' : 's'} — no scanning the whole table.`
           : `get(${JSON.stringify(key)}): hash says bucket ${b}, but the ${chain.length === 0 ? 'bucket is empty' : 'chain there does not contain it'} — the key does not exist. A hash map answers "not here" just as fast as "found".`;
       } else if (op === 'remove') {
+        walkChain(op, key, b, Math.max(at, 0));
         if (at >= 0) {
           chain.splice(at, 1);
           explanation = `remove(${JSON.stringify(key)}): hash to bucket ${b}, unlink the entry, and the chain closes up behind it. Size bookkeeping is the map's job — no other bucket was touched.`;
@@ -106,13 +155,11 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
         line: lineOf(op),
         explanation,
         array2d: gridState(current),
-        variables: { bucket: b, size: table.reduce((a, c) => a + c.length, 0) },
+        variables: { bucket: b, size: mapSize() },
       });
     }
+    views = { array2d: { rows: buckets, cols: COLS, rowLabels: Array.from({ length: buckets }, (_, i) => `b${i}`) } };
   }
 
-  const views = structure === 'hash_map'
-    ? { array2d: { rows: buckets, cols: 4, rowLabels: Array.from({ length: buckets }, (_, i) => `b${i}`) } }
-    : {};
   return validateExecutionTrace({ language, code: String(code ?? ''), views, steps }, 'operations trace');
 }
