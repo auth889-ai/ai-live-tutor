@@ -8,6 +8,8 @@
 
 import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
+import { narrateInit, narrateVisit, narrateDone } from './narrate.js';
+
 export const TRAVERSAL_KINDS = Object.freeze(['bfs', 'dfs', 'level_order']);
 
 // compileTraversalTrace({ graph, kind, start, code, language, lines })
@@ -63,9 +65,7 @@ export function compileTraversalTrace({ graph, kind = 'bfs', start, code, langua
   steps.push(snap({
     line: lineOf('init'),
     current: null,
-    explanation: isQueue
-      ? `We begin by placing the start node ${name(startId)} into the queue. The queue is the engine of this traversal: whatever sits at its FRONT is always the next node we visit, and newly discovered neighbors join at the BACK — that is exactly what makes the walk go level by level.`
-      : `We begin by pushing the start node ${name(startId)} onto the stack. The stack drives depth-first order: we always continue from the node we discovered MOST recently, diving as deep as possible before backtracking.`,
+    explanation: narrateInit({ isQueue, startName: name(startId) }),
   }));
 
   let guard = 0;
@@ -79,36 +79,27 @@ export function compileTraversalTrace({ graph, kind = 'bfs', start, code, langua
     const pushList = isQueue ? children : [...children].reverse(); // stack: reverse so first child is explored first
     pending.push(...pushList.map((c) => c.to));
 
-    const childNames = children.map((c) => name(c.to));
-    const takeVerb = isQueue ? `dequeue ${name(currentId)} from the front of the queue` : `pop ${name(currentId)} off the top of the stack`;
-    const discover = childNames.length === 0
-      ? `It has no unvisited neighbours, so nothing new is ${isQueue ? 'enqueued' : 'pushed'} — the ${structure} only shrinks here.`
-      : childNames.length > 1
-        ? `Its unvisited neighbours ${childNames.join(' and ')} are discovered and ${isQueue ? 'join the back of the queue to wait their turn' : 'are pushed onto the stack to be explored next'}.`
-        : `Its unvisited neighbour ${childNames[0]} is discovered and ${isQueue ? 'joins the back of the queue to wait its turn' : 'is pushed onto the stack to be explored next'}.`;
-    // The common-mistake callout every good tutor makes at exactly this moment: WHY a
-    // neighbour gets skipped — the seen-set is what turns a possible infinite loop into O(V+E).
-    const skippedNames = skipped.map((c) => name(c.to));
-    const skipNote = skippedNames.length > 0
-      ? ` Note ${skippedNames.join(' and ')} ${skippedNames.length > 1 ? 'are' : 'is'} skipped: already seen. That check is the whole reason this walk can never loop forever — forgetting it is THE classic traversal bug.`
-      : '';
-    const orderNote = isQueue
-      ? ` Watch the visit order strip: ${name(currentId)} takes position ${visited.length}, and the queue now holds ${pending.length ? pending.map(name).join(', ') : 'nothing — we are almost done'}.`
-      : ` The stack now holds ${pending.length ? pending.map(name).join(', ') + ' (top last)' : 'nothing — every path has been fully explored'}.`;
-
     steps.push(snap({
       line: lineOf('visit'),
       current: currentId,
       activeEdge: visited.length > 1 ? findParentEdge(edges, currentId, visited, graph.directed) : null,
       variables: isQueue ? { visiting: name(currentId), queueSize: pending.length } : { visiting: name(currentId), stackDepth: pending.length },
-      explanation: `We ${takeVerb} and visit it — it turns green and stays green, it is done forever. ${discover}${skipNote}${orderNote}`,
+      explanation: narrateVisit({
+        isQueue,
+        structure,
+        currentName: name(currentId),
+        childNames: children.map((c) => name(c.to)),
+        skippedNames: skipped.map((c) => name(c.to)),
+        position: visited.length,
+        pendingNames: pending.map(name),
+      }),
     }));
   }
 
   steps.push(snap({
     line: lineOf('done'),
     current: null,
-    explanation: `The ${structure} is empty, so the traversal is complete. Read the visit order back: ${visited.map(name).join(' → ')} — ${isQueue ? 'level by level, exactly the order the queue released them' : 'each branch explored to its full depth before backtracking'}. Every node was visited exactly once, which is why this runs in O(V + E).`,
+    explanation: narrateDone({ isQueue, structure, orderNames: visited.map(name) }),
   }));
 
   const trace = {
