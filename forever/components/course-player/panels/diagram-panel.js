@@ -131,7 +131,16 @@ function MermaidDiagram({ content, progress = 1 }) {
     });
   }, [progress, content]);
 
-  if (error) return <div style={{ color: '#c0392b', fontSize: 13 }}>diagram unavailable</div>;
+  if (error) {
+    // Never show a raw engine error on the board: fall back to the diagram's own text as
+    // structured notes so the teaching content survives a bad render.
+    const lines = String(content.code ?? '').split('\n').map((l) => l.trim()).filter((l) => l && !/^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|erDiagram|mindmap|timeline)/.test(l)).slice(0, 8);
+    return (
+      <div style={{ background: '#fffdf8', borderRadius: 12, border: '1px solid #e8ddc9', padding: '14px 18px', fontSize: 14.5, lineHeight: 1.7, color: '#3a2e22' }}>
+        {lines.length ? lines.map((l, i) => <div key={i}>• {l.replace(/[-=]{2,}>?|[[\]{}()"]/g, ' ').trim()}</div>) : 'Diagram unavailable for this step.'}
+      </div>
+    );
+  }
   return <div ref={ref} style={{ display: 'flex', justifyContent: 'center', padding: 12, background: '#fffdf8', borderRadius: 12, border: '1px solid #e8ddc9' }} />;
 }
 
