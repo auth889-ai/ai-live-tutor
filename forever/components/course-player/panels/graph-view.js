@@ -14,6 +14,7 @@ import { ReactFlow, ReactFlowProvider, Background, MarkerType, useNodesInitializ
 import '@xyflow/react/dist/style.css';
 
 import { layoutGraph } from '../../../lib/board/diagrams/graph-layout.js';
+import { wantsTreeLayout, layoutTree } from '../../../lib/board/diagrams/tree-layout.js';
 
 // Resolve the visual state at the current clock position. Prefer an EXPLICIT step bound to the
 // active narration line (activeStep) — that's true voice-sync; the current node marks exactly
@@ -72,7 +73,10 @@ export function GraphView(props) {
 function GraphViewInner({ content, progress = 1, activeNode = null, activeStep = null }) {
   const laid = useMemo(() => {
     try {
-      return layoutGraph({ nodes: content.nodes ?? [], edges: content.edges ?? [], direction: content.direction ?? 'TB' });
+      const spec = { nodes: content.nodes ?? [], edges: content.edges ?? [] };
+      // Branching rooted trees (BST, heap, recursion trees) get the tidy-tree layout — true
+      // left/right child positions. Everything else (cycles, DAGs, linked lists) stays on dagre.
+      return wantsTreeLayout(spec) ? layoutTree(spec) : layoutGraph({ ...spec, direction: content.direction ?? 'TB' });
     } catch {
       return null;
     }

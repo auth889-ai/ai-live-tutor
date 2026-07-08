@@ -23,6 +23,7 @@ for real and emitting its state at each step. Output ONLY JSON with FOUR fields:
   "language": "${lang}",
   "code": "<the CLEAN algorithm, exactly as shown to the student, 1 statement per line>",
   "views": { "array": {"values":[...]}  OR  "graph": {"nodes":[{"id":"1","label":"8"}],"edges":[{"from":"1","to":"2"}],"directed":true}
+             (for BINARY trees: every edge also carries "side":"left" or "side":"right", children listed left-then-right)
              OR "array2d": {"rows":5,"cols":5,"rowLabels":["","A","B","C","D"],"colLabels":["","A","C","D","G"]} },
   "program": "<a runnable ${lang} program that RUNS 'code' on ONE concrete example and prints the trace>"
 }
