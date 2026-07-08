@@ -9,6 +9,8 @@
 // what the trace DECLARES (views.array / views.array2d / views.graph), so the same stage renders
 // arrays, sorting, DP, grids, trees, graphs, recursion and linked lists — one primitive, not many.
 
+import { useMemo } from 'react';
+
 import { traceStateAtMs, traceStateAt } from '../../../lib/board/execution/execution-trace.js';
 import { CodePanel } from '../panels/code-panel.js';
 import { ArrayView } from '../panels/array-view.js';
@@ -17,6 +19,21 @@ import { GridView } from './grid-view.js';
 import { TraceTable } from './trace-table.js';
 
 export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null }) {
+  // STABLE graph content, built ONCE per trace (the playback-visibility fix): the clock ticks
+  // many times a second, and rebuilding this object every tick made ReactFlow re-layout and
+  // re-measure continuously — the tree only painted when playback PAUSED. With a stable
+  // identity, ReactFlow settles once; per-tick changes are just the activeStep number.
+  const graphContent = useMemo(() => {
+    const g = trace?.views?.graph;
+    if (!g) return null;
+    return {
+      nodes: g.nodes,
+      edges: g.edges,
+      directed: g.directed,
+      trace: (trace.steps ?? []).map((s) => ({ note: '', ...(s.graph ?? {}), activeEdge: s.activeEdge })),
+    };
+  }, [trace]);
+
   if (!trace?.steps?.length) return null;
   // Priority: an explicit step (voice-synced, one line per step) > timed clock (startMs/endMs) >
   // write-progress fallback. All deterministic; none use setTimeout.
@@ -39,9 +56,7 @@ export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null 
           <ArrayView content={{ values: views.array.values, trace: [{ note: '', ...step.array }] }} activeStep={0} />
         ) : null}
         {views.array2d && step.array2d ? <GridView view={views.array2d} step={step} history={historySteps} /> : null}
-        {views.graph && step.graph ? (
-          <GraphView content={{ nodes: views.graph.nodes, edges: views.graph.edges, directed: views.graph.directed, trace: [{ note: '', ...step.graph, activeEdge: step.activeEdge }] }} activeStep={0} />
-        ) : null}
+        {graphContent && step.graph ? <GraphView content={graphContent} activeStep={index} /> : null}
         {views.graph ? <OrderStrip step={step} nodes={views.graph.nodes ?? []} /> : null}
         <TraceTable history={historySteps} />
       </div>
