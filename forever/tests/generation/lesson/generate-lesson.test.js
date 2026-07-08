@@ -39,6 +39,40 @@ test('a lesson decomposes into ordered scenes, each generated from its focused c
   assert.deepEqual(lesson.scenes.map((s) => s.sceneId), ['sc_01', 'sc_02']);
 });
 
+test('second chance: scenes lost to a flaky provider window are retried and recovered IN ORDER; real contract failures stay dropped', async () => {
+  const attempts = {};
+  const lesson = await generateLessonFromText(TEXT, {
+    agents: {
+      routeDomain: async () => ({ domain: 'general', usage: null }),
+      designPedagogy: async ({ sourcePack }) => ({
+        lessonTitle: 'Flaky Window',
+        scenes: ['One', 'Two', 'Three'].map((title) => ({
+          title, pedagogicalRole: 'intuition', directive: 'x', focusChunkIds: [sourcePack.chunks[0].id],
+        })),
+        usage: null,
+      }),
+      generateScene: async (focused, { sceneId }) => {
+        attempts[sceneId] = (attempts[sceneId] ?? 0) + 1;
+        // sc_02 dies once with a transient abort (recoverable); sc_03 fails its contract (not retried).
+        if (sceneId === 'sc_02' && attempts[sceneId] === 1) throw new Error('This operation was aborted');
+        if (sceneId === 'sc_03') throw new Error('Board Director failed contract validation after repair');
+        return {
+          scene: { sceneId, layout: 'teacher_notebook_code', objects: [{ id: 'o1', objectType: 't', renderHint: 'text', region: 'notebook_area', content: 'x', sourceRef: { chunkId: focused.chunks[0].id } }], voiceLines: [{ id: 'v1', text: 'Line.', targetObjectId: 'o1' }] },
+          timeline: { sceneId, timingSource: 'provisional', actions: [] },
+          durationMs: 5000,
+          reviewRounds: 0,
+        };
+      },
+    },
+  });
+
+  assert.deepEqual(lesson.scenes.map((s) => s.title), ['One', 'Two'], 'aborted scene recovered, in brief order');
+  assert.equal(attempts.sc_02, 2, 'transient failure got its second chance');
+  assert.equal(attempts.sc_03, 1, 'contract failure was NOT retried');
+  assert.equal(lesson.skippedScenes, 1);
+  assert.match(lesson.skippedSceneReasons[0].reason, /contract validation/);
+});
+
 test('coding material is architected by the Coding Instructor, not the general Teacher', async () => {
   const planners = [];
   const fakeScene = async (_focused, { sceneId }) => ({

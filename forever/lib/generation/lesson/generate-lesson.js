@@ -3,6 +3,7 @@
 // multi-scene lesson like a world-class course. Teacher + scene generator are injectable
 // for deterministic testing.
 
+import { isTransient } from '../../qwen/client.js';
 import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
 import { focusSourcePack } from '../../source-pack/build/focus-source-pack.js';
 import { mapWithConcurrency } from '../../util/concurrency.js';
@@ -40,23 +41,51 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
   let done = 0;
   const sceneTotal = briefs.length;
   onProgress({ phase: 'generating', message: `Generating ${sceneTotal} scenes`, sceneDone: 0, sceneTotal });
-  const settled = await mapWithConcurrency(briefs, Number(process.env.SCENE_CONCURRENCY || 3), (brief, index) => {
-    const focused = focusSourcePack(sourcePack, brief.focusChunkIds);
-    return genScene(focused, {
-      sceneId: `sc_${String(index + 1).padStart(2, '0')}`,
-      brief,
-    })
-      .then((result) => ({ title: brief.title, pedagogicalRole: brief.pedagogicalRole, ...result }))
-      .finally(() => {
-        done += 1;
-        // Real progress: fires as EACH scene finishes (success or failure), so the bar
-        // reflects the society's actual throughput rather than a guess.
-        onProgress({ phase: 'generating', message: `Scene ${done}/${sceneTotal} done`, sceneDone: done, sceneTotal });
-      });
-  });
-  const scenes = settled.filter((r) => r.status === 'fulfilled').map((r) => r.value);
-  const skippedScenes = settled
-    .map((r, i) => (r.status === 'rejected' ? { title: briefs[i].title, pedagogicalRole: briefs[i].pedagogicalRole, reason: String(r.reason?.message ?? r.reason).slice(0, 300) } : null))
+  const results = new Array(briefs.length).fill(null); // per-index: keeps scene ORDER across passes
+  const failures = new Array(briefs.length).fill(null);
+  const runPass = async (indices, concurrency) => {
+    const settled = await mapWithConcurrency(indices, concurrency, (index) => {
+      const brief = briefs[index];
+      const focused = focusSourcePack(sourcePack, brief.focusChunkIds);
+      return genScene(focused, {
+        sceneId: `sc_${String(index + 1).padStart(2, '0')}`,
+        brief,
+      })
+        .then((result) => ({ title: brief.title, pedagogicalRole: brief.pedagogicalRole, ...result }))
+        .finally(() => {
+          done = Math.min(done + 1, sceneTotal);
+          // Real progress: fires as EACH scene finishes (success or failure), so the bar
+          // reflects the society's actual throughput rather than a guess.
+          onProgress({ phase: 'generating', message: `Scene ${done}/${sceneTotal} done`, sceneDone: done, sceneTotal });
+        });
+    });
+    settled.forEach((r, k) => {
+      const index = indices[k];
+      if (r.status === 'fulfilled') {
+        results[index] = r.value;
+        failures[index] = null;
+      } else {
+        failures[index] = r.reason;
+      }
+    });
+  };
+
+  await runPass(briefs.map((_, i) => i), Number(process.env.SCENE_CONCURRENCY || 3));
+
+  // SECOND CHANCE: a scene killed by a flaky provider window (timeout/abort/429/5xx) is not a
+  // quality rejection — retry those once, at lower concurrency, before accepting the loss.
+  // Real quality failures (contract violations) stay dropped; measured 2026-07-08: one slow
+  // DashScope window aborted 7/11 scenes of a lesson, including every dry run.
+  const retryable = failures.map((e, i) => (e && isTransient(e) ? i : null)).filter((i) => i !== null);
+  if (retryable.length > 0) {
+    done = sceneTotal - retryable.length;
+    onProgress({ phase: 'generating', message: `Retrying ${retryable.length} scenes lost to a flaky provider window`, sceneDone: done, sceneTotal });
+    await runPass(retryable, Math.min(2, Number(process.env.SCENE_CONCURRENCY || 3)));
+  }
+
+  const scenes = results.filter(Boolean);
+  const skippedScenes = failures
+    .map((e, i) => (e ? { title: briefs[i].title, pedagogicalRole: briefs[i].pedagogicalRole, reason: String(e?.message ?? e).slice(0, 300) } : null))
     .filter(Boolean);
   // A dropped scene must be LOUD and DIAGNOSABLE — silent skips are how quality rots.
   for (const skip of skippedScenes) console.error(`[lesson] scene DROPPED "${skip.title}" (${skip.pedagogicalRole}): ${skip.reason}`);

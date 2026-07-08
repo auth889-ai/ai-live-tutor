@@ -47,7 +47,10 @@ export async function callQwenJson({
   model = process.env.MODEL_SCENE || 'qwen3.7-plus',
   temperature = 0.4,
   maxTokens = 4000,
-  timeoutMs = 150_000,
+  // 300s: a heavy board (4000-token JSON) at DashScope's slow-window decode (~20 tok/s) takes
+  // >150s — a shorter timeout deterministically kills exactly the richest scenes (dry runs,
+  // worked examples) while light callout scenes survive. Measured live 2026-07-08.
+  timeoutMs = 300_000,
   retries = 3,
   env = process.env,
 }) {
@@ -106,7 +109,9 @@ export async function callQwenJson({
   }
 }
 
-function isTransient(error) {
+// Exported so the lesson generator can distinguish "the provider was flaky" (worth a second
+// chance) from "the content failed its contract" (a real quality rejection).
+export function isTransient(error) {
   const m = String(error?.message || error);
   return (
     error?.name === 'AbortError' ||
