@@ -40,7 +40,12 @@ function resolveState({ content, progress, activeNode, activeStep }) {
       pointerAt.get(key).push(name);
     }
     const activeEdge = Array.isArray(step.activeEdge) ? step.activeEdge.map(String) : null;
-    return { current, visited: path, pointerAt, note: step.note, stepNum: idx + 1, stepTotal: trace.length, activeEdge };
+    // Recursion-tree state (recursion-compiler): the tree GROWS (revealed), return values land
+    // on nodes (returned), memo hits stay marked (memo).
+    const revealed = Array.isArray(step.revealed) ? new Set(step.revealed.map(String)) : null;
+    const returned = step.returned && typeof step.returned === 'object' && !Array.isArray(step.returned) ? step.returned : {};
+    const memo = new Set(Array.isArray(step.memo) ? step.memo.map(String) : []);
+    return { current, visited: path, pointerAt, note: step.note, stepNum: idx + 1, stepTotal: trace.length, activeEdge, revealed, returned, memo };
   }
   const seq = Array.isArray(content.highlightSequence) ? content.highlightSequence.map(String) : null;
   if (seq) {
@@ -95,24 +100,30 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
 
   if (!laid) return <div style={{ color: '#c0392b', fontSize: 13 }}>diagram unavailable</div>;
 
-  const { current, visited, pointerAt, note, stepNum, stepTotal, activeEdge = null } = resolveState({ content, progress, activeNode, activeStep });
-  const hasTrace = Boolean(note);
+  const { current, visited, pointerAt, note, stepNum, stepTotal, activeEdge = null, revealed = null, returned = {}, memo = new Set() } = resolveState({ content, progress, activeNode, activeStep });
+  const hasTrace = stepTotal > 0; // (was Boolean(note) — AlgorithmStage passes note:'' and lost the trace styling)
 
   const nodeColor = (id) => {
     if (id === current) return { border: '#d35400', bg: '#ffd9a8', fg: '#8a3a12' }; // where the tutor is now
+    if (memo.has(id)) return { border: '#8e44ad', bg: '#f3e8fb', fg: '#5b2c6f' }; // answered from memory (the DP win)
     if (visited.has(id)) return { border: '#27ae60', bg: '#eafaf0', fg: '#1c6b3a' }; // already walked
     if (hasTrace) return { border: '#b8b0a0', bg: '#fbf8f2', fg: '#8a8172' }; // not yet reached
     return { border: '#c0392b', bg: '#fffdf8', fg: '#3a3327' }; // plain diagram (no trace)
   };
+  // Growing tree: nodes outside `revealed` haven't been CALLED yet — ghosts hold the layout
+  // steady while the recursion builds the tree call by call in front of the student.
+  const isGhost = (id) => revealed !== null && !revealed.has(id) && id !== current;
 
   const nodes = laid.nodes.map((n) => {
     const c = nodeColor(n.id);
     const isCurrent = n.id === current;
+    const value = returned[n.id];
     return {
       id: n.id,
       position: { x: n.x, y: n.y },
-      data: { label: n.label },
+      data: { label: value !== undefined ? `${n.label}\n= ${JSON.stringify(value)}` : n.label },
       style: {
+        opacity: isGhost(n.id) ? 0.12 : 1,
         width: n.width,
         height: n.height,
         borderRadius: 10,
@@ -179,14 +190,15 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
   const edges = laid.edges.map((e) => {
     const traversing = isActiveEdge(e); // the edge the algorithm walks THIS step
     const active = traversing || e.from === current || e.to === current || (visited.has(e.from) && visited.has(e.to));
+    const ghost = isGhost(e.from) || isGhost(e.to); // edge into the unrevealed future stays hidden
     return {
       id: e.id,
       source: e.from,
       target: e.to,
       label: e.label,
-      animated: traversing || e.from === current || e.to === current,
+      animated: !ghost && (traversing || e.from === current || e.to === current),
       markerEnd: content.directed !== false ? { type: MarkerType.ArrowClosed, color: active ? '#d35400' : '#8a6d3b' } : undefined,
-      style: { stroke: traversing ? '#e8604c' : active ? '#d35400' : '#8a6d3b', strokeWidth: traversing ? 4 : active ? 2.5 : 1.5, transition: 'stroke 0.3s, stroke-width 0.3s' },
+      style: { opacity: ghost ? 0.08 : 1, stroke: traversing ? '#e8604c' : active ? '#d35400' : '#8a6d3b', strokeWidth: traversing ? 4 : active ? 2.5 : 1.5, transition: 'stroke 0.3s, stroke-width 0.3s, opacity 0.3s' },
     };
   });
 
@@ -198,6 +210,8 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
           <LegendChip swatch={{ background: '#ffd9a8', border: '2px solid #d35400' }} label="current" />
           <LegendChip swatch={{ background: '#eafaf0', border: '2px solid #27ae60' }} label="visited" />
           <LegendChip swatch={{ background: '#fbf8f2', border: '2px solid #b8b0a0' }} label="not yet" />
+          {memo.size > 0 ? <LegendChip swatch={{ background: '#f3e8fb', border: '2px solid #8e44ad' }} label="from memo" /> : null}
+          {Object.keys(returned).length > 0 ? <LegendChip swatch={{ background: '#eafaf0', border: '2px solid #27ae60' }} label="= returned value" /> : null}
           <LegendChip swatch={{ background: 'transparent', borderBottom: '3px solid #e8604c', borderRadius: 0, height: 3, marginTop: 6 }} label="active edge" />
         </div>
       ) : null}

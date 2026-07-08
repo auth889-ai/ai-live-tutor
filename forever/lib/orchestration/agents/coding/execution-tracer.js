@@ -12,6 +12,7 @@
 import { callQwenJson } from '../../../qwen/client.js';
 import { runCode } from '../../../execution/run-code.js';
 import { parseStepEvents } from '../../../execution/trace/parse-steps.js';
+import { assembleRecursionProgram, parseCallTree, compileRecursionTrace } from '../../../execution/trace/recursion-compiler.js';
 import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
 const RUNNABLE_LANGUAGES = ['python', 'javascript'];
@@ -27,6 +28,18 @@ for real and emitting its state at each step. Output ONLY JSON with FOUR fields:
              OR "array2d": {"rows":5,"cols":5,"rowLabels":["","A","B","C","D"],"colLabels":["","A","C","D","G"]} },
   "program": "<a runnable ${lang} program that RUNS 'code' on ONE concrete example and prints the trace>"
 }
+RECURSION MODE (python only) — when the algorithm IS a recursive function whose CALL TREE is the lesson
+(fibonacci, subsets, tree recursion, top-down DP/memoization): INSTEAD of "program", output
+  "recursion": {"fnName": "fib", "args": [5], "memoize": true,
+                "lines": {"call": <line of the recursive call>, "base": <line of the base-case return>,
+                          "memo": <line of the memo check, if any>, "combine": <line combining results>}}
+and make "code" EXACTLY the clean recursive function definition (def ${'fnName'}(...)), nothing else.
+The function must be PURE and SELF-CONTAINED: its parameters are its ONLY inputs — no global
+variables, no own memo/cache dict, no prints. For memoization lessons set "memoize": true — OUR
+tracker supplies the memo and the animation shows every memo hit; the recursive calls stay plain
+(e.g. return fib(n-1) + fib(n-2)). Our instrumented tracker runs it for real and derives every
+animation step — do not write tracking code.
+
 Rules for "program" — it must print, at each LOGICAL step (each comparison/decision/loop turn), exactly one line:
 @@STEP {"line": <1-based line in 'code' active now>, "explanation": "<plain English: the comparison + the decision>", <state...>}
 where <state...> is the fields that apply this step:
@@ -72,21 +85,50 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
     const code = String(json.code || '').trim();
     const program = String(json.program || '').trim();
     const views = json.views && typeof json.views === 'object' ? json.views : {};
+
+    // RECURSION MODE: the model supplied only the clean recursive function — OUR instrumented
+    // tracker (recursion-compiler) wraps it, runs it for real, and derives every step
+    // deterministically. No model-written tracking code, no imagined frames.
+    if (json.recursion && typeof json.recursion === 'object' && lang === 'python' && code) {
+      try {
+        const source = assembleRecursionProgram({
+          code,
+          fnName: json.recursion.fnName,
+          args: json.recursion.args,
+          memoize: json.recursion.memoize === true,
+        });
+        const run = await exec({ language: 'python', source });
+        if (run.timedOut) throw new Error('tracker timed out (likely unbounded recursion)');
+        const callTree = parseCallTree(run.stdout);
+        if (!callTree) {
+          throw new Error(run.stderr ? `tracker errored: ${run.stderr.slice(0, 300)}` : 'tracker printed no @@CALLTREE line');
+        }
+        const trace = compileRecursionTrace({ callTree, code, language: 'python', lines: json.recursion.lines ?? {} });
+        return { trace, usage, fixes: attempt };
+      } catch (error) {
+        lastError = `Recursion trace failed: ${error.message}`;
+        logAttempt(attempt, lastError);
+        continue;
+      }
+    }
+
     if (!code || !program) {
       lastError = 'Missing code or program in output.';
+      logAttempt(attempt, lastError);
       continue;
     }
 
     const run = await exec({ language: lang, source: program });
     if (run.timedOut) {
       lastError = 'Program timed out (likely an infinite loop).';
-      if (process.env.TRACE_DEBUG) console.error(`[tracer] attempt ${attempt}: timed out`);
+      logAttempt(attempt, lastError);
       continue;
     }
     const steps = parseStepEvents(run.stdout);
     if (steps.length === 0) {
       lastError = run.stderr ? `Program errored: ${run.stderr.slice(0, 400)}` : 'Program printed no @@STEP lines.';
-      if (process.env.TRACE_DEBUG) console.error(`[tracer] attempt ${attempt}: ${lastError}\n--program--\n${program}\n--stdout--\n${run.stdout?.slice(0, 300)}`);
+      logAttempt(attempt, lastError);
+      if (process.env.TRACE_DEBUG) console.error(`[tracer] --program--\n${program}\n--stdout--\n${run.stdout?.slice(0, 300)}`);
       continue;
     }
 
@@ -95,7 +137,8 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
       validateExecutionTrace(trace);
     } catch (error) {
       lastError = `Trace failed contract validation: ${error.message}`;
-      if (process.env.TRACE_DEBUG) console.error(`[tracer] attempt ${attempt}: ${lastError}\n--steps--\n${JSON.stringify(steps).slice(0, 500)}\n--views--\n${JSON.stringify(views)}`);
+      logAttempt(attempt, lastError);
+      if (process.env.TRACE_DEBUG) console.error(`[tracer] --steps--\n${JSON.stringify(steps).slice(0, 500)}\n--views--\n${JSON.stringify(views)}`);
       continue;
     }
     // QUALITY GATE, not just validity: an elite dry-run shows pointers RIDING the structure
@@ -106,7 +149,7 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
       const withPointers = stateful.filter((s) => s.array?.pointers || s.graph?.pointers);
       if (stateful.length > 0 && withPointers.length < stateful.length) {
         lastError = `Only ${withPointers.length}/${stateful.length} steps carry "pointers" — EVERY array/graph step must include its pointer positions (e.g. {"low":0,"mid":3,"high":6}) so they visibly move on the structure.`;
-        if (process.env.TRACE_DEBUG) console.error(`[tracer] attempt ${attempt}: ${lastError}`);
+        logAttempt(attempt, lastError);
         continue;
       }
       // Same bar for the collection: a queue/stack-driven algorithm (BFS, iterative DFS) whose
@@ -118,12 +161,20 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
       );
       if (missingCollection) {
         lastError = `The algorithm uses a ${missingCollection} but NO step carries "${missingCollection}" — every step must include the live ${missingCollection} contents (e.g. "${missingCollection}": ["2","3"]; use [] when empty) so the student watches it grow and shrink.`;
-        if (process.env.TRACE_DEBUG) console.error(`[tracer] attempt ${attempt}: ${lastError}`);
+        logAttempt(attempt, lastError);
         continue;
       }
     }
     return { trace, usage, fixes: attempt };
   }
 
-  return null; // honest: no real, valid trace — the caller falls back to a simpler visual, never a fake one
+  // Honest failure — but LOUD: a silently-degraded dry run is how quality rots. The caller
+  // refuses to fake an animation; the log tells us exactly what to fix.
+  console.error(`[tracer] GAVE UP after ${maxFixes + 1} attempts: ${String(lastError).slice(0, 300)}`);
+  return null;
+}
+
+// Every failed attempt is visible in production logs (concise); TRACE_DEBUG adds the dumps.
+function logAttempt(attempt, message) {
+  console.error(`[tracer] attempt ${attempt} failed: ${String(message).slice(0, 220)}`);
 }

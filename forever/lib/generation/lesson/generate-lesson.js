@@ -74,9 +74,12 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
 
   // SECOND CHANCE: a scene killed by a flaky provider window (timeout/abort/429/5xx) is not a
   // quality rejection — retry those once, at lower concurrency, before accepting the loss.
-  // Real quality failures (contract violations) stay dropped; measured 2026-07-08: one slow
+  // Dry-run scenes whose tracer gave up also qualify: the tracer is stochastic (fresh sampling
+  // succeeds where a bad first draft spiraled — measured standalone 16s/0 fixes right after an
+  // in-lesson give-up). Real contract violations stay dropped; measured 2026-07-08: one slow
   // DashScope window aborted 7/11 scenes of a lesson, including every dry run.
-  const retryable = failures.map((e, i) => (e && isTransient(e) ? i : null)).filter((i) => i !== null);
+  const worthRetry = (e) => isTransient(e) || /REAL ExecutionTrace/.test(String(e?.message ?? e));
+  const retryable = failures.map((e, i) => (e && worthRetry(e) ? i : null)).filter((i) => i !== null);
   if (retryable.length > 0) {
     done = sceneTotal - retryable.length;
     onProgress({ phase: 'generating', message: `Retrying ${retryable.length} scenes lost to a flaky provider window`, sceneDone: done, sceneTotal });
