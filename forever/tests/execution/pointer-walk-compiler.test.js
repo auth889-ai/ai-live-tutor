@@ -35,7 +35,7 @@ test('binary search: pointer moves become steps, eliminated half dims, sentences
 
   const lowMove = trace.steps[2];
   assert.deepEqual(lowMove.array.eliminated, [0, 1, 2, 3], 'left half dimmed after low jumps to 4');
-  assert.match(lowMove.explanation, /low moves to index 4/);
+  assert.match(lowMove.explanation, /[Ll]ow moves to index 4/);
   assert.match(lowMove.explanation, /ELIMINATED.*logarithmic/s, 'teaches WHY the shrinking matters');
 
   assert.match(trace.steps.at(-1).explanation, /returns 5/);
