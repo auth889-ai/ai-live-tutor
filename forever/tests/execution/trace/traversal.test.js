@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { compileTraversalTrace } from '../../lib/execution/trace/traversal/compiler.js';
+import { compileTraversalTrace } from '../../../lib/execution/trace/traversal/compiler.js';
 
 // The classic 7-node binary tree: 1 -> (2, 3), 2 -> (4, 5), 3 -> (6, 7)
 const TREE = {

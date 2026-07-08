@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { compileOperationsTrace } from '../../lib/execution/trace/operations/compiler.js';
+import { compileOperationsTrace } from '../../../lib/execution/trace/operations/compiler.js';
 
 const CODE = 's = []\ns.append(x)\ns.pop()\ns[-1]';
 

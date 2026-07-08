@@ -7,6 +7,7 @@
 import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
 import { runGroundingReview } from '../../orchestration/review/grounding-review-loop.js';
 import { writeVoice } from '../../orchestration/agents/authoring/voice-writer.js';
+import { voiceLinesForTrace } from '../voice/algo-voice.js';
 import { generateExecutedCode } from '../../orchestration/agents/coding/code-runner.js';
 import { traceExecution } from '../../orchestration/agents/coding/execution-tracer.js';
 import { compileProvisionalTimeline } from '../timeline/timeline-compiler.js';
@@ -75,15 +76,7 @@ export async function generateSceneFromSourcePack(
   // are guaranteed to match the animated state — single source of truth, no drift.
   const narratable = objects.filter((o) => o.renderHint !== 'algorithm');
   const voice = narratable.length ? await voiceAgent({ objects: narratable, sourcePack }) : { voiceLines: [], usage: null };
-  const algoLines = algorithmObject
-    ? algorithmObject.content.steps.map((step, i) => ({
-        id: `${algorithmObject.id}_step_${i}`,
-        text: step.explanation,
-        targetObjectId: algorithmObject.id,
-        traceStep: i,
-        sourceRef: algorithmObject.sourceRef,
-      }))
-    : [];
+  const algoLines = algorithmObject ? voiceLinesForTrace(algorithmObject) : [];
   const voiceLines = [...voice.voiceLines, ...algoLines];
   const { timeline, durationMs } = compileProvisionalTimeline({ sceneId: id, objects, voiceLines });
 
