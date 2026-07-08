@@ -51,3 +51,27 @@ highlight sync, F1>92%). What's DONE vs NEXT:
    sweep, label callout, moving pointer — rough.js paths on an overlay SVG anchored by
    target bbox, revealed by engine #2 at narration timestamps. Also solves PDF/website
    image annotation (image + timed overlays, tldraw pattern).
+
+## Dry-run/trace mechanics (researched 2026-07-08 — from VisuAlgo SOURCE, tracers.js, USFCA, Python Tutor, dpvis)
+STEP MODEL: snapshots per step (not deltas — O(1) seek/step-back): { nodes:{id:{x,y,label,
+state: default|current|visited|frontier|result|hidden}}, edges:{id:{from,to,state, animateFlow?}},
+pointers:[{name:'curr'|'parent',nodeId}], cells?:{write:[i,j],reads:[[i,j]],value,runningMax},
+vars, pseudocodeLine, statusText, logAppend }.
+FIVE REQUIREMENTS (feel-like-VisuAlgo):
+1. Three-tier persistent node coloring from an enum→theme table: current(orange, one per step),
+   visited(darker, PERMANENT), result(green) — never revert visited except explicit backtrack.
+2. THE EDGE ANIMATES BEFORE THE NODE: traversal u->v plays a directional stroke-dash flow on
+   the edge (~0.9x step duration), THEN v turns current; traversed edges stay colored (the
+   visible BFS/DFS tree).
+3. Every step sets pseudocode line + status sentence + structure state ATOMICALLY (one render).
+4. Transport with O(1) seek: render(stateList[i], duration) pure reconcile; duration 0 on jumps.
+5. DP tables: one frame per WRITE — dependency cells flash 'read' color in the SAME step the
+   written cell flashes 'write' + value; running max persistently outlined; pointers on trees are
+   Galles-style moving RINGS (labeled, fill-less), animated between nodes, never teleported.
+LAYOUT (VisuAlgo): structure canvas is the hero (center, large); compact numbered pseudocode
+docked bottom-right w/ current-line highlight; one-sentence status bar top; transport bottom
+(step-back/fwd, jump, speed); add a right log/vars column for DP running state (AlgoVis style).
+Map to Forever: ExecutionTrace already has line+state+explanation per step == the snapshot
+model; gaps = edge-before-node flow animation, persistent-visited enforcement in graph-view,
+DP read/write cell flashing, moving ring pointers, side-by-side layout (board + code + output
+simultaneously in dry_run scenes — see user's t6.png reference).
