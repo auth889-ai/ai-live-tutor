@@ -5,7 +5,7 @@ server/node_modules/
 
 # env / secrets
 
-
+tree/
 .png
 *.png
 *.mp4

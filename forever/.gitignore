@@ -3,6 +3,8 @@
 !.env.example
 *.pdf
 .pdf
+.mp4
+*.mp4
 __pycache__/
 .pytest_cache/
 .ruff_cache/
@@ -19,3 +21,5 @@ eval/out/
 app/dev/lesson/generated-lesson.json
 public/audio/
 .data/
+
+tree/
