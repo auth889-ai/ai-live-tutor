@@ -16,6 +16,11 @@
 
 import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
+import {
+  narrateMoves, narrateSwap, narrateWrite, narrateIntroduced, narrateUpdated,
+  narrateEliminated, narrateWindow, narrateClose,
+} from './narrate.js';
+
 // compilePointerWalk({ events, result, code, array, pointers, examine?, arrayVar?,
 //                      eliminatedOutside?, window?, language })
 // events/result: from parseLineEvents (line-simulator run). array: the concrete values being
@@ -82,35 +87,18 @@ export function compilePointerWalk({
     const shown = liveValues ?? array;
 
     const parts = [];
-    if (moved.length > 0) {
-      const moves = moved.map((p) => {
-        const at = locals[p];
-        const verb = p in prev ? 'moves to' : 'starts at';
-        return `${p} ${verb} index ${at}, where the value is ${JSON.stringify(shown[at])}`;
-      }).join('; ');
-      parts.push(`${moves.charAt(0).toUpperCase()}${moves.slice(1)}. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.`);
-    }
-    if (written.length === 2) {
-      const [i, j] = written;
-      parts.push(`Cells ${i} and ${j} trade contents: ${JSON.stringify(shown[i])} now sits at index ${i} and ${JSON.stringify(shown[j])} at index ${j}. Watch the swap flash — in-place rearrangement is the whole trick: no second array, just disciplined exchanges.`);
-    } else if (written.length > 0) {
-      parts.push(`The array itself changes at ${written.length === 1 ? `index ${written[0]}, which now holds ${JSON.stringify(shown[written[0]])}` : `indices ${written.join(', ')}`} — a real in-place write recorded from the run, not an animation guess.`);
-    }
+    if (moved.length > 0) parts.push(narrateMoves(moved, locals, prev, shown));
+    if (written.length === 2) parts.push(narrateSwap(written, shown));
+    else if (written.length > 0) parts.push(narrateWrite(written, shown));
     const introduced = changedScalars.filter(([k]) => !(k in prev));
     const updated = changedScalars.filter(([k]) => k in prev);
-    if (introduced.length > 0) {
-      const what = introduced.map(([k, v]) => `${k} = ${JSON.stringify(v)}`).join(', ');
-      parts.push(`New state appears: ${what} — keep your eye on ${introduced.length === 1 ? 'this value' : 'these values'}; every pointer move below is decided by ${introduced.length === 1 ? 'it' : 'them'}.`);
-    }
-    if (updated.length > 0) {
-      const what = updated.map(([k, v]) => `${k} becomes ${JSON.stringify(v)}`).join(', ');
-      parts.push(`The bookkeeping updates: ${what}. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.`);
-    }
+    if (introduced.length > 0) parts.push(narrateIntroduced(introduced));
+    if (updated.length > 0) parts.push(narrateUpdated(updated));
     const searchNote = eliminatedOutside && eliminated.length > 0
-      ? ` Everything outside ${locals[eliminatedOutside[0]]}..${locals[eliminatedOutside[1]]} is now ELIMINATED — ${eliminated.length} of ${array.length} cells dimmed, the search space keeps shrinking, and that shrinking is the whole reason this runs in logarithmic time.`
+      ? narrateEliminated({ lo: locals[eliminatedOutside[0]], hi: locals[eliminatedOutside[1]], eliminatedCount: eliminated.length, total: array.length })
       : '';
     const windowNote = window && inArray(locals[window[0]]) && inArray(locals[window[1]])
-      ? ` The window now spans indices ${locals[window[0]]}..${locals[window[1]]} — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.`
+      ? narrateWindow({ left: locals[window[0]], right: locals[window[1]] })
       : '';
 
     steps.push({
@@ -130,12 +118,9 @@ export function compilePointerWalk({
   }
   if (steps.length === 0 || !anyPointerMoved) throw new Error('pointer walk saw no pointer movement — check the declared pointer names');
 
-  const finalValues = liveValues ? ` The array ends as [${liveValues.map((v) => JSON.stringify(v)).join(', ')}] — compare it with where it started and every difference is a step you just watched.` : '';
   steps.push({
     line: steps[steps.length - 1].line,
-    explanation: truncated
-      ? `The recording stops HERE, on purpose: the walk kept repeating the same pattern past the recording cap, so watching more of it teaches nothing new. The run itself continued to completion and returned ${JSON.stringify(result)} — recorded honestly, cut openly.`
-      : `The walk is over and the call returns ${JSON.stringify(result)}.${finalValues} Replay the arrows in your head: every move you watched was a decision the code made on real data — that decision pattern IS the algorithm.`,
+    explanation: narrateClose({ truncated, result, liveValues }),
     array: steps[steps.length - 1].array,
     variables: steps[steps.length - 1].variables,
   });
