@@ -6,7 +6,7 @@
 // No model-written tracker programs, no sandbox, no imagined frames: the most common DSA
 // lessons (tree/graph walks) become instant and exact.
 
-import { validateExecutionTrace } from '../../board/execution/execution-trace.js';
+import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
 export const TRAVERSAL_KINDS = Object.freeze(['bfs', 'dfs', 'level_order']);
 

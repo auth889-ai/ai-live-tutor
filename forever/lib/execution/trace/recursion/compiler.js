@@ -12,7 +12,7 @@
 // explanations, so the whole AlgorithmStage (code + tree + stack + caption + voice) stays in
 // lock-step from one step object.
 
-import { validateExecutionTrace } from '../../board/execution/execution-trace.js';
+import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
 // Our original Python instrumentation template (modeled on the studied recording technique,
 // written for our @@CALLTREE protocol). Definitions only — assembleRecursionProgram() adds the

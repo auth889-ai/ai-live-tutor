@@ -6,7 +6,7 @@
 // actual recorded values (never predicted). This is the VisuAlgo binary-search feel — arrows
 // riding the array, half the search space dimming — for any pointer algorithm.
 
-import { validateExecutionTrace } from '../../board/execution/execution-trace.js';
+import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
 // compilePointerWalk({ events, result, code, array, pointers, eliminatedOutside?, window?, language })
 // events/result: from parseLineEvents (line-simulator run). array: the concrete values being

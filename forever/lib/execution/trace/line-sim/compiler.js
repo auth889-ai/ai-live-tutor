@@ -5,7 +5,7 @@
 // dry_run scene can never end up trace-less: the worst case is still a real, synced,
 // line-by-line animation with live variables — never an imagined frame, never text-only.
 
-import { validateExecutionTrace } from '../../board/execution/execution-trace.js';
+import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
 // Our instrumentation harness (definitions only; assembleLineProgram adds the student code +
 // entry call). Records one @@LINE event per executed line of the STUDENT'S code with the local
