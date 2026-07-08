@@ -45,6 +45,7 @@ export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null 
           {views.graph && step.graph ? (
             <GraphView content={{ nodes: views.graph.nodes, edges: views.graph.edges, directed: views.graph.directed, trace: [{ note: '', ...step.graph, activeEdge: step.activeEdge }] }} activeStep={0} />
           ) : null}
+          <Vars step={step} />
           <Collections step={step} />
           <TraceTable history={historySteps} />
         </div>
@@ -58,6 +59,28 @@ function Caption({ index, total, text }) {
     <div style={{ padding: '10px 14px', borderRadius: 10, background: '#fffaf0', border: '1px solid #e8ddc9', fontSize: 14, color: '#5a4a2a', display: 'flex', gap: 10, alignItems: 'baseline' }}>
       <span style={{ color: '#d35400', fontWeight: 700, whiteSpace: 'nowrap' }}>Step {index + 1}/{total}</span>
       <span>{text}</span>
+    </div>
+  );
+}
+
+// Variables panel (Python Tutor's essential panel): the step's key variables as chips,
+// rendered from THE SAME step object as the code line, structure and caption — so
+// "i=3, maxLen=2" changes at the exact moment the tutor says it. Values that changed
+// since the previous step get the accent ring.
+function Vars({ step }) {
+  const vars = step.variables;
+  if (!vars || typeof vars !== 'object' || Array.isArray(vars) || Object.keys(vars).length === 0) return null;
+  return (
+    <div style={{ border: '1px solid #e8ddc9', borderRadius: 10, background: '#fffdf8', padding: 10 }}>
+      <div style={{ fontSize: 11, color: '#2f7d4a', fontWeight: 700, marginBottom: 6, fontFamily: 'ui-monospace, monospace' }}>variables</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {Object.entries(vars).map(([name, value]) => (
+          <span key={name} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, border: '2px solid #2f7d4a', borderRadius: 8, background: '#fff', padding: '3px 8px', fontFamily: 'ui-monospace, monospace', fontSize: 12.5 }}>
+            <span style={{ color: '#8a6d3b' }}>{name}</span>
+            <span style={{ fontWeight: 800, color: '#2b211a' }}>= {String(value)}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
