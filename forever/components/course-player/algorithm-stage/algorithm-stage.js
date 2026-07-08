@@ -13,12 +13,19 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { traceStateAtMs, traceStateAt } from '../../../lib/board/execution/execution-trace.js';
 import { CodePanel } from '../panels/code-panel.js';
+import { RetracePanel } from './retrace-panel.js';
 import { ArrayView } from '../panels/array-view.js';
 import { GraphView } from '../panels/graph-view.js';
 import { GridView } from './grid-view.js';
 import { TraceTable } from './trace-table.js';
 
-export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null, setHold }) {
+export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, stepIndex = null, setHold }) {
+  // LIVE INSTRUMENT: the student can re-run the engine on their own input (RetracePanel);
+  // the whole stage then animates THEIR scenario. liveTrace overrides the lesson's trace;
+  // exploring is forced so the voice (which narrates the LESSON's trace) holds until they
+  // return to the lesson.
+  const [liveTrace, setLiveTrace] = useState(null);
+  const trace = liveTrace ?? lessonTrace;
   // EXPLORE MODE (research-backed: stepping beats speed control — Hansen JVLC; self-paced
   // rewind/forward measurably improves comprehension). The student can leave the voice at any
   // moment, walk the dry run step by step in BOTH directions (buttons or ←/→ keys), then jump
@@ -100,8 +107,20 @@ export function AlgorithmStage({ trace, tMs = 0, progress = 1, stepIndex = null,
           exploring={explore !== null}
           onStep={(delta) => setExplore(Math.max(0, Math.min(total - 1, index + delta)))}
           onJump={(to) => setExplore(Math.max(0, Math.min(total - 1, to)))}
-          onFollow={() => setExplore(null)}
+          onFollow={() => { setLiveTrace(null); setExplore(null); }}
         />
+        {trace.meta ? (
+          <RetracePanel
+            key={liveTrace ? 'live' : 'lesson'}
+            meta={trace.meta}
+            onTrace={(next) => { setLiveTrace(next); setExplore(0); }}
+          />
+        ) : null}
+        {liveTrace ? (
+          <div style={{ fontSize: 12, color: '#c0522d', fontWeight: 700 }}>
+            ⚗️ your own run — step through it; “resume voice” returns to the lesson’s example
+          </div>
+        ) : null}
         <Caption index={index} total={trace.steps.length} text={step.explanation} />
         <Vars step={step} />
         <Collections step={step} />

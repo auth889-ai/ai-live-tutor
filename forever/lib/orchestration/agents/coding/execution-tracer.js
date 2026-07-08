@@ -142,6 +142,12 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
           throw new Error(run.stderr ? `tracker errored: ${run.stderr.slice(0, 300)}` : 'tracker printed no @@CALLTREE line');
         }
         const trace = compileRecursionTrace({ callTree, code, language: 'python', lines: json.recursion.lines ?? {} });
+        // The trace carries its own recipe so the PLAYER can re-run this engine on
+        // student-modified inputs (fib(7), memo on/off) — a live instrument, not a recording.
+        trace.meta = {
+          tool: 'recursion',
+          params: { code, fnName: json.recursion.fnName, args: json.recursion.args, memoize: json.recursion.memoize === true, lines: json.recursion.lines ?? {} },
+        };
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Recursion trace failed: ${error.message}`;
@@ -162,6 +168,10 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
           language: lang,
           lines: json.traversal.lines ?? {},
         });
+        trace.meta = {
+          tool: 'traversal',
+          params: { graph: views.graph, kind: json.traversal.kind, start: json.traversal.start, code, lines: json.traversal.lines ?? {} },
+        };
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Traversal trace failed: ${error.message}`;
