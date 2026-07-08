@@ -71,6 +71,9 @@ export function compileRecursionTrace({ callTree, code, language = 'python', lin
   steps.push(snap({
     line: lineOf('call'),
     current: String(rootId),
+    // Every step fills the `call` column; `returns` stays blank until the value exists — a
+    // dry-run table must never show rows that are empty except for the step number.
+    variables: { call: nameOf(rootId) },
     explanation: narrateRootCall(nameOf(rootId)),
   }));
 
@@ -91,6 +94,7 @@ export function compileRecursionTrace({ callTree, code, language = 'python', lin
         line: lineOf('call'),
         current: childId,
         activeEdge: [String(id), childId],
+        variables: { call: nameOf(child.id) },
         explanation: narrateDownCall(nameOf(id), nameOf(child.id)),
       }));
 

@@ -6,13 +6,19 @@
 // clock advances — never all at once.
 
 export function TraceTable({ history = [], allSteps = null }) {
-  const rows = history.map((h) => h.traceRow ?? h.variables ?? {});
+  // ONE key-space for the whole table, decided once: if any step carries an explicit traceRow,
+  // traceRow is the table (steps without one get a blank row); otherwise variables is the table.
+  // Mixing `traceRow ?? variables` PER ROW spanned two disjoint key sets — every row filled only
+  // its half and the table read as misaligned.
+  const source = allSteps ?? history;
+  const useTraceRow = source.some((h) => h.traceRow && typeof h.traceRow === 'object');
+  const rowOf = (h) => (useTraceRow ? h.traceRow ?? {} : h.variables ?? {});
+  const rows = history.map(rowOf);
   // Columns come from the WHOLE trace (not just the revealed rows) in first-seen order, so
   // headers are STABLE from step 1 — they never shift as playback reveals steps that
   // introduce new variables (the "misplaced headers" bug). A Step # column leads.
-  const columnSource = (allSteps ?? history).map((h) => h.traceRow ?? h.variables ?? {});
   const columns = [];
-  for (const row of columnSource) for (const k of Object.keys(row)) if (!columns.includes(k)) columns.push(k);
+  for (const h of source) for (const k of Object.keys(rowOf(h))) if (!columns.includes(k)) columns.push(k);
   if (columns.length === 0) return null;
 
   return (
