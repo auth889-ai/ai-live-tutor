@@ -99,7 +99,8 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
   for (let attempt = 0; attempt <= maxFixes; attempt += 1) {
     const fix = attempt === 0
       ? ''
-      : `\nThe previous attempt failed: ${lastError}\nFix it and output the full JSON again (keep 'code' and 'program' line-aligned).`;
+      : `\nThe previous attempt failed: ${lastError}\nFix it and output the full JSON again (keep 'code' and 'program' line-aligned).${
+        attempt >= 2 ? ' If the @@STEP program keeps failing, SWITCH TO LINE-SIM MODE instead ("linesim": {"entry": "<one call>"}) — it cannot fail.' : ''}`;
     const res = await call({
       agent: 'execution_tracer',
       system: tracerSystem(lang) + fix,
