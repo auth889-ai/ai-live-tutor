@@ -6,13 +6,28 @@
 // Python instrumentation template — definitions only; assembleRecursionProgram() adds the
 // student's function and the run line.
 export const RECURSION_TRACKER_PY = `
-import json, sys
+import json, sys, math
 
 MAX_CALLS = 60
 vertices = {}
 _curr_id = 0
 _memo = {}
 _stack = []
+
+def _safe(v, depth=0):
+    # Hybrid serialization (JSON-safe values pass; the rest become readable placeholders) —
+    # float('inf')/NaN would otherwise make json.dumps emit INVALID JSON and kill the trace.
+    if isinstance(v, bool) or v is None or isinstance(v, str):
+        return v
+    if isinstance(v, (int, float)):
+        return v if (not isinstance(v, float) or math.isfinite(v)) else repr(v)
+    if depth >= 3:
+        return repr(v)[:40]
+    if isinstance(v, (list, tuple)):
+        return [_safe(x, depth + 1) for x in list(v)[:20]]
+    if isinstance(v, dict):
+        return {str(k): _safe(x, depth + 1) for k, x in list(v.items())[:20]}
+    return repr(v)[:40]
 
 def fn(*args):
     global _curr_id
@@ -21,7 +36,7 @@ def fn(*args):
         sys.exit(0)
     vid = _curr_id
     _curr_id += 1
-    vertices[vid] = {'args': list(args), 'children': [], 'memoized': False}
+    vertices[vid] = {'args': _safe(list(args)), 'children': [], 'memoized': False}
     if _stack:
         vertices[_stack[-1]]['children'].append({'id': vid, 'value': None})
     _stack.append(vid)
@@ -36,7 +51,7 @@ def fn(*args):
     if _stack:
         for child in vertices[_stack[-1]]['children']:
             if child['id'] == vid:
-                child['value'] = value
+                child['value'] = _safe(value)
     return value
 `.trim();
 
@@ -60,8 +75,32 @@ export function assembleRecursionProgram({ code, fnName, args = [], memoize = fa
     `_fn = ${name}`,
     `${name} = fn`,
     'result = fn(*ARGS)',
-    "print('@@CALLTREE ' + json.dumps({'fnName': FN_NAME, 'result': result, 'vertices': vertices}))",
+    "print('@@CALLTREE ' + json.dumps({'fnName': FN_NAME, 'result': _safe(result), 'vertices': vertices}))",
   ].join('\n');
+}
+
+// OUTPUT INTEGRITY VALIDATION (the studied repo runs a joi schema over the child process
+// stdout before trusting it): the recorded call tree must be exactly the shape the compiler
+// expects, with actionable errors naming the offending vertex — a malformed recording fails
+// HERE, loudly, not as a confusing crash mid-compilation.
+export function validateCallTree(callTree) {
+  if (!callTree || typeof callTree !== 'object') throw new Error('call tree must be an object');
+  if (callTree.error) return callTree; // honest tracker-side failure, surfaced by the compiler
+  const vertices = callTree.vertices;
+  if (!vertices || typeof vertices !== 'object' || Array.isArray(vertices)) {
+    throw new Error('call tree needs a vertices object');
+  }
+  for (const [id, v] of Object.entries(vertices)) {
+    if (!v || typeof v !== 'object') throw new Error(`call tree vertex ${id} must be an object`);
+    if (!Array.isArray(v.args)) throw new Error(`call tree vertex ${id}: args must be an array`);
+    if (!Array.isArray(v.children)) throw new Error(`call tree vertex ${id}: children must be an array`);
+    for (const c of v.children) {
+      if (!c || typeof c !== 'object' || c.id === undefined) throw new Error(`call tree vertex ${id}: each child needs an id`);
+      if (vertices[String(c.id)] === undefined) throw new Error(`call tree vertex ${id}: child ${c.id} has no vertex of its own`);
+    }
+    if (typeof v.memoized !== 'boolean') throw new Error(`call tree vertex ${id}: memoized must be a boolean`);
+  }
+  return callTree;
 }
 
 // Extract the @@CALLTREE payload from a real run's stdout (null if absent/malformed).

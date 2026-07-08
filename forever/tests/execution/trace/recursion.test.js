@@ -104,3 +104,17 @@ test('parseCallTree extracts the payload from noisy stdout, null when absent/bro
   assert.equal(parseCallTree('no marker here'), null);
   assert.equal(parseCallTree('@@CALLTREE {broken'), null);
 });
+
+test('output integrity: malformed recordings and non-finite values cannot poison a trace', () => {
+  // Schema validation with actionable errors (the studied repo's stdout validation stage).
+  assert.throws(
+    () => compileRecursionTrace({ code: CODE, callTree: { fnName: 'f', vertices: { 0: { args: [1], children: [{ id: 99, value: 1 }], memoized: false } } } }),
+    /child 99 has no vertex/,
+  );
+  assert.throws(
+    () => compileRecursionTrace({ code: CODE, callTree: { fnName: 'f', vertices: { 0: { args: 'nope', children: [], memoized: false } } } }),
+    /args must be an array/,
+  );
+  // The tracker template carries the hybrid-serialization guard (inf/NaN -> readable token).
+  assert.ok(RECURSION_TRACKER_PY.includes('math.isfinite'), 'non-finite floats cannot emit invalid JSON');
+});

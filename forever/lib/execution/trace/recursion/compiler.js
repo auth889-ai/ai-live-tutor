@@ -15,7 +15,9 @@ import {
   narrateCombineReturn, narrateFinalReturn,
 } from './narrate.js';
 
-export { RECURSION_TRACKER_PY, assembleRecursionProgram, parseCallTree } from './tracker.js';
+import { validateCallTree } from './tracker.js';
+
+export { RECURSION_TRACKER_PY, assembleRecursionProgram, parseCallTree, validateCallTree } from './tracker.js';
 
 const label = (fnName, args) => `${fnName}(${args.map((a) => JSON.stringify(a)).join(',')})`.replace(/"/g, "'");
 
@@ -23,8 +25,9 @@ const label = (fnName, args) => `${fnName}(${args.map((a) => JSON.stringify(a)).
 // lines: 1-based lines in `code` for the teaching moments — {call, base, memo, combine};
 // missing entries fall back to line 1 (the function signature).
 export function compileRecursionTrace({ callTree, code, language = 'python', lines = {} } = {}) {
-  const { fnName = 'fn', vertices = {}, result } = callTree ?? {};
   if (callTree?.error) throw new Error(`recursion tracker failed: ${callTree.error}`);
+  validateCallTree(callTree ?? {}); // output integrity BEFORE compilation — loud, actionable
+  const { fnName = 'fn', vertices = {}, result } = callTree ?? {};
   const ids = Object.keys(vertices);
   if (ids.length === 0) throw new Error('recursion call tree has no vertices');
   const lineCount = String(code ?? '').split('\n').length;

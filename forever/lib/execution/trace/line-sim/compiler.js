@@ -11,14 +11,17 @@ import { validateExecutionTrace } from '../../../board/execution/execution-trace
 // entry call). Records one @@LINE event per executed line of the STUDENT'S code with the local
 // variables that are JSON-safe, capped so a hot loop cannot flood stdout.
 export const LINE_TRACKER_PY = `
-import json, sys
+import json, sys, math
 
 MAX_EVENTS = 200
 _events = []
 
 def _safe(v):
-    if isinstance(v, (int, float, str, bool)) or v is None:
+    if isinstance(v, bool) or v is None or isinstance(v, (int, str)):
         return v
+    if isinstance(v, float):
+        # non-finite floats make json.dumps emit INVALID JSON -> readable token instead
+        return v if math.isfinite(v) else repr(v)
     if isinstance(v, (list, tuple)):
         return [_safe(x) for x in list(v)[:20]]
     if isinstance(v, dict):
