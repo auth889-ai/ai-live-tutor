@@ -197,3 +197,25 @@ test('quality gate applies to ENGINE traces too: line-sim of a stack algorithm i
   assert.match(prompts[1], /NO step carries "stack"/, 'the gate names exactly what the weak trace hid');
   assert.ok(result.trace.steps.every((s) => Array.isArray(s.stack)), 'the accepted trace SHOWS the stack at every step');
 });
+
+test('malformed @@STEP lines are counted and repaired — a dry run never ships with silent holes', async () => {
+  const oneGood = `${STEP_MARKER}{"line":4,"explanation":"We probe the middle of the array: mid lands on index 2 where the value is 5, and 5 is smaller than the target, so the whole left half can be ruled out.","array":{"current":2,"pointers":{"mid":2}}}`;
+  const broken = `${STEP_MARKER}{"line":4,"explanation":"half-printed`; // hand-formatted, not serialized
+  const prompts = [];
+  const result = await traceExecution({
+    directive: 'binary search',
+    deps: {
+      callQwenJson: async ({ system }) => {
+        prompts.push(system);
+        return { json: GOOD_JSON, usage: null };
+      },
+      runCode: async () => ({
+        stdout: prompts.length === 1 ? `${oneGood}\n${broken}` : GOOD_STDOUT,
+        stderr: '', timedOut: false, exitCode: 0,
+      }),
+    },
+  });
+  assert.ok(result, 'repaired on the second attempt');
+  assert.equal(result.fixes, 1);
+  assert.match(prompts[1], /1 @@STEP line\(s\) were malformed JSON.*json\.dumps/s, 'the repair demand names the structural fix');
+});

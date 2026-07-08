@@ -49,3 +49,22 @@ test('collapses consecutive duplicate states; honest failures reject empty runs'
   assert.equal(parseLineEvents('noise\n@@LINESIM {"events":[{"line":2,"locals":{}}],"result":5}').result, 5);
   assert.equal(parseLineEvents('nothing'), null);
 });
+
+test('truncation is an EXPLICIT terminal beat, never a silent cut', () => {
+  const events = [
+    { line: 2, fn: 'f', locals: { i: 0 } },
+    { line: 2, fn: 'f', locals: { i: 1 } },
+    { truncated: true }, // the tracker's cap sentinel
+  ];
+  const trace = compileLineTrace({ events, result: 42, code: 'def f():\n    i = 0', language: 'python' });
+  assert.match(trace.steps.at(-1).explanation, /recording stops HERE.*returned 42.*cut openly/s);
+});
+
+test('opening frame beat: the entry call is announced before anything moves', () => {
+  const trace = compileLineTrace({
+    events: [{ line: 2, fn: 'gcd', locals: { a: 48, b: 18 } }],
+    result: 6, code: 'def gcd(a, b):\n    pass', entry: 'gcd(48, 18)',
+  });
+  assert.match(trace.steps[0].explanation, /We run gcd\(48, 18\).*Keep your eye on the variables/s);
+  assert.deepEqual(trace.steps[0].variables, {}, 'the frame beat precedes any recorded state');
+});

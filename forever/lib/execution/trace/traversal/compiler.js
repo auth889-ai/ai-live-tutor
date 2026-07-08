@@ -72,7 +72,9 @@ export function compileTraversalTrace({ graph, kind = 'bfs', start, code, langua
   while (pending.length > 0 && (guard += 1) < 10_000) {
     const currentId = isQueue ? pending.shift() : pending.pop();
     visited.push(currentId);
-    const children = (adj.get(currentId) ?? []).filter((c) => !seen.has(c.to));
+    const neighbours = adj.get(currentId) ?? [];
+    const children = neighbours.filter((c) => !seen.has(c.to));
+    const skipped = neighbours.filter((c) => seen.has(c.to)); // the seen-set lesson, made visible
     for (const c of children) seen.add(c.to);
     const pushList = isQueue ? children : [...children].reverse(); // stack: reverse so first child is explored first
     pending.push(...pushList.map((c) => c.to));
@@ -84,6 +86,12 @@ export function compileTraversalTrace({ graph, kind = 'bfs', start, code, langua
       : childNames.length > 1
         ? `Its unvisited neighbours ${childNames.join(' and ')} are discovered and ${isQueue ? 'join the back of the queue to wait their turn' : 'are pushed onto the stack to be explored next'}.`
         : `Its unvisited neighbour ${childNames[0]} is discovered and ${isQueue ? 'joins the back of the queue to wait its turn' : 'is pushed onto the stack to be explored next'}.`;
+    // The common-mistake callout every good tutor makes at exactly this moment: WHY a
+    // neighbour gets skipped — the seen-set is what turns a possible infinite loop into O(V+E).
+    const skippedNames = skipped.map((c) => name(c.to));
+    const skipNote = skippedNames.length > 0
+      ? ` Note ${skippedNames.join(' and ')} ${skippedNames.length > 1 ? 'are' : 'is'} skipped: already seen. That check is the whole reason this walk can never loop forever — forgetting it is THE classic traversal bug.`
+      : '';
     const orderNote = isQueue
       ? ` Watch the visit order strip: ${name(currentId)} takes position ${visited.length}, and the queue now holds ${pending.length ? pending.map(name).join(', ') : 'nothing — we are almost done'}.`
       : ` The stack now holds ${pending.length ? pending.map(name).join(', ') + ' (top last)' : 'nothing — every path has been fully explored'}.`;
@@ -93,7 +101,7 @@ export function compileTraversalTrace({ graph, kind = 'bfs', start, code, langua
       current: currentId,
       activeEdge: visited.length > 1 ? findParentEdge(edges, currentId, visited, graph.directed) : null,
       variables: isQueue ? { visiting: name(currentId), queueSize: pending.length } : { visiting: name(currentId), stackDepth: pending.length },
-      explanation: `We ${takeVerb} and visit it — it turns green and stays green, it is done forever. ${discover}${orderNote}`,
+      explanation: `We ${takeVerb} and visit it — it turns green and stays green, it is done forever. ${discover}${skipNote}${orderNote}`,
     }));
   }
 

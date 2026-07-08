@@ -27,6 +27,10 @@ export function compilePointerWalk({
   eliminatedOutside = null, window = null, language = 'python',
 } = {}) {
   if (!Array.isArray(events) || events.length === 0) throw new Error('pointer walk recorded no events');
+  // The shared line tracker appends {'truncated': true} at its recording cap — honor it here
+  // too so a long walk is CUT OPENLY, never silently.
+  const truncated = events[events.length - 1]?.truncated === true;
+  if (truncated) events = events.slice(0, -1);
   if (!Array.isArray(array) || array.length === 0) throw new Error('pointer walk needs the concrete array');
   if (!Array.isArray(pointers) || pointers.length === 0) throw new Error('pointer walk needs pointer variable names');
   const lineCount = String(code ?? '').split('\n').length;
@@ -129,7 +133,9 @@ export function compilePointerWalk({
   const finalValues = liveValues ? ` The array ends as [${liveValues.map((v) => JSON.stringify(v)).join(', ')}] — compare it with where it started and every difference is a step you just watched.` : '';
   steps.push({
     line: steps[steps.length - 1].line,
-    explanation: `The walk is over and the call returns ${JSON.stringify(result)}.${finalValues} Replay the arrows in your head: every move you watched was a decision the code made on real data — that decision pattern IS the algorithm.`,
+    explanation: truncated
+      ? `The recording stops HERE, on purpose: the walk kept repeating the same pattern past the recording cap, so watching more of it teaches nothing new. The run itself continued to completion and returned ${JSON.stringify(result)} — recorded honestly, cut openly.`
+      : `The walk is over and the call returns ${JSON.stringify(result)}.${finalValues} Replay the arrows in your head: every move you watched was a decision the code made on real data — that decision pattern IS the algorithm.`,
     array: steps[steps.length - 1].array,
     variables: steps[steps.length - 1].variables,
   });

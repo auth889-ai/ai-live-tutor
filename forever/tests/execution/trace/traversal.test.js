@@ -57,3 +57,18 @@ test('undirected graphs traverse both directions; honest failures reject junk', 
   assert.throws(() => compileTraversalTrace({ graph: TREE, start: '99', code: CODE }), /not a node/);
   assert.throws(() => compileTraversalTrace({ graph: { nodes: [{ id: 'A' }], edges: [{ from: 'A', to: 'Z' }] }, start: 'A', code: CODE }), /missing node/);
 });
+
+test('skipped neighbours are TAUGHT, not hidden: the seen-set callout fires on revisits', () => {
+  // A cycle: 1 -> 2 -> 3 -> 1. Visiting 3 re-encounters 1, which must be narrated as skipped.
+  const trace = compileTraversalTrace({
+    graph: {
+      nodes: [{ id: '1' }, { id: '2' }, { id: '3' }],
+      edges: [{ from: '1', to: '2' }, { from: '2', to: '3' }, { from: '3', to: '1' }],
+      directed: true,
+    },
+    kind: 'bfs', start: '1', code: 'a\nb\nc',
+  });
+  const revisit = trace.steps.find((s) => /skipped: already seen/.test(s.explanation));
+  assert.ok(revisit, 'the revisit moment gets its callout');
+  assert.match(revisit.explanation, /never loop forever.*classic traversal bug/s);
+});

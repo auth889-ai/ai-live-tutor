@@ -23,3 +23,20 @@ export function parseStepEvents(stdout) {
   }
   return steps;
 }
+
+// Skipping a garbled line keeps the parser resilient, but it must never be SILENT: a vanished
+// step is a hole in the dry run the student would never know about. The tracer counts these
+// and demands a repair (the fix is always the same: serialize a dict, never hand-format).
+export function countMalformedStepLines(stdout) {
+  let malformed = 0;
+  for (const rawLine of String(stdout ?? '').split('\n')) {
+    const line = rawLine.trim();
+    if (!line.startsWith(STEP_MARKER)) continue;
+    try {
+      JSON.parse(line.slice(STEP_MARKER.length).trim());
+    } catch {
+      malformed += 1;
+    }
+  }
+  return malformed;
+}

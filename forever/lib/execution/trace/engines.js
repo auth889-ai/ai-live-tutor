@@ -11,13 +11,18 @@
 //   recursion & divide-and-conquer (fib, subsets, merge     -> recursion-compiler (call-tree
 //     sort splits, top-down DP with memo hits)                 recording + Euler-tour playback)
 //   array pointer algorithms (binary search, two pointers,  -> pointer-walk-compiler (settrace
-//     sliding window: arrows, eliminated half, window span)    run + array lens)
+//     sliding window, in-place sorting: arrows, eliminated     run + array lens; declared
+//     half, window span, swap flashes, live values)            examine/arrayVar semantics)
 //   DP tables (LCS, knapsack: one frame per cell write,     -> tracer @@STEP array2d contract
 //     dependency reads highlighted, running best)              (real execution, grid view)
-//   EVERYTHING ELSE (greedy, math, string, OOP, any custom  -> line-simulator (sys.settrace
-//     LeetCode/Codeforces code)                                floor: every line + variable
-//                                                              change of a real run — a dry run
-//                                                              can never be trace-less)
+//   structure-LESS algorithms ONLY (pure math like gcd,     -> line-simulator (sys.settrace:
+//     string building, greedy counting — nothing to draw)      every line + variable change of
+//                                                              a real run, truncation cut openly)
+//
+// NO DOWNGRADE RULE (user's standing order): line-sim is a CLASSIFICATION, never a fallback.
+// A failed engine attempt fixes its error in the same mode or moves to a RICHER mode; every
+// engine's output passes the same dryRunQualityIssue() gate (pointers riding the structure,
+// collections shown, tutor-voice explanations) — see execution-tracer.js.
 
 //   data structures THEMSELVES (stack push/pop, queue      -> operations/compiler (one frame
 //     enqueue/dequeue, hash map put/get: collisions,           per op, real hashes/chains,

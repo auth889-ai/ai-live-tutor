@@ -11,7 +11,7 @@
 
 import { callQwenJson } from '../../../qwen/client.js';
 import { runCode } from '../../../execution/run-code.js';
-import { parseStepEvents } from '../../../execution/trace/parse-steps.js';
+import { parseStepEvents, countMalformedStepLines } from '../../../execution/trace/parse-steps.js';
 import { assembleRecursionProgram, parseCallTree, compileRecursionTrace } from '../../../execution/trace/engines.js';
 import { compileTraversalTrace } from '../../../execution/trace/engines.js';
 import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../../../execution/trace/engines.js';
@@ -262,7 +262,7 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         if (run.timedOut) throw new Error('simulation timed out (likely an infinite loop)');
         const payload = parseLineEvents(run.stdout);
         if (!payload) throw new Error(run.stderr ? `simulation errored: ${run.stderr.slice(0, 300)}` : 'simulation printed no @@LINESIM line');
-        const trace = compileLineTrace({ ...payload, code, language: 'python' });
+        const trace = compileLineTrace({ ...payload, code, entry: json.linesim.entry, language: 'python' });
         // The gate is what keeps line-sim honest: a structural algorithm routed here fails the
         // pointer/collection bar and the retry pushes the model UP to the matching engine mode.
         assertDryRunQuality(trace, { directive, code, attempt, maxFixes });
@@ -287,6 +287,14 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
       continue;
     }
     const steps = parseStepEvents(run.stdout);
+    // A malformed @@STEP line is a missing frame the student would never know about — never
+    // ship a trace with silent holes; demand the structural fix (serialize, don't format).
+    const malformed = countMalformedStepLines(run.stdout);
+    if (malformed > 0) {
+      lastError = `${malformed} @@STEP line(s) were malformed JSON and would silently vanish from the dry run — print steps ONLY by serializing a dict (json.dumps / JSON.stringify), never by hand-formatting strings.`;
+      logAttempt(attempt, lastError);
+      continue;
+    }
     if (steps.length === 0) {
       lastError = run.stderr ? `Program errored: ${run.stderr.slice(0, 400)}` : 'Program printed no @@STEP lines.';
       logAttempt(attempt, lastError);

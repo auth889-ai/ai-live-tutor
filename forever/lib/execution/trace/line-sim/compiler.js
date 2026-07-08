@@ -33,6 +33,9 @@ def _safe(v):
 def _tracer(frame, event, arg):
     if event == 'line' and frame.f_code.co_filename == '<student>':
         if len(_events) >= MAX_EVENTS:
+            # NEVER a silent cut: the cap becomes a first-class terminal event so the
+            # compiled trace can SAY the recording stopped (the run itself continues).
+            _events.append({'truncated': True})
             sys.settrace(None)
             return None
         _events.append({
@@ -81,14 +84,19 @@ export function parseLineEvents(stdout) {
 // Compile recorded line events into a validated ExecutionTrace: one step per executed line,
 // narrated from what ACTUALLY changed (diff of locals) — deterministic teacher sentences.
 // Consecutive-duplicate states collapse so tight loops read as logical steps.
-export function compileLineTrace({ events, result, code, language = 'python' } = {}) {
+export function compileLineTrace({ events, result, code, entry = null, language = 'python' } = {}) {
   if (!Array.isArray(events) || events.length === 0) throw new Error('line simulator recorded no events');
   const lineCount = String(code ?? '').split('\n').length;
   const codeLines = String(code ?? '').split('\n');
 
+  // The tracker appends a {'truncated': true} sentinel when it hits its recording cap —
+  // an explicit terminal event (Python Tutor's instruction_limit_reached), never a silent cut.
+  const truncated = events[events.length - 1]?.truncated === true;
+  const lineEvents = truncated ? events.slice(0, -1) : events;
+
   const steps = [];
   let prevLocals = {};
-  for (const ev of events) {
+  for (const ev of lineEvents) {
     const line = Number(ev.line);
     if (!Number.isInteger(line) || line < 1 || line > lineCount) continue;
     const locals = ev.locals && typeof ev.locals === 'object' ? ev.locals : {};
@@ -110,9 +118,20 @@ export function compileLineTrace({ events, result, code, language = 'python' } =
   }
   if (steps.length === 0) throw new Error('line simulator produced no in-range steps');
 
+  // The tutor's opening frame beat: state the goal and what to track BEFORE anything moves.
+  if (entry) {
+    steps.unshift({
+      line: steps[0].line,
+      explanation: `We run ${entry} and let the real machine execute it line by line. Keep your eye on the variables panel — every value you are about to see was recorded from this exact run, and the story of this algorithm is nothing but how those values change.`,
+      variables: {},
+    });
+  }
+
   steps.push({
     line: steps[steps.length - 1].line,
-    explanation: `Execution finishes and the call returns ${JSON.stringify(result)}. Scroll back through the steps and notice how every value on screen came from the real run — that is the whole story of this algorithm, line by line.`,
+    explanation: truncated
+      ? `The recording stops HERE, on purpose: after ${steps.length - (entry ? 1 : 0)} recorded steps the loop keeps repeating the exact same pattern, so watching more of it teaches nothing new. The run itself continued to completion and returned ${JSON.stringify(result)} — recorded honestly, cut openly.`
+      : `Execution finishes and the call returns ${JSON.stringify(result)}. Scroll back through the steps and notice how every value on screen came from the real run — that is the whole story of this algorithm, line by line.`,
     variables: steps[steps.length - 1].variables,
   });
 
