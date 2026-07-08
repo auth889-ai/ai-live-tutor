@@ -13,6 +13,7 @@ import { callQwenJson } from '../../../qwen/client.js';
 import { runCode } from '../../../execution/run-code.js';
 import { parseStepEvents } from '../../../execution/trace/parse-steps.js';
 import { assembleRecursionProgram, parseCallTree, compileRecursionTrace } from '../../../execution/trace/recursion-compiler.js';
+import { compileTraversalTrace } from '../../../execution/trace/traversal-compiler.js';
 import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
 const RUNNABLE_LANGUAGES = ['python', 'javascript'];
@@ -39,6 +40,13 @@ variables, no own memo/cache dict, no prints. For memoization lessons set "memoi
 tracker supplies the memo and the animation shows every memo hit; the recursive calls stay plain
 (e.g. return fib(n-1) + fib(n-2)). Our instrumented tracker runs it for real and derives every
 animation step — do not write tracking code.
+
+TRAVERSAL MODE — when the algorithm IS breadth-first / depth-first / level-order over a CONCRETE
+tree or graph: INSTEAD of "program", output
+  "traversal": {"kind": "bfs" | "dfs" | "level_order", "start": "<nodeId from views.graph>",
+                "lines": {"init": <line that seeds the queue/stack>, "visit": <line that visits>, "done": <line after the loop>}}
+plus "views.graph" (edges carry "side" for binary trees) and "code" = the clean traversal function.
+Our engine executes the walk itself, exactly — do not write tracking code.
 
 Rules for "program" — it must print, at each LOGICAL step (each comparison/decision/loop turn), exactly one line:
 @@STEP {"line": <1-based line in 'code' active now>, "explanation": "<2-3 full sentences in a warm human tutor voice: the ACTUAL action with its real values, the decision taken, and WHY it matters for the next step — never a stub like 'Visit node 1'>", <state...>}
@@ -107,6 +115,26 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Recursion trace failed: ${error.message}`;
+        logAttempt(attempt, lastError);
+        continue;
+      }
+    }
+
+    // TRAVERSAL MODE: BFS/DFS/level-order over a declared graph — our engine runs the walk
+    // natively and exactly (no sandbox, no model tracker, instant).
+    if (json.traversal && typeof json.traversal === 'object' && views.graph && code) {
+      try {
+        const trace = compileTraversalTrace({
+          graph: views.graph,
+          kind: json.traversal.kind,
+          start: json.traversal.start,
+          code,
+          language: lang,
+          lines: json.traversal.lines ?? {},
+        });
+        return { trace, usage, fixes: attempt };
+      } catch (error) {
+        lastError = `Traversal trace failed: ${error.message}`;
         logAttempt(attempt, lastError);
         continue;
       }
