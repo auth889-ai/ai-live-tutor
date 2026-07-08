@@ -114,20 +114,27 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
   // steady while the recursion builds the tree call by call in front of the student.
   const isGhost = (id) => revealed !== null && !revealed.has(id) && id !== current;
 
+  // Trace-driven nodes render as CIRCLES (recursion-tree-visualizer's vertice.tsx: fixed
+  // radius, thick stroke, bold centered value, text scaled to fit) — a tree must look like a
+  // textbook tree, never a flowchart of boxes. Plain diagrams (no trace) keep rounded rects.
+  const CIRCLE = 56;
   const nodes = laid.nodes.map((n) => {
     const c = nodeColor(n.id);
     const isCurrent = n.id === current;
     const value = returned[n.id];
+    const label = value !== undefined ? `${n.label}\n= ${JSON.stringify(value)}` : n.label;
+    const circle = hasTrace;
+    const longest = Math.max(...String(label).split('\n').map((l) => l.length));
     return {
       id: n.id,
-      position: { x: n.x, y: n.y },
-      data: { label: value !== undefined ? `${n.label}\n= ${JSON.stringify(value)}` : n.label },
+      position: circle ? { x: n.x + (n.width - CIRCLE) / 2, y: n.y + (n.height - CIRCLE) / 2 } : { x: n.x, y: n.y },
+      data: { label },
       style: {
         opacity: isGhost(n.id) ? 0.12 : 1,
-        width: n.width,
-        height: n.height,
-        borderRadius: 10,
-        border: `${isCurrent ? 3 : 2}px solid ${c.border}`,
+        width: circle ? CIRCLE : n.width,
+        height: circle ? CIRCLE : n.height,
+        borderRadius: circle ? '50%' : 10,
+        border: `${isCurrent ? 4 : 3}px solid ${c.border}`,
         background: c.bg,
         color: c.fg,
         display: 'flex',
@@ -135,14 +142,16 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
         justifyContent: 'center',
         textAlign: 'center',
         whiteSpace: 'pre-line',
+        lineHeight: 1.15,
         fontFamily: 'ui-monospace, monospace',
-        fontWeight: 600,
-        fontSize: 14,
+        fontWeight: 800,
+        // Scale text into the circle (their useScaleDown trick, done with font-size).
+        fontSize: circle ? Math.max(9, Math.min(17, Math.floor((CIRCLE - 12) / Math.max(1, longest * 0.62)))) : 14,
         // NOTE: never put `transform` here — ReactFlow uses transform:translate() to POSITION the
         // node, so a scale() would clobber the position (nodes collapse to the origin). Emphasis
         // is via border width + glow only.
         boxShadow: isCurrent ? '0 0 0 6px rgba(211,84,0,0.32), 0 2px 12px rgba(211,84,0,0.4)' : 'none',
-        transition: 'background 0.3s, border-color 0.3s, color 0.3s, box-shadow 0.3s',
+        transition: 'background 0.3s, border-color 0.3s, color 0.3s, box-shadow 0.3s, opacity 0.25s ease-out',
       },
     };
   });
@@ -195,7 +204,9 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
       id: e.id,
       source: e.from,
       target: e.to,
-      label: e.label,
+      // A finished subtree's answer rides its edge (recursion-tree-visualizer's edge label):
+      // "↑ 3" on fib(4)->fib(3) the moment fib(3) returns.
+      label: e.label || (returned[e.to] !== undefined ? `↑ ${JSON.stringify(returned[e.to])}` : ''),
       animated: !ghost && (traversing || e.from === current || e.to === current),
       markerEnd: content.directed !== false ? { type: MarkerType.ArrowClosed, color: active ? '#d35400' : '#8a6d3b' } : undefined,
       style: { opacity: ghost ? 0.08 : 1, stroke: traversing ? '#e8604c' : active ? '#d35400' : '#8a6d3b', strokeWidth: traversing ? 4 : active ? 2.5 : 1.5, transition: 'stroke 0.3s, stroke-width 0.3s, opacity 0.3s' },
