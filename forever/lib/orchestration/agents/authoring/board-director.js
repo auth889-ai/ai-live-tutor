@@ -7,6 +7,7 @@
 import { callQwenJson } from '../../../qwen/client.js';
 import { validateBoardObjects } from '../../../board/objects/board-objects.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
+import { structureViolation } from '../../../board/structures/structure-rules.js';
 
 const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram', 'math', 'image', 'callout', 'quiz']; // grows as the renderer grows
 
@@ -40,6 +41,10 @@ Rules you must never break:
     (use this for actual tree/graph/linked-list data with node values — it auto-lays-out cleanly)
     For a simple visit ORDER (BFS levels, DFS order), you may add "highlightSequence":["1","2","3"] —
     nodes light up in that order as the clock plays. Every id must be a node id from "nodes".
+  STRUCTURE-TRUE RULE: if the scene's concept IS a linked structure (tree/BST/trie/heap/graph/
+    linked list), you MUST draw it as diagramType "graph" with its real nodes and edges — node labels
+    may carry values/roles ("root: 8", "curr"), edge labels "left"/"right"/"next". A flowchart ABOUT
+    a tree is rejected. Human teachers draw the structure itself.
   ANIMATION OWNERSHIP (never violate): you NEVER hand-author step-by-step algorithm traces — any "trace"
     field you output is discarded. Real dry-run animation (active code line, moving pointers, queue/stack,
     growing trace table) is produced by the Execution Tracer agent, which RUNS the real algorithm. Your
@@ -120,6 +125,10 @@ async function runBoardCall({ system, user, sourcePack, layout, brief = null }) 
           throw new Error(`object ${object.id} cites unknown chunk ${object.sourceRef?.chunkId}`);
         }
       }
+      // Structure-true rule (classify-then-constrain): a tree/graph concept must be DRAWN
+      // as its structure — a flowchart about a tree is rejected and repaired.
+      const violation = structureViolation(objects, brief);
+      if (violation) throw new Error(violation);
       return { objects, usage };
     } catch (error) {
       lastError = error.message;
