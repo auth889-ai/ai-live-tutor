@@ -67,7 +67,7 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
 
     if (step.array !== undefined) {
       if (arrayLen === 0) throw new Error(`${at} has array state but no views.array is declared`);
-      validateArrayState(step.array, arrIn, at);
+      validateArrayState(step.array, arrIn, at, arrayLen);
     }
     if (step.graph !== undefined) {
       if (!graphIds) throw new Error(`${at} has graph state but no views.graph is declared`);
@@ -137,7 +137,7 @@ export function traceStateAtMs(trace, tMs) {
   return { index, step: steps[index], history };
 }
 
-function validateArrayState(state, inBounds, at) {
+function validateArrayState(state, inBounds, at, arrayLen) {
   if (typeof state !== 'object' || Array.isArray(state)) throw new Error(`${at} array state must be an object`);
   if (state.current !== undefined && state.current !== null && !inBounds(state.current)) throw new Error(`${at} array current index out of bounds`);
   if (state.eliminated !== undefined) {
@@ -154,6 +154,14 @@ function validateArrayState(state, inBounds, at) {
     if (state[key] !== undefined) {
       if (!Array.isArray(state[key])) throw new Error(`${at} array ${key} must be an array of indices`);
       for (const i of state[key]) if (!inBounds(i)) throw new Error(`${at} array ${key} index out of bounds`);
+    }
+  }
+  // Live per-step contents for in-place algorithms (sorting, partitioning): the REAL recorded
+  // snapshot of the array at this step. Same length as the declared view — cells move, the
+  // array never grows or shrinks mid-animation.
+  if (state.values !== undefined) {
+    if (!Array.isArray(state.values) || state.values.length !== arrayLen) {
+      throw new Error(`${at} array values must be an array with the same length as views.array.values`);
     }
   }
 }

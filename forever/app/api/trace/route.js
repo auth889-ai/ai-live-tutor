@@ -15,8 +15,10 @@ export async function POST(request) {
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== 'object') return Response.json({ error: 'Body must be { tool, params }' }, { status: 400 });
 
-  if (body.tool === 'recursion' && selectRunner() === 'local') {
-    return Response.json({ error: 'Recursion retrace needs the sandbox (set CODE_SANDBOX=docker or JUDGE0_URL)' }, { status: 503 });
+  // Any tool that EXECUTES code (recursion tracker, pointer-walk settrace run) needs the
+  // sandbox — same rule as /api/run. Traversal is a native walk, no code execution.
+  if (['recursion', 'pointerwalk'].includes(body.tool) && selectRunner() === 'local') {
+    return Response.json({ error: 'This retrace runs real code and needs the sandbox (set CODE_SANDBOX=docker or JUDGE0_URL)' }, { status: 503 });
   }
 
   try {

@@ -50,3 +50,54 @@ test('bounded and honest: caps, timeouts, unknown tools reject loudly', async ()
     /arguments too large/,
   );
 });
+
+test('pointerwalk retrace: student edits the CALL — the view array is derived from the REAL run', async () => {
+  const CODE = 'def bsearch(arr, t):\n    low, high = 0, len(arr) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if arr[mid] == t:\n            return mid\n        low = mid + 1\n    return -1';
+  // The student's own array [1,4,9] — recorded by the settrace run, NOT the lesson's original.
+  const stdout = '@@LINESIM ' + JSON.stringify({
+    events: [
+      { line: 2, fn: 'bsearch', locals: { arr: [1, 4, 9], t: 9 } },
+      { line: 4, fn: 'bsearch', locals: { arr: [1, 4, 9], t: 9, low: 0, high: 2, mid: 1 } },
+      { line: 4, fn: 'bsearch', locals: { arr: [1, 4, 9], t: 9, low: 2, high: 2, mid: 2 } },
+    ],
+    result: 2,
+  });
+  const trace = await retrace(
+    {
+      tool: 'pointerwalk',
+      params: {
+        code: CODE,
+        entry: 'bsearch([1, 4, 9], 9)',
+        array: [2, 5, 8, 12], // the LESSON's array — must be replaced by the run's real one
+        pointers: ['low', 'mid', 'high'],
+        examine: 'mid',
+        arrayVar: 'arr',
+        eliminatedOutside: ['low', 'high'],
+        window: null,
+      },
+    },
+    { runCode: async () => ({ stdout, stderr: '', timedOut: false }) },
+  );
+  assert.deepEqual(trace.views.array.values, [1, 4, 9], 'the view shows the array the run actually saw');
+  assert.equal(trace.meta.tool, 'pointerwalk', 're-retraceable');
+  assert.equal(trace.meta.params.entry, 'bsearch([1, 4, 9], 9)');
+  assert.deepEqual(trace.meta.params.array, [1, 4, 9], 'the recipe carries the derived array forward');
+  const midStep = trace.steps.find((s) => s.array?.current !== undefined);
+  assert.ok(midStep, 'the declared examine pointer highlights on the student array too');
+});
+
+test('pointerwalk retrace: bounded and honest (entry cap, timeout, no recording)', async () => {
+  const params = { code: 'def f(a):\n    return a', entry: 'f([1])', array: [1], pointers: ['i'], arrayVar: 'a' };
+  await assert.rejects(
+    retrace({ tool: 'pointerwalk', params: { ...params, entry: `f([${Array(200).fill(1).join(',')}])` } }),
+    /entry expression too large/,
+  );
+  await assert.rejects(
+    retrace({ tool: 'pointerwalk', params }, { runCode: async () => ({ timedOut: true }) }),
+    /timed out/,
+  );
+  await assert.rejects(
+    retrace({ tool: 'pointerwalk', params }, { runCode: async () => ({ stdout: 'nothing', stderr: '', timedOut: false }) }),
+    /no walk was recorded/,
+  );
+});

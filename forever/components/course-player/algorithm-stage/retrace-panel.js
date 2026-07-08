@@ -107,8 +107,47 @@ export function RetracePanel({ meta, onTrace }) {
         </>
       )}
 
+      {meta.tool === 'pointerwalk' && (
+        <PointerWalkControls meta={meta} busy={busy} request={request} setError={setError} />
+      )}
+
       {busy && meta.tool === 'traversal' ? <span style={{ fontSize: 12, color: '#8a6d3b' }}>re-tracing…</span> : null}
       {error ? <span style={{ fontSize: 12, color: '#c0392b' }}>{error}</span> : null}
     </div>
+  );
+}
+
+// Pointer-walk: the student edits the CALL itself — their own array, their own target — and
+// the same settrace engine re-walks it (the array shown is derived from the real run).
+function PointerWalkControls({ meta, busy, request, setError }) {
+  const [entry, setEntry] = useState(String(meta?.params?.entry ?? ''));
+  const chip = {
+    border: '1px solid #e8ddc9', borderRadius: 8, background: '#fff', color: '#2b211a',
+    padding: '4px 10px', fontSize: 12.5, fontWeight: 700,
+  };
+  return (
+    <>
+      <input
+        value={entry}
+        disabled={busy}
+        onChange={(e) => setEntry(e.target.value)}
+        style={{ ...chip, flex: '1 1 220px', cursor: 'text', fontFamily: 'ui-monospace, monospace', fontWeight: 500 }}
+        aria-label="call to run (edit the array and target)"
+      />
+      <button
+        disabled={busy}
+        style={{ ...chip, background: '#e8604c', color: '#fff', border: 'none', cursor: 'pointer' }}
+        onClick={() => {
+          const call = entry.trim();
+          if (!call || /[;\n]/.test(call)) {
+            setError('the call must be one expression, e.g. binary_search([2,5,8], 5)');
+            return;
+          }
+          request({ ...meta.params, entry: call });
+        }}
+      >
+        {busy ? 'running…' : 'run it'}
+      </button>
+    </>
   );
 }

@@ -29,6 +29,7 @@ function resolveState({ content, progress, activeStep }) {
     swapped: new Set((step.swapped ?? []).map(Number)), // sorting: cells just swapped
     sorted: new Set((step.sorted ?? []).map(Number)), // sorting: cells locked in final place
     current: step.current != null ? Number(step.current) : null,
+    liveValues: Array.isArray(step.values) ? step.values : null, // in-place algos: REAL contents at this step
     note: step.note,
     stepNum: idx + 1,
     stepTotal: trace.length,
@@ -39,13 +40,16 @@ export function ArrayView({ content, progress = 1, activeStep = null }) {
   const values = Array.isArray(content.values) ? content.values : [];
   if (!values.length) return <div style={{ color: '#c0392b', fontSize: 13 }}>array unavailable</div>;
 
-  const { pointerAt, eliminated, comparing, swapped, sorted, current, note, stepNum, stepTotal } = resolveState({ content, progress, activeStep });
+  const { pointerAt, eliminated, comparing, swapped, sorted, current, liveValues, note, stepNum, stepTotal } = resolveState({ content, progress, activeStep });
   const hasTrace = Boolean(note);
+  // In-place algorithms (sorting, partitioning) carry the REAL array contents per step — the
+  // cells rearrange in front of the student; static algorithms keep the declared values.
+  const shown = liveValues && liveValues.length === values.length ? liveValues : values;
 
   return (
     <div style={{ border: '1px solid #e8ddc9', borderRadius: 12, background: '#fffdf8', padding: 14 }}>
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
-        {values.map((value, i) => {
+        {shown.map((value, i) => {
           const pointers = pointerAt.get(i);
           const isCurrent = i === current;
           const isEliminated = eliminated.has(i);

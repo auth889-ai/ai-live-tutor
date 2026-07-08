@@ -6,9 +6,11 @@
 
 import { compileTraversalTrace } from './traversal/compiler.js';
 import { compileRecursionTrace, assembleRecursionProgram, parseCallTree } from './recursion/compiler.js';
+import { compilePointerWalk } from './pointer-walk/compiler.js';
+import { assembleLineProgram, parseLineEvents } from './line-sim/compiler.js';
 import { runCode } from '../run-code.js';
 
-export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion']);
+export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk']);
 
 export async function retrace({ tool, params } = {}, deps = {}) {
   const exec = deps.runCode ?? runCode;
@@ -35,6 +37,27 @@ export async function retrace({ tool, params } = {}, deps = {}) {
     }
     const trace = compileRecursionTrace({ callTree, code, lines });
     trace.meta = { tool, params: { code, fnName, args, memoize: memoize === true, lines } };
+    return trace;
+  }
+
+  if (tool === 'pointerwalk') {
+    const { code, entry, array, pointers, examine, arrayVar, eliminatedOutside, window } = params ?? {};
+    if (String(code ?? '').length > 4000) throw new Error('code too large to retrace');
+    if (String(entry ?? '').length > 200) throw new Error('entry expression too large to retrace');
+    const run = await exec({ language: 'python', source: assembleLineProgram({ code, entry }), timeoutMs: 8000 });
+    if (run.timedOut) throw new Error('the walk timed out — try a smaller input');
+    const payload = parseLineEvents(run.stdout);
+    if (!payload) throw new Error(run.stderr ? `the run errored: ${run.stderr.slice(0, 200)}` : 'no walk was recorded');
+    // The student edits the ENTRY (their own array lives inside it) — derive the concrete
+    // array from what the run actually saw, so the view always matches the real input.
+    const seen = arrayVar
+      ? payload.events.map((e) => e?.locals?.[arrayVar]).find((v) => Array.isArray(v) && v.length > 0)
+      : null;
+    const concrete = seen ?? array;
+    if (!Array.isArray(concrete) || concrete.length === 0) throw new Error('could not determine the concrete array of this run');
+    if (concrete.length > 40) throw new Error('array too large to retrace (max 40 values)');
+    const trace = compilePointerWalk({ ...payload, code, array: concrete, pointers, examine, arrayVar, eliminatedOutside, window });
+    trace.meta = { tool, params: { code, entry, array: concrete, pointers, examine, arrayVar, eliminatedOutside, window } };
     return trace;
   }
 
