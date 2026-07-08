@@ -22,7 +22,18 @@ const concurrency = Number(process.env.WORKER_CONCURRENCY || 2);
 const worker = new Worker(
   JOB_NAME,
   async (job) => processLessonJob(job.data, { report: (progress) => job.updateProgress(progress) }),
-  { connection, concurrency },
+  {
+    connection,
+    concurrency,
+    // Long-AI-job lock tuning (measured 2026-07-08: a 20-minute lesson died to "job stalled
+    // more than allowable limit" after ONE >30s renewal miss on the DEFAULT 30s lock). A long
+    // lock plus stall forgiveness means a transient event-loop or Redis hiccup costs nothing;
+    // a genuinely dead worker still gets its jobs re-queued (idempotent lessonIds make the
+    // retry overwrite the same lesson).
+    lockDuration: 120_000,
+    stalledInterval: 60_000,
+    maxStalledCount: 3,
+  },
 );
 
 // Heartbeat: refresh a short-TTL key so /api/health can tell a worker is alive. If the worker
