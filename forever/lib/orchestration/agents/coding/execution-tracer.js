@@ -18,6 +18,7 @@ import { compileGraphWalk } from '../../../execution/trace/engines.js';
 import { compileLinkedListTrace, assembleListProgram, parseListEvents } from '../../../execution/trace/engines.js';
 import { compileDivideConquer, assembleDivideProgram, parseDivideEvents } from '../../../execution/trace/engines.js';
 import { compileTrieTrace, assembleTrieProgram, parseTrieEvents } from '../../../execution/trace/engines.js';
+import { compileDpTable, assembleDpProgram, parseDpEvents } from '../../../execution/trace/engines.js';
 import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../../../execution/trace/engines.js';
 import { compilePointerWalk } from '../../../execution/trace/engines.js';
 import { compileOperationsTrace } from '../../../execution/trace/engines.js';
@@ -83,6 +84,17 @@ two pointers, sliding window, in-place sorting/partitioning): INSTEAD of "progra
 with "code" = the clean function definition. Our engine runs it for real and animates the
 pointers riding the array — do not write tracking code. For sorting ALWAYS set "arrayVar" so
 every swap is a visible flash, and set "examine" for search algorithms so the probed cell lights up.
+
+DP-TABLE MODE (python only) — for TABULATION dynamic programming (LCS, edit distance, knapsack,
+grid paths, coin change — any bottom-up table fill): INSTEAD of "program", output
+  "dptable": {"entry": "<ONE call expression, e.g. lcs('abcde', 'ace')>",
+              "dp": "dp" (the table variable inside 'code' — 2-D list of lists, or a 1-D list),
+              "rowLabels": ["","a","b","c"] / "colLabels": [...] (optional, MUST match the final
+              table dimensions — e.g. '' + one label per character for LCS)}
+with "code" = the clean bottom-up implementation. Our tracker snapshots the REAL table at every
+line: the grid fills cell by cell with actual old -> new values, base row/column taught, the
+answer read out of the final cell. Keep the example SMALL (table <= 24x24 — bigger fails).
+Top-down/memoized recursion stays in RECURSION MODE; do not write tracking code.
 
 TRIE MODE (python only) — for prefix-tree lessons (implement trie, insert/search/startsWith,
 autocomplete, word dictionary): INSTEAD of "program", output
@@ -273,6 +285,35 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Graph walk failed: ${error.message}`;
+        logAttempt(attempt, lastError);
+        continue;
+      }
+    }
+
+    // DP-TABLE MODE: bottom-up DP — the declared table variable is snapshotted faithfully per
+    // line; the grid fills from the REAL run (the last family to shed model-written trackers).
+    if (json.dptable && typeof json.dptable === 'object' && lang === 'python' && code) {
+      try {
+        const d = json.dptable;
+        const source = assembleDpProgram({ code, entry: d.entry, dp: d.dp ?? 'dp' });
+        const run = await exec({ language: 'python', source });
+        if (run.timedOut) throw new Error('dp-table run timed out (likely an infinite loop)');
+        const payload = parseDpEvents(run.stdout);
+        if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(0, 300)}` : 'run printed no @@DPTABLE line');
+        const trace = compileDpTable({
+          ...payload, code, entry: d.entry,
+          rowLabels: Array.isArray(d.rowLabels) ? d.rowLabels : null,
+          colLabels: Array.isArray(d.colLabels) ? d.colLabels : null,
+          language: 'python',
+        });
+        assertDryRunQuality(trace, { directive, code, attempt, maxFixes });
+        trace.meta = {
+          tool: 'dptable',
+          params: { code, entry: d.entry, dp: d.dp ?? 'dp', rowLabels: d.rowLabels ?? null, colLabels: d.colLabels ?? null },
+        };
+        return { trace, usage, fixes: attempt };
+      } catch (error) {
+        lastError = `DP-table trace failed: ${error.message}`;
         logAttempt(attempt, lastError);
         continue;
       }

@@ -14,10 +14,12 @@ import { compileDivideConquer } from './divide-conquer/compiler.js';
 import { assembleDivideProgram, parseDivideEvents } from './divide-conquer/tracker.js';
 import { compileTrieTrace } from './trie/compiler.js';
 import { assembleTrieProgram, parseTrieEvents } from './trie/tracker.js';
+import { compileDpTable } from './dp-table/compiler.js';
+import { assembleDpProgram, parseDpEvents } from './dp-table/tracker.js';
 import { assembleLineProgram, parseLineEvents } from './line-sim/compiler.js';
 import { runCode } from '../run-code.js';
 
-export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk', 'graphwalk', 'linkedlist', 'divideconquer', 'trie']);
+export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk', 'graphwalk', 'linkedlist', 'divideconquer', 'trie', 'dptable']);
 
 export async function retrace({ tool, params } = {}, deps = {}) {
   const exec = deps.runCode ?? runCode;
@@ -123,6 +125,21 @@ export async function retrace({ tool, params } = {}, deps = {}) {
     if (!payload) throw new Error(run.stderr ? `the run errored: ${run.stderr.slice(0, 200)}` : 'no trie activity was recorded');
     const trace = compileTrieTrace({ ...payload, code, entry });
     trace.meta = { tool, params: { code, entry, root, childrenAttr, endAttr, cursors } };
+    return trace;
+  }
+
+  if (tool === 'dptable') {
+    const { code, entry, dp, rowLabels, colLabels } = params ?? {};
+    if (String(code ?? '').length > 4000) throw new Error('code too large to retrace');
+    if (String(entry ?? '').length > 200) throw new Error('entry expression too large to retrace');
+    const run = await exec({ language: 'python', source: assembleDpProgram({ code, entry, dp }), timeoutMs: 8000 });
+    if (run.timedOut) throw new Error('the run timed out — try smaller inputs');
+    const payload = parseDpEvents(run.stdout);
+    if (!payload) throw new Error(run.stderr ? `the run errored: ${run.stderr.slice(0, 200)}` : 'no table was recorded');
+    // The student's inputs change the table's dimensions — the lesson's labels only apply if
+    // they still fit; otherwise the grid falls back to numeric indices (honest, never stale).
+    const trace = compileDpTable({ ...payload, code, entry, rowLabels: rowLabels ?? null, colLabels: colLabels ?? null });
+    trace.meta = { tool, params: { code, entry, dp, rowLabels: rowLabels ?? null, colLabels: colLabels ?? null } };
     return trace;
   }
 

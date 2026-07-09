@@ -21,8 +21,10 @@
 //   array pointer algorithms (binary search, two pointers,  -> pointer-walk-compiler (settrace
 //     sliding window, in-place sorting: arrows, eliminated     run + array lens; declared
 //     half, window span, swap flashes, live values)            examine/arrayVar semantics)
-//   DP tables (LCS, knapsack: one frame per cell write,     -> tracer @@STEP array2d contract
-//     dependency reads highlighted, running best)              (real execution, grid view)
+//   DP tables (LCS, knapsack, edit distance: one visible   -> dp-table compiler (declared dp
+//     write per cell with real old->new values, base row       variable snapshotted faithfully
+//     taught, answer read out of the final cell)               per line; GridView fills; a
+//                                                              >24x24 table fails LOUD)
 //   structure-LESS algorithms ONLY (pure math like gcd,     -> line-simulator (sys.settrace:
 //     string building, greedy counting — nothing to draw)      every line + variable change of
 //                                                              a real run, truncation cut openly)
@@ -51,6 +53,8 @@ export { compileDivideConquer } from './divide-conquer/compiler.js';
 export { assembleDivideProgram, parseDivideEvents, DIVIDE_TRACKER_PY } from './divide-conquer/tracker.js';
 export { compileTrieTrace } from './trie/compiler.js';
 export { assembleTrieProgram, parseTrieEvents, TRIE_TRACKER_PY } from './trie/tracker.js';
+export { compileDpTable } from './dp-table/compiler.js';
+export { assembleDpProgram, parseDpEvents, DP_TRACKER_PY } from './dp-table/tracker.js';
 export { compileOperationsTrace, OPERATION_STRUCTURES } from './operations/compiler.js';
 export { compileRecursionTrace, assembleRecursionProgram, parseCallTree, RECURSION_TRACKER_PY } from './recursion/compiler.js';
 export { compilePointerWalk } from './pointer-walk/compiler.js';
