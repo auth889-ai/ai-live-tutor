@@ -15,6 +15,7 @@ import { parseStepEvents, countMalformedStepLines } from '../../../execution/tra
 import { assembleRecursionProgram, parseCallTree, compileRecursionTrace } from '../../../execution/trace/engines.js';
 import { compileTraversalTrace } from '../../../execution/trace/engines.js';
 import { compileGraphWalk } from '../../../execution/trace/engines.js';
+import { compileLinkedListTrace, assembleListProgram, parseListEvents } from '../../../execution/trace/engines.js';
 import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../../../execution/trace/engines.js';
 import { compilePointerWalk } from '../../../execution/trace/engines.js';
 import { compileOperationsTrace } from '../../../execution/trace/engines.js';
@@ -80,6 +81,16 @@ two pointers, sliding window, in-place sorting/partitioning): INSTEAD of "progra
 with "code" = the clean function definition. Our engine runs it for real and animates the
 pointers riding the array — do not write tracking code. For sorting ALWAYS set "arrayVar" so
 every swap is a visible flash, and set "examine" for search algorithms so the probed cell lights up.
+
+LINKED-LIST MODE (python only) — for algorithms over node chains (traverse, reverse, insert,
+delete, middle via slow/fast, cycle detection): INSTEAD of "program", output
+  "linkedlist": {"entry": "<ONE call expression, e.g. reverse(build([1,2,3,4]))>",
+                 "roots": ["head","prev","curr","nxt"] (EVERY pointer variable the code uses),
+                 "nextAttr": "next", "valAttr": "val"}
+with "code" = the clean Node class + algorithm + any tiny build helper the entry needs. Our
+identity-preserving tracker runs it for real: boxes are real node objects, arrows are live
+next-references, rewires flash, unreachable nodes fade (the garbage moment). Declare every
+pointer variable in "roots" — undeclared pointers are invisible. Do not write tracking code.
 
 OPERATIONS MODE — when the lesson teaches a DATA STRUCTURE ITSELF (stack, queue, hash map —
 push/pop, enqueue/dequeue, put/get/remove with collisions): INSTEAD of "program", output
@@ -234,6 +245,41 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Graph walk failed: ${error.message}`;
+        logAttempt(attempt, lastError);
+        continue;
+      }
+    }
+
+    // LINKED-LIST MODE: node chains — the dedicated identity-preserving tracker runs the
+    // student's REAL code; boxes never move, arrows flip, orphans fade.
+    if (json.linkedlist && typeof json.linkedlist === 'object' && lang === 'python' && code) {
+      try {
+        const source = assembleListProgram({
+          code,
+          entry: json.linkedlist.entry,
+          roots: json.linkedlist.roots,
+          nextAttr: json.linkedlist.nextAttr ?? 'next',
+          valAttr: json.linkedlist.valAttr ?? 'val',
+        });
+        const run = await exec({ language: 'python', source });
+        if (run.timedOut) throw new Error('linked-list run timed out (likely an infinite loop — a cycle without Floyd?)');
+        const payload = parseListEvents(run.stdout);
+        if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(0, 300)}` : 'run printed no @@LISTWALK line');
+        const trace = compileLinkedListTrace({ ...payload, code, entry: json.linkedlist.entry, language: 'python' });
+        assertDryRunQuality(trace, { directive, code, attempt, maxFixes });
+        trace.meta = {
+          tool: 'linkedlist',
+          params: {
+            code,
+            entry: json.linkedlist.entry,
+            roots: json.linkedlist.roots,
+            nextAttr: json.linkedlist.nextAttr ?? 'next',
+            valAttr: json.linkedlist.valAttr ?? 'val',
+          },
+        };
+        return { trace, usage, fixes: attempt };
+      } catch (error) {
+        lastError = `Linked-list trace failed: ${error.message}`;
         logAttempt(attempt, lastError);
         continue;
       }

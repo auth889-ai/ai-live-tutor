@@ -107,7 +107,7 @@ export function RetracePanel({ meta, onTrace }) {
         </>
       )}
 
-      {(meta.tool === 'pointerwalk' || meta.tool === 'graphwalk') && (
+      {['pointerwalk', 'graphwalk', 'linkedlist'].includes(meta.tool) && (
         <EntryCallControls meta={meta} busy={busy} request={request} setError={setError} />
       )}
 

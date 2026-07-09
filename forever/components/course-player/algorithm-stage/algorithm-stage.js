@@ -16,6 +16,7 @@ import { CodePanel } from '../panels/code-panel.js';
 import { RetracePanel } from './retrace-panel.js';
 import { ArrayView } from '../panels/array-view.js';
 import { GraphView } from '../panels/graph-view.js';
+import { LinkedListView } from '../panels/linked-list-view.js';
 import { GridView } from './grid-view.js';
 import { TraceTable } from './trace-table.js';
 
@@ -98,6 +99,12 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
             state forces ReactFlow to remount, re-measure and re-fit — the flicker/invisible
             class of bugs. A step with no graph payload simply renders the tree unhighlighted. */}
         {graphContent ? <GraphView content={graphContent} activeStep={index} /> : null}
+        {views.list ? (
+          <LinkedListView
+            content={{ trace: trace.steps.map((s) => ({ note: '', ...(s.list ?? {}) })) }}
+            activeStep={index}
+          />
+        ) : null}
         {views.graph ? <OrderStrip step={step} nodes={views.graph.nodes ?? []} /> : null}
         <TraceTable history={historySteps} allSteps={trace.steps} />
       </div>

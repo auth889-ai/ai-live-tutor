@@ -8,10 +8,12 @@ import { compileTraversalTrace } from './traversal/compiler.js';
 import { compileRecursionTrace, assembleRecursionProgram, parseCallTree } from './recursion/compiler.js';
 import { compilePointerWalk } from './pointer-walk/compiler.js';
 import { compileGraphWalk } from './graph-walk/compiler.js';
+import { compileLinkedListTrace } from './linked-list/compiler.js';
+import { assembleListProgram, parseListEvents } from './linked-list/tracker.js';
 import { assembleLineProgram, parseLineEvents } from './line-sim/compiler.js';
 import { runCode } from '../run-code.js';
 
-export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk', 'graphwalk']);
+export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk', 'graphwalk', 'linkedlist']);
 
 export async function retrace({ tool, params } = {}, deps = {}) {
   const exec = deps.runCode ?? runCode;
@@ -73,6 +75,20 @@ export async function retrace({ tool, params } = {}, deps = {}) {
     if (!payload) throw new Error(run.stderr ? `the run errored: ${run.stderr.slice(0, 200)}` : 'no walk was recorded');
     const trace = compileGraphWalk({ ...payload, code, entry, graph, lens });
     trace.meta = { tool, params: { code, entry, graph, lens } };
+    return trace;
+  }
+
+  if (tool === 'linkedlist') {
+    const { code, entry, roots, nextAttr, valAttr } = params ?? {};
+    if (String(code ?? '').length > 4000) throw new Error('code too large to retrace');
+    if (String(entry ?? '').length > 200) throw new Error('entry expression too large to retrace');
+    const source = assembleListProgram({ code, entry, roots, nextAttr, valAttr });
+    const run = await exec({ language: 'python', source, timeoutMs: 8000 });
+    if (run.timedOut) throw new Error('the run timed out — try a smaller list');
+    const payload = parseListEvents(run.stdout);
+    if (!payload) throw new Error(run.stderr ? `the run errored: ${run.stderr.slice(0, 200)}` : 'no chain activity was recorded');
+    const trace = compileLinkedListTrace({ ...payload, code, entry });
+    trace.meta = { tool, params: { code, entry, roots, nextAttr, valAttr } };
     return trace;
   }
 

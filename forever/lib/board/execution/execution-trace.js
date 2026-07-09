@@ -38,6 +38,13 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
       if (!graphIds.has(String(e.from)) || !graphIds.has(String(e.to))) throw new Error(`${context} views.graph edge references a missing node`);
     }
   }
+  // Linked-list chain view: node ids in FIRST-APPEARANCE order (box positions are fixed for
+  // the whole animation — only arrows and named pointers move between steps).
+  let listIds = null;
+  if (views.list !== undefined) {
+    if (!Array.isArray(views.list.nodes) || views.list.nodes.length === 0) throw new Error(`${context} views.list needs nodes[]`);
+    listIds = new Set(views.list.nodes.map((n) => String(n.id)));
+  }
   // Array2DTracer equivalent: a grid / DP table (Fibonacci memo, LCS, knapsack, matrices, grids).
   let grid = null;
   if (views.array2d !== undefined) {
@@ -76,6 +83,10 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     if (step.array2d !== undefined) {
       if (!grid) throw new Error(`${at} has array2d state but no views.array2d is declared`);
       validateGridState(step.array2d, grid, at);
+    }
+    if (step.list !== undefined) {
+      if (!listIds) throw new Error(`${at} has list state but no views.list is declared`);
+      validateListState(step.list, listIds, at);
     }
     if (step.stack !== undefined && !Array.isArray(step.stack)) throw new Error(`${at} stack must be an array`);
     if (step.queue !== undefined && !Array.isArray(step.queue)) throw new Error(`${at} queue must be an array`);
@@ -184,6 +195,23 @@ function validateGridState(state, grid, at) {
     if (!Array.isArray(state.values)) throw new Error(`${at} array2d values must be an array of [row,col,value]`);
     for (const v of state.values) {
       if (!Array.isArray(v) || v.length !== 3 || !cellIn([v[0], v[1]])) throw new Error(`${at} array2d value must be [row,col,value] within the grid`);
+    }
+  }
+}
+
+// A linked-list chain state: node snapshots {id, value, next, orphan?, rewired?} plus the
+// named pointers standing on nodes (or None). Every referenced id must be a declared node.
+function validateListState(state, ids, at) {
+  if (typeof state !== 'object' || Array.isArray(state)) throw new Error(`${at} list state must be an object`);
+  if (!Array.isArray(state.nodes)) throw new Error(`${at} list nodes must be an array`);
+  for (const n of state.nodes) {
+    if (!n || typeof n !== 'object' || !ids.has(String(n.id))) throw new Error(`${at} list node references a missing id`);
+    if (n.next !== undefined && n.next !== null && !ids.has(String(n.next))) throw new Error(`${at} list node next references a missing id`);
+  }
+  if (state.pointers !== undefined) {
+    if (typeof state.pointers !== 'object' || Array.isArray(state.pointers)) throw new Error(`${at} list pointers must be an object`);
+    for (const nid of Object.values(state.pointers)) {
+      if (nid !== null && !ids.has(String(nid))) throw new Error(`${at} list pointer references a missing id`);
     }
   }
 }

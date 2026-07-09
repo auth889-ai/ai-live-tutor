@@ -31,12 +31,14 @@
 //   data structures THEMSELVES (stack push/pop, queue      -> operations/compiler (one frame
 //     enqueue/dequeue, hash map put/get: collisions,           per op, real hashes/chains,
 //     updates, misses, underflow taught as lessons)            underflow narrated)
-//   linked list (chain view with node insert/delete)       -> PLANNED: needs a dedicated
-//                                                              chain renderer first — not
-//                                                              shipped weak on the graph view
+//   linked list (traverse, reverse, insert, delete,        -> linked-list compiler (dedicated
+//     slow/fast, cycle detection: fixed boxes, arrows         identity-preserving tracker +
+//     flip, orphans fade — real node objects)                 LinkedListView chain renderer)
 
 export { compileTraversalTrace, TRAVERSAL_KINDS } from './traversal/compiler.js';
 export { compileGraphWalk, GRAPH_LENS_ROLES } from './graph-walk/compiler.js';
+export { compileLinkedListTrace } from './linked-list/compiler.js';
+export { assembleListProgram, parseListEvents, LIST_TRACKER_PY } from './linked-list/tracker.js';
 export { compileOperationsTrace, OPERATION_STRUCTURES } from './operations/compiler.js';
 export { compileRecursionTrace, assembleRecursionProgram, parseCallTree, RECURSION_TRACKER_PY } from './recursion/compiler.js';
 export { compilePointerWalk } from './pointer-walk/compiler.js';
