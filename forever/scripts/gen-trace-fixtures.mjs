@@ -23,6 +23,8 @@ import { compileDpTable } from '../lib/execution/trace/dp-table/compiler.js';
 import { assembleDpProgram, parseDpEvents } from '../lib/execution/trace/dp-table/tracker.js';
 import { compileOperationsTrace } from '../lib/execution/trace/operations/compiler.js';
 import { detectCollectionOps } from '../lib/execution/trace/collections/detect.js';
+import { compileStructureTrace } from '../lib/execution/trace/structure/compiler.js';
+import { assembleStructureProgram, parseStructureEvents } from '../lib/execution/trace/structure/tracker.js';
 
 const py = (source) => execFileSync('python3', ['-c', source], { encoding: 'utf8', timeout: 20000 });
 const out = [];
@@ -97,6 +99,15 @@ add('Hash map — put/get with collision', compileOperationsTrace({
   structure: 'hash_map', code: 'm = {}\nm[k] = v\nm.get(k)\ndel m[k]', buckets: 4, lines: { put: 2, get: 3, remove: 4 },
   ops: [{ op: 'put', key: 'cat', value: 1 }, { op: 'put', key: 'dog', value: 2 }, { op: 'put', key: 'act', value: 3 }, { op: 'get', key: 'act' }, { op: 'get', key: 'ghost' }],
 }));
+
+// --- UNIVERSAL STRUCTURE: any tree/graph problem draws ITSELF from the real run (zero
+// declaration) — LC 226 invert binary tree through the auto-extraction engine. ---
+{
+  const code = 'class TreeNode:\n    def __init__(self, val):\n        self.val = val\n        self.left = None\n        self.right = None\ndef build():\n    root = TreeNode(4)\n    root.left = TreeNode(2)\n    root.right = TreeNode(7)\n    root.left.left = TreeNode(1)\n    root.left.right = TreeNode(3)\n    root.right.left = TreeNode(6)\n    root.right.right = TreeNode(9)\n    return root\ntree = build()\ndef invert(node):\n    if node is None:\n        return None\n    node.left, node.right = node.right, node.left\n    invert(node.left)\n    invert(node.right)\n    return node';
+  const entry = 'invert(tree)';
+  const payload = parseStructureEvents(py(assembleStructureProgram({ code, entry })));
+  add('AUTO-TREE: Invert Binary Tree (extracted)', compileStructureTrace({ ...payload, code, entry }));
+}
 
 // --- AUTO-UPGRADE: an in-code stack is DETECTED from the real run and rendered as the elite
 // operations view (no declared family) — the operation-pattern edge over shape-only tools. ---

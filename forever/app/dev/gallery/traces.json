@@ -6834,6 +6834,505 @@
     }
   },
   {
+    "name": "AUTO-TREE: Invert Binary Tree (extracted)",
+    "trace": {
+      "language": "python",
+      "code": "class TreeNode:\n    def __init__(self, val):\n        self.val = val\n        self.left = None\n        self.right = None\ndef build():\n    root = TreeNode(4)\n    root.left = TreeNode(2)\n    root.right = TreeNode(7)\n    root.left.left = TreeNode(1)\n    root.left.right = TreeNode(3)\n    root.right.left = TreeNode(6)\n    root.right.right = TreeNode(9)\n    return root\ntree = build()\ndef invert(node):\n    if node is None:\n        return None\n    node.left, node.right = node.right, node.left\n    invert(node.left)\n    invert(node.right)\n    return node",
+      "views": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "n1",
+              "label": "4"
+            },
+            {
+              "id": "n3",
+              "label": "7"
+            },
+            {
+              "id": "n2",
+              "label": "2"
+            },
+            {
+              "id": "n7",
+              "label": "9"
+            },
+            {
+              "id": "n6",
+              "label": "6"
+            },
+            {
+              "id": "n5",
+              "label": "3"
+            },
+            {
+              "id": "n4",
+              "label": "1"
+            }
+          ],
+          "edges": [
+            {
+              "from": "n1",
+              "to": "n3",
+              "side": "left"
+            },
+            {
+              "from": "n1",
+              "to": "n2",
+              "side": "right"
+            },
+            {
+              "from": "n3",
+              "to": "n7",
+              "side": "left"
+            },
+            {
+              "from": "n3",
+              "to": "n6",
+              "side": "right"
+            },
+            {
+              "from": "n2",
+              "to": "n5",
+              "side": "left"
+            },
+            {
+              "from": "n2",
+              "to": "n4",
+              "side": "right"
+            }
+          ],
+          "directed": true
+        }
+      },
+      "steps": [
+        {
+          "line": 17,
+          "explanation": "We run invert(tree) and watch the structure itself: every circle is a real node object (or adjacency entry) extracted live from memory, every arrow a real reference. Nothing here was declared — the picture IS the program's own data, drawn as it exists at each step.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "revealed": [],
+            "pointers": {}
+          },
+          "variables": {}
+        },
+        {
+          "line": 17,
+          "explanation": "node steps to the node holding '4' — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n1",
+            "visited": [],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n1"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 17,
+          "explanation": "node steps to the node holding '7' leaving '4' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n3",
+            "visited": [
+              "n1"
+            ],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n3"
+            }
+          },
+          "activeEdge": [
+            "n1",
+            "n3"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 17,
+          "explanation": "node steps to the node holding '9' leaving '7' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n7",
+            "visited": [
+              "n1",
+              "n3"
+            ],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n7"
+            }
+          },
+          "activeEdge": [
+            "n3",
+            "n7"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 21,
+          "explanation": "node steps to the node holding '7' leaving '9' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n3",
+            "visited": [
+              "n1",
+              "n3",
+              "n7"
+            ],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n3"
+            }
+          },
+          "activeEdge": [
+            "n7",
+            "n3"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 17,
+          "explanation": "node steps to the node holding '6' leaving '7' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n6",
+            "visited": [
+              "n1",
+              "n3",
+              "n7"
+            ],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n6"
+            }
+          },
+          "activeEdge": [
+            "n3",
+            "n6"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 22,
+          "explanation": "node steps to the node holding '7' leaving '6' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n3",
+            "visited": [
+              "n1",
+              "n3",
+              "n7",
+              "n6"
+            ],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n3"
+            }
+          },
+          "activeEdge": [
+            "n6",
+            "n3"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 21,
+          "explanation": "node steps to the node holding '4' leaving '7' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n1",
+            "visited": [
+              "n1",
+              "n3",
+              "n7",
+              "n6"
+            ],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n1"
+            }
+          },
+          "activeEdge": [
+            "n3",
+            "n1"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 17,
+          "explanation": "node steps to the node holding '2' leaving '4' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n2",
+            "visited": [
+              "n1",
+              "n3",
+              "n7",
+              "n6"
+            ],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n2"
+            }
+          },
+          "activeEdge": [
+            "n1",
+            "n2"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 17,
+          "explanation": "node steps to the node holding '3' leaving '2' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n5",
+            "visited": [
+              "n1",
+              "n3",
+              "n7",
+              "n6",
+              "n2"
+            ],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n5"
+            }
+          },
+          "activeEdge": [
+            "n2",
+            "n5"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 21,
+          "explanation": "node steps to the node holding '2' leaving '3' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n2",
+            "visited": [
+              "n1",
+              "n3",
+              "n7",
+              "n6",
+              "n2",
+              "n5"
+            ],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n2"
+            }
+          },
+          "activeEdge": [
+            "n5",
+            "n2"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 17,
+          "explanation": "node steps to the node holding '1' leaving '2' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n4",
+            "visited": [
+              "n1",
+              "n3",
+              "n7",
+              "n6",
+              "n2",
+              "n5"
+            ],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n4"
+            }
+          },
+          "activeEdge": [
+            "n2",
+            "n4"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 22,
+          "explanation": "node steps to the node holding '2' leaving '1' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n2",
+            "visited": [
+              "n1",
+              "n3",
+              "n7",
+              "n6",
+              "n2",
+              "n5",
+              "n4"
+            ],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n2"
+            }
+          },
+          "activeEdge": [
+            "n4",
+            "n2"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 22,
+          "explanation": "node steps to the node holding '4' leaving '2' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "n1",
+            "visited": [
+              "n1",
+              "n3",
+              "n7",
+              "n6",
+              "n2",
+              "n5",
+              "n4"
+            ],
+            "revealed": [
+              "n1",
+              "n2",
+              "n3",
+              "n4",
+              "n5",
+              "n6",
+              "n7"
+            ],
+            "pointers": {
+              "node": "n1"
+            }
+          },
+          "activeEdge": [
+            "n2",
+            "n1"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 22,
+          "explanation": "The run is complete and the call returns \"n1\". The final structure holds 7 nodes and 6 links — every one extracted from the real objects the code created and walked. That picture is not an illustration of the algorithm; it IS the algorithm's memory.",
+          "graph": {
+            "current": null,
+            "visited": [
+              "n1",
+              "n3",
+              "n7",
+              "n6",
+              "n2",
+              "n5",
+              "n4"
+            ],
+            "revealed": [
+              "n1",
+              "n3",
+              "n2",
+              "n7",
+              "n6",
+              "n5",
+              "n4"
+            ],
+            "pointers": {}
+          },
+          "variables": {}
+        }
+      ]
+    }
+  },
+  {
     "name": "AUTO-STACK: Valid Parentheses (detected)",
     "trace": {
       "language": "python",
