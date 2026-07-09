@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compilePointerWalk } from '../lib/execution/trace/pointer-walk/compiler.js';
-import { assembleLineProgram, parseLineEvents } from '../lib/execution/trace/line-sim/compiler.js';
+import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../lib/execution/trace/line-sim/compiler.js';
 import { compileGraphWalk } from '../lib/execution/trace/graph-walk/compiler.js';
 import { compileLinkedListTrace } from '../lib/execution/trace/linked-list/compiler.js';
 import { assembleListProgram, parseListEvents } from '../lib/execution/trace/linked-list/tracker.js';
@@ -96,6 +96,18 @@ add('Hash map — put/get with collision', compileOperationsTrace({
   structure: 'hash_map', code: 'm = {}\nm[k] = v\nm.get(k)\ndel m[k]', buckets: 4, lines: { put: 2, get: 3, remove: 4 },
   ops: [{ op: 'put', key: 'cat', value: 1 }, { op: 'put', key: 'dog', value: 2 }, { op: 'put', key: 'act', value: 3 }, { op: 'get', key: 'act' }, { op: 'get', key: 'ghost' }],
 }));
+
+// --- LINE-SIM FLOOR examples (fit no engine — the honest "floor": real line-by-line trace) ---
+{
+  const code = 'def valid(s):\n    st = []\n    pairs = {")": "(", "]": "[", "}": "{"}\n    for c in s:\n        if c in pairs:\n            if not st or st.pop() != pairs[c]:\n                return False\n        else:\n            st.append(c)\n    return not st';
+  const entry = 'valid("([{}])")';
+  add('FLOOR: Valid Parentheses (line-sim)', compileLineTrace({ ...parseLineEvents(py(assembleLineProgram({ code, entry }))), code, entry }));
+}
+{
+  const code = 'def kadane(a):\n    best = a[0]\n    cur = a[0]\n    for x in a[1:]:\n        cur = max(x, cur + x)\n        best = max(best, cur)\n    return best';
+  const entry = 'kadane([-2, 1, -3, 4, -1, 2, 1, -5, 4])';
+  add('FLOOR: Max Subarray / Kadane (line-sim)', compileLineTrace({ ...parseLineEvents(py(assembleLineProgram({ code, entry }))), code, entry }));
+}
 
 const dir = dirname(fileURLToPath(import.meta.url));
 const target = join(dir, '..', 'app', 'dev', 'gallery', 'traces.json');

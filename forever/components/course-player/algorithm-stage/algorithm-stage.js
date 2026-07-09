@@ -243,6 +243,14 @@ function OrderStrip({ step, nodes }) {
 // rendered from THE SAME step object as the code line, structure and caption — so
 // "i=3, maxLen=2" changes at the exact moment the tutor says it. Values that changed
 // since the previous step get the accent ring.
+// A dict/list variable must read as JSON, not "[object Object]" (String() on an object) —
+// line-sim captures real dicts/lists (pairs={...}, seen={...}), and the panel showed them broken.
+function fmtValue(value) {
+  if (value === null) return 'None';
+  if (typeof value === 'object') { try { return JSON.stringify(value); } catch { return String(value); } }
+  return String(value);
+}
+
 function Vars({ step }) {
   const vars = step.variables;
   if (!vars || typeof vars !== 'object' || Array.isArray(vars) || Object.keys(vars).length === 0) return null;
@@ -253,7 +261,7 @@ function Vars({ step }) {
         {Object.entries(vars).map(([name, value]) => (
           <span key={name} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, border: '2px solid #2f7d4a', borderRadius: 8, background: '#fff', padding: '3px 8px', fontFamily: 'ui-monospace, monospace', fontSize: 12.5 }}>
             <span style={{ color: '#8a6d3b' }}>{name}</span>
-            <span style={{ fontWeight: 800, color: '#2b211a' }}>= {String(value)}</span>
+            <span style={{ fontWeight: 800, color: '#2b211a' }}>= {fmtValue(value)}</span>
           </span>
         ))}
       </div>

@@ -84,7 +84,7 @@ export function TraceTable({ history = [], allSteps = null, nodeLabels = null })
                 {has.queue ? <td style={cell(false)}>{fmtList(s.queue)}</td> : null}
                 {has.stack ? <td style={cell(false)}>{fmtList(s.stack)}</td> : null}
                 {has.visited ? <td style={cell(false)}>{(s.graph?.visited ?? []).map(labelOf).join(', ')}</td> : null}
-                {evolving.map((c) => <td key={c} style={{ ...cell(false), textAlign: 'center' }}>{c in vars ? String(vars[c]) : ''}</td>)}
+                {evolving.map((c) => <td key={c} style={{ ...cell(false), textAlign: 'center' }}>{c in vars ? fmtCell(vars[c]) : ''}</td>)}
                 {hasAction ? <td style={{ ...cell(false), fontFamily: 'inherit', color: '#5a4a2a' }}>{firstSentence(s.explanation)}</td> : null}
               </tr>
             );
@@ -131,6 +131,13 @@ function firstSentence(text) {
   const end = t.search(/\.\s|\.$/);
   const first = end === -1 ? t : t.slice(0, end + 1);
   return first.length > 120 ? `${first.slice(0, 117)}…` : first;
+}
+
+// Dicts/lists read as JSON, not "[object Object]".
+function fmtCell(v) {
+  if (v === null) return 'None';
+  if (typeof v === 'object') { try { return JSON.stringify(v); } catch { return String(v); } }
+  return String(v);
 }
 
 function fmtList(arr) {
