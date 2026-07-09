@@ -61,12 +61,12 @@ const SORT = {
 const SAMPLES = { 'Binary search (array)': BINARY_SEARCH, 'BFS (graph + queue + edge)': BFS, 'Fibonacci DP (2D table)': DP_FIB, 'Bubble sort (compare/swap)': SORT };
 
 export default function StagePreview() {
-  const [name, setName] = useState('Binary search (array)');
-  const [progress, setProgress] = useState(0);
+  const [name, setName] = useState('BFS (graph + queue + edge)');
+  const [progress, setProgress] = useState(0.85); // dev default lands on the richest view
   const trace = SAMPLES[name];
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto', padding: 24, fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24, fontFamily: 'system-ui, sans-serif' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>AlgorithmStage — one primitive, every algorithm</h1>
       <p style={{ color: '#8a8172', fontSize: 13, marginTop: 0 }}>
         One ExecutionTrace drives all panels. Scrub the clock to watch the code line, structure, pointers, queue, DP table and trace table advance together.

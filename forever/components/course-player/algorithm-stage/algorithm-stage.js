@@ -88,9 +88,13 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
   // visited-order strip and the growing trace table under it; the code rides the right with the
   // step explanation and live variables directly beneath — the eye path a human tutor points:
   // tree → order → table, code → why → state. One step object feeds both columns (atomic sync).
+  // Layout (target tree2.png): a top row with the STRUCTURE on the left (it is the lesson) and
+  // the code + live state as a right rail; then the Dry Run Trace table FULL-WIDTH beneath, so
+  // its Node/Queue/Visited/Action columns have room to breathe instead of being crushed.
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>
-      <div style={{ flex: '1.4 1 380px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>
+      <div style={{ flex: '1.6 1 420px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {views.array && step.array ? (
           <ArrayView content={{ values: views.array.values, trace: [{ note: '', ...step.array }] }} activeStep={0} />
         ) : null}
@@ -106,10 +110,16 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
           />
         ) : null}
         {views.graph ? <OrderStrip step={step} nodes={views.graph.nodes ?? []} /> : null}
-        <TraceTable history={historySteps} allSteps={trace.steps} />
+        {/* The Dry Run Trace sits directly under the structure (target tree2.png) in the wide
+            centre column — the eye path tree → order → table. */}
+        <TraceTable
+          history={historySteps}
+          allSteps={trace.steps}
+          nodeLabels={views.graph ? Object.fromEntries((views.graph.nodes ?? []).map((n) => [String(n.id), String(n.label ?? n.id)])) : null}
+        />
       </div>
 
-      <div style={{ flex: '1 1 320px', minWidth: 300, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ flex: '1 1 340px', minWidth: 300, maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <CodePanel codeObject={{ content: trace.code, language: trace.language }} revealProgress={1} activeLine={step.line} />
         <StepControls
           index={index}
@@ -134,6 +144,7 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
         <Caption index={index} total={trace.steps.length} text={step.explanation} />
         <Vars step={step} />
         <Collections step={step} />
+      </div>
       </div>
     </div>
   );
