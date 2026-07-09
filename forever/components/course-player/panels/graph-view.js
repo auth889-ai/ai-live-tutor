@@ -132,8 +132,9 @@ function buildFlowElements(laid, content, state) {
         fontSize: circle ? Math.max(9, Math.min(17, Math.floor((CIRCLE - 12) / Math.max(1, longest * 0.62)))) : 14,
         // NOTE: never put `transform` here — ReactFlow uses transform:translate() to POSITION the
         // node, so a scale() would clobber the position (nodes collapse to the origin). Emphasis
-        // is via border width + glow only.
-        boxShadow: isCurrent ? '0 0 0 6px rgba(211,84,0,0.32), 0 2px 12px rgba(211,84,0,0.4)' : 'none',
+        // is via a PULSING glow (keyframe below) on the current node + subtle depth on the rest.
+        boxShadow: isCurrent ? undefined : hasTrace && !isGhost(n.id) ? '0 2px 6px rgba(120,90,40,0.14)' : 'none',
+        animation: isCurrent ? 'algoNodePulse 1.7s ease-in-out infinite' : undefined,
         transition: 'background 0.3s, border-color 0.3s, color 0.3s, box-shadow 0.3s, opacity 0.25s ease-out',
       },
     };
@@ -187,8 +188,8 @@ function buildFlowElements(laid, content, state) {
       const clause = String(note).split(/(?<=[.:])\s/)[0].split(/\s+/).slice(0, 9).join(' ');
       nodes.push({
         id: '__callout__',
-        position: { x: base.x + base.width * 0.55 + 16, y: base.y - 58 },
-        data: { label: `◤ ${clause}` },
+        position: { x: base.x + base.width * 0.9 + 22, y: base.y - 66 },
+        data: { label: clause },
         draggable: false, selectable: false, focusable: false, zIndex: 40,
         style: {
           width: 184,
@@ -293,6 +294,12 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
   const height = Math.min(560, Math.max(240, laid.height + 60));
   return (
     <div>
+      {/* Current-node pulse (tree/-style aliveness) — the glow breathes so the eye finds the
+          active node instantly. box-shadow only (transform is reserved by ReactFlow). */}
+      <style>{`@keyframes algoNodePulse {
+        0%,100% { box-shadow: 0 0 0 4px rgba(211,84,0,0.30), 0 3px 14px rgba(211,84,0,0.36); }
+        50% { box-shadow: 0 0 0 10px rgba(211,84,0,0.12), 0 4px 20px rgba(211,84,0,0.5); }
+      }`}</style>
       {hasTrace ? (
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6, fontSize: 11.5, fontFamily: 'ui-monospace, monospace', color: '#5a4a2a' }}>
           <LegendChip swatch={{ background: '#ffd9a8', border: '2px solid #d35400' }} label="current" />
