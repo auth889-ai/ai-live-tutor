@@ -32,7 +32,11 @@ export function resolveTraceStep({ content, progress = 1, activeStep = null, act
     const revealed = Array.isArray(step.revealed) ? new Set(step.revealed.map(String)) : null;
     const returned = step.returned && typeof step.returned === 'object' && !Array.isArray(step.returned) ? step.returned : {};
     const memo = new Set(Array.isArray(step.memo) ? step.memo.map(String) : []);
-    return { current, visited, pointerAt, note: step.note ?? null, stepNum: at + 1, stepTotal: trace.length, activeEdge, revealed, returned, memo };
+    // Per-node values (dist/indegree) live ON the drawing; the previous step's values let the
+    // view render the instructor's "7 -> 3" rewrite at the exact relaxation moment.
+    const values = step.values && typeof step.values === 'object' ? step.values : {};
+    const prevValues = (at > 0 && trace[at - 1].values && typeof trace[at - 1].values === 'object') ? trace[at - 1].values : {};
+    return { current, visited, pointerAt, note: step.note ?? null, stepNum: at + 1, stepTotal: trace.length, activeEdge, revealed, returned, memo, values, prevValues };
   }
   const seq = Array.isArray(content?.highlightSequence) ? content.highlightSequence.map(String) : null;
   if (seq) {
@@ -46,7 +50,7 @@ export function resolveTraceStep({ content, progress = 1, activeStep = null, act
 }
 
 function EMPTY(over) {
-  return { current: null, visited: new Set(), pointerAt: new Map(), note: null, stepNum: 0, stepTotal: 0, activeEdge: null, revealed: null, returned: {}, memo: new Set(), ...over };
+  return { current: null, visited: new Set(), pointerAt: new Map(), note: null, stepNum: 0, stepTotal: 0, activeEdge: null, revealed: null, returned: {}, memo: new Set(), values: {}, prevValues: {}, ...over };
 }
 
 // A node is a ghost until it has been revealed (recursion tree grows call by call). Ghost holds

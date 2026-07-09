@@ -45,8 +45,10 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
       edges: g.edges,
       directed: g.directed,
       // note = the step's real narration; GraphView renders a short clause of it as a
-      // hand-drawn callout anchored to the current node (target graph.png).
-      trace: (trace.steps ?? []).map((s) => ({ note: s.explanation ?? '', ...(s.graph ?? {}), activeEdge: s.activeEdge })),
+      // hand-drawn callout anchored to the current node (target graph.png). values = the
+      // step's per-node numbers (dist/indegree) so they render ON the drawing — the
+      // instructors write these beside each node and rewrite them on every improvement.
+      trace: (trace.steps ?? []).map((s) => ({ note: s.explanation ?? '', ...(s.graph ?? {}), activeEdge: s.activeEdge, values: s.traceRow ?? null })),
     };
   }, [trace]);
 

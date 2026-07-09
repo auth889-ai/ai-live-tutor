@@ -38,12 +38,13 @@ const STATUS_STYLE = {
 // The visible node is an INNER div (rendered as ReactFlow node.data.label). The RF wrapper stays
 // transparent and fixed-size so edges anchor to a stable box while THIS div scales in on mount
 // (transform:scale is safe here — RF's transform is on the wrapper, not this element).
-const NodeInner = memo(function NodeInner({ label, status, circle, fontSize }) {
+const NodeInner = memo(function NodeInner({ label, status, circle, fontSize, badge }) {
   const c = STATUS_STYLE[status] ?? STATUS_STYLE.plain;
   return (
     <div
       className={`algo-node algo-node--${status}`}
       style={{
+        position: 'relative',
         width: '100%',
         height: '100%',
         boxSizing: 'border-box',
@@ -66,6 +67,21 @@ const NodeInner = memo(function NodeInner({ label, status, circle, fontSize }) {
       }}
     >
       {label}
+      {badge ? (
+        <div
+          className={badge.changed ? 'algo-badge algo-badge--changed' : 'algo-badge'}
+          style={{
+            position: 'absolute', top: '100%', left: '50%', transform: 'translate(-50%, 3px)',
+            whiteSpace: 'nowrap', padding: '1px 7px', borderRadius: 8, fontSize: 11.5, fontWeight: 800,
+            fontFamily: 'ui-monospace, monospace', lineHeight: 1.5, pointerEvents: 'none',
+            background: badge.changed ? '#e8604c' : '#fffcfa', color: badge.changed ? '#fff' : '#5a4a2a',
+            border: `1.5px solid ${badge.changed ? '#b93c2b' : '#e8d5c8'}`, boxShadow: '0 1px 4px rgba(120,90,40,0.15)',
+          }}
+        >
+          {badge.changed && badge.old !== undefined ? <s style={{ opacity: 0.75, marginRight: 4 }}>{badge.old}</s> : null}
+          {badge.text}
+        </div>
+      ) : null}
     </div>
   );
 });
@@ -131,6 +147,17 @@ function buildFlowElements(laid, content, state) {
     const circle = hasTrace;
     const value = returned[n.id];
     const label = value !== undefined ? `${n.label}\n= ${JSON.stringify(value)}` : n.label;
+    // The instructor move: per-node numbers (dist/indegree) live ON the drawing, and an
+    // improvement renders as the crossed-out old value next to the new one (their "7 -> 3").
+    const raw = state.values[n.label] ?? state.values[n.id];
+    const prev = state.prevValues[n.label] ?? state.prevValues[n.id];
+    const badge = raw !== undefined && raw !== null && raw !== ''
+      ? {
+        text: String(raw),
+        changed: JSON.stringify(prev) !== JSON.stringify(raw),
+        old: prev !== undefined && prev !== null && prev !== '' ? String(prev) : undefined,
+      }
+      : null;
     const longest = Math.max(...String(label).split('\n').map((l) => l.length));
     // Reference sizing (tree/): text starts HUGE and scales down to fit — bold labels carry
     // the drawing. Cap raised now that labels are compact (varying args only).
@@ -138,7 +165,7 @@ function buildFlowElements(laid, content, state) {
     nodes.push({
       id: n.id,
       position: circle ? { x: n.x + (n.width - CIRCLE) / 2, y: n.y + (n.height - CIRCLE) / 2 } : { x: n.x, y: n.y },
-      data: { label: <NodeInner label={label} status={status} circle={circle} fontSize={fontSize} /> },
+      data: { label: <NodeInner label={label} status={status} circle={circle} fontSize={fontSize} badge={badge} /> },
       // The wrapper is invisible + fixed-size: edges anchor to it while NodeInner animates.
       style: { width: circle ? CIRCLE : n.width, height: circle ? CIRCLE : n.height, background: 'transparent', border: 'none', padding: 0, boxShadow: 'none' },
     });
