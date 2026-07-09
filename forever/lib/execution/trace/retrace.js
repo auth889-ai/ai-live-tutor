@@ -12,10 +12,12 @@ import { compileLinkedListTrace } from './linked-list/compiler.js';
 import { assembleListProgram, parseListEvents } from './linked-list/tracker.js';
 import { compileDivideConquer } from './divide-conquer/compiler.js';
 import { assembleDivideProgram, parseDivideEvents } from './divide-conquer/tracker.js';
+import { compileTrieTrace } from './trie/compiler.js';
+import { assembleTrieProgram, parseTrieEvents } from './trie/tracker.js';
 import { assembleLineProgram, parseLineEvents } from './line-sim/compiler.js';
 import { runCode } from '../run-code.js';
 
-export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk', 'graphwalk', 'linkedlist', 'divideconquer']);
+export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk', 'graphwalk', 'linkedlist', 'divideconquer', 'trie']);
 
 export async function retrace({ tool, params } = {}, deps = {}) {
   const exec = deps.runCode ?? runCode;
@@ -105,6 +107,22 @@ export async function retrace({ tool, params } = {}, deps = {}) {
     if (!payload) throw new Error(run.stderr ? `the run errored: ${run.stderr.slice(0, 200)}` : 'no run was recorded');
     const trace = compileDivideConquer({ ...payload, code, entry, fn, pointers: Array.isArray(pointers) ? pointers : [] });
     trace.meta = { tool, params: { code, entry, fn, arrayVar, lo, hi, pointers } };
+    return trace;
+  }
+
+  if (tool === 'trie') {
+    const { code, entry, root, childrenAttr, endAttr, cursors } = params ?? {};
+    if (String(code ?? '').length > 4000) throw new Error('code too large to retrace');
+    if (String(entry ?? '').length > 200) throw new Error('entry expression too large to retrace');
+    const source = assembleTrieProgram({
+      code, entry, root, childrenAttr, endAttr, cursors: Array.isArray(cursors) && cursors.length ? cursors : undefined,
+    });
+    const run = await exec({ language: 'python', source, timeoutMs: 8000 });
+    if (run.timedOut) throw new Error('the run timed out — try fewer/shorter words');
+    const payload = parseTrieEvents(run.stdout);
+    if (!payload) throw new Error(run.stderr ? `the run errored: ${run.stderr.slice(0, 200)}` : 'no trie activity was recorded');
+    const trace = compileTrieTrace({ ...payload, code, entry });
+    trace.meta = { tool, params: { code, entry, root, childrenAttr, endAttr, cursors } };
     return trace;
   }
 

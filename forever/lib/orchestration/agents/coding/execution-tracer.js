@@ -17,6 +17,7 @@ import { compileTraversalTrace } from '../../../execution/trace/engines.js';
 import { compileGraphWalk } from '../../../execution/trace/engines.js';
 import { compileLinkedListTrace, assembleListProgram, parseListEvents } from '../../../execution/trace/engines.js';
 import { compileDivideConquer, assembleDivideProgram, parseDivideEvents } from '../../../execution/trace/engines.js';
+import { compileTrieTrace, assembleTrieProgram, parseTrieEvents } from '../../../execution/trace/engines.js';
 import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../../../execution/trace/engines.js';
 import { compilePointerWalk } from '../../../execution/trace/engines.js';
 import { compileOperationsTrace } from '../../../execution/trace/engines.js';
@@ -82,6 +83,19 @@ two pointers, sliding window, in-place sorting/partitioning): INSTEAD of "progra
 with "code" = the clean function definition. Our engine runs it for real and animates the
 pointers riding the array — do not write tracking code. For sorting ALWAYS set "arrayVar" so
 every swap is a visible flash, and set "examine" for search algorithms so the probed cell lights up.
+
+TRIE MODE (python only) — for prefix-tree lessons (implement trie, insert/search/startsWith,
+autocomplete, word dictionary): INSTEAD of "program", output
+  "trie": {"entry": "<ONE call expression, e.g. demo()>",
+           "root": "trie" (the variable holding the Trie instance or root node),
+           "childrenAttr": "children" (dict char->node, or a 26-slot list),
+           "endAttr": "is_end" (the end-of-word flag attribute),
+           "cursors": ["node","cur"] (EVERY node variable the code walks with)}
+with "code" = the clean TrieNode/Trie classes + operations + a demo function the entry calls
+(insert several words sharing prefixes, then search for a stored word AND for a prefix-only
+word like 'app' when 'apple' is stored — that contrast is the lesson). Our tracker runs it for
+real: the tree grows character by character, end-of-word nodes turn green, the cursor rides
+under the student's own variable name. Do not write tracking code.
 
 DIVIDE-CONQUER MODE (python only) — for recursive ARRAY splitting (merge sort, quicksort, and
 any partition/segment recursion): INSTEAD of "program", output
@@ -259,6 +273,33 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Graph walk failed: ${error.message}`;
+        logAttempt(attempt, lastError);
+        continue;
+      }
+    }
+
+    // TRIE MODE: prefix trees — the identity-preserving tracker chases the declared root and
+    // the tree grows character by character from the student's REAL run.
+    if (json.trie && typeof json.trie === 'object' && lang === 'python' && code) {
+      try {
+        const t = json.trie;
+        const source = assembleTrieProgram({
+          code, entry: t.entry, root: t.root, childrenAttr: t.childrenAttr ?? 'children', endAttr: t.endAttr ?? 'is_end',
+          cursors: Array.isArray(t.cursors) && t.cursors.length ? t.cursors : undefined,
+        });
+        const run = await exec({ language: 'python', source });
+        if (run.timedOut) throw new Error('trie run timed out (likely an infinite loop)');
+        const payload = parseTrieEvents(run.stdout);
+        if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(0, 300)}` : 'run printed no @@TRIE line');
+        const trace = compileTrieTrace({ ...payload, code, entry: t.entry, language: 'python' });
+        assertDryRunQuality(trace, { directive, code, attempt, maxFixes });
+        trace.meta = {
+          tool: 'trie',
+          params: { code, entry: t.entry, root: t.root, childrenAttr: t.childrenAttr ?? 'children', endAttr: t.endAttr ?? 'is_end', cursors: Array.isArray(t.cursors) ? t.cursors : null },
+        };
+        return { trace, usage, fixes: attempt };
+      } catch (error) {
+        lastError = `Trie trace failed: ${error.message}`;
         logAttempt(attempt, lastError);
         continue;
       }

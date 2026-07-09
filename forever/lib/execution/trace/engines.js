@@ -38,6 +38,10 @@
 //   linked list (traverse, reverse, insert, delete,        -> linked-list compiler (dedicated
 //     slow/fast, cycle detection: fixed boxes, arrows         identity-preserving tracker +
 //     flip, orphans fade — real node objects)                 LinkedListView chain renderer)
+//   trie (insert/search/startsWith/delete: tree grows       -> trie compiler (root chased thru
+//     char by char, end-of-word nodes green, cursor           declared children attr; create vs
+//     rides under the student's variable name, prune          reuse fork, app-vs-apple end-flag
+//     fades — VisuAlgo has NO trie module at all)             lesson, bottom-up prune)
 
 export { compileTraversalTrace, TRAVERSAL_KINDS } from './traversal/compiler.js';
 export { compileGraphWalk, GRAPH_LENS_ROLES } from './graph-walk/compiler.js';
@@ -45,6 +49,8 @@ export { compileLinkedListTrace } from './linked-list/compiler.js';
 export { assembleListProgram, parseListEvents, LIST_TRACKER_PY } from './linked-list/tracker.js';
 export { compileDivideConquer } from './divide-conquer/compiler.js';
 export { assembleDivideProgram, parseDivideEvents, DIVIDE_TRACKER_PY } from './divide-conquer/tracker.js';
+export { compileTrieTrace } from './trie/compiler.js';
+export { assembleTrieProgram, parseTrieEvents, TRIE_TRACKER_PY } from './trie/tracker.js';
 export { compileOperationsTrace, OPERATION_STRUCTURES } from './operations/compiler.js';
 export { compileRecursionTrace, assembleRecursionProgram, parseCallTree, RECURSION_TRACKER_PY } from './recursion/compiler.js';
 export { compilePointerWalk } from './pointer-walk/compiler.js';
