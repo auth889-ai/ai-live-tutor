@@ -55,7 +55,7 @@ test('quicksort through the tracker: focus band, swaps, and the segment tree in 
 });
 
 test('harness assembly is hardened: identifiers validated, single-expression entry', () => {
-  const ok = assembleDivideProgram({ code: 'x = 1', entry: 'qs([2,1], 0, 1)', fn: 'qs', arrayVar: 'arr' });
+  const ok = assembleDivideProgram({ code: 'def qs(a, lo, hi):\n    pass', entry: 'qs([2,1], 0, 1)', fn: 'qs', arrayVar: 'arr' });
   assert.ok(ok.includes('FN_NAME = "qs"'));
   assert.ok(ok.includes("compile(_src, '<student>', 'exec')"));
   assert.throws(() => assembleDivideProgram({ code: 'x', entry: 'a();b()', fn: 'qs', arrayVar: 'arr' }), /single expression/);

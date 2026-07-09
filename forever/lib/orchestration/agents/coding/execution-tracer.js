@@ -59,7 +59,9 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
     const ctx = { json, code, program, views, lang, exec };
     const mode = TRACER_MODES.find((m) => m.canHandle(ctx));
     if (!mode) {
-      lastError = 'Missing code or program in output.';
+      // Battery-measured: a bare "missing code or program" burned 3 retries on the same
+      // mistake — name exactly what a valid output contains so the next attempt can comply.
+      lastError = `No tracer mode matched the output. Emit "code" (the clean algorithm) AND exactly one mode key: ${TRACER_MODES.map((m) => m.key).join(', ')} — or a runnable "program" that prints @@STEP lines via json.dumps (never hand-built strings). Fields present were: ${Object.keys(json).join(', ') || 'none'}.`;
       logAttempt(attempt, lastError);
       continue;
     }

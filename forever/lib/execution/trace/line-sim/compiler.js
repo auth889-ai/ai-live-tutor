@@ -80,7 +80,7 @@ export function compileLineTrace({ events, result, code, entry = null, language 
 
   const steps = [];
   let prevLocals = {};
-  for (const ev of lineEvents) {
+  for (const [evIndex, ev] of lineEvents.entries()) {
     const line = Number(ev.line);
     if (!Number.isInteger(line) || line < 1 || line > lineCount) continue;
     const locals = ev.locals && typeof ev.locals === 'object' ? ev.locals : {};
@@ -88,7 +88,20 @@ export function compileLineTrace({ events, result, code, entry = null, language 
     const src = (codeLines[line - 1] ?? '').trim();
 
     let explanation;
-    if (changed.length > 0) {
+    if (/^(if|elif|while)\b/.test(src)) {
+      // The teaching move measured from the best instructors (Striver/NeetCode transcripts):
+      // a condition is narrated as CHECK with live values -> VERDICT -> THEREFORE. The recording
+      // knows the verdict for real: the branch was TAKEN iff the next executed line is the one
+      // directly below (the indented block); anything else means the check said no.
+      const next = lineEvents[evIndex + 1];
+      const nextLine = Number(next?.line);
+      const taken = Number.isInteger(nextLine) && nextLine === line + 1;
+      const names = (src.replace(/'[^']*'|"[^"]*"/g, '').match(/[A-Za-z_]\w*/g) ?? [])
+        .filter((n) => n in locals && !Array.isArray(locals[n]) && typeof locals[n] !== 'object')
+        .slice(0, 3);
+      const withVals = names.length ? ` With ${names.map((n) => `${n} = ${JSON.stringify(locals[n])}`).join(', ')},` : '';
+      explanation = `Line ${line} asks: \`${src}\`.${withVals} the check comes back ${taken ? 'TRUE — so execution steps INTO this branch' : 'FALSE — so this branch is skipped'}${Number.isInteger(nextLine) ? ` and the pointer moves to line ${nextLine}` : ''}. That decision, not the code order, is what chooses the path here.`;
+    } else if (changed.length > 0) {
       const what = changed.map(([k, v]) => `${k} ${k in prevLocals ? 'becomes' : 'starts as'} ${JSON.stringify(v)}`).join(', ');
       explanation = `Line ${line} runs: \`${src}\`. As a result ${what} — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.`;
     } else {

@@ -13,12 +13,32 @@
 
 import { pyLiteral } from './py-literal.js';
 
+// Python names an entry expression may use without the code defining them.
+const PY_BUILTINS = new Set(['True', 'False', 'None', 'len', 'range', 'list', 'dict', 'set', 'tuple', 'str', 'int', 'float', 'bool', 'max', 'min', 'sum', 'abs', 'sorted', 'reversed', 'enumerate', 'zip', 'map', 'filter', 'print', 'ord', 'chr', 'round']);
+
+// Battery-measured failure mode: the agent writes entry "maxPathSum(root)" but never defines
+// root in the code — Python then dies with a NameError so cryptic that FOUR retries repeat the
+// same mistake. Checking BEFORE the run, with the fix spelled out, turns that into a one-retry
+// self-correction (the actionable-error pattern that made other modes recover).
+function assertEntryNamesDefined(entry, code) {
+  const noStrings = entry.replace(/'[^']*'|"[^"]*"/g, '');
+  const names = noStrings.match(/(?<![\w.])[A-Za-z_]\w*(?!\s*=[^=])/g) ?? [];
+  for (const name of new Set(names)) {
+    if (PY_BUILTINS.has(name)) continue;
+    const defined = new RegExp(`^(?:${name}\\s*=[^=]|def\\s+${name}\\s*\\(|class\\s+${name}\\b)`, 'm').test(code);
+    if (!defined) {
+      throw new Error(`entry references "${name}" but the code never defines it at module top level — add the concrete build lines to the code (e.g. ${name} = ...) so the entry can run on a real instance.`);
+    }
+  }
+}
+
 export function buildTracedProgram({ constants = {}, trackerPy, code, entry, marker, resultLine, entryExample }) {
   const call = String(entry ?? '').trim();
   if (!call || /[;\n]/.test(call)) {
     throw new Error(`entry must be a single expression like ${entryExample ?? '"solve(...)"'}`);
   }
   if (!String(code ?? '').trim()) throw new Error('the tracker needs the algorithm code');
+  assertEntryNamesDefined(call, String(code));
   if (!String(trackerPy ?? '').trim() || !String(marker ?? '').startsWith('@@')) {
     throw new Error('buildTracedProgram needs a tracker source and an @@-prefixed marker');
   }

@@ -63,7 +63,7 @@ test('honest failures: oversized table, missing dp variable, junk stdout', () =>
     /saw no table/,
   );
   assert.equal(parseDpEvents('junk'), null);
-  const ok = assembleDpProgram({ code: 'x = 1', entry: 'lcs("ab", "a")' });
+  const ok = assembleDpProgram({ code: 'def lcs(a, b):\n    return 0', entry: 'lcs("ab", "a")' });
   assert.ok(ok.includes('DP_VAR = "dp"'));
   assert.throws(() => assembleDpProgram({ code: 'x', entry: 'a()', dp: 'd p' }), /simple identifier/);
   assert.throws(() => assembleDpProgram({ code: 'x', entry: 'a();b()' }), /single expression/);

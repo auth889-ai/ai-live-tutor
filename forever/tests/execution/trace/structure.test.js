@@ -58,7 +58,7 @@ test('adjacency dict: keys/neighbors become nodes and edges, integer cursor trac
 });
 
 test('harness + honest failures: single-expression entry, no structure detected', () => {
-  const ok = assembleStructureProgram({ code: 'x = 1', entry: 'f(tree)' });
+  const ok = assembleStructureProgram({ code: 'tree = None\ndef f(t):\n    return t', entry: 'f(tree)' });
   assert.ok(ok.includes("compile(_src, '<student>', 'exec')"));
   assert.throws(() => assembleStructureProgram({ code: 'x', entry: 'a();b()' }), /single expression/);
   assert.equal(parseStructureEvents('junk'), null);

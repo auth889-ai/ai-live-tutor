@@ -68,7 +68,7 @@ test('delete: end-flag clears and unused nodes prune (fade back to ghost)', () =
 });
 
 test('harness assembly is hardened; honest failures reject junk', () => {
-  const ok = assembleTrieProgram({ code: 'x = 1', entry: 'demo()', root: 'trie' });
+  const ok = assembleTrieProgram({ code: 'trie = None\ndef demo():\n    return 1', entry: 'demo()', root: 'trie' });
   assert.ok(ok.includes('ROOT_VAR = "trie"'));
   assert.ok(ok.includes("compile(_src, '<student>', 'exec')"));
   assert.throws(() => assembleTrieProgram({ code: 'x', entry: 'a();b()', root: 'trie' }), /single expression/);

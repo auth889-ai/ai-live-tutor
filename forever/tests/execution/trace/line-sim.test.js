@@ -30,7 +30,8 @@ test('compileLineTrace: one step per executed line, narrated from the REAL local
   assert.equal(trace.steps[0].line, 2);
   assert.match(trace.steps[0].explanation, /i starts as 0/);
   assert.match(trace.steps[2].explanation, /i becomes 1/, 'the diff narrates what actually changed');
-  assert.match(trace.steps[1].explanation, /deciding WHERE/, 'no-change lines explain control flow');
+  assert.match(trace.steps[1].explanation, /asks.*FALSE — so this branch is skipped/s, 'a failed check is narrated as a verdict');
+  assert.match(trace.steps[5].explanation, /TRUE — so execution steps INTO/, 'the winning check is narrated as a verdict');
   assert.match(trace.steps.at(-1).explanation, /returns 2/);
   assert.deepEqual(trace.steps[4].variables, { arr: [4, 7, 9], target: 9, i: 2 });
   for (const s of trace.steps) assert.ok(s.explanation.length > 60, 'floor still speaks in full sentences');
@@ -86,4 +87,19 @@ test('the floor DRAWS: a run carrying a list gets the array view with flash + po
   // A scalar-only run stays an honest text floor — no fake structure invented.
   const scalars = compileLineTrace({ events: [{ line: 1, locals: { n: 3 } }, { line: 1, locals: { n: 6 } }], result: 6, code: 'l1' });
   assert.deepEqual(scalars.views, {});
+});
+
+test('conditions narrate CHECK -> VERDICT -> THEREFORE with live values (instructor formula)', () => {
+  const code = 'def f(u):\n    if u > 2:\n        return "big"\n    return "small"';
+  const events = [
+    { line: 2, locals: { u: 5 } },
+    { line: 3, locals: { u: 5 } },
+  ];
+  const trace = compileLineTrace({ events, result: 'big', code });
+  const cond = trace.steps.find((s) => s.line === 2);
+  assert.match(cond.explanation, /asks/, 'a condition is posed as a question');
+  assert.match(cond.explanation, /u = 5/, 'live values appear at the moment of decision');
+  assert.match(cond.explanation, /TRUE — so execution steps INTO/, 'the real verdict is stated');
+  const skipped = compileLineTrace({ events: [{ line: 2, locals: { u: 1 } }, { line: 4, locals: { u: 1 } }], result: 'small', code });
+  assert.match(skipped.steps.find((s) => s.line === 2).explanation, /FALSE — so this branch is skipped/);
 });
