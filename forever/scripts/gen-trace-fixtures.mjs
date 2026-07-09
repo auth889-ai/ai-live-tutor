@@ -46,11 +46,13 @@ const add = (name, trace) => out.push({ name, trace });
   }));
 }
 
-// --- linked list (LC 206 reverse) ---
+// --- linked list (LC 206 reverse) — the list is BUILT at module level (untraced setup) so the
+// dry run shows ONLY the reverse operation, and the first traced snapshot registers nodes in
+// chain order (head → tail), left to right. ---
 {
-  const code = 'class Node:\n    def __init__(self, val):\n        self.val = val\n        self.next = None\ndef build(vals):\n    head = None\n    for v in reversed(vals):\n        n = Node(v)\n        n.next = head\n        head = n\n    return head\ndef reverse(head):\n    prev = None\n    curr = head\n    while curr:\n        nxt = curr.next\n        curr.next = prev\n        prev = curr\n        curr = nxt\n    return prev';
-  const entry = 'reverse(build([1, 2, 3, 4]))';
-  const payload = parseListEvents(py(assembleListProgram({ code, entry, roots: ['head', 'prev', 'curr', 'nxt', 'n'] })));
+  const code = 'class Node:\n    def __init__(self, val):\n        self.val = val\n        self.next = None\ndef build(vals):\n    head = None\n    for v in reversed(vals):\n        n = Node(v)\n        n.next = head\n        head = n\n    return head\nlst = build([1, 2, 3, 4])\ndef reverse(head):\n    prev = None\n    curr = head\n    while curr:\n        nxt = curr.next\n        curr.next = prev\n        prev = curr\n        curr = nxt\n    return prev';
+  const entry = 'reverse(lst)';
+  const payload = parseListEvents(py(assembleListProgram({ code, entry, roots: ['head', 'prev', 'curr', 'nxt'] })));
   add('Linked list — reverse', compileLinkedListTrace({ ...payload, code, entry }));
 }
 

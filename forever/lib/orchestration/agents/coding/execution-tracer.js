@@ -127,10 +127,14 @@ delete, middle via slow/fast, cycle detection): INSTEAD of "program", output
   "linkedlist": {"entry": "<ONE call expression, e.g. reverse(build([1,2,3,4]))>",
                  "roots": ["head","prev","curr","nxt"] (EVERY pointer variable the code uses),
                  "nextAttr": "next", "valAttr": "val"}
-with "code" = the clean Node class + algorithm + any tiny build helper the entry needs. Our
-identity-preserving tracker runs it for real: boxes are real node objects, arrows are live
-next-references, rewires flash, unreachable nodes fade (the garbage moment). Declare every
-pointer variable in "roots" — undeclared pointers are invisible. Do not write tracking code.
+with "code" = the clean Node class + algorithm. BUILD THE INPUT LIST AT MODULE LEVEL (a plain
+statement like "lst = build([1,2,3,4])" after the defs) and make "entry" the operation on it
+(e.g. "reverse(lst)") — NOT "reverse(build([...]))". This keeps the dry run focused on the
+ACTUAL operation (the build runs untraced as setup) and lays the boxes out head→tail, left to
+right. Our identity-preserving tracker runs it for real: boxes are real node objects, arrows are
+live next-references, rewires flash, unreachable nodes fade (the garbage moment). Declare every
+pointer variable the OPERATION uses in "roots" — undeclared pointers are invisible. Do not write
+tracking code.
 
 OPERATIONS MODE — when the lesson teaches a DATA STRUCTURE ITSELF (stack, queue, hash map —
 push/pop, enqueue/dequeue, put/get/remove with collisions): INSTEAD of "program", output

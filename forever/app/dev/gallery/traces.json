@@ -1651,7 +1651,7 @@
     "name": "Linked list — reverse",
     "trace": {
       "language": "python",
-      "code": "class Node:\n    def __init__(self, val):\n        self.val = val\n        self.next = None\ndef build(vals):\n    head = None\n    for v in reversed(vals):\n        n = Node(v)\n        n.next = head\n        head = n\n    return head\ndef reverse(head):\n    prev = None\n    curr = head\n    while curr:\n        nxt = curr.next\n        curr.next = prev\n        prev = curr\n        curr = nxt\n    return prev",
+      "code": "class Node:\n    def __init__(self, val):\n        self.val = val\n        self.next = None\ndef build(vals):\n    head = None\n    for v in reversed(vals):\n        n = Node(v)\n        n.next = head\n        head = n\n    return head\nlst = build([1, 2, 3, 4])\ndef reverse(head):\n    prev = None\n    curr = head\n    while curr:\n        nxt = curr.next\n        curr.next = prev\n        prev = curr\n        curr = nxt\n    return prev",
       "views": {
         "list": {
           "nodes": [
@@ -1672,612 +1672,389 @@
       },
       "steps": [
         {
-          "line": 7,
-          "explanation": "We run reverse(build([1, 2, 3, 4])) and watch the chain itself: every box is a real node object from the run, every arrow is its live next-reference. Boxes never move — only the arrows and the named pointers do, and that is exactly where your eyes should be.",
+          "line": 14,
+          "explanation": "We run reverse(lst) and watch the chain itself: every box is a real node object from the run, every arrow is its live next-reference. Boxes never move — only the arrows and the named pointers do, and that is exactly where your eyes should be.",
           "list": {
             "nodes": [],
             "pointers": {}
           },
           "variables": {}
-        },
-        {
-          "line": 7,
-          "explanation": "head is now None — it has walked off the end of the chain. Reading head.next here would crash: this exact moment is where null-checks earn their keep.",
-          "list": {
-            "nodes": [],
-            "pointers": {
-              "head": null
-            }
-          },
-          "variables": {}
-        },
-        {
-          "line": 9,
-          "explanation": "head is now None — it has walked off the end of the chain. Reading head.next here would crash: this exact moment is where null-checks earn their keep. n starts on the node holding 4 — remember which box it stands on; every decision below is made from where the named pointers stand.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              }
-            ],
-            "pointers": {
-              "head": null,
-              "n": "n1"
-            }
-          },
-          "variables": {
-            "v": 4
-          }
-        },
-        {
-          "line": 7,
-          "explanation": "head advances to the node holding 4. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              }
-            ],
-            "pointers": {
-              "head": "n1",
-              "n": "n1"
-            }
-          },
-          "variables": {
-            "v": 4
-          }
-        },
-        {
-          "line": 3,
-          "explanation": "The node holding 4 is now UNREACHABLE — no pointer and no arrow leads to it anymore (watch it fade). In Python the garbage collector quietly reclaims it; in C, forgetting to free at this exact moment is the classic memory leak.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null,
-                "orphan": true
-              }
-            ],
-            "pointers": {}
-          },
-          "variables": {
-            "val": 3
-          }
-        },
-        {
-          "line": 9,
-          "explanation": "head starts on the node holding 4 — remember which box it stands on; every decision below is made from where the named pointers stand. n starts on the node holding 3 — remember which box it stands on; every decision below is made from where the named pointers stand.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": null
-              }
-            ],
-            "pointers": {
-              "head": "n1",
-              "n": "n2"
-            }
-          },
-          "variables": {
-            "v": 3
-          }
-        },
-        {
-          "line": 10,
-          "explanation": "The node holding 3 gets its arrow: it now points at the node holding 4. A link exists where there was none — the chain just grew by one connection.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1",
-                "rewired": true
-              }
-            ],
-            "pointers": {
-              "head": "n1",
-              "n": "n2"
-            }
-          },
-          "variables": {
-            "v": 3
-          }
-        },
-        {
-          "line": 7,
-          "explanation": "head advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              }
-            ],
-            "pointers": {
-              "head": "n2",
-              "n": "n2"
-            }
-          },
-          "variables": {
-            "v": 3
-          }
-        },
-        {
-          "line": 3,
-          "explanation": "The node holding 3 is now UNREACHABLE — no pointer and no arrow leads to it anymore (watch it fade). In Python the garbage collector quietly reclaims it; in C, forgetting to free at this exact moment is the classic memory leak. The node holding 4 is now UNREACHABLE — no pointer and no arrow leads to it anymore (watch it fade). In Python the garbage collector quietly reclaims it; in C, forgetting to free at this exact moment is the classic memory leak.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null,
-                "orphan": true
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1",
-                "orphan": true
-              }
-            ],
-            "pointers": {}
-          },
-          "variables": {
-            "val": 2
-          }
-        },
-        {
-          "line": 9,
-          "explanation": "head starts on the node holding 3 — remember which box it stands on; every decision below is made from where the named pointers stand. n starts on the node holding 2 — remember which box it stands on; every decision below is made from where the named pointers stand.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": null
-              }
-            ],
-            "pointers": {
-              "head": "n2",
-              "n": "n3"
-            }
-          },
-          "variables": {
-            "v": 2
-          }
-        },
-        {
-          "line": 10,
-          "explanation": "The node holding 2 gets its arrow: it now points at the node holding 3. A link exists where there was none — the chain just grew by one connection.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": "n2",
-                "rewired": true
-              }
-            ],
-            "pointers": {
-              "head": "n2",
-              "n": "n3"
-            }
-          },
-          "variables": {
-            "v": 2
-          }
-        },
-        {
-          "line": 7,
-          "explanation": "head advances to the node holding 2. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": "n2"
-              }
-            ],
-            "pointers": {
-              "head": "n3",
-              "n": "n3"
-            }
-          },
-          "variables": {
-            "v": 2
-          }
-        },
-        {
-          "line": 3,
-          "explanation": "The node holding 2 is now UNREACHABLE — no pointer and no arrow leads to it anymore (watch it fade). In Python the garbage collector quietly reclaims it; in C, forgetting to free at this exact moment is the classic memory leak. The node holding 3 is now UNREACHABLE — no pointer and no arrow leads to it anymore (watch it fade). In Python the garbage collector quietly reclaims it; in C, forgetting to free at this exact moment is the classic memory leak. The node holding 4 is now UNREACHABLE — no pointer and no arrow leads to it anymore (watch it fade). In Python the garbage collector quietly reclaims it; in C, forgetting to free at this exact moment is the classic memory leak.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null,
-                "orphan": true
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1",
-                "orphan": true
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": "n2",
-                "orphan": true
-              }
-            ],
-            "pointers": {}
-          },
-          "variables": {
-            "val": 1
-          }
-        },
-        {
-          "line": 9,
-          "explanation": "head starts on the node holding 2 — remember which box it stands on; every decision below is made from where the named pointers stand. n starts on the node holding 1 — remember which box it stands on; every decision below is made from where the named pointers stand.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": "n2"
-              },
-              {
-                "id": "n4",
-                "value": 1,
-                "next": null
-              }
-            ],
-            "pointers": {
-              "head": "n3",
-              "n": "n4"
-            }
-          },
-          "variables": {
-            "v": 1
-          }
-        },
-        {
-          "line": 10,
-          "explanation": "The node holding 1 gets its arrow: it now points at the node holding 2. A link exists where there was none — the chain just grew by one connection.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": "n2"
-              },
-              {
-                "id": "n4",
-                "value": 1,
-                "next": "n3",
-                "rewired": true
-              }
-            ],
-            "pointers": {
-              "head": "n3",
-              "n": "n4"
-            }
-          },
-          "variables": {
-            "v": 1
-          }
-        },
-        {
-          "line": 7,
-          "explanation": "head advances to the node holding 1. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": "n2"
-              },
-              {
-                "id": "n4",
-                "value": 1,
-                "next": "n3"
-              }
-            ],
-            "pointers": {
-              "head": "n4",
-              "n": "n4"
-            }
-          },
-          "variables": {
-            "v": 1
-          }
         },
         {
           "line": 14,
+          "explanation": "head starts on the node holding 1 — remember which box it stands on; every decision below is made from where the named pointers stand.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 1,
+                "next": "n2"
+              },
+              {
+                "id": "n2",
+                "value": 2,
+                "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 3,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 4,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n1"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 15,
           "explanation": "prev is now None — it has walked off the end of the chain. Reading prev.next here would crash: this exact moment is where null-checks earn their keep.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
+                "value": 1,
                 "next": "n2"
               },
               {
-                "id": "n4",
-                "value": 1,
+                "id": "n2",
+                "value": 2,
                 "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 3,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 4,
+                "next": null
               }
             ],
             "pointers": {
-              "head": "n4",
+              "head": "n1",
               "prev": null
             }
           },
           "variables": {}
         },
         {
-          "line": 15,
+          "line": 16,
           "explanation": "curr starts on the node holding 1 — remember which box it stands on; every decision below is made from where the named pointers stand.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
+                "value": 1,
                 "next": "n2"
               },
               {
-                "id": "n4",
-                "value": 1,
+                "id": "n2",
+                "value": 2,
                 "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 3,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 4,
+                "next": null
               }
             ],
             "pointers": {
-              "head": "n4",
+              "head": "n1",
               "prev": null,
-              "curr": "n4"
+              "curr": "n1"
             }
           },
           "variables": {}
         },
         {
-          "line": 17,
+          "line": 18,
           "explanation": "nxt starts on the node holding 2 — remember which box it stands on; every decision below is made from where the named pointers stand.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
+                "value": 1,
                 "next": "n2"
               },
               {
-                "id": "n4",
-                "value": 1,
+                "id": "n2",
+                "value": 2,
                 "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 3,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 4,
+                "next": null
               }
             ],
             "pointers": {
-              "head": "n4",
+              "head": "n1",
               "prev": null,
-              "curr": "n4",
-              "nxt": "n3"
+              "curr": "n1",
+              "nxt": "n2"
             }
           },
           "variables": {}
         },
         {
-          "line": 18,
+          "line": 19,
           "explanation": "The arrow out of the node holding 1 is CUT: it pointed at the node holding 2, and now it points at None — this node just became the tail of its chain.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": "n2"
-              },
-              {
-                "id": "n4",
                 "value": 1,
                 "next": null,
                 "rewired": true
+              },
+              {
+                "id": "n2",
+                "value": 2,
+                "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 3,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 4,
+                "next": null
               }
             ],
             "pointers": {
-              "head": "n4",
+              "head": "n1",
               "prev": null,
-              "curr": "n4",
-              "nxt": "n3"
+              "curr": "n1",
+              "nxt": "n2"
             }
           },
           "variables": {}
         },
         {
-          "line": 19,
+          "line": 20,
           "explanation": "prev advances to the node holding 1. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
+                "value": 1,
                 "next": null
               },
               {
                 "id": "n2",
-                "value": 3,
-                "next": "n1"
+                "value": 2,
+                "next": "n3"
               },
               {
                 "id": "n3",
-                "value": 2,
-                "next": "n2"
+                "value": 3,
+                "next": "n4"
               },
               {
                 "id": "n4",
-                "value": 1,
+                "value": 4,
                 "next": null
               }
             ],
             "pointers": {
-              "head": "n4",
-              "prev": "n4",
-              "curr": "n4",
-              "nxt": "n3"
+              "head": "n1",
+              "prev": "n1",
+              "curr": "n1",
+              "nxt": "n2"
             }
           },
           "variables": {}
         },
         {
-          "line": 15,
+          "line": 16,
           "explanation": "curr advances to the node holding 2. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
+                "value": 1,
                 "next": null
               },
               {
                 "id": "n2",
-                "value": 3,
-                "next": "n1"
+                "value": 2,
+                "next": "n3"
               },
               {
                 "id": "n3",
-                "value": 2,
-                "next": "n2"
+                "value": 3,
+                "next": "n4"
               },
               {
                 "id": "n4",
-                "value": 1,
+                "value": 4,
                 "next": null
               }
             ],
             "pointers": {
-              "head": "n4",
-              "prev": "n4",
+              "head": "n1",
+              "prev": "n1",
+              "curr": "n2",
+              "nxt": "n2"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 18,
+          "explanation": "nxt advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 1,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 2,
+                "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 3,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 4,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n1",
+              "prev": "n1",
+              "curr": "n2",
+              "nxt": "n3"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 19,
+          "explanation": "REWIRE: the arrow out of the node holding 2 flips from the node holding 3 to the node holding 1. This single reassignment is the heart of the operation — everything else is just walking pointers into position.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 1,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 2,
+                "next": "n1",
+                "rewired": true
+              },
+              {
+                "id": "n3",
+                "value": 3,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 4,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n1",
+              "prev": "n1",
+              "curr": "n2",
+              "nxt": "n3"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 20,
+          "explanation": "prev advances to the node holding 2. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 1,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 2,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 3,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 4,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n1",
+              "prev": "n2",
+              "curr": "n2",
+              "nxt": "n3"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 16,
+          "explanation": "curr advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 1,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 2,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 3,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 4,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n1",
+              "prev": "n2",
               "curr": "n3",
               "nxt": "n3"
             }
@@ -2285,353 +2062,176 @@
           "variables": {}
         },
         {
-          "line": 17,
-          "explanation": "nxt advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": "n2"
-              },
-              {
-                "id": "n4",
-                "value": 1,
-                "next": null
-              }
-            ],
-            "pointers": {
-              "head": "n4",
-              "prev": "n4",
-              "curr": "n3",
-              "nxt": "n2"
-            }
-          },
-          "variables": {}
-        },
-        {
           "line": 18,
-          "explanation": "REWIRE: the arrow out of the node holding 2 flips from the node holding 3 to the node holding 1. This single reassignment is the heart of the operation — everything else is just walking pointers into position.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": "n4",
-                "rewired": true
-              },
-              {
-                "id": "n4",
-                "value": 1,
-                "next": null
-              }
-            ],
-            "pointers": {
-              "head": "n4",
-              "prev": "n4",
-              "curr": "n3",
-              "nxt": "n2"
-            }
-          },
-          "variables": {}
-        },
-        {
-          "line": 19,
-          "explanation": "prev advances to the node holding 2. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": "n4"
-              },
-              {
-                "id": "n4",
-                "value": 1,
-                "next": null
-              }
-            ],
-            "pointers": {
-              "head": "n4",
-              "prev": "n3",
-              "curr": "n3",
-              "nxt": "n2"
-            }
-          },
-          "variables": {}
-        },
-        {
-          "line": 15,
-          "explanation": "curr advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
-                "value": 4,
-                "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n1"
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": "n4"
-              },
-              {
-                "id": "n4",
-                "value": 1,
-                "next": null
-              }
-            ],
-            "pointers": {
-              "head": "n4",
-              "prev": "n3",
-              "curr": "n2",
-              "nxt": "n2"
-            }
-          },
-          "variables": {}
-        },
-        {
-          "line": 17,
           "explanation": "nxt advances to the node holding 4. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
+                "value": 1,
                 "next": null
               },
               {
                 "id": "n2",
-                "value": 3,
+                "value": 2,
                 "next": "n1"
               },
               {
                 "id": "n3",
-                "value": 2,
+                "value": 3,
                 "next": "n4"
               },
               {
                 "id": "n4",
-                "value": 1,
+                "value": 4,
                 "next": null
               }
             ],
             "pointers": {
-              "head": "n4",
-              "prev": "n3",
-              "curr": "n2",
-              "nxt": "n1"
+              "head": "n1",
+              "prev": "n2",
+              "curr": "n3",
+              "nxt": "n4"
             }
           },
           "variables": {}
         },
         {
-          "line": 18,
+          "line": 19,
           "explanation": "REWIRE: the arrow out of the node holding 3 flips from the node holding 4 to the node holding 2. This single reassignment is the heart of the operation — everything else is just walking pointers into position.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
+                "value": 1,
                 "next": null
               },
               {
                 "id": "n2",
-                "value": 3,
-                "next": "n3",
-                "rewired": true
+                "value": 2,
+                "next": "n1"
               },
               {
                 "id": "n3",
-                "value": 2,
-                "next": "n4"
+                "value": 3,
+                "next": "n2",
+                "rewired": true
               },
               {
                 "id": "n4",
-                "value": 1,
+                "value": 4,
                 "next": null
               }
             ],
             "pointers": {
-              "head": "n4",
-              "prev": "n3",
-              "curr": "n2",
-              "nxt": "n1"
+              "head": "n1",
+              "prev": "n2",
+              "curr": "n3",
+              "nxt": "n4"
             }
           },
           "variables": {}
         },
         {
-          "line": 19,
+          "line": 20,
           "explanation": "prev advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
+                "value": 1,
                 "next": null
               },
               {
                 "id": "n2",
-                "value": 3,
-                "next": "n3"
+                "value": 2,
+                "next": "n1"
               },
               {
                 "id": "n3",
-                "value": 2,
-                "next": "n4"
+                "value": 3,
+                "next": "n2"
               },
               {
                 "id": "n4",
-                "value": 1,
+                "value": 4,
                 "next": null
               }
             ],
             "pointers": {
-              "head": "n4",
-              "prev": "n2",
-              "curr": "n2",
-              "nxt": "n1"
+              "head": "n1",
+              "prev": "n3",
+              "curr": "n3",
+              "nxt": "n4"
             }
           },
           "variables": {}
         },
         {
-          "line": 15,
+          "line": 16,
           "explanation": "curr advances to the node holding 4. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
+                "value": 1,
                 "next": null
               },
               {
                 "id": "n2",
-                "value": 3,
-                "next": "n3"
+                "value": 2,
+                "next": "n1"
               },
               {
                 "id": "n3",
-                "value": 2,
-                "next": "n4"
+                "value": 3,
+                "next": "n2"
               },
               {
                 "id": "n4",
-                "value": 1,
-                "next": null
-              }
-            ],
-            "pointers": {
-              "head": "n4",
-              "prev": "n2",
-              "curr": "n1",
-              "nxt": "n1"
-            }
-          },
-          "variables": {}
-        },
-        {
-          "line": 17,
-          "explanation": "nxt is now None — it has walked off the end of the chain. Reading nxt.next here would crash: this exact moment is where null-checks earn their keep.",
-          "list": {
-            "nodes": [
-              {
-                "id": "n1",
                 "value": 4,
                 "next": null
-              },
-              {
-                "id": "n2",
-                "value": 3,
-                "next": "n3"
-              },
-              {
-                "id": "n3",
-                "value": 2,
-                "next": "n4"
-              },
-              {
-                "id": "n4",
-                "value": 1,
-                "next": null
               }
             ],
             "pointers": {
-              "head": "n4",
-              "prev": "n2",
-              "curr": "n1",
-              "nxt": null
+              "head": "n1",
+              "prev": "n3",
+              "curr": "n4",
+              "nxt": "n4"
             }
           },
           "variables": {}
         },
         {
           "line": 18,
-          "explanation": "The node holding 4 gets its arrow: it now points at the node holding 3. A link exists where there was none — the chain just grew by one connection.",
+          "explanation": "nxt is now None — it has walked off the end of the chain. Reading nxt.next here would crash: this exact moment is where null-checks earn their keep.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
-                "next": "n2",
-                "rewired": true
+                "value": 1,
+                "next": null
               },
               {
                 "id": "n2",
-                "value": 3,
-                "next": "n3"
+                "value": 2,
+                "next": "n1"
               },
               {
                 "id": "n3",
-                "value": 2,
-                "next": "n4"
+                "value": 3,
+                "next": "n2"
               },
               {
                 "id": "n4",
-                "value": 1,
+                "value": 4,
                 "next": null
               }
             ],
             "pointers": {
-              "head": "n4",
-              "prev": "n2",
-              "curr": "n1",
+              "head": "n1",
+              "prev": "n3",
+              "curr": "n4",
               "nxt": null
             }
           },
@@ -2639,68 +2239,104 @@
         },
         {
           "line": 19,
-          "explanation": "prev advances to the node holding 4. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "explanation": "The node holding 4 gets its arrow: it now points at the node holding 3. A link exists where there was none — the chain just grew by one connection.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
-                "next": "n2"
+                "value": 1,
+                "next": null
               },
               {
                 "id": "n2",
-                "value": 3,
-                "next": "n3"
+                "value": 2,
+                "next": "n1"
               },
               {
                 "id": "n3",
-                "value": 2,
-                "next": "n4"
+                "value": 3,
+                "next": "n2"
               },
               {
                 "id": "n4",
-                "value": 1,
-                "next": null
+                "value": 4,
+                "next": "n3",
+                "rewired": true
               }
             ],
             "pointers": {
-              "head": "n4",
-              "prev": "n1",
-              "curr": "n1",
+              "head": "n1",
+              "prev": "n3",
+              "curr": "n4",
               "nxt": null
             }
           },
           "variables": {}
         },
         {
-          "line": 15,
+          "line": 20,
+          "explanation": "prev advances to the node holding 4. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 1,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 2,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 3,
+                "next": "n2"
+              },
+              {
+                "id": "n4",
+                "value": 4,
+                "next": "n3"
+              }
+            ],
+            "pointers": {
+              "head": "n1",
+              "prev": "n4",
+              "curr": "n4",
+              "nxt": null
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 16,
           "explanation": "curr is now None — it has walked off the end of the chain. Reading curr.next here would crash: this exact moment is where null-checks earn their keep.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
-                "next": "n2"
+                "value": 1,
+                "next": null
               },
               {
                 "id": "n2",
-                "value": 3,
-                "next": "n3"
+                "value": 2,
+                "next": "n1"
               },
               {
                 "id": "n3",
-                "value": 2,
-                "next": "n4"
+                "value": 3,
+                "next": "n2"
               },
               {
                 "id": "n4",
-                "value": 1,
-                "next": null
+                "value": 4,
+                "next": "n3"
               }
             ],
             "pointers": {
-              "head": "n4",
-              "prev": "n1",
+              "head": "n1",
+              "prev": "n4",
               "curr": null,
               "nxt": null
             }
@@ -2708,34 +2344,34 @@
           "variables": {}
         },
         {
-          "line": 15,
-          "explanation": "The operation is complete and the call returns \"n1\". Read the final chain off the arrows: 4 → 3 → 2 → 1. Every arrow in the final picture was rewired in front of you — replay the flips and you have re-derived the algorithm.",
+          "line": 16,
+          "explanation": "The operation is complete and the call returns \"n4\". Read the final chain off the arrows: 4 → 3 → 2 → 1. Every arrow in the final picture was rewired in front of you — replay the flips and you have re-derived the algorithm.",
           "list": {
             "nodes": [
               {
                 "id": "n1",
-                "value": 4,
-                "next": "n2"
+                "value": 1,
+                "next": null
               },
               {
                 "id": "n2",
-                "value": 3,
-                "next": "n3"
+                "value": 2,
+                "next": "n1"
               },
               {
                 "id": "n3",
-                "value": 2,
-                "next": "n4"
+                "value": 3,
+                "next": "n2"
               },
               {
                 "id": "n4",
-                "value": 1,
-                "next": null
+                "value": 4,
+                "next": "n3"
               }
             ],
             "pointers": {
-              "head": "n4",
-              "prev": "n1",
+              "head": "n1",
+              "prev": "n4",
               "curr": null,
               "nxt": null
             }
