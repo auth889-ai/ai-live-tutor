@@ -29,9 +29,33 @@ export default function RootLayout({ children }) {
           .forever-dot { animation: foreverDot 1.4s ease-in-out infinite; }
           .forever-shot { animation: foreverShot 0.45s ease; }
           :root { --caveat: ${caveat.style.fontFamily}; }
+          /* PREMIUM SURFACE (beyond flat): a whisper of radial warmth at the top of the page —
+             depth without a background image, so dense lesson content stays readable. */
+          body {
+            background:
+              radial-gradient(1200px 500px at 50% -10%, #fff7f4 0%, rgba(255,247,244,0) 70%),
+              linear-gradient(180deg, #fdf3f1 0%, #fbece7 100%);
+            background-attachment: fixed;
+          }
+          /* Every slider in the app rides the coral brand, never the browser default blue. */
+          input[type="range"] { accent-color: #e8604c; }
+          /* Premium buttons: coral gradient + soft lift on hover (used via className). */
+          .forever-btn {
+            background: linear-gradient(180deg, #f4776a 0%, #e8604c 100%);
+            color: #fff; border: none; border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(232,96,76,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+          }
+          .forever-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(232,96,76,0.45), inset 0 1px 0 rgba(255,255,255,0.25); }
+          .forever-chip {
+            background: #fffcfa; border: 1px solid #f0dcd5; border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(190,120,100,0.10);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+          }
+          .forever-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(190,120,100,0.18); background: #fff; }
         `}</style>
       </head>
-      <body style={{ margin: 0, background: '#fdf3f1', fontFamily: 'system-ui, sans-serif' }}>{children}</body>
+      <body style={{ margin: 0, fontFamily: 'system-ui, sans-serif' }}>{children}</body>
     </html>
   );
 }

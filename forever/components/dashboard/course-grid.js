@@ -5,7 +5,12 @@
 
 const UI = { text: '#2b211a', muted: '#8a6d3b', border: '#f5e6d9', card: '#fff', accent: '#f47368', bgSoft: '#fdf1ea' };
 
-const COVERS = ['/images/study-29.png', '/images/study-30.png', '/images/study-31.png', '/images/study-32.png', '/images/study-33.png'];
+const COVERS = [
+  '/images/study-29.png', '/images/study-30.png', '/images/study-31.png', '/images/study-32.png', '/images/study-33.png',
+  // user-curated additions: reading under the tree, book stack + lamp, grand library hall,
+  // modern library, cozy desk — imagery lives on COVERS only, never behind lesson content.
+  '/images/study-34.png', '/images/study-35.png', '/images/study-36.png', '/images/study-37.png', '/images/study-38.png',
+];
 
 // coverImage is {url, credit} from the stock-photo APIs (legacy: plain string). Anything else
 // falls back to the bundled study photos — a card must NEVER render a broken image.

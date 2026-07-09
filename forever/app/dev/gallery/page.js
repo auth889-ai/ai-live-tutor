@@ -31,7 +31,8 @@ export default function Gallery() {
           <button
             key={idx}
             onClick={() => { setI(idx); setProgress(0.9); }}
-            style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #f0dcd5', background: idx === i ? '#d35400' : '#fffcfa', color: idx === i ? '#fff' : '#5a4a2a', cursor: 'pointer', fontSize: 12.5 }}
+            className={idx === i ? 'forever-btn' : 'forever-chip'}
+            style={{ padding: '6px 12px', color: idx === i ? '#fff' : '#5a4a2a', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 }}
           >
             {t.name}
           </button>
