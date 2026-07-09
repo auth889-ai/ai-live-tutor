@@ -41,9 +41,17 @@ export function TraceTable({ history = [], allSteps = null, nodeLabels = null })
   };
   const varCols = [];
   for (const s of source) for (const k of Object.keys(varsOf(s))) if (!covered(k) && !varCols.includes(k)) varCols.push(k);
+  // A step-by-step table shows EVOLVING state. A column whose value never changes across the
+  // whole trace is an input constant (the string "abcde", the array, the target) — it belongs
+  // in the Variables panel, not repeated on every row. Drop constant columns.
+  const evolving = varCols.filter((c) => {
+    const vals = new Set();
+    for (const s of source) { const r = varsOf(s); if (c in r) vals.add(JSON.stringify(r[c])); }
+    return vals.size > 1;
+  });
 
   const hasAction = source.some((s) => String(s.explanation ?? '').trim().length > 0);
-  const nCols = 1 + (has.node ? 1 : 0) + (has.queue ? 1 : 0) + (has.stack ? 1 : 0) + (has.visited ? 1 : 0) + varCols.length + (hasAction ? 1 : 0);
+  const nCols = 1 + (has.node ? 1 : 0) + (has.queue ? 1 : 0) + (has.stack ? 1 : 0) + (has.visited ? 1 : 0) + evolving.length + (hasAction ? 1 : 0);
   if (nCols <= 1) return null;
 
   return (
@@ -57,7 +65,7 @@ export function TraceTable({ history = [], allSteps = null, nodeLabels = null })
             {has.queue ? <th style={cell(true)}>Queue (front → back)</th> : null}
             {has.stack ? <th style={cell(true)}>Stack (top →)</th> : null}
             {has.visited ? <th style={cell(true)}>Visited</th> : null}
-            {varCols.map((c) => <th key={c} style={cell(true)}>{c}</th>)}
+            {evolving.map((c) => <th key={c} style={cell(true)}>{c}</th>)}
             {hasAction ? <th style={{ ...cell(true), minWidth: 220 }}>Action / Explanation</th> : null}
           </tr>
         </thead>
@@ -76,7 +84,7 @@ export function TraceTable({ history = [], allSteps = null, nodeLabels = null })
                 {has.queue ? <td style={cell(false)}>{fmtList(s.queue)}</td> : null}
                 {has.stack ? <td style={cell(false)}>{fmtList(s.stack)}</td> : null}
                 {has.visited ? <td style={cell(false)}>{(s.graph?.visited ?? []).map(labelOf).join(', ')}</td> : null}
-                {varCols.map((c) => <td key={c} style={{ ...cell(false), textAlign: 'center' }}>{c in vars ? String(vars[c]) : ''}</td>)}
+                {evolving.map((c) => <td key={c} style={{ ...cell(false), textAlign: 'center' }}>{c in vars ? String(vars[c]) : ''}</td>)}
                 {hasAction ? <td style={{ ...cell(false), fontFamily: 'inherit', color: '#5a4a2a' }}>{firstSentence(s.explanation)}</td> : null}
               </tr>
             );
