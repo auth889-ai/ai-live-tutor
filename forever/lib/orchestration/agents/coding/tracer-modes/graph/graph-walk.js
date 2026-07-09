@@ -15,7 +15,9 @@ Bellman-Ford, topological sort/Kahn, Prim, union-find, cycle detection): INSTEAD
                          "parent": "parent" (union-find parent map, if any),
                          "indegree": "indeg" (Kahn's counts, if any)}}
 plus "views.graph" and "code" = the clean function. CRITICAL: node ids in views.graph MUST equal
-the node keys the code uses (dist/parent/indegree keys, visited elements, current values). Our
+the node keys the code uses (dist/parent/indegree keys, visited elements, current values). When
+the graph is WEIGHTED, put each weight on its edge as "label" (e.g. {"from":"A","to":"B","label":"4"})
+so the drawing shows the numbers the algorithm is comparing. Our
 engine runs the code for real under the tracer and derives every teaching moment (extract-min,
 relax old->new, finalize, union, indegree drop) from the actual variables — do not write
 tracking code. Declare every lens role that exists in the code; skip roles it doesn't have.`,

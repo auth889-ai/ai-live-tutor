@@ -44,7 +44,7 @@ const add = (name, trace) => out.push({ name, trace });
   const payload = parseLineEvents(py(assembleLineProgram({ code, entry })));
   add('Graph-walk — Dijkstra shortest paths', compileGraphWalk({
     ...payload, code, entry,
-    graph: { nodes: [{ id: 'A' }, { id: 'B' }, { id: 'C' }, { id: 'D' }], edges: [{ from: 'A', to: 'B' }, { from: 'A', to: 'C' }, { from: 'C', to: 'B' }, { from: 'C', to: 'D' }, { from: 'B', to: 'D' }], directed: true },
+    graph: { nodes: [{ id: 'A' }, { id: 'B' }, { id: 'C' }, { id: 'D' }], edges: [{ from: 'A', to: 'B', label: '4' }, { from: 'A', to: 'C', label: '1' }, { from: 'C', to: 'B', label: '2' }, { from: 'C', to: 'D', label: '5' }, { from: 'B', to: 'D', label: '1' }], directed: true },
     lens: { current: 'u', dist: 'dist', visited: 'visited', pq: 'pq' },
   }));
 }

@@ -928,23 +928,28 @@
           "edges": [
             {
               "from": "A",
-              "to": "B"
+              "to": "B",
+              "label": "4"
             },
             {
               "from": "A",
-              "to": "C"
+              "to": "C",
+              "label": "1"
             },
             {
               "from": "C",
-              "to": "B"
+              "to": "B",
+              "label": "2"
             },
             {
               "from": "C",
-              "to": "D"
+              "to": "D",
+              "label": "5"
             },
             {
               "from": "B",
-              "to": "D"
+              "to": "D",
+              "label": "1"
             }
           ],
           "directed": true

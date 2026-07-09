@@ -101,3 +101,11 @@ test('[layout] cyclic graphs draw organically (reference style), clean trees sta
   assert.equal(wantsForceLayout(dijkstra, true), true, 'Dijkstra graph (cycles) must get the organic force layout');
   assert.equal(wantsForceLayout(tree, true), false, 'a binary tree must stay hierarchical');
 });
+
+test('[visual] weighted graphs show their weights on the edges (reference parity)', () => {
+  const dijkstra = traces.find((t) => /dijkstra/i.test(t.name))?.trace.views.graph;
+  assert.ok(dijkstra, 'need the Dijkstra fixture');
+  for (const e of dijkstra.edges) {
+    assert.ok(String(e.label ?? '').length > 0, `edge ${e.from}->${e.to} has no weight label — the numbers the algorithm compares are invisible`);
+  }
+});
