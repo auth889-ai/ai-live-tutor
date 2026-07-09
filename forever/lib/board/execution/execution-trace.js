@@ -155,6 +155,12 @@ function validateArrayState(state, inBounds, at, arrayLen) {
     if (!Array.isArray(state.eliminated)) throw new Error(`${at} array eliminated must be an array`);
     for (const i of state.eliminated) if (!inBounds(i)) throw new Error(`${at} array eliminated index out of bounds`);
   }
+  // `dimmed` = out of the active focus (another call's cells in divide & conquer): faded, NOT
+  // struck through — those values are not ruled out, they simply belong to a different band.
+  if (state.dimmed !== undefined) {
+    if (!Array.isArray(state.dimmed)) throw new Error(`${at} array dimmed must be an array`);
+    for (const i of state.dimmed) if (!inBounds(i)) throw new Error(`${at} array dimmed index out of bounds`);
+  }
   if (state.pointers !== undefined) {
     if (typeof state.pointers !== 'object' || Array.isArray(state.pointers)) throw new Error(`${at} array pointers must be an object`);
     for (const i of Object.values(state.pointers)) if (!inBounds(i)) throw new Error(`${at} array pointer index out of bounds`);

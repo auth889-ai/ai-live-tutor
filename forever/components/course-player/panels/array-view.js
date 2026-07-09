@@ -16,6 +16,7 @@ function resolveState({ content, progress, activeStep }) {
     : Math.min(trace.length - 1, Math.max(0, Math.floor(progress * trace.length + 1e-9)));
   const step = trace[idx];
   const eliminated = new Set((step.eliminated ?? []).map(Number));
+  const dimmed = new Set((step.dimmed ?? []).map(Number)); // out-of-focus (D&C band): faded, not struck
   const pointerAt = new Map(); // cell index -> ['low','mid'] labels
   for (const [name, i] of Object.entries(step.pointers ?? {})) {
     const key = Number(i);
@@ -28,6 +29,7 @@ function resolveState({ content, progress, activeStep }) {
     comparing: new Set((step.comparing ?? []).map(Number)), // sorting: cells being compared
     swapped: new Set((step.swapped ?? []).map(Number)), // sorting: cells just swapped
     sorted: new Set((step.sorted ?? []).map(Number)), // sorting: cells locked in final place
+    dimmed, // D&C: cells outside the active call's band
     current: step.current != null ? Number(step.current) : null,
     liveValues: Array.isArray(step.values) ? step.values : null, // in-place algos: REAL contents at this step
     note: step.note,
@@ -40,7 +42,7 @@ export function ArrayView({ content, progress = 1, activeStep = null }) {
   const values = Array.isArray(content.values) ? content.values : [];
   if (!values.length) return <div style={{ color: '#c0392b', fontSize: 13 }}>array unavailable</div>;
 
-  const { pointerAt, eliminated, comparing, swapped, sorted, current, liveValues, note, stepNum, stepTotal } = resolveState({ content, progress, activeStep });
+  const { pointerAt, eliminated, comparing, swapped, sorted, dimmed, current, liveValues, note, stepNum, stepTotal } = resolveState({ content, progress, activeStep });
   const hasTrace = Boolean(note);
   // In-place algorithms (sorting, partitioning) carry the REAL array contents per step — the
   // cells rearrange in front of the student; static algorithms keep the declared values.
@@ -56,12 +58,13 @@ export function ArrayView({ content, progress = 1, activeStep = null }) {
           const isComparing = comparing.has(i);
           const isSwapped = swapped.has(i);
           const isSorted = sorted.has(i);
+          const isDimmed = (dimmed?.has(i) ?? false) && !isCurrent && !isSwapped && !isComparing; // D&C: another call's cell
           // priority: current > swapped > comparing > sorted > eliminated > default
           const border = isCurrent ? '#d35400' : isSwapped ? '#c0392b' : isComparing ? '#c9a227' : isSorted ? '#27ae60' : isEliminated ? '#d8cdb8' : '#c9a227';
           const bg = isCurrent ? '#ffd9a8' : isSwapped ? '#fdd9d2' : isComparing ? '#fdeaa7' : isSorted ? '#eafaf0' : isEliminated ? '#f3eee2' : '#fff8e6';
           const fg = isEliminated ? '#b3a889' : isSorted ? '#1c6b3a' : '#5a4a2a';
           return (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 44 }}>
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 44, opacity: isDimmed ? 0.35 : 1, transition: 'opacity 0.3s' }}>
               {/* pointer badges ride above the cell they point at */}
               <div style={{ height: 20, fontSize: 11, fontWeight: 700, color: '#d35400', whiteSpace: 'nowrap' }}>
                 {pointers ? pointers.join(',') : ''}

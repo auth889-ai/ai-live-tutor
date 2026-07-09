@@ -35,7 +35,7 @@ test('quicksort through the tracker: focus band, swaps, and the segment tree in 
   // Entering a child call: the focus band dims everything outside ITS segment.
   const enterChild = trace.steps.find((s) => /qs\(0\.\.0\) is the BASE CASE/.test(s.explanation));
   assert.ok(enterChild, 'base case narrated as the certainty recursion is built from');
-  assert.deepEqual(enterChild.array.eliminated, [1, 2], 'cells outside the active band are dimmed');
+  assert.deepEqual(enterChild.array.dimmed, [1, 2], 'cells outside the active band are dimmed (not struck through)');
   assert.equal(enterChild.graph.current, 'c2', 'the tree pointer stands on the active call');
   assert.deepEqual(enterChild.stack, ['qs(0..2)', 'qs(0..0)'], 'the call stack reads root -> current');
 

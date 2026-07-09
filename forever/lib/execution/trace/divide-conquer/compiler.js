@@ -62,11 +62,11 @@ export function compileDivideConquer({ events, result, code, entry = null, fn = 
   };
   const snap = ({ line, explanation, arrayOver = {}, activeEdge, variables = {} }) => {
     const top = activeStack[activeStack.length - 1] ?? null;
-    const eliminated = band();
+    const dimmed = band(); // cells OUTSIDE the active call's segment — faded, not eliminated
     return {
       line,
       explanation,
-      array: { values: [...values], ...(eliminated.length ? { eliminated } : {}), pointers: {}, ...arrayOver },
+      array: { values: [...values], ...(dimmed.length ? { dimmed } : {}), pointers: {}, ...arrayOver },
       graph: {
         current: top ? nid(top.id) : null,
         visited: [...finished],
