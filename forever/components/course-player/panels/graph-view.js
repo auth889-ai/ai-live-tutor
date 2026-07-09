@@ -14,7 +14,7 @@
 // edgeStatus); this file only renders them.
 
 import { memo, useEffect, useMemo } from 'react';
-import { ReactFlow, ReactFlowProvider, Background, MarkerType, useNodesInitialized, useReactFlow } from '@xyflow/react';
+import { ReactFlow, ReactFlowProvider, Background, Controls, MarkerType, useNodesInitialized, useReactFlow } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { layoutGraph } from '../../../lib/board/diagrams/graph-layout.js';
@@ -235,11 +235,16 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}
-          panOnDrag={false}
+          // SCROLLABLE, never cut: a big tree/graph can be DRAGGED to pan and zoomed with the
+          // controls, so no part is ever permanently clipped (the array/grid/table boxes already
+          // scroll via overflow:auto; the canvas needs pan+zoom instead). zoomOnScroll stays off
+          // so the page still scrolls normally when the cursor is over the graph.
+          panOnDrag
           zoomOnScroll={false}
           proOptions={{ hideAttribution: true }}
         >
           <Background color="#efe6d3" gap={20} />
+          <Controls showInteractive={false} position="bottom-right" />
         </ReactFlow>
       </div>
       {hasTrace ? (
