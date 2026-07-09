@@ -8069,5 +8069,6089 @@
         }
       ]
     }
+  },
+  {
+    "name": "Recursion tree — LCS fn(i,j) memoized (their demo)",
+    "trace": {
+      "language": "python",
+      "code": "a = 'AGTB'\nb = 'GTXAB'\ndef fn(i, j):\n    if i == len(a) or j == len(b):\n        return 0\n    if a[i] == b[j]:\n        return 1 + fn(i + 1, j + 1)\n    return max(fn(i + 1, j), fn(i, j + 1))",
+      "views": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "0",
+              "label": "fn(0,0)"
+            },
+            {
+              "id": "1",
+              "label": "fn(1,0)"
+            },
+            {
+              "id": "2",
+              "label": "fn(2,1)"
+            },
+            {
+              "id": "3",
+              "label": "fn(3,2)"
+            },
+            {
+              "id": "4",
+              "label": "fn(4,2)"
+            },
+            {
+              "id": "5",
+              "label": "fn(3,3)"
+            },
+            {
+              "id": "6",
+              "label": "fn(4,3)"
+            },
+            {
+              "id": "7",
+              "label": "fn(3,4)"
+            },
+            {
+              "id": "8",
+              "label": "fn(4,5)"
+            },
+            {
+              "id": "9",
+              "label": "fn(0,1)"
+            },
+            {
+              "id": "10",
+              "label": "fn(1,1)"
+            },
+            {
+              "id": "11",
+              "label": "fn(2,1)"
+            },
+            {
+              "id": "12",
+              "label": "fn(1,2)"
+            },
+            {
+              "id": "13",
+              "label": "fn(2,2)"
+            },
+            {
+              "id": "14",
+              "label": "fn(3,2)"
+            },
+            {
+              "id": "15",
+              "label": "fn(2,3)"
+            },
+            {
+              "id": "16",
+              "label": "fn(3,3)"
+            },
+            {
+              "id": "17",
+              "label": "fn(2,4)"
+            },
+            {
+              "id": "18",
+              "label": "fn(3,4)"
+            },
+            {
+              "id": "19",
+              "label": "fn(2,5)"
+            },
+            {
+              "id": "20",
+              "label": "fn(1,3)"
+            },
+            {
+              "id": "21",
+              "label": "fn(2,3)"
+            },
+            {
+              "id": "22",
+              "label": "fn(1,4)"
+            },
+            {
+              "id": "23",
+              "label": "fn(2,4)"
+            },
+            {
+              "id": "24",
+              "label": "fn(1,5)"
+            },
+            {
+              "id": "25",
+              "label": "fn(0,2)"
+            },
+            {
+              "id": "26",
+              "label": "fn(1,2)"
+            },
+            {
+              "id": "27",
+              "label": "fn(0,3)"
+            },
+            {
+              "id": "28",
+              "label": "fn(1,4)"
+            }
+          ],
+          "edges": [
+            {
+              "from": "0",
+              "to": "1"
+            },
+            {
+              "from": "0",
+              "to": "9"
+            },
+            {
+              "from": "1",
+              "to": "2"
+            },
+            {
+              "from": "2",
+              "to": "3"
+            },
+            {
+              "from": "3",
+              "to": "4"
+            },
+            {
+              "from": "3",
+              "to": "5"
+            },
+            {
+              "from": "5",
+              "to": "6"
+            },
+            {
+              "from": "5",
+              "to": "7"
+            },
+            {
+              "from": "7",
+              "to": "8"
+            },
+            {
+              "from": "9",
+              "to": "10"
+            },
+            {
+              "from": "9",
+              "to": "25"
+            },
+            {
+              "from": "10",
+              "to": "11"
+            },
+            {
+              "from": "10",
+              "to": "12"
+            },
+            {
+              "from": "12",
+              "to": "13"
+            },
+            {
+              "from": "12",
+              "to": "20"
+            },
+            {
+              "from": "13",
+              "to": "14"
+            },
+            {
+              "from": "13",
+              "to": "15"
+            },
+            {
+              "from": "15",
+              "to": "16"
+            },
+            {
+              "from": "15",
+              "to": "17"
+            },
+            {
+              "from": "17",
+              "to": "18"
+            },
+            {
+              "from": "17",
+              "to": "19"
+            },
+            {
+              "from": "20",
+              "to": "21"
+            },
+            {
+              "from": "20",
+              "to": "22"
+            },
+            {
+              "from": "22",
+              "to": "23"
+            },
+            {
+              "from": "22",
+              "to": "24"
+            },
+            {
+              "from": "25",
+              "to": "26"
+            },
+            {
+              "from": "25",
+              "to": "27"
+            },
+            {
+              "from": "27",
+              "to": "28"
+            }
+          ],
+          "directed": true
+        }
+      },
+      "steps": [
+        {
+          "line": 7,
+          "explanation": "We start by calling fn(0,0). Nothing is computed yet — its answer depends entirely on smaller subproblems we are about to open. Watch the tree grow downward: every node that appears is a fresh recursive call.",
+          "graph": {
+            "current": "0",
+            "visited": [
+              "0"
+            ],
+            "revealed": [
+              "0"
+            ],
+            "returned": {},
+            "memo": [],
+            "pointers": {
+              "call": "0"
+            }
+          },
+          "stack": [
+            "fn(0,0)"
+          ],
+          "variables": {
+            "call": "fn(0,0)"
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "fn(0,0) cannot finish on its own — it needs fn(1,0) first, so it calls it and pauses. Look at the call stack: fn(0,0) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "1",
+            "visited": [
+              "0",
+              "1"
+            ],
+            "revealed": [
+              "0",
+              "1"
+            ],
+            "returned": {},
+            "memo": [],
+            "pointers": {
+              "call": "1"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)"
+          ],
+          "variables": {
+            "call": "fn(1,0)"
+          },
+          "activeEdge": [
+            "0",
+            "1"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(1,0) cannot finish on its own — it needs fn(2,1) first, so it calls it and pauses. Look at the call stack: fn(1,0) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "2",
+            "visited": [
+              "0",
+              "1",
+              "2"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2"
+            ],
+            "returned": {},
+            "memo": [],
+            "pointers": {
+              "call": "2"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)"
+          ],
+          "variables": {
+            "call": "fn(2,1)"
+          },
+          "activeEdge": [
+            "1",
+            "2"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(2,1) cannot finish on its own — it needs fn(3,2) first, so it calls it and pauses. Look at the call stack: fn(2,1) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "3",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3"
+            ],
+            "returned": {},
+            "memo": [],
+            "pointers": {
+              "call": "3"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)",
+            "fn(3,2)"
+          ],
+          "variables": {
+            "call": "fn(3,2)"
+          },
+          "activeEdge": [
+            "2",
+            "3"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(3,2) cannot finish on its own — it needs fn(4,2) first, so it calls it and pauses. Look at the call stack: fn(3,2) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "4",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "returned": {},
+            "memo": [],
+            "pointers": {
+              "call": "4"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)",
+            "fn(3,2)",
+            "fn(4,2)"
+          ],
+          "variables": {
+            "call": "fn(4,2)"
+          },
+          "activeEdge": [
+            "3",
+            "4"
+          ]
+        },
+        {
+          "line": 5,
+          "explanation": "fn(4,2) hits the base case — the input is now small enough to answer directly, so it returns 0 without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and 0 travels along the edge to fn(3,2).",
+          "graph": {
+            "current": "3",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "returned": {
+              "4": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "3"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)",
+            "fn(3,2)"
+          ],
+          "variables": {
+            "call": "fn(4,2)",
+            "returns": 0
+          },
+          "activeEdge": [
+            "4",
+            "3"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(3,2) cannot finish on its own — it needs fn(3,3) first, so it calls it and pauses. Look at the call stack: fn(3,2) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "5",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ],
+            "returned": {
+              "4": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "5"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)",
+            "fn(3,2)",
+            "fn(3,3)"
+          ],
+          "variables": {
+            "call": "fn(3,3)"
+          },
+          "activeEdge": [
+            "3",
+            "5"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(3,3) cannot finish on its own — it needs fn(4,3) first, so it calls it and pauses. Look at the call stack: fn(3,3) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "6",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ],
+            "returned": {
+              "4": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "6"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)",
+            "fn(3,2)",
+            "fn(3,3)",
+            "fn(4,3)"
+          ],
+          "variables": {
+            "call": "fn(4,3)"
+          },
+          "activeEdge": [
+            "5",
+            "6"
+          ]
+        },
+        {
+          "line": 5,
+          "explanation": "fn(4,3) hits the base case — the input is now small enough to answer directly, so it returns 0 without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and 0 travels along the edge to fn(3,3).",
+          "graph": {
+            "current": "5",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ],
+            "returned": {
+              "4": 0,
+              "6": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "5"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)",
+            "fn(3,2)",
+            "fn(3,3)"
+          ],
+          "variables": {
+            "call": "fn(4,3)",
+            "returns": 0
+          },
+          "activeEdge": [
+            "6",
+            "5"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(3,3) cannot finish on its own — it needs fn(3,4) first, so it calls it and pauses. Look at the call stack: fn(3,3) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "7",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7"
+            ],
+            "returned": {
+              "4": 0,
+              "6": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "7"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)",
+            "fn(3,2)",
+            "fn(3,3)",
+            "fn(3,4)"
+          ],
+          "variables": {
+            "call": "fn(3,4)"
+          },
+          "activeEdge": [
+            "5",
+            "7"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(3,4) cannot finish on its own — it needs fn(4,5) first, so it calls it and pauses. Look at the call stack: fn(3,4) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "8",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "returned": {
+              "4": 0,
+              "6": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "8"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)",
+            "fn(3,2)",
+            "fn(3,3)",
+            "fn(3,4)",
+            "fn(4,5)"
+          ],
+          "variables": {
+            "call": "fn(4,5)"
+          },
+          "activeEdge": [
+            "7",
+            "8"
+          ]
+        },
+        {
+          "line": 5,
+          "explanation": "fn(4,5) hits the base case — the input is now small enough to answer directly, so it returns 0 without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and 0 travels along the edge to fn(3,4).",
+          "graph": {
+            "current": "7",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "returned": {
+              "4": 0,
+              "6": 0,
+              "8": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "7"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)",
+            "fn(3,2)",
+            "fn(3,3)",
+            "fn(3,4)"
+          ],
+          "variables": {
+            "call": "fn(4,5)",
+            "returns": 0
+          },
+          "activeEdge": [
+            "8",
+            "7"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(3,4) has finished: all of its own children have answered, and combining them gives 1. That value now flows up the edge to fn(3,3), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "5",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "returned": {
+              "4": 0,
+              "6": 0,
+              "7": 1,
+              "8": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "5"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)",
+            "fn(3,2)",
+            "fn(3,3)"
+          ],
+          "variables": {
+            "call": "fn(3,4)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "7",
+            "5"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(3,3) has finished: all of its own children have answered, and combining them gives 1. That value now flows up the edge to fn(3,2), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "3",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "returned": {
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "3"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)",
+            "fn(3,2)"
+          ],
+          "variables": {
+            "call": "fn(3,3)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "5",
+            "3"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(3,2) has finished: all of its own children have answered, and combining them gives 1. That value now flows up the edge to fn(2,1), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "2",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "returned": {
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "2"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)",
+            "fn(2,1)"
+          ],
+          "variables": {
+            "call": "fn(3,2)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "3",
+            "2"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(2,1) has finished: all of its own children have answered, and combining them gives 2. That value now flows up the edge to fn(1,0), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "1",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "returned": {
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "1"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(1,0)"
+          ],
+          "variables": {
+            "call": "fn(2,1)",
+            "returns": 2
+          },
+          "activeEdge": [
+            "2",
+            "1"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(1,0) has finished: all of its own children have answered, and combining them gives 3. That value now flows up the edge to fn(0,0), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "0",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "0"
+            }
+          },
+          "stack": [
+            "fn(0,0)"
+          ],
+          "variables": {
+            "call": "fn(1,0)",
+            "returns": 3
+          },
+          "activeEdge": [
+            "1",
+            "0"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(0,0) cannot finish on its own — it needs fn(0,1) first, so it calls it and pauses. Look at the call stack: fn(0,0) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "9",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "9"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)"
+          ],
+          "variables": {
+            "call": "fn(0,1)"
+          },
+          "activeEdge": [
+            "0",
+            "9"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(0,1) cannot finish on its own — it needs fn(1,1) first, so it calls it and pauses. Look at the call stack: fn(0,1) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "10",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "10"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)"
+          ],
+          "variables": {
+            "call": "fn(1,1)"
+          },
+          "activeEdge": [
+            "9",
+            "10"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(1,1) cannot finish on its own — it needs fn(2,1) first, so it calls it and pauses. Look at the call stack: fn(1,1) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "11",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "11"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(2,1)"
+          ],
+          "variables": {
+            "call": "fn(2,1)"
+          },
+          "activeEdge": [
+            "10",
+            "11"
+          ]
+        },
+        {
+          "line": 1,
+          "explanation": "fn(2,1) looks familiar — we already solved it earlier and stored its answer in the memo, so it hands back 2 instantly with no recomputation. Compare this single purple lookup with the whole subtree we grew the first time: that repeated work is exactly what memoization saves.",
+          "graph": {
+            "current": "10",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2
+            },
+            "memo": [
+              "11"
+            ],
+            "pointers": {
+              "call": "10"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)"
+          ],
+          "variables": {
+            "call": "fn(2,1)",
+            "returns": 2
+          },
+          "activeEdge": [
+            "11",
+            "10"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(1,1) cannot finish on its own — it needs fn(1,2) first, so it calls it and pauses. Look at the call stack: fn(1,1) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "12",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2
+            },
+            "memo": [
+              "11"
+            ],
+            "pointers": {
+              "call": "12"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)"
+          ],
+          "variables": {
+            "call": "fn(1,2)"
+          },
+          "activeEdge": [
+            "10",
+            "12"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(1,2) cannot finish on its own — it needs fn(2,2) first, so it calls it and pauses. Look at the call stack: fn(1,2) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "13",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2
+            },
+            "memo": [
+              "11"
+            ],
+            "pointers": {
+              "call": "13"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)"
+          ],
+          "variables": {
+            "call": "fn(2,2)"
+          },
+          "activeEdge": [
+            "12",
+            "13"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(2,2) cannot finish on its own — it needs fn(3,2) first, so it calls it and pauses. Look at the call stack: fn(2,2) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "14",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2
+            },
+            "memo": [
+              "11"
+            ],
+            "pointers": {
+              "call": "14"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)",
+            "fn(3,2)"
+          ],
+          "variables": {
+            "call": "fn(3,2)"
+          },
+          "activeEdge": [
+            "13",
+            "14"
+          ]
+        },
+        {
+          "line": 1,
+          "explanation": "fn(3,2) looks familiar — we already solved it earlier and stored its answer in the memo, so it hands back 1 instantly with no recomputation. Compare this single purple lookup with the whole subtree we grew the first time: that repeated work is exactly what memoization saves.",
+          "graph": {
+            "current": "13",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "14": 1
+            },
+            "memo": [
+              "11",
+              "14"
+            ],
+            "pointers": {
+              "call": "13"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)"
+          ],
+          "variables": {
+            "call": "fn(3,2)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "14",
+            "13"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(2,2) cannot finish on its own — it needs fn(2,3) first, so it calls it and pauses. Look at the call stack: fn(2,2) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "15",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "14": 1
+            },
+            "memo": [
+              "11",
+              "14"
+            ],
+            "pointers": {
+              "call": "15"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)",
+            "fn(2,3)"
+          ],
+          "variables": {
+            "call": "fn(2,3)"
+          },
+          "activeEdge": [
+            "13",
+            "15"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(2,3) cannot finish on its own — it needs fn(3,3) first, so it calls it and pauses. Look at the call stack: fn(2,3) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "16",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "14": 1
+            },
+            "memo": [
+              "11",
+              "14"
+            ],
+            "pointers": {
+              "call": "16"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)",
+            "fn(2,3)",
+            "fn(3,3)"
+          ],
+          "variables": {
+            "call": "fn(3,3)"
+          },
+          "activeEdge": [
+            "15",
+            "16"
+          ]
+        },
+        {
+          "line": 1,
+          "explanation": "fn(3,3) looks familiar — we already solved it earlier and stored its answer in the memo, so it hands back 1 instantly with no recomputation. Compare this single purple lookup with the whole subtree we grew the first time: that repeated work is exactly what memoization saves.",
+          "graph": {
+            "current": "15",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "14": 1,
+              "16": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16"
+            ],
+            "pointers": {
+              "call": "15"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)",
+            "fn(2,3)"
+          ],
+          "variables": {
+            "call": "fn(3,3)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "16",
+            "15"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(2,3) cannot finish on its own — it needs fn(2,4) first, so it calls it and pauses. Look at the call stack: fn(2,3) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "17",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "14": 1,
+              "16": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16"
+            ],
+            "pointers": {
+              "call": "17"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)",
+            "fn(2,3)",
+            "fn(2,4)"
+          ],
+          "variables": {
+            "call": "fn(2,4)"
+          },
+          "activeEdge": [
+            "15",
+            "17"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(2,4) cannot finish on its own — it needs fn(3,4) first, so it calls it and pauses. Look at the call stack: fn(2,4) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "18",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "14": 1,
+              "16": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16"
+            ],
+            "pointers": {
+              "call": "18"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)",
+            "fn(2,3)",
+            "fn(2,4)",
+            "fn(3,4)"
+          ],
+          "variables": {
+            "call": "fn(3,4)"
+          },
+          "activeEdge": [
+            "17",
+            "18"
+          ]
+        },
+        {
+          "line": 1,
+          "explanation": "fn(3,4) looks familiar — we already solved it earlier and stored its answer in the memo, so it hands back 1 instantly with no recomputation. Compare this single purple lookup with the whole subtree we grew the first time: that repeated work is exactly what memoization saves.",
+          "graph": {
+            "current": "17",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "14": 1,
+              "16": 1,
+              "18": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18"
+            ],
+            "pointers": {
+              "call": "17"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)",
+            "fn(2,3)",
+            "fn(2,4)"
+          ],
+          "variables": {
+            "call": "fn(3,4)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "18",
+            "17"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(2,4) cannot finish on its own — it needs fn(2,5) first, so it calls it and pauses. Look at the call stack: fn(2,4) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "19",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "14": 1,
+              "16": 1,
+              "18": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18"
+            ],
+            "pointers": {
+              "call": "19"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)",
+            "fn(2,3)",
+            "fn(2,4)",
+            "fn(2,5)"
+          ],
+          "variables": {
+            "call": "fn(2,5)"
+          },
+          "activeEdge": [
+            "17",
+            "19"
+          ]
+        },
+        {
+          "line": 5,
+          "explanation": "fn(2,5) hits the base case — the input is now small enough to answer directly, so it returns 0 without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and 0 travels along the edge to fn(2,4).",
+          "graph": {
+            "current": "17",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "14": 1,
+              "16": 1,
+              "18": 1,
+              "19": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18"
+            ],
+            "pointers": {
+              "call": "17"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)",
+            "fn(2,3)",
+            "fn(2,4)"
+          ],
+          "variables": {
+            "call": "fn(2,5)",
+            "returns": 0
+          },
+          "activeEdge": [
+            "19",
+            "17"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(2,4) has finished: all of its own children have answered, and combining them gives 1. That value now flows up the edge to fn(2,3), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "15",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "14": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18"
+            ],
+            "pointers": {
+              "call": "15"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)",
+            "fn(2,3)"
+          ],
+          "variables": {
+            "call": "fn(2,4)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "17",
+            "15"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(2,3) has finished: all of its own children have answered, and combining them gives 1. That value now flows up the edge to fn(2,2), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "13",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18"
+            ],
+            "pointers": {
+              "call": "13"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(2,2)"
+          ],
+          "variables": {
+            "call": "fn(2,3)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "15",
+            "13"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(2,2) has finished: all of its own children have answered, and combining them gives 1. That value now flows up the edge to fn(1,2), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "12",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18"
+            ],
+            "pointers": {
+              "call": "12"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)"
+          ],
+          "variables": {
+            "call": "fn(2,2)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "13",
+            "12"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(1,2) cannot finish on its own — it needs fn(1,3) first, so it calls it and pauses. Look at the call stack: fn(1,2) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "20",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18"
+            ],
+            "pointers": {
+              "call": "20"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(1,3)"
+          ],
+          "variables": {
+            "call": "fn(1,3)"
+          },
+          "activeEdge": [
+            "12",
+            "20"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(1,3) cannot finish on its own — it needs fn(2,3) first, so it calls it and pauses. Look at the call stack: fn(1,3) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "21",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18"
+            ],
+            "pointers": {
+              "call": "21"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(1,3)",
+            "fn(2,3)"
+          ],
+          "variables": {
+            "call": "fn(2,3)"
+          },
+          "activeEdge": [
+            "20",
+            "21"
+          ]
+        },
+        {
+          "line": 1,
+          "explanation": "fn(2,3) looks familiar — we already solved it earlier and stored its answer in the memo, so it hands back 1 instantly with no recomputation. Compare this single purple lookup with the whole subtree we grew the first time: that repeated work is exactly what memoization saves.",
+          "graph": {
+            "current": "20",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "21": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21"
+            ],
+            "pointers": {
+              "call": "20"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(1,3)"
+          ],
+          "variables": {
+            "call": "fn(2,3)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "21",
+            "20"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(1,3) cannot finish on its own — it needs fn(1,4) first, so it calls it and pauses. Look at the call stack: fn(1,3) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "22",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "21": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21"
+            ],
+            "pointers": {
+              "call": "22"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(1,3)",
+            "fn(1,4)"
+          ],
+          "variables": {
+            "call": "fn(1,4)"
+          },
+          "activeEdge": [
+            "20",
+            "22"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(1,4) cannot finish on its own — it needs fn(2,4) first, so it calls it and pauses. Look at the call stack: fn(1,4) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "23",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "21": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21"
+            ],
+            "pointers": {
+              "call": "23"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(1,3)",
+            "fn(1,4)",
+            "fn(2,4)"
+          ],
+          "variables": {
+            "call": "fn(2,4)"
+          },
+          "activeEdge": [
+            "22",
+            "23"
+          ]
+        },
+        {
+          "line": 1,
+          "explanation": "fn(2,4) looks familiar — we already solved it earlier and stored its answer in the memo, so it hands back 1 instantly with no recomputation. Compare this single purple lookup with the whole subtree we grew the first time: that repeated work is exactly what memoization saves.",
+          "graph": {
+            "current": "22",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "21": 1,
+              "23": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23"
+            ],
+            "pointers": {
+              "call": "22"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(1,3)",
+            "fn(1,4)"
+          ],
+          "variables": {
+            "call": "fn(2,4)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "23",
+            "22"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(1,4) cannot finish on its own — it needs fn(1,5) first, so it calls it and pauses. Look at the call stack: fn(1,4) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "24",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "21": 1,
+              "23": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23"
+            ],
+            "pointers": {
+              "call": "24"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(1,3)",
+            "fn(1,4)",
+            "fn(1,5)"
+          ],
+          "variables": {
+            "call": "fn(1,5)"
+          },
+          "activeEdge": [
+            "22",
+            "24"
+          ]
+        },
+        {
+          "line": 5,
+          "explanation": "fn(1,5) hits the base case — the input is now small enough to answer directly, so it returns 0 without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and 0 travels along the edge to fn(1,4).",
+          "graph": {
+            "current": "22",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "21": 1,
+              "23": 1,
+              "24": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23"
+            ],
+            "pointers": {
+              "call": "22"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(1,3)",
+            "fn(1,4)"
+          ],
+          "variables": {
+            "call": "fn(1,5)",
+            "returns": 0
+          },
+          "activeEdge": [
+            "24",
+            "22"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(1,4) has finished: all of its own children have answered, and combining them gives 1. That value now flows up the edge to fn(1,3), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "20",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23"
+            ],
+            "pointers": {
+              "call": "20"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)",
+            "fn(1,3)"
+          ],
+          "variables": {
+            "call": "fn(1,4)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "22",
+            "20"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(1,3) has finished: all of its own children have answered, and combining them gives 1. That value now flows up the edge to fn(1,2), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "12",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23"
+            ],
+            "pointers": {
+              "call": "12"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)",
+            "fn(1,2)"
+          ],
+          "variables": {
+            "call": "fn(1,3)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "20",
+            "12"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(1,2) has finished: all of its own children have answered, and combining them gives 1. That value now flows up the edge to fn(1,1), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "10",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "11": 2,
+              "12": 1,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23"
+            ],
+            "pointers": {
+              "call": "10"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(1,1)"
+          ],
+          "variables": {
+            "call": "fn(1,2)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "12",
+            "10"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(1,1) has finished: all of its own children have answered, and combining them gives 2. That value now flows up the edge to fn(0,1), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "9",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "10": 2,
+              "11": 2,
+              "12": 1,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23"
+            ],
+            "pointers": {
+              "call": "9"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)"
+          ],
+          "variables": {
+            "call": "fn(1,1)",
+            "returns": 2
+          },
+          "activeEdge": [
+            "10",
+            "9"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(0,1) cannot finish on its own — it needs fn(0,2) first, so it calls it and pauses. Look at the call stack: fn(0,1) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "25",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "10": 2,
+              "11": 2,
+              "12": 1,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23"
+            ],
+            "pointers": {
+              "call": "25"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(0,2)"
+          ],
+          "variables": {
+            "call": "fn(0,2)"
+          },
+          "activeEdge": [
+            "9",
+            "25"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(0,2) cannot finish on its own — it needs fn(1,2) first, so it calls it and pauses. Look at the call stack: fn(0,2) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "26",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "10": 2,
+              "11": 2,
+              "12": 1,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23"
+            ],
+            "pointers": {
+              "call": "26"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(0,2)",
+            "fn(1,2)"
+          ],
+          "variables": {
+            "call": "fn(1,2)"
+          },
+          "activeEdge": [
+            "25",
+            "26"
+          ]
+        },
+        {
+          "line": 1,
+          "explanation": "fn(1,2) looks familiar — we already solved it earlier and stored its answer in the memo, so it hands back 1 instantly with no recomputation. Compare this single purple lookup with the whole subtree we grew the first time: that repeated work is exactly what memoization saves.",
+          "graph": {
+            "current": "25",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "10": 2,
+              "11": 2,
+              "12": 1,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0,
+              "26": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23",
+              "26"
+            ],
+            "pointers": {
+              "call": "25"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(0,2)"
+          ],
+          "variables": {
+            "call": "fn(1,2)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "26",
+            "25"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(0,2) cannot finish on its own — it needs fn(0,3) first, so it calls it and pauses. Look at the call stack: fn(0,2) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "27",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "10": 2,
+              "11": 2,
+              "12": 1,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0,
+              "26": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23",
+              "26"
+            ],
+            "pointers": {
+              "call": "27"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(0,2)",
+            "fn(0,3)"
+          ],
+          "variables": {
+            "call": "fn(0,3)"
+          },
+          "activeEdge": [
+            "25",
+            "27"
+          ]
+        },
+        {
+          "line": 7,
+          "explanation": "fn(0,3) cannot finish on its own — it needs fn(1,4) first, so it calls it and pauses. Look at the call stack: fn(0,3) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "28",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "10": 2,
+              "11": 2,
+              "12": 1,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0,
+              "26": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23",
+              "26"
+            ],
+            "pointers": {
+              "call": "28"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(0,2)",
+            "fn(0,3)",
+            "fn(1,4)"
+          ],
+          "variables": {
+            "call": "fn(1,4)"
+          },
+          "activeEdge": [
+            "27",
+            "28"
+          ]
+        },
+        {
+          "line": 1,
+          "explanation": "fn(1,4) looks familiar — we already solved it earlier and stored its answer in the memo, so it hands back 1 instantly with no recomputation. Compare this single purple lookup with the whole subtree we grew the first time: that repeated work is exactly what memoization saves.",
+          "graph": {
+            "current": "27",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "10": 2,
+              "11": 2,
+              "12": 1,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0,
+              "26": 1,
+              "28": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23",
+              "26",
+              "28"
+            ],
+            "pointers": {
+              "call": "27"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(0,2)",
+            "fn(0,3)"
+          ],
+          "variables": {
+            "call": "fn(1,4)",
+            "returns": 1
+          },
+          "activeEdge": [
+            "28",
+            "27"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(0,3) has finished: all of its own children have answered, and combining them gives 2. That value now flows up the edge to fn(0,2), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "25",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "10": 2,
+              "11": 2,
+              "12": 1,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0,
+              "26": 1,
+              "27": 2,
+              "28": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23",
+              "26",
+              "28"
+            ],
+            "pointers": {
+              "call": "25"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)",
+            "fn(0,2)"
+          ],
+          "variables": {
+            "call": "fn(0,3)",
+            "returns": 2
+          },
+          "activeEdge": [
+            "27",
+            "25"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(0,2) has finished: all of its own children have answered, and combining them gives 2. That value now flows up the edge to fn(0,1), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "9",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "10": 2,
+              "11": 2,
+              "12": 1,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0,
+              "25": 2,
+              "26": 1,
+              "27": 2,
+              "28": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23",
+              "26",
+              "28"
+            ],
+            "pointers": {
+              "call": "9"
+            }
+          },
+          "stack": [
+            "fn(0,0)",
+            "fn(0,1)"
+          ],
+          "variables": {
+            "call": "fn(0,2)",
+            "returns": 2
+          },
+          "activeEdge": [
+            "25",
+            "9"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "fn(0,1) has finished: all of its own children have answered, and combining them gives 2. That value now flows up the edge to fn(0,0), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "0",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28"
+            ],
+            "returned": {
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "9": 2,
+              "10": 2,
+              "11": 2,
+              "12": 1,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0,
+              "25": 2,
+              "26": 1,
+              "27": 2,
+              "28": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23",
+              "26",
+              "28"
+            ],
+            "pointers": {
+              "call": "0"
+            }
+          },
+          "stack": [
+            "fn(0,0)"
+          ],
+          "variables": {
+            "call": "fn(0,1)",
+            "returns": 2
+          },
+          "activeEdge": [
+            "9",
+            "0"
+          ]
+        },
+        {
+          "line": 8,
+          "explanation": "Every branch has reported back, so fn(0,0) combines its children's answers and returns 3 — the final result. Read the finished tree bottom-up: each node's value was built from its children, and every purple node marks an entire subtree of work the memo saved us from repeating.",
+          "graph": {
+            "current": "0",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+              "13",
+              "14",
+              "15",
+              "16",
+              "17",
+              "18",
+              "19",
+              "20",
+              "21",
+              "22",
+              "23",
+              "24",
+              "25",
+              "26",
+              "27",
+              "28"
+            ],
+            "returned": {
+              "0": 3,
+              "1": 3,
+              "2": 2,
+              "3": 1,
+              "4": 0,
+              "5": 1,
+              "6": 0,
+              "7": 1,
+              "8": 0,
+              "9": 2,
+              "10": 2,
+              "11": 2,
+              "12": 1,
+              "13": 1,
+              "14": 1,
+              "15": 1,
+              "16": 1,
+              "17": 1,
+              "18": 1,
+              "19": 0,
+              "20": 1,
+              "21": 1,
+              "22": 1,
+              "23": 1,
+              "24": 0,
+              "25": 2,
+              "26": 1,
+              "27": 2,
+              "28": 1
+            },
+            "memo": [
+              "11",
+              "14",
+              "16",
+              "18",
+              "21",
+              "23",
+              "26",
+              "28"
+            ],
+            "pointers": {
+              "call": "0"
+            }
+          },
+          "stack": [],
+          "variables": {
+            "call": "fn(0,0)",
+            "returns": 3
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Recursion tree — LC124 Max Path Sum gain()",
+    "trace": {
+      "language": "python",
+      "code": "def gain(vals, i):\n    if i >= len(vals) or vals[i] is None:\n        return 0\n    left = max(0, gain(vals, 2 * i + 1))\n    right = max(0, gain(vals, 2 * i + 2))\n    return vals[i] + max(left, right)",
+      "views": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "0",
+              "label": "gain(0)"
+            },
+            {
+              "id": "1",
+              "label": "gain(1)"
+            },
+            {
+              "id": "2",
+              "label": "gain(3)"
+            },
+            {
+              "id": "3",
+              "label": "gain(4)"
+            },
+            {
+              "id": "4",
+              "label": "gain(2)"
+            },
+            {
+              "id": "5",
+              "label": "gain(5)"
+            },
+            {
+              "id": "6",
+              "label": "gain(11)"
+            },
+            {
+              "id": "7",
+              "label": "gain(12)"
+            },
+            {
+              "id": "8",
+              "label": "gain(6)"
+            },
+            {
+              "id": "9",
+              "label": "gain(13)"
+            },
+            {
+              "id": "10",
+              "label": "gain(14)"
+            }
+          ],
+          "edges": [
+            {
+              "from": "0",
+              "to": "1"
+            },
+            {
+              "from": "0",
+              "to": "4"
+            },
+            {
+              "from": "1",
+              "to": "2"
+            },
+            {
+              "from": "1",
+              "to": "3"
+            },
+            {
+              "from": "4",
+              "to": "5"
+            },
+            {
+              "from": "4",
+              "to": "8"
+            },
+            {
+              "from": "5",
+              "to": "6"
+            },
+            {
+              "from": "5",
+              "to": "7"
+            },
+            {
+              "from": "8",
+              "to": "9"
+            },
+            {
+              "from": "8",
+              "to": "10"
+            }
+          ],
+          "directed": true
+        }
+      },
+      "steps": [
+        {
+          "line": 4,
+          "explanation": "We start by calling gain(0). Nothing is computed yet — its answer depends entirely on smaller subproblems we are about to open. Watch the tree grow downward: every node that appears is a fresh recursive call.",
+          "graph": {
+            "current": "0",
+            "visited": [
+              "0"
+            ],
+            "revealed": [
+              "0"
+            ],
+            "returned": {},
+            "memo": [],
+            "pointers": {
+              "call": "0"
+            }
+          },
+          "stack": [
+            "gain(0)"
+          ],
+          "variables": {
+            "call": "gain(0)"
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "gain(0) cannot finish on its own — it needs gain(1) first, so it calls it and pauses. Look at the call stack: gain(0) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "1",
+            "visited": [
+              "0",
+              "1"
+            ],
+            "revealed": [
+              "0",
+              "1"
+            ],
+            "returned": {},
+            "memo": [],
+            "pointers": {
+              "call": "1"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(1)"
+          ],
+          "variables": {
+            "call": "gain(1)"
+          },
+          "activeEdge": [
+            "0",
+            "1"
+          ]
+        },
+        {
+          "line": 4,
+          "explanation": "gain(1) cannot finish on its own — it needs gain(3) first, so it calls it and pauses. Look at the call stack: gain(1) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "2",
+            "visited": [
+              "0",
+              "1",
+              "2"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2"
+            ],
+            "returned": {},
+            "memo": [],
+            "pointers": {
+              "call": "2"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(1)",
+            "gain(3)"
+          ],
+          "variables": {
+            "call": "gain(3)"
+          },
+          "activeEdge": [
+            "1",
+            "2"
+          ]
+        },
+        {
+          "line": 3,
+          "explanation": "gain(3) hits the base case — the input is now small enough to answer directly, so it returns 0 without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and 0 travels along the edge to gain(1).",
+          "graph": {
+            "current": "1",
+            "visited": [
+              "0",
+              "1",
+              "2"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2"
+            ],
+            "returned": {
+              "2": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "1"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(1)"
+          ],
+          "variables": {
+            "call": "gain(3)",
+            "returns": 0
+          },
+          "activeEdge": [
+            "2",
+            "1"
+          ]
+        },
+        {
+          "line": 4,
+          "explanation": "gain(1) cannot finish on its own — it needs gain(4) first, so it calls it and pauses. Look at the call stack: gain(1) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "3",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3"
+            ],
+            "returned": {
+              "2": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "3"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(1)",
+            "gain(4)"
+          ],
+          "variables": {
+            "call": "gain(4)"
+          },
+          "activeEdge": [
+            "1",
+            "3"
+          ]
+        },
+        {
+          "line": 3,
+          "explanation": "gain(4) hits the base case — the input is now small enough to answer directly, so it returns 0 without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and 0 travels along the edge to gain(1).",
+          "graph": {
+            "current": "1",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3"
+            ],
+            "returned": {
+              "2": 0,
+              "3": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "1"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(1)"
+          ],
+          "variables": {
+            "call": "gain(4)",
+            "returns": 0
+          },
+          "activeEdge": [
+            "3",
+            "1"
+          ]
+        },
+        {
+          "line": 6,
+          "explanation": "gain(1) has finished: all of its own children have answered, and combining them gives 9. That value now flows up the edge to gain(0), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "0",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "0"
+            }
+          },
+          "stack": [
+            "gain(0)"
+          ],
+          "variables": {
+            "call": "gain(1)",
+            "returns": 9
+          },
+          "activeEdge": [
+            "1",
+            "0"
+          ]
+        },
+        {
+          "line": 4,
+          "explanation": "gain(0) cannot finish on its own — it needs gain(2) first, so it calls it and pauses. Look at the call stack: gain(0) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "4",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "4"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)"
+          ],
+          "variables": {
+            "call": "gain(2)"
+          },
+          "activeEdge": [
+            "0",
+            "4"
+          ]
+        },
+        {
+          "line": 4,
+          "explanation": "gain(2) cannot finish on its own — it needs gain(5) first, so it calls it and pauses. Look at the call stack: gain(2) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "5",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "5"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)",
+            "gain(5)"
+          ],
+          "variables": {
+            "call": "gain(5)"
+          },
+          "activeEdge": [
+            "4",
+            "5"
+          ]
+        },
+        {
+          "line": 4,
+          "explanation": "gain(5) cannot finish on its own — it needs gain(11) first, so it calls it and pauses. Look at the call stack: gain(5) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "6",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "6"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)",
+            "gain(5)",
+            "gain(11)"
+          ],
+          "variables": {
+            "call": "gain(11)"
+          },
+          "activeEdge": [
+            "5",
+            "6"
+          ]
+        },
+        {
+          "line": 3,
+          "explanation": "gain(11) hits the base case — the input is now small enough to answer directly, so it returns 0 without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and 0 travels along the edge to gain(5).",
+          "graph": {
+            "current": "5",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0,
+              "6": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "5"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)",
+            "gain(5)"
+          ],
+          "variables": {
+            "call": "gain(11)",
+            "returns": 0
+          },
+          "activeEdge": [
+            "6",
+            "5"
+          ]
+        },
+        {
+          "line": 4,
+          "explanation": "gain(5) cannot finish on its own — it needs gain(12) first, so it calls it and pauses. Look at the call stack: gain(5) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "7",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0,
+              "6": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "7"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)",
+            "gain(5)",
+            "gain(12)"
+          ],
+          "variables": {
+            "call": "gain(12)"
+          },
+          "activeEdge": [
+            "5",
+            "7"
+          ]
+        },
+        {
+          "line": 3,
+          "explanation": "gain(12) hits the base case — the input is now small enough to answer directly, so it returns 0 without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and 0 travels along the edge to gain(5).",
+          "graph": {
+            "current": "5",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0,
+              "6": 0,
+              "7": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "5"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)",
+            "gain(5)"
+          ],
+          "variables": {
+            "call": "gain(12)",
+            "returns": 0
+          },
+          "activeEdge": [
+            "7",
+            "5"
+          ]
+        },
+        {
+          "line": 6,
+          "explanation": "gain(5) has finished: all of its own children have answered, and combining them gives 15. That value now flows up the edge to gain(2), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "4",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0,
+              "5": 15,
+              "6": 0,
+              "7": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "4"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)"
+          ],
+          "variables": {
+            "call": "gain(5)",
+            "returns": 15
+          },
+          "activeEdge": [
+            "5",
+            "4"
+          ]
+        },
+        {
+          "line": 4,
+          "explanation": "gain(2) cannot finish on its own — it needs gain(6) first, so it calls it and pauses. Look at the call stack: gain(2) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "8",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0,
+              "5": 15,
+              "6": 0,
+              "7": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "8"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)",
+            "gain(6)"
+          ],
+          "variables": {
+            "call": "gain(6)"
+          },
+          "activeEdge": [
+            "4",
+            "8"
+          ]
+        },
+        {
+          "line": 4,
+          "explanation": "gain(6) cannot finish on its own — it needs gain(13) first, so it calls it and pauses. Look at the call stack: gain(6) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "9",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0,
+              "5": 15,
+              "6": 0,
+              "7": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "9"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)",
+            "gain(6)",
+            "gain(13)"
+          ],
+          "variables": {
+            "call": "gain(13)"
+          },
+          "activeEdge": [
+            "8",
+            "9"
+          ]
+        },
+        {
+          "line": 3,
+          "explanation": "gain(13) hits the base case — the input is now small enough to answer directly, so it returns 0 without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and 0 travels along the edge to gain(6).",
+          "graph": {
+            "current": "8",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0,
+              "5": 15,
+              "6": 0,
+              "7": 0,
+              "9": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "8"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)",
+            "gain(6)"
+          ],
+          "variables": {
+            "call": "gain(13)",
+            "returns": 0
+          },
+          "activeEdge": [
+            "9",
+            "8"
+          ]
+        },
+        {
+          "line": 4,
+          "explanation": "gain(6) cannot finish on its own — it needs gain(14) first, so it calls it and pauses. Look at the call stack: gain(6) is still there, waiting for this answer. We descend one level, and a new node appears on the tree.",
+          "graph": {
+            "current": "10",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0,
+              "5": 15,
+              "6": 0,
+              "7": 0,
+              "9": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "10"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)",
+            "gain(6)",
+            "gain(14)"
+          ],
+          "variables": {
+            "call": "gain(14)"
+          },
+          "activeEdge": [
+            "8",
+            "10"
+          ]
+        },
+        {
+          "line": 3,
+          "explanation": "gain(14) hits the base case — the input is now small enough to answer directly, so it returns 0 without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and 0 travels along the edge to gain(6).",
+          "graph": {
+            "current": "8",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0,
+              "5": 15,
+              "6": 0,
+              "7": 0,
+              "9": 0,
+              "10": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "8"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)",
+            "gain(6)"
+          ],
+          "variables": {
+            "call": "gain(14)",
+            "returns": 0
+          },
+          "activeEdge": [
+            "10",
+            "8"
+          ]
+        },
+        {
+          "line": 6,
+          "explanation": "gain(6) has finished: all of its own children have answered, and combining them gives 7. That value now flows up the edge to gain(2), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "4",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0,
+              "5": 15,
+              "6": 0,
+              "7": 0,
+              "8": 7,
+              "9": 0,
+              "10": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "4"
+            }
+          },
+          "stack": [
+            "gain(0)",
+            "gain(2)"
+          ],
+          "variables": {
+            "call": "gain(6)",
+            "returns": 7
+          },
+          "activeEdge": [
+            "8",
+            "4"
+          ]
+        },
+        {
+          "line": 6,
+          "explanation": "gain(2) has finished: all of its own children have answered, and combining them gives 35. That value now flows up the edge to gain(0), which is still waiting on the stack until every one of its children reports back.",
+          "graph": {
+            "current": "0",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "returned": {
+              "1": 9,
+              "2": 0,
+              "3": 0,
+              "4": 35,
+              "5": 15,
+              "6": 0,
+              "7": 0,
+              "8": 7,
+              "9": 0,
+              "10": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "0"
+            }
+          },
+          "stack": [
+            "gain(0)"
+          ],
+          "variables": {
+            "call": "gain(2)",
+            "returns": 35
+          },
+          "activeEdge": [
+            "4",
+            "0"
+          ]
+        },
+        {
+          "line": 6,
+          "explanation": "Every branch has reported back, so gain(0) combines its children's answers and returns 25 — the final result. Read the finished tree bottom-up: each node's value was built from its children.",
+          "graph": {
+            "current": "0",
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "revealed": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "returned": {
+              "0": 25,
+              "1": 9,
+              "2": 0,
+              "3": 0,
+              "4": 35,
+              "5": 15,
+              "6": 0,
+              "7": 0,
+              "8": 7,
+              "9": 0,
+              "10": 0
+            },
+            "memo": [],
+            "pointers": {
+              "call": "0"
+            }
+          },
+          "stack": [],
+          "variables": {
+            "call": "gain(0)",
+            "returns": 25
+          }
+        }
+      ]
+    }
   }
 ]

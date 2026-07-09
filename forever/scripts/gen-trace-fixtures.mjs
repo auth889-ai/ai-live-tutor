@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compilePointerWalk } from '../lib/execution/trace/pointer-walk/compiler.js';
+import { compileRecursionTrace, assembleRecursionProgram, parseCallTree } from '../lib/execution/trace/recursion/compiler.js';
 import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../lib/execution/trace/line-sim/compiler.js';
 import { compileGraphWalk } from '../lib/execution/trace/graph-walk/compiler.js';
 import { compileLinkedListTrace } from '../lib/execution/trace/linked-list/compiler.js';
@@ -127,6 +128,27 @@ add('Hash map — put/get with collision', compileOperationsTrace({
   const code = 'def kadane(a):\n    best = a[0]\n    cur = a[0]\n    for x in a[1:]:\n        cur = max(x, cur + x)\n        best = max(best, cur)\n    return best';
   const entry = 'kadane([-2, 1, -3, 4, -1, 2, 1, -5, 4])';
   add('FLOOR: Max Subarray / Kadane (line-sim)', compileLineTrace({ ...parseLineEvents(py(assembleLineProgram({ code, entry }))), code, entry }));
+}
+
+// --- recursion tree with memoization — recursion.vercel.app's exact viral demo (LCS on
+// 'AGTB'/'GTXAB'), so the gallery proves our recursion engine head-to-head against theirs. ---
+{
+  const code = "a = 'AGTB'\nb = 'GTXAB'\ndef fn(i, j):\n    if i == len(a) or j == len(b):\n        return 0\n    if a[i] == b[j]:\n        return 1 + fn(i + 1, j + 1)\n    return max(fn(i + 1, j), fn(i, j + 1))";
+  const program = assembleRecursionProgram({ code, fnName: 'fn', args: [0, 0], memoize: true });
+  add('Recursion tree — LCS fn(i,j) memoized (their demo)', compileRecursionTrace({
+    callTree: parseCallTree(py(program)), code, language: 'python',
+    lines: { call: 7, base: 5, combine: 8 },
+  }));
+}
+
+// --- recursion tree — LC 124 Max Path Sum gain(), flattened top-level as the mode demands ---
+{
+  const code = 'def gain(vals, i):\n    if i >= len(vals) or vals[i] is None:\n        return 0\n    left = max(0, gain(vals, 2 * i + 1))\n    right = max(0, gain(vals, 2 * i + 2))\n    return vals[i] + max(left, right)';
+  const program = assembleRecursionProgram({ code, fnName: 'gain', args: [[-10, 9, 20, null, null, 15, 7], 0] });
+  add('Recursion tree — LC124 Max Path Sum gain()', compileRecursionTrace({
+    callTree: parseCallTree(py(program)), code, language: 'python',
+    lines: { base: 3, call: 4, combine: 6 },
+  }));
 }
 
 const dir = dirname(fileURLToPath(import.meta.url));

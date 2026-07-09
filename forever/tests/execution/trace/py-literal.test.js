@@ -12,6 +12,17 @@ test('pyLiteral: JSON values become real python (null/true/false do not leak)', 
   assert.equal(pyLiteral(Infinity), "float('inf')");
 });
 
+test('a student function named "fn" cannot shadow the tracker (the reference demo name)', () => {
+  // recursion.vercel.app's own demo names the function fn — a wrapper also named fn recorded
+  // ZERO vertices because the student def silently replaced it.
+  const code = "a = 'AG'\nb = 'GA'\ndef fn(i, j):\n    if i == len(a) or j == len(b):\n        return 0\n    if a[i] == b[j]:\n        return 1 + fn(i + 1, j + 1)\n    return max(fn(i + 1, j), fn(i, j + 1))";
+  const program = assembleRecursionProgram({ code, fnName: 'fn', args: [0, 0], memoize: true });
+  const stdout = execFileSync('python3', ['-c', program], { encoding: 'utf8', timeout: 15_000 });
+  const line = stdout.split('\n').find((l) => l.includes('@@CALLTREE '));
+  const tree = JSON.parse(line.slice(line.indexOf('@@CALLTREE ') + '@@CALLTREE '.length));
+  assert.ok(Object.keys(tree.vertices).length >= 5, `expected a real call tree, got ${Object.keys(tree.vertices).length} vertices`);
+});
+
 test('recursion tracker survives LeetCode-style null args (the Max Path Sum crash)', () => {
   // The exact shape that killed the generated tree lesson: a level-order array with null holes.
   const code = [

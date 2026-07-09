@@ -83,7 +83,7 @@ test('the tracker template is real instrumented Python with the @@CALLTREE proto
 test('assembleRecursionProgram instruments the UNMODIFIED student function via global rebinding', () => {
   const program = assembleRecursionProgram({ code: CODE, fnName: 'fib', args: [5], memoize: true });
   // Order matters: tracker defs -> student code -> rebinding -> run.
-  const order = ['def fn(*args):', 'def fib(n):', '_fn = fib', 'fib = fn', 'result = fn(*ARGS)', "json.dumps({'fnName': FN_NAME"];
+  const order = ['def _trace_call(*args):', 'def fib(n):', '_fn = fib', 'fib = _trace_call', 'result = _trace_call(*ARGS)', "json.dumps({'fnName': FN_NAME"];
   let last = -1;
   for (const marker of order) {
     const at = program.indexOf(marker);
@@ -96,6 +96,11 @@ test('assembleRecursionProgram instruments the UNMODIFIED student function via g
   assert.throws(() => assembleRecursionProgram({ code: CODE, fnName: 'fib; import os', args: [] }), /identifier/);
   assert.throws(() => assembleRecursionProgram({ code: CODE, fnName: 'other', args: [] }), /must define/);
   assert.throws(() => assembleRecursionProgram({ code: CODE, fnName: 'fib', args: 'nope' }), /array/);
+
+  // A nested helper (LeetCode's idiomatic inner `gain` closing over `best`) is invisible at
+  // module scope, where the tracker rebinds — reject it with the fix spelled out.
+  const nested = 'def maxPathSum(root):\n    def gain(node):\n        return 0\n    return gain(root)';
+  assert.throws(() => assembleRecursionProgram({ code: nested, fnName: 'gain', args: [null] }), /NESTED def.*top level/);
 });
 
 test('parseCallTree extracts the payload from noisy stdout, null when absent/broken', () => {

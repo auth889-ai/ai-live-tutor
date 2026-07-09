@@ -21,6 +21,22 @@ export { RECURSION_TRACKER_PY, assembleRecursionProgram, parseCallTree, validate
 
 const label = (fnName, args) => `${fnName}(${args.map((a) => JSON.stringify(a)).join(',')})`.replace(/"/g, "'");
 
+// The readable-circle rule the reference visualizer lives by: a node shows ONLY the arguments
+// that VARY between calls. gain(vals, i) where vals never changes reads as gain(6), never as
+// gain([-10,9,20,null,null,15,7],6) — the invariant payload would drown every label, chip and
+// stack row. With a single call (nothing to compare) or all-constant args, show everything.
+function varyingArgPositions(vertices) {
+  const all = Object.values(vertices).map((v) => v.args ?? []);
+  if (all.length < 2) return null; // one call — no basis to drop anything
+  const width = Math.max(...all.map((a) => a.length));
+  const varying = [];
+  for (let i = 0; i < width; i += 1) {
+    const first = JSON.stringify(all[0][i]);
+    if (all.some((a) => JSON.stringify(a[i]) !== first)) varying.push(i);
+  }
+  return varying.length > 0 ? varying : null;
+}
+
 // callTree: { fnName, result, vertices: {id: {args, children: [{id, value}], memoized}} }
 // lines: 1-based lines in `code` for the teaching moments — {call, base, memo, combine};
 // missing entries fall back to line 1 (the function signature).
@@ -36,7 +52,11 @@ export function compileRecursionTrace({ callTree, code, language = 'python', lin
     return Number.isInteger(l) && l >= 1 && l <= lineCount ? l : 1;
   };
 
-  const nameOf = (id) => label(fnName, vertices[id]?.args ?? []);
+  const varying = varyingArgPositions(vertices);
+  const nameOf = (id) => {
+    const args = vertices[id]?.args ?? [];
+    return label(fnName, varying ? varying.map((i) => args[i]) : args);
+  };
   const nodes = ids.map((id) => ({ id: String(id), label: nameOf(id) }));
   const edges = ids.flatMap((id) => (vertices[id].children ?? []).map((c) => ({ from: String(id), to: String(c.id) })));
 

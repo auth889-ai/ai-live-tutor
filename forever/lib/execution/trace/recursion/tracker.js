@@ -31,7 +31,7 @@ def _safe(v, depth=0):
         return {str(k): _safe(x, depth + 1) for k, x in list(v.items())[:20]}
     return repr(v)[:40]
 
-def fn(*args):
+def _trace_call(*args):
     global _curr_id
     if _curr_id > MAX_CALLS:
         print('@@CALLTREE ' + json.dumps({'error': 'too many recursive calls', 'maxCalls': MAX_CALLS}))
@@ -59,13 +59,21 @@ def fn(*args):
 
 // Assemble the runnable tracker program around the student's UNMODIFIED function. The trick
 // (Python resolves globals at call time): after defining the function, rebind its global name
-// to the tracker — every recursive call inside the original body then routes through fn(),
-// recording the real call tree with zero cooperation from the code being traced.
+// to the tracker — every recursive call inside the original body then routes through
+// _trace_call() (underscore-prefixed so a student function named "fn" — the reference tool's
+// own demo name — can never shadow it), recording the real call tree with zero cooperation
+// from the code being traced.
 export function assembleRecursionProgram({ code, fnName, args = [], memoize = false }) {
   const name = String(fnName ?? '').trim();
-  if (!/^[A-Za-z_]\w*$/.test(name)) throw new Error(`recursion fnName must be a python identifier (got "${fnName}")`);
+  if (!/^[A-Za-z]\w*$/.test(name)) throw new Error(`recursion fnName must be a python identifier not starting with "_" (got "${fnName}")`);
   if (!Array.isArray(args)) throw new Error('recursion args must be an array of literal argument values');
   if (!String(code ?? '').includes(`def ${name}(`)) throw new Error(`recursion code must define "def ${name}(...)"`);
+  // The tracker rebinds the function in MODULE scope (`_fn = name; name = fn`) — a def nested
+  // inside a wrapper is invisible there and dies as a confusing NameError at run time. Fail
+  // fast with the fix spelled out, so the agent's retry actually corrects the shape.
+  if (!new RegExp(`^def ${name}\\(`, 'm').test(String(code ?? ''))) {
+    throw new Error(`recursion fnName "${name}" is a NESTED def — it must be at module top level (column 0). Flatten the helper out of its wrapper and return any outer state (e.g. a running best) from the function itself.`);
+  }
   return [
     RECURSION_TRACKER_PY,
     '',
@@ -75,8 +83,8 @@ export function assembleRecursionProgram({ code, fnName, args = [], memoize = fa
     `ARGS = ${pyLiteral(args)}`,
     `MEMOIZE = ${memoize ? 'True' : 'False'}`,
     `_fn = ${name}`,
-    `${name} = fn`,
-    'result = fn(*ARGS)',
+    `${name} = _trace_call`,
+    'result = _trace_call(*ARGS)',
     "print('@@CALLTREE ' + json.dumps({'fnName': FN_NAME, 'result': _safe(result), 'vertices': vertices}))",
   ].join('\n');
 }
