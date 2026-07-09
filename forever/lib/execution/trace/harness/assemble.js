@@ -4,11 +4,14 @@
 // theirs — constants, the tracker source, the stdout marker, and how to serialize the result.
 //
 // The contract every harness gets for free:
-//   - constants injected as python assignments (JSON literals are valid python literals)
+//   - constants injected as python assignments (via pyLiteral — JSON's null/true/false are
+//     NOT python; LeetCode-style inputs carry null constantly)
 //   - the student's code compiled under the '<student>' filename, so trackers can filter
 //     events to ONLY the student's lines (harness lines never leak into the animation)
 //   - a single-expression entry evaluated under sys.settrace, tracer always detached in finally
 //   - one '<MARKER> {"events": [...], "result": ...}' line printed at the end
+
+import { pyLiteral } from './py-literal.js';
 
 export function buildTracedProgram({ constants = {}, trackerPy, code, entry, marker, resultLine, entryExample }) {
   const call = String(entry ?? '').trim();
@@ -20,7 +23,7 @@ export function buildTracedProgram({ constants = {}, trackerPy, code, entry, mar
     throw new Error('buildTracedProgram needs a tracker source and an @@-prefixed marker');
   }
   return [
-    ...Object.entries(constants).map(([k, v]) => `${k} = ${JSON.stringify(v)}`),
+    ...Object.entries(constants).map(([k, v]) => `${k} = ${pyLiteral(v)}`),
     trackerPy,
     '',
     `_src = ${JSON.stringify(String(code))}`,

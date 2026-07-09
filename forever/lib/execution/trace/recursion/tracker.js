@@ -3,6 +3,8 @@
 // lambda — one vertex per call with args/children/memoized, child value = return value.)
 // The model never writes any of this machinery.
 
+import { pyLiteral } from '../harness/py-literal.js';
+
 // Python instrumentation template — definitions only; assembleRecursionProgram() adds the
 // student's function and the run line.
 export const RECURSION_TRACKER_PY = `
@@ -70,7 +72,7 @@ export function assembleRecursionProgram({ code, fnName, args = [], memoize = fa
     String(code).trim(),
     '',
     `FN_NAME = ${JSON.stringify(name)}`,
-    `ARGS = ${JSON.stringify(args)}`,
+    `ARGS = ${pyLiteral(args)}`,
     `MEMOIZE = ${memoize ? 'True' : 'False'}`,
     `_fn = ${name}`,
     `${name} = fn`,
