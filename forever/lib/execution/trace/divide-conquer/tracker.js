@@ -11,6 +11,8 @@
 // The model declares only: the recursive function's NAME, the array parameter's NAME, and the
 // lo/hi bound parameter NAMES. The algorithm must sort IN PLACE on that one array.
 
+import { buildTracedProgram, parseTracedEvents } from '../harness/assemble.js';
+
 export const DIVIDE_TRACKER_PY = `
 import json, sys
 
@@ -73,42 +75,20 @@ def _tracer(frame, event, arg):
 const IDENT = /^[A-Za-z_]\w*$/;
 
 export function assembleDivideProgram({ code, entry, fn, arrayVar, loVar = 'lo', hiVar = 'hi' }) {
-  const call = String(entry ?? '').trim();
-  if (!call || /[;\n]/.test(call)) throw new Error('divide-conquer entry must be a single expression like "quick_sort([5,2,9,1], 0, 3)"');
-  if (!String(code ?? '').trim()) throw new Error('divide-conquer tool needs the algorithm code');
   for (const [what, v] of [['fn', fn], ['arrayVar', arrayVar], ['loVar', loVar], ['hiVar', hiVar]]) {
     if (!IDENT.test(String(v ?? ''))) throw new Error(`divide-conquer ${what} must be a simple identifier`);
   }
-  return [
-    `FN_NAME = ${JSON.stringify(String(fn))}`,
-    `ARRAY_VAR = ${JSON.stringify(String(arrayVar))}`,
-    `LO_VAR = ${JSON.stringify(String(loVar))}`,
-    `HI_VAR = ${JSON.stringify(String(hiVar))}`,
-    DIVIDE_TRACKER_PY,
-    '',
-    `_src = ${JSON.stringify(String(code))}`,
-    `_compiled = compile(_src, '<student>', 'exec')`,
-    '_ns = {}',
-    'exec(_compiled, _ns)',
-    'sys.settrace(_tracer)',
-    'try:',
-    `    _result = eval(${JSON.stringify(call)}, _ns)`,
-    'finally:',
-    '    sys.settrace(None)',
-    "_out = _result if _result is None or isinstance(_result, (int, float, str, bool)) else (_copyarr(_result) if isinstance(_result, list) else repr(_result)[:40])",
-    "print('@@DIVIDE ' + json.dumps({'events': _events, 'result': _out}))",
-  ].join('\n');
+  return buildTracedProgram({
+    constants: { FN_NAME: String(fn), ARRAY_VAR: String(arrayVar), LO_VAR: String(loVar), HI_VAR: String(hiVar) },
+    trackerPy: DIVIDE_TRACKER_PY,
+    code,
+    entry,
+    marker: '@@DIVIDE',
+    resultLine: '_out = _result if _result is None or isinstance(_result, (int, float, str, bool)) else (_copyarr(_result) if isinstance(_result, list) else repr(_result)[:40])',
+    entryExample: '"quick_sort([5,2,9,1], 0, 3)"',
+  });
 }
 
 export function parseDivideEvents(stdout) {
-  for (const line of String(stdout ?? '').split('\n')) {
-    const at = line.indexOf('@@DIVIDE ');
-    if (at === -1) continue;
-    try {
-      return JSON.parse(line.slice(at + '@@DIVIDE '.length));
-    } catch {
-      return null;
-    }
-  }
-  return null;
+  return parseTracedEvents(stdout, '@@DIVIDE');
 }

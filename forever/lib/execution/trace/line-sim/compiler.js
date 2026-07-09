@@ -7,6 +7,8 @@
 
 import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
+import { buildTracedProgram, parseTracedEvents } from '../harness/assemble.js';
+
 // Our instrumentation harness (definitions only; assembleLineProgram adds the student code +
 // entry call). Records one @@LINE event per executed line of the STUDENT'S code with the local
 // variables that are JSON-safe, capped so a hot loop cannot flood stdout.
@@ -46,39 +48,21 @@ def _tracer(frame, event, arg):
     return _tracer
 `.trim();
 
-// Assemble the runnable program: compile the student's code under the '<student>' filename so
-// the tracer keeps only ITS lines (harness lines never leak into the animation).
+// Assemble the runnable program via the SHARED harness (one owner for the compile-under-
+// '<student>' / entry-eval / marker-print tail every tracker needs).
 export function assembleLineProgram({ code, entry }) {
-  const call = String(entry ?? '').trim();
-  if (!call || /[;\n]/.test(call)) throw new Error('line-sim entry must be a single expression like "binary_search([1,3,5], 5)"');
-  if (!String(code ?? '').trim()) throw new Error('line-sim needs the algorithm code');
-  return [
-    LINE_TRACKER_PY,
-    '',
-    `_src = ${JSON.stringify(String(code))}`,
-    `_compiled = compile(_src, '<student>', 'exec')`,
-    '_ns = {}',
-    'exec(_compiled, _ns)',
-    'sys.settrace(_tracer)',
-    'try:',
-    `    _result = eval(${JSON.stringify(call)}, _ns)`,
-    'finally:',
-    '    sys.settrace(None)',
-    "print('@@LINESIM ' + json.dumps({'events': _events, 'result': _safe(_result)}))",
-  ].join('\n');
+  return buildTracedProgram({
+    trackerPy: LINE_TRACKER_PY,
+    code,
+    entry,
+    marker: '@@LINESIM',
+    resultLine: '_out = _safe(_result)',
+    entryExample: '"binary_search([1,3,5], 5)"',
+  });
 }
 
 export function parseLineEvents(stdout) {
-  for (const line of String(stdout ?? '').split('\n')) {
-    const at = line.indexOf('@@LINESIM ');
-    if (at === -1) continue;
-    try {
-      return JSON.parse(line.slice(at + '@@LINESIM '.length));
-    } catch {
-      return null;
-    }
-  }
-  return null;
+  return parseTracedEvents(stdout, '@@LINESIM');
 }
 
 // Compile recorded line events into a validated ExecutionTrace: one step per executed line,

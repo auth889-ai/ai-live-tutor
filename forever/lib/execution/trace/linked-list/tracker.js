@@ -12,6 +12,8 @@
 //   - it emits {pointers: name -> nodeId|null, nodes: nodeId -> {value, next}} per line, plus
 //     plain scalar locals for the variables panel
 
+import { buildTracedProgram, parseTracedEvents } from '../harness/assemble.js';
+
 export const LIST_TRACKER_PY = `
 import json, sys
 
@@ -79,45 +81,24 @@ def _tracer(frame, event, arg):
 
 const IDENT = /^[A-Za-z_]\w*$/;
 
-// Assemble the runnable program: declared roles first, then the student's code compiled under
-// the '<student>' filename (only ITS lines are traced), then the single entry expression.
+// Assemble the runnable program via the SHARED harness — this tracker declares only its
+// constants, its python source, its marker and its result serialization.
 export function assembleListProgram({ code, entry, roots, nextAttr = 'next', valAttr = 'val' }) {
-  const call = String(entry ?? '').trim();
-  if (!call || /[;\n]/.test(call)) throw new Error('linked-list entry must be a single expression like "reverse(build([1,2,3]))"');
-  if (!String(code ?? '').trim()) throw new Error('linked-list tool needs the algorithm code');
   if (!Array.isArray(roots) || roots.length === 0 || !roots.every((r) => IDENT.test(String(r)))) {
     throw new Error('linked-list tool needs pointer root names (simple identifiers like ["head","prev","curr"])');
   }
   if (!IDENT.test(nextAttr) || !IDENT.test(valAttr)) throw new Error('nextAttr/valAttr must be simple identifiers');
-  return [
-    `ROOTS = ${JSON.stringify(roots.map(String))}`,
-    `NEXT_ATTR = ${JSON.stringify(nextAttr)}`,
-    `VAL_ATTR = ${JSON.stringify(valAttr)}`,
-    LIST_TRACKER_PY,
-    '',
-    `_src = ${JSON.stringify(String(code))}`,
-    `_compiled = compile(_src, '<student>', 'exec')`,
-    '_ns = {}',
-    'exec(_compiled, _ns)',
-    'sys.settrace(_tracer)',
-    'try:',
-    `    _result = eval(${JSON.stringify(call)}, _ns)`,
-    'finally:',
-    '    sys.settrace(None)',
-    "_out = _nid(_result) if _is_node(_result) else (_result if _result is None or isinstance(_result, (int, float, str, bool)) else repr(_result)[:40])",
-    "print('@@LISTWALK ' + json.dumps({'events': _events, 'result': _out}))",
-  ].join('\n');
+  return buildTracedProgram({
+    constants: { ROOTS: roots.map(String), NEXT_ATTR: nextAttr, VAL_ATTR: valAttr },
+    trackerPy: LIST_TRACKER_PY,
+    code,
+    entry,
+    marker: '@@LISTWALK',
+    resultLine: '_out = _nid(_result) if _is_node(_result) else (_result if _result is None or isinstance(_result, (int, float, str, bool)) else repr(_result)[:40])',
+    entryExample: '"reverse(build([1,2,3]))"',
+  });
 }
 
 export function parseListEvents(stdout) {
-  for (const line of String(stdout ?? '').split('\n')) {
-    const at = line.indexOf('@@LISTWALK ');
-    if (at === -1) continue;
-    try {
-      return JSON.parse(line.slice(at + '@@LISTWALK '.length));
-    } catch {
-      return null;
-    }
-  }
-  return null;
+  return parseTracedEvents(stdout, '@@LISTWALK');
 }

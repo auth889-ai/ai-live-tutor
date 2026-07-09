@@ -7,6 +7,8 @@
 // declared cursor variable currently stands on a known node, reported under the student's own
 // variable name.
 
+import { buildTracedProgram, parseTracedEvents } from '../harness/assemble.js';
+
 export const TRIE_TRACKER_PY = `
 import json, sys
 
@@ -100,44 +102,22 @@ def _tracer(frame, event, arg):
 const IDENT = /^[A-Za-z_]\w*$/;
 
 export function assembleTrieProgram({ code, entry, root, childrenAttr = 'children', endAttr = 'is_end', cursors = ['node', 'cur', 'curr', 'current'] }) {
-  const call = String(entry ?? '').trim();
-  if (!call || /[;\n]/.test(call)) throw new Error('trie entry must be a single expression like "demo()"');
-  if (!String(code ?? '').trim()) throw new Error('trie tool needs the algorithm code');
   if (!IDENT.test(String(root ?? ''))) throw new Error('trie root must be a simple identifier (the variable holding the Trie or its root node)');
   if (!IDENT.test(childrenAttr) || !IDENT.test(endAttr)) throw new Error('childrenAttr/endAttr must be simple identifiers');
   if (!Array.isArray(cursors) || cursors.length === 0 || !cursors.every((c) => IDENT.test(String(c)))) {
     throw new Error('trie cursors must be simple identifiers (the node variables the code walks with)');
   }
-  return [
-    `ROOT_VAR = ${JSON.stringify(String(root))}`,
-    `CHILDREN_ATTR = ${JSON.stringify(childrenAttr)}`,
-    `END_ATTR = ${JSON.stringify(endAttr)}`,
-    `CURSORS = ${JSON.stringify(cursors.map(String))}`,
-    TRIE_TRACKER_PY,
-    '',
-    `_src = ${JSON.stringify(String(code))}`,
-    `_compiled = compile(_src, '<student>', 'exec')`,
-    '_ns = {}',
-    'exec(_compiled, _ns)',
-    'sys.settrace(_tracer)',
-    'try:',
-    `    _result = eval(${JSON.stringify(call)}, _ns)`,
-    'finally:',
-    '    sys.settrace(None)',
-    "_out = _result if _result is None or isinstance(_result, (int, float, str, bool)) else repr(_result)[:40]",
-    "print('@@TRIE ' + json.dumps({'events': _events, 'result': _out}))",
-  ].join('\n');
+  return buildTracedProgram({
+    constants: { ROOT_VAR: String(root), CHILDREN_ATTR: childrenAttr, END_ATTR: endAttr, CURSORS: cursors.map(String) },
+    trackerPy: TRIE_TRACKER_PY,
+    code,
+    entry,
+    marker: '@@TRIE',
+    resultLine: '_out = _result if _result is None or isinstance(_result, (int, float, str, bool)) else repr(_result)[:40]',
+    entryExample: '"demo()"',
+  });
 }
 
 export function parseTrieEvents(stdout) {
-  for (const line of String(stdout ?? '').split('\n')) {
-    const at = line.indexOf('@@TRIE ');
-    if (at === -1) continue;
-    try {
-      return JSON.parse(line.slice(at + '@@TRIE '.length));
-    } catch {
-      return null;
-    }
-  }
-  return null;
+  return parseTracedEvents(stdout, '@@TRIE');
 }
