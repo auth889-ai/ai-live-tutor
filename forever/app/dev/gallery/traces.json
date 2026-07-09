@@ -1,0 +1,7200 @@
+[
+  {
+    "name": "Trie — insert cat/car/card/dog",
+    "trace": {
+      "language": "python",
+      "code": "class TrieNode:\n    def __init__(self):\n        self.children = {}\n        self.is_end = False\nclass Trie:\n    def __init__(self):\n        self.root = TrieNode()\n    def insert(self, word):\n        node = self.root\n        for ch in word:\n            if ch not in node.children:\n                node.children[ch] = TrieNode()\n            node = node.children[ch]\n        node.is_end = True\ntrie = Trie()\ndef demo():\n    trie.insert(\"cat\")\n    trie.insert(\"car\")\n    trie.insert(\"card\")\n    trie.insert(\"dog\")\n    return \"done\"",
+      "views": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "t1",
+              "label": "∅"
+            },
+            {
+              "id": "t2",
+              "label": "c"
+            },
+            {
+              "id": "t3",
+              "label": "a"
+            },
+            {
+              "id": "t4",
+              "label": "t"
+            },
+            {
+              "id": "t5",
+              "label": "r"
+            },
+            {
+              "id": "t6",
+              "label": "d"
+            },
+            {
+              "id": "t7",
+              "label": "d"
+            },
+            {
+              "id": "t8",
+              "label": "o"
+            },
+            {
+              "id": "t9",
+              "label": "g"
+            }
+          ],
+          "edges": [
+            {
+              "from": "t1",
+              "to": "t2",
+              "label": "c"
+            },
+            {
+              "from": "t1",
+              "to": "t7",
+              "label": "d"
+            },
+            {
+              "from": "t2",
+              "to": "t3",
+              "label": "a"
+            },
+            {
+              "from": "t3",
+              "to": "t5",
+              "label": "r"
+            },
+            {
+              "from": "t3",
+              "to": "t4",
+              "label": "t"
+            },
+            {
+              "from": "t5",
+              "to": "t6",
+              "label": "d"
+            },
+            {
+              "from": "t7",
+              "to": "t8",
+              "label": "o"
+            },
+            {
+              "from": "t8",
+              "to": "t9",
+              "label": "g"
+            }
+          ],
+          "directed": true
+        }
+      },
+      "steps": [
+        {
+          "line": 10,
+          "explanation": "We run demo() and watch the trie build itself: one node per character, shared prefixes stored ONCE. Green nodes are where a word ENDS — keep your eye on that flag, it is the difference between a word and a mere prefix.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "revealed": [],
+            "pointers": {}
+          },
+          "variables": {}
+        },
+        {
+          "line": 10,
+          "explanation": "node returns to the root — the empty prefix. Every trie operation starts here and pays one step per character, never more; what is stored below does not slow the walk down.",
+          "graph": {
+            "current": "t1",
+            "visited": [],
+            "revealed": [
+              "t1"
+            ],
+            "pointers": {
+              "node": "t1"
+            }
+          },
+          "variables": {
+            "word": "cat"
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "No child for 'c' here — this is the branching moment: the word stops overlapping everything stored so far. A new node is created and hung on the 'c' edge; the path down to it now spells 'c'. node returns to the root — the empty prefix. Every trie operation starts here and pays one step per character, never more; what is stored below does not slow the walk down.",
+          "graph": {
+            "current": "t1",
+            "visited": [],
+            "revealed": [
+              "t1",
+              "t2"
+            ],
+            "pointers": {
+              "node": "t1"
+            }
+          },
+          "activeEdge": [
+            "t1",
+            "t2"
+          ],
+          "variables": {
+            "word": "cat",
+            "ch": "c"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'c' already has a child, so node just steps down the existing edge — the path so far spells 'c'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t2",
+            "visited": [],
+            "revealed": [
+              "t1",
+              "t2"
+            ],
+            "pointers": {
+              "node": "t2"
+            }
+          },
+          "activeEdge": [
+            "t1",
+            "t2"
+          ],
+          "variables": {
+            "word": "cat",
+            "ch": "c"
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "No child for 'a' here — this is the branching moment: the word stops overlapping everything stored so far. A new node is created and hung on the 'a' edge; the path down to it now spells 'ca'. 'c' already has a child, so node just steps down the existing edge — the path so far spells 'c'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t2",
+            "visited": [],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3"
+            ],
+            "pointers": {
+              "node": "t2"
+            }
+          },
+          "activeEdge": [
+            "t2",
+            "t3"
+          ],
+          "variables": {
+            "word": "cat",
+            "ch": "a"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'a' already has a child, so node just steps down the existing edge — the path so far spells 'ca'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t3",
+            "visited": [],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3"
+            ],
+            "pointers": {
+              "node": "t3"
+            }
+          },
+          "activeEdge": [
+            "t2",
+            "t3"
+          ],
+          "variables": {
+            "word": "cat",
+            "ch": "a"
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "No child for 't' here — this is the branching moment: the word stops overlapping everything stored so far. A new node is created and hung on the 't' edge; the path down to it now spells 'cat'. 'a' already has a child, so node just steps down the existing edge — the path so far spells 'ca'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t3",
+            "visited": [],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4"
+            ],
+            "pointers": {
+              "node": "t3"
+            }
+          },
+          "activeEdge": [
+            "t3",
+            "t4"
+          ],
+          "variables": {
+            "word": "cat",
+            "ch": "t"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'t' already has a child, so node just steps down the existing edge — the path so far spells 'cat'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t4",
+            "visited": [],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4"
+            ],
+            "pointers": {
+              "node": "t4"
+            }
+          },
+          "activeEdge": [
+            "t3",
+            "t4"
+          ],
+          "variables": {
+            "word": "cat",
+            "ch": "t"
+          }
+        },
+        {
+          "line": 18,
+          "explanation": "The whole word is consumed, so THIS node's end flag flips ON — it turns green. Without that flag the trie would only know 'cat' as a path toward longer words, never as a word itself. That is the classic trap: the path for 'app' exists inside 'apple', but only the flag says which of them was actually inserted.",
+          "graph": {
+            "current": null,
+            "visited": [
+              "t4"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4"
+            ],
+            "pointers": {}
+          },
+          "variables": {}
+        },
+        {
+          "line": 10,
+          "explanation": "node returns to the root — the empty prefix. Every trie operation starts here and pays one step per character, never more; what is stored below does not slow the walk down.",
+          "graph": {
+            "current": "t1",
+            "visited": [
+              "t4"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4"
+            ],
+            "pointers": {
+              "node": "t1"
+            }
+          },
+          "variables": {
+            "word": "car"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'c' already has a child, so node just steps down the existing edge — the path so far spells 'c'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t2",
+            "visited": [
+              "t4"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4"
+            ],
+            "pointers": {
+              "node": "t2"
+            }
+          },
+          "activeEdge": [
+            "t1",
+            "t2"
+          ],
+          "variables": {
+            "word": "car",
+            "ch": "c"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'a' already has a child, so node just steps down the existing edge — the path so far spells 'ca'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t3",
+            "visited": [
+              "t4"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4"
+            ],
+            "pointers": {
+              "node": "t3"
+            }
+          },
+          "activeEdge": [
+            "t2",
+            "t3"
+          ],
+          "variables": {
+            "word": "car",
+            "ch": "a"
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "No child for 'r' here — this is the branching moment: the word stops overlapping everything stored so far. A new node is created and hung on the 'r' edge; the path down to it now spells 'car'. 'a' already has a child, so node just steps down the existing edge — the path so far spells 'ca'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t3",
+            "visited": [
+              "t4"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5"
+            ],
+            "pointers": {
+              "node": "t3"
+            }
+          },
+          "activeEdge": [
+            "t3",
+            "t5"
+          ],
+          "variables": {
+            "word": "car",
+            "ch": "r"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'r' already has a child, so node just steps down the existing edge — the path so far spells 'car'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t5",
+            "visited": [
+              "t4"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5"
+            ],
+            "pointers": {
+              "node": "t5"
+            }
+          },
+          "activeEdge": [
+            "t3",
+            "t5"
+          ],
+          "variables": {
+            "word": "car",
+            "ch": "r"
+          }
+        },
+        {
+          "line": 19,
+          "explanation": "The whole word is consumed, so THIS node's end flag flips ON — it turns green. Without that flag the trie would only know 'car' as a path toward longer words, never as a word itself. That is the classic trap: the path for 'app' exists inside 'apple', but only the flag says which of them was actually inserted.",
+          "graph": {
+            "current": null,
+            "visited": [
+              "t4",
+              "t5"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5"
+            ],
+            "pointers": {}
+          },
+          "variables": {}
+        },
+        {
+          "line": 10,
+          "explanation": "node returns to the root — the empty prefix. Every trie operation starts here and pays one step per character, never more; what is stored below does not slow the walk down.",
+          "graph": {
+            "current": "t1",
+            "visited": [
+              "t4",
+              "t5"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5"
+            ],
+            "pointers": {
+              "node": "t1"
+            }
+          },
+          "variables": {
+            "word": "card"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'c' already has a child, so node just steps down the existing edge — the path so far spells 'c'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t2",
+            "visited": [
+              "t4",
+              "t5"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5"
+            ],
+            "pointers": {
+              "node": "t2"
+            }
+          },
+          "activeEdge": [
+            "t1",
+            "t2"
+          ],
+          "variables": {
+            "word": "card",
+            "ch": "c"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'a' already has a child, so node just steps down the existing edge — the path so far spells 'ca'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t3",
+            "visited": [
+              "t4",
+              "t5"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5"
+            ],
+            "pointers": {
+              "node": "t3"
+            }
+          },
+          "activeEdge": [
+            "t2",
+            "t3"
+          ],
+          "variables": {
+            "word": "card",
+            "ch": "a"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'r' already has a child, so node just steps down the existing edge — the path so far spells 'car'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t5",
+            "visited": [
+              "t4",
+              "t5"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5"
+            ],
+            "pointers": {
+              "node": "t5"
+            }
+          },
+          "activeEdge": [
+            "t3",
+            "t5"
+          ],
+          "variables": {
+            "word": "card",
+            "ch": "r"
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "No child for 'd' here — this is the branching moment: the word stops overlapping everything stored so far. A new node is created and hung on the 'd' edge; the path down to it now spells 'card'. 'r' already has a child, so node just steps down the existing edge — the path so far spells 'car'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t5",
+            "visited": [
+              "t4",
+              "t5"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "pointers": {
+              "node": "t5"
+            }
+          },
+          "activeEdge": [
+            "t5",
+            "t6"
+          ],
+          "variables": {
+            "word": "card",
+            "ch": "d"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'d' already has a child, so node just steps down the existing edge — the path so far spells 'card'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t6",
+            "visited": [
+              "t4",
+              "t5"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "pointers": {
+              "node": "t6"
+            }
+          },
+          "activeEdge": [
+            "t5",
+            "t6"
+          ],
+          "variables": {
+            "word": "card",
+            "ch": "d"
+          }
+        },
+        {
+          "line": 20,
+          "explanation": "The whole word is consumed, so THIS node's end flag flips ON — it turns green. Without that flag the trie would only know 'card' as a path toward longer words, never as a word itself. That is the classic trap: the path for 'app' exists inside 'apple', but only the flag says which of them was actually inserted.",
+          "graph": {
+            "current": null,
+            "visited": [
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "pointers": {}
+          },
+          "variables": {}
+        },
+        {
+          "line": 10,
+          "explanation": "node returns to the root — the empty prefix. Every trie operation starts here and pays one step per character, never more; what is stored below does not slow the walk down.",
+          "graph": {
+            "current": "t1",
+            "visited": [
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "pointers": {
+              "node": "t1"
+            }
+          },
+          "variables": {
+            "word": "dog"
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "No child for 'd' here — this is the branching moment: the word stops overlapping everything stored so far. A new node is created and hung on the 'd' edge; the path down to it now spells 'd'. node returns to the root — the empty prefix. Every trie operation starts here and pays one step per character, never more; what is stored below does not slow the walk down.",
+          "graph": {
+            "current": "t1",
+            "visited": [
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5",
+              "t6",
+              "t7"
+            ],
+            "pointers": {
+              "node": "t1"
+            }
+          },
+          "activeEdge": [
+            "t1",
+            "t7"
+          ],
+          "variables": {
+            "word": "dog",
+            "ch": "d"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'d' already has a child, so node just steps down the existing edge — the path so far spells 'd'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t7",
+            "visited": [
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5",
+              "t6",
+              "t7"
+            ],
+            "pointers": {
+              "node": "t7"
+            }
+          },
+          "activeEdge": [
+            "t1",
+            "t7"
+          ],
+          "variables": {
+            "word": "dog",
+            "ch": "d"
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "No child for 'o' here — this is the branching moment: the word stops overlapping everything stored so far. A new node is created and hung on the 'o' edge; the path down to it now spells 'do'. 'd' already has a child, so node just steps down the existing edge — the path so far spells 'd'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t7",
+            "visited": [
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5",
+              "t6",
+              "t7",
+              "t8"
+            ],
+            "pointers": {
+              "node": "t7"
+            }
+          },
+          "activeEdge": [
+            "t7",
+            "t8"
+          ],
+          "variables": {
+            "word": "dog",
+            "ch": "o"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'o' already has a child, so node just steps down the existing edge — the path so far spells 'do'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t8",
+            "visited": [
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5",
+              "t6",
+              "t7",
+              "t8"
+            ],
+            "pointers": {
+              "node": "t8"
+            }
+          },
+          "activeEdge": [
+            "t7",
+            "t8"
+          ],
+          "variables": {
+            "word": "dog",
+            "ch": "o"
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "No child for 'g' here — this is the branching moment: the word stops overlapping everything stored so far. A new node is created and hung on the 'g' edge; the path down to it now spells 'dog'. 'o' already has a child, so node just steps down the existing edge — the path so far spells 'do'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t8",
+            "visited": [
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5",
+              "t6",
+              "t7",
+              "t8",
+              "t9"
+            ],
+            "pointers": {
+              "node": "t8"
+            }
+          },
+          "activeEdge": [
+            "t8",
+            "t9"
+          ],
+          "variables": {
+            "word": "dog",
+            "ch": "g"
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "'g' already has a child, so node just steps down the existing edge — the path so far spells 'dog'. Nothing is created: shared prefixes live in the tree exactly once, and that reuse is the whole point of a trie.",
+          "graph": {
+            "current": "t9",
+            "visited": [
+              "t4",
+              "t5",
+              "t6"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5",
+              "t6",
+              "t7",
+              "t8",
+              "t9"
+            ],
+            "pointers": {
+              "node": "t9"
+            }
+          },
+          "activeEdge": [
+            "t8",
+            "t9"
+          ],
+          "variables": {
+            "word": "dog",
+            "ch": "g"
+          }
+        },
+        {
+          "line": 21,
+          "explanation": "The whole word is consumed, so THIS node's end flag flips ON — it turns green. Without that flag the trie would only know 'dog' as a path toward longer words, never as a word itself. That is the classic trap: the path for 'app' exists inside 'apple', but only the flag says which of them was actually inserted.",
+          "graph": {
+            "current": null,
+            "visited": [
+              "t4",
+              "t5",
+              "t9",
+              "t6"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5",
+              "t6",
+              "t7",
+              "t8",
+              "t9"
+            ],
+            "pointers": {}
+          },
+          "variables": {}
+        },
+        {
+          "line": 21,
+          "explanation": "The run is complete and the call returns \"done\". The trie now stores: car, card, cat, dog — read each word by walking edges from the root to a green node. Notice what you never saw: a walk that got slower because more words were stored. Every operation cost O(L) — the length of its own word — and that is the trie's promise.",
+          "graph": {
+            "current": null,
+            "visited": [
+              "t4",
+              "t5",
+              "t9",
+              "t6"
+            ],
+            "revealed": [
+              "t1",
+              "t2",
+              "t3",
+              "t4",
+              "t5",
+              "t6",
+              "t7",
+              "t8",
+              "t9"
+            ],
+            "pointers": {}
+          },
+          "variables": {}
+        }
+      ]
+    }
+  },
+  {
+    "name": "Graph-walk — Dijkstra shortest paths",
+    "trace": {
+      "language": "python",
+      "code": "import heapq\ndef dijkstra(graph, start):\n    dist = {start: 0}\n    visited = set()\n    pq = [(0, start)]\n    while pq:\n        d, u = heapq.heappop(pq)\n        if u in visited:\n            continue\n        visited.add(u)\n        for v, w in graph.get(u, []):\n            nd = d + w\n            if v not in dist or nd < dist[v]:\n                dist[v] = nd\n                heapq.heappush(pq, (nd, v))\n    return dist",
+      "views": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "A"
+            },
+            {
+              "id": "B"
+            },
+            {
+              "id": "C"
+            },
+            {
+              "id": "D"
+            }
+          ],
+          "edges": [
+            {
+              "from": "A",
+              "to": "B"
+            },
+            {
+              "from": "A",
+              "to": "C"
+            },
+            {
+              "from": "C",
+              "to": "B"
+            },
+            {
+              "from": "C",
+              "to": "D"
+            },
+            {
+              "from": "B",
+              "to": "D"
+            }
+          ],
+          "directed": true
+        }
+      },
+      "steps": [
+        {
+          "line": 4,
+          "explanation": "We run dijkstra({'A': [('B', 4), ('C', 1)], 'C': [('B', 2), ('D', 5)], 'B': [('D', 1)]}, 'A') on this exact graph and watch the algorithm's own variables — the node being processed, the distance table, the frontier. Every value below was recorded from the real run; the picture can never disagree with the code.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "pointers": {}
+          },
+          "traceRow": {
+            "at": "—"
+          },
+          "variables": {}
+        },
+        {
+          "line": 4,
+          "explanation": "The table starts with A = 0 — the starting point costs nothing to reach, and every other node begins unknown.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "pointers": {}
+          },
+          "traceRow": {
+            "at": "—",
+            "A": 0
+          },
+          "variables": {
+            "start": "A"
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "The queue now holds 0:A — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "pointers": {}
+          },
+          "queue": [
+            "0:A"
+          ],
+          "traceRow": {
+            "at": "—",
+            "A": 0
+          },
+          "variables": {
+            "start": "A"
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "Now A is taken out of the frontier and becomes the node under the pointer. Its tentative distance is 0 — the smallest of everything still waiting, which is exactly why it goes next. Whatever we learn in this moment, we learn by looking along A's edges.",
+          "graph": {
+            "current": "A",
+            "visited": [],
+            "pointers": {
+              "curr": "A"
+            }
+          },
+          "queue": [],
+          "traceRow": {
+            "at": "A",
+            "A": 0
+          },
+          "variables": {
+            "start": "A",
+            "d": 0
+          }
+        },
+        {
+          "line": 11,
+          "explanation": "A is now FINALIZED — it turns green and its distance can never improve again, because any other route into it would have to pass through a node that is already farther away. That certainty is the invariant the whole algorithm rests on.",
+          "graph": {
+            "current": "A",
+            "visited": [
+              "A"
+            ],
+            "pointers": {
+              "curr": "A"
+            }
+          },
+          "queue": [],
+          "traceRow": {
+            "at": "A",
+            "A": 0
+          },
+          "variables": {
+            "start": "A",
+            "d": 0
+          }
+        },
+        {
+          "line": 15,
+          "explanation": "Through A we reach B for the first time: its distance becomes 4. A blank cell in the table just got its first real number — watch it, it may still improve.",
+          "graph": {
+            "current": "A",
+            "visited": [
+              "A"
+            ],
+            "pointers": {
+              "curr": "A"
+            }
+          },
+          "queue": [],
+          "activeEdge": [
+            "A",
+            "B"
+          ],
+          "traceRow": {
+            "at": "A",
+            "A": 0,
+            "B": 4
+          },
+          "variables": {
+            "start": "A",
+            "d": 0,
+            "v": "B",
+            "w": 4,
+            "nd": 4
+          }
+        },
+        {
+          "line": 11,
+          "explanation": "The queue now holds 4:B — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+          "graph": {
+            "current": "A",
+            "visited": [
+              "A"
+            ],
+            "pointers": {
+              "curr": "A"
+            }
+          },
+          "queue": [
+            "4:B"
+          ],
+          "traceRow": {
+            "at": "A",
+            "A": 0,
+            "B": 4
+          },
+          "variables": {
+            "start": "A",
+            "d": 0,
+            "v": "B",
+            "w": 4,
+            "nd": 4
+          }
+        },
+        {
+          "line": 15,
+          "explanation": "Through A we reach C for the first time: its distance becomes 1. A blank cell in the table just got its first real number — watch it, it may still improve.",
+          "graph": {
+            "current": "A",
+            "visited": [
+              "A"
+            ],
+            "pointers": {
+              "curr": "A"
+            }
+          },
+          "queue": [
+            "4:B"
+          ],
+          "activeEdge": [
+            "A",
+            "C"
+          ],
+          "traceRow": {
+            "at": "A",
+            "A": 0,
+            "B": 4,
+            "C": 1
+          },
+          "variables": {
+            "start": "A",
+            "d": 0,
+            "v": "C",
+            "w": 1,
+            "nd": 1
+          }
+        },
+        {
+          "line": 11,
+          "explanation": "The queue now holds 1:C, 4:B — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+          "graph": {
+            "current": "A",
+            "visited": [
+              "A"
+            ],
+            "pointers": {
+              "curr": "A"
+            }
+          },
+          "queue": [
+            "1:C",
+            "4:B"
+          ],
+          "traceRow": {
+            "at": "A",
+            "A": 0,
+            "B": 4,
+            "C": 1
+          },
+          "variables": {
+            "start": "A",
+            "d": 0,
+            "v": "C",
+            "w": 1,
+            "nd": 1
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "Now C is taken out of the frontier and becomes the node under the pointer. Its tentative distance is 1 — the smallest of everything still waiting, which is exactly why it goes next. Whatever we learn in this moment, we learn by looking along C's edges.",
+          "graph": {
+            "current": "C",
+            "visited": [
+              "A"
+            ],
+            "pointers": {
+              "curr": "C"
+            }
+          },
+          "queue": [
+            "4:B"
+          ],
+          "traceRow": {
+            "at": "C",
+            "A": 0,
+            "B": 4,
+            "C": 1
+          },
+          "variables": {
+            "start": "A",
+            "d": 1,
+            "v": "C",
+            "w": 1,
+            "nd": 1
+          }
+        },
+        {
+          "line": 11,
+          "explanation": "C is now FINALIZED — it turns green and its distance can never improve again, because any other route into it would have to pass through a node that is already farther away. That certainty is the invariant the whole algorithm rests on.",
+          "graph": {
+            "current": "C",
+            "visited": [
+              "A",
+              "C"
+            ],
+            "pointers": {
+              "curr": "C"
+            }
+          },
+          "queue": [
+            "4:B"
+          ],
+          "traceRow": {
+            "at": "C",
+            "A": 0,
+            "B": 4,
+            "C": 1
+          },
+          "variables": {
+            "start": "A",
+            "d": 1,
+            "v": "C",
+            "w": 1,
+            "nd": 1
+          }
+        },
+        {
+          "line": 15,
+          "explanation": "Relaxation: through C, B is reachable in 3 — better than the 4 we knew before, so the table is UPDATED. This one comparison, repeated everywhere, is the entire algorithm.",
+          "graph": {
+            "current": "C",
+            "visited": [
+              "A",
+              "C"
+            ],
+            "pointers": {
+              "curr": "C"
+            }
+          },
+          "queue": [
+            "4:B"
+          ],
+          "activeEdge": [
+            "C",
+            "B"
+          ],
+          "traceRow": {
+            "at": "C",
+            "A": 0,
+            "B": 3,
+            "C": 1
+          },
+          "variables": {
+            "start": "A",
+            "d": 1,
+            "v": "B",
+            "w": 2,
+            "nd": 3
+          }
+        },
+        {
+          "line": 11,
+          "explanation": "The queue now holds 3:B, 4:B — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+          "graph": {
+            "current": "C",
+            "visited": [
+              "A",
+              "C"
+            ],
+            "pointers": {
+              "curr": "C"
+            }
+          },
+          "queue": [
+            "3:B",
+            "4:B"
+          ],
+          "traceRow": {
+            "at": "C",
+            "A": 0,
+            "B": 3,
+            "C": 1
+          },
+          "variables": {
+            "start": "A",
+            "d": 1,
+            "v": "B",
+            "w": 2,
+            "nd": 3
+          }
+        },
+        {
+          "line": 15,
+          "explanation": "Through C we reach D for the first time: its distance becomes 6. A blank cell in the table just got its first real number — watch it, it may still improve.",
+          "graph": {
+            "current": "C",
+            "visited": [
+              "A",
+              "C"
+            ],
+            "pointers": {
+              "curr": "C"
+            }
+          },
+          "queue": [
+            "3:B",
+            "4:B"
+          ],
+          "activeEdge": [
+            "C",
+            "D"
+          ],
+          "traceRow": {
+            "at": "C",
+            "A": 0,
+            "B": 3,
+            "C": 1,
+            "D": 6
+          },
+          "variables": {
+            "start": "A",
+            "d": 1,
+            "v": "D",
+            "w": 5,
+            "nd": 6
+          }
+        },
+        {
+          "line": 11,
+          "explanation": "The queue now holds 3:B, 4:B, 6:D — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+          "graph": {
+            "current": "C",
+            "visited": [
+              "A",
+              "C"
+            ],
+            "pointers": {
+              "curr": "C"
+            }
+          },
+          "queue": [
+            "3:B",
+            "4:B",
+            "6:D"
+          ],
+          "traceRow": {
+            "at": "C",
+            "A": 0,
+            "B": 3,
+            "C": 1,
+            "D": 6
+          },
+          "variables": {
+            "start": "A",
+            "d": 1,
+            "v": "D",
+            "w": 5,
+            "nd": 6
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "Now B is taken out of the frontier and becomes the node under the pointer. Its tentative distance is 3 — the smallest of everything still waiting, which is exactly why it goes next. Whatever we learn in this moment, we learn by looking along B's edges.",
+          "graph": {
+            "current": "B",
+            "visited": [
+              "A",
+              "C"
+            ],
+            "pointers": {
+              "curr": "B"
+            }
+          },
+          "queue": [
+            "4:B",
+            "6:D"
+          ],
+          "traceRow": {
+            "at": "B",
+            "A": 0,
+            "B": 3,
+            "C": 1,
+            "D": 6
+          },
+          "variables": {
+            "start": "A",
+            "d": 3,
+            "v": "D",
+            "w": 5,
+            "nd": 6
+          }
+        },
+        {
+          "line": 11,
+          "explanation": "B is now FINALIZED — it turns green and its distance can never improve again, because any other route into it would have to pass through a node that is already farther away. That certainty is the invariant the whole algorithm rests on.",
+          "graph": {
+            "current": "B",
+            "visited": [
+              "A",
+              "C",
+              "B"
+            ],
+            "pointers": {
+              "curr": "B"
+            }
+          },
+          "queue": [
+            "4:B",
+            "6:D"
+          ],
+          "traceRow": {
+            "at": "B",
+            "A": 0,
+            "B": 3,
+            "C": 1,
+            "D": 6
+          },
+          "variables": {
+            "start": "A",
+            "d": 3,
+            "v": "D",
+            "w": 5,
+            "nd": 6
+          }
+        },
+        {
+          "line": 15,
+          "explanation": "Relaxation: through B, D is reachable in 4 — better than the 6 we knew before, so the table is UPDATED. This one comparison, repeated everywhere, is the entire algorithm.",
+          "graph": {
+            "current": "B",
+            "visited": [
+              "A",
+              "C",
+              "B"
+            ],
+            "pointers": {
+              "curr": "B"
+            }
+          },
+          "queue": [
+            "4:B",
+            "6:D"
+          ],
+          "activeEdge": [
+            "B",
+            "D"
+          ],
+          "traceRow": {
+            "at": "B",
+            "A": 0,
+            "B": 3,
+            "C": 1,
+            "D": 4
+          },
+          "variables": {
+            "start": "A",
+            "d": 3,
+            "v": "D",
+            "w": 1,
+            "nd": 4
+          }
+        },
+        {
+          "line": 11,
+          "explanation": "The queue now holds 4:B, 4:D, 6:D — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+          "graph": {
+            "current": "B",
+            "visited": [
+              "A",
+              "C",
+              "B"
+            ],
+            "pointers": {
+              "curr": "B"
+            }
+          },
+          "queue": [
+            "4:B",
+            "4:D",
+            "6:D"
+          ],
+          "traceRow": {
+            "at": "B",
+            "A": 0,
+            "B": 3,
+            "C": 1,
+            "D": 4
+          },
+          "variables": {
+            "start": "A",
+            "d": 3,
+            "v": "D",
+            "w": 1,
+            "nd": 4
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "The queue now holds 4:D, 6:D — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+          "graph": {
+            "current": "B",
+            "visited": [
+              "A",
+              "C",
+              "B"
+            ],
+            "pointers": {
+              "curr": "B"
+            }
+          },
+          "queue": [
+            "4:D",
+            "6:D"
+          ],
+          "traceRow": {
+            "at": "B",
+            "A": 0,
+            "B": 3,
+            "C": 1,
+            "D": 4
+          },
+          "variables": {
+            "start": "A",
+            "d": 4,
+            "v": "D",
+            "w": 1,
+            "nd": 4
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "Now D is taken out of the frontier and becomes the node under the pointer. Its tentative distance is 4 — the smallest of everything still waiting, which is exactly why it goes next. Whatever we learn in this moment, we learn by looking along D's edges.",
+          "graph": {
+            "current": "D",
+            "visited": [
+              "A",
+              "C",
+              "B"
+            ],
+            "pointers": {
+              "curr": "D"
+            }
+          },
+          "queue": [
+            "6:D"
+          ],
+          "traceRow": {
+            "at": "D",
+            "A": 0,
+            "B": 3,
+            "C": 1,
+            "D": 4
+          },
+          "variables": {
+            "start": "A",
+            "d": 4,
+            "v": "D",
+            "w": 1,
+            "nd": 4
+          }
+        },
+        {
+          "line": 11,
+          "explanation": "D is now FINALIZED — it turns green and its distance can never improve again, because any other route into it would have to pass through a node that is already farther away. That certainty is the invariant the whole algorithm rests on.",
+          "graph": {
+            "current": "D",
+            "visited": [
+              "A",
+              "C",
+              "B",
+              "D"
+            ],
+            "pointers": {
+              "curr": "D"
+            }
+          },
+          "queue": [
+            "6:D"
+          ],
+          "traceRow": {
+            "at": "D",
+            "A": 0,
+            "B": 3,
+            "C": 1,
+            "D": 4
+          },
+          "variables": {
+            "start": "A",
+            "d": 4,
+            "v": "D",
+            "w": 1,
+            "nd": 4
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "The queue is now empty — nothing is waiting anymore, which is exactly the signal that the algorithm is about to finish.",
+          "graph": {
+            "current": "D",
+            "visited": [
+              "A",
+              "C",
+              "B",
+              "D"
+            ],
+            "pointers": {
+              "curr": "D"
+            }
+          },
+          "queue": [],
+          "traceRow": {
+            "at": "D",
+            "A": 0,
+            "B": 3,
+            "C": 1,
+            "D": 4
+          },
+          "variables": {
+            "start": "A",
+            "d": 6,
+            "v": "D",
+            "w": 1,
+            "nd": 4
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "The walk is complete and the call returns {\"A\":0,\"B\":3,\"C\":1,\"D\":4}. Read the processing order back: A → C → B → D. Every number in the final table was earned by a relaxation you watched happen — that is the whole proof, performed in front of you.",
+          "graph": {
+            "current": "D",
+            "visited": [
+              "A",
+              "C",
+              "B",
+              "D"
+            ],
+            "pointers": {
+              "curr": "D"
+            }
+          },
+          "traceRow": {
+            "at": "D",
+            "A": 0,
+            "B": 3,
+            "C": 1,
+            "D": 4
+          },
+          "variables": {}
+        }
+      ]
+    }
+  },
+  {
+    "name": "Linked list — reverse",
+    "trace": {
+      "language": "python",
+      "code": "class Node:\n    def __init__(self, val):\n        self.val = val\n        self.next = None\ndef build(vals):\n    head = None\n    for v in reversed(vals):\n        n = Node(v)\n        n.next = head\n        head = n\n    return head\ndef reverse(head):\n    prev = None\n    curr = head\n    while curr:\n        nxt = curr.next\n        curr.next = prev\n        prev = curr\n        curr = nxt\n    return prev",
+      "views": {
+        "list": {
+          "nodes": [
+            {
+              "id": "n1"
+            },
+            {
+              "id": "n2"
+            },
+            {
+              "id": "n3"
+            },
+            {
+              "id": "n4"
+            }
+          ]
+        }
+      },
+      "steps": [
+        {
+          "line": 7,
+          "explanation": "We run reverse(build([1, 2, 3, 4])) and watch the chain itself: every box is a real node object from the run, every arrow is its live next-reference. Boxes never move — only the arrows and the named pointers do, and that is exactly where your eyes should be.",
+          "list": {
+            "nodes": [],
+            "pointers": {}
+          },
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "head is now None — it has walked off the end of the chain. Reading head.next here would crash: this exact moment is where null-checks earn their keep.",
+          "list": {
+            "nodes": [],
+            "pointers": {
+              "head": null
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 9,
+          "explanation": "head is now None — it has walked off the end of the chain. Reading head.next here would crash: this exact moment is where null-checks earn their keep. n starts on the node holding 4 — remember which box it stands on; every decision below is made from where the named pointers stand.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": null,
+              "n": "n1"
+            }
+          },
+          "variables": {
+            "v": 4
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "head advances to the node holding 4. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n1",
+              "n": "n1"
+            }
+          },
+          "variables": {
+            "v": 4
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "The node holding 4 is now UNREACHABLE — no pointer and no arrow leads to it anymore (watch it fade). In Python the garbage collector quietly reclaims it; in C, forgetting to free at this exact moment is the classic memory leak.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null,
+                "orphan": true
+              }
+            ],
+            "pointers": {}
+          },
+          "variables": {
+            "val": 3
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "head starts on the node holding 4 — remember which box it stands on; every decision below is made from where the named pointers stand. n starts on the node holding 3 — remember which box it stands on; every decision below is made from where the named pointers stand.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n1",
+              "n": "n2"
+            }
+          },
+          "variables": {
+            "v": 3
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "The node holding 3 gets its arrow: it now points at the node holding 4. A link exists where there was none — the chain just grew by one connection.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1",
+                "rewired": true
+              }
+            ],
+            "pointers": {
+              "head": "n1",
+              "n": "n2"
+            }
+          },
+          "variables": {
+            "v": 3
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "head advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              }
+            ],
+            "pointers": {
+              "head": "n2",
+              "n": "n2"
+            }
+          },
+          "variables": {
+            "v": 3
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "The node holding 3 is now UNREACHABLE — no pointer and no arrow leads to it anymore (watch it fade). In Python the garbage collector quietly reclaims it; in C, forgetting to free at this exact moment is the classic memory leak. The node holding 4 is now UNREACHABLE — no pointer and no arrow leads to it anymore (watch it fade). In Python the garbage collector quietly reclaims it; in C, forgetting to free at this exact moment is the classic memory leak.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null,
+                "orphan": true
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1",
+                "orphan": true
+              }
+            ],
+            "pointers": {}
+          },
+          "variables": {
+            "val": 2
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "head starts on the node holding 3 — remember which box it stands on; every decision below is made from where the named pointers stand. n starts on the node holding 2 — remember which box it stands on; every decision below is made from where the named pointers stand.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n2",
+              "n": "n3"
+            }
+          },
+          "variables": {
+            "v": 2
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "The node holding 2 gets its arrow: it now points at the node holding 3. A link exists where there was none — the chain just grew by one connection.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2",
+                "rewired": true
+              }
+            ],
+            "pointers": {
+              "head": "n2",
+              "n": "n3"
+            }
+          },
+          "variables": {
+            "v": 2
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "head advances to the node holding 2. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2"
+              }
+            ],
+            "pointers": {
+              "head": "n3",
+              "n": "n3"
+            }
+          },
+          "variables": {
+            "v": 2
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "The node holding 2 is now UNREACHABLE — no pointer and no arrow leads to it anymore (watch it fade). In Python the garbage collector quietly reclaims it; in C, forgetting to free at this exact moment is the classic memory leak. The node holding 3 is now UNREACHABLE — no pointer and no arrow leads to it anymore (watch it fade). In Python the garbage collector quietly reclaims it; in C, forgetting to free at this exact moment is the classic memory leak. The node holding 4 is now UNREACHABLE — no pointer and no arrow leads to it anymore (watch it fade). In Python the garbage collector quietly reclaims it; in C, forgetting to free at this exact moment is the classic memory leak.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null,
+                "orphan": true
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1",
+                "orphan": true
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2",
+                "orphan": true
+              }
+            ],
+            "pointers": {}
+          },
+          "variables": {
+            "val": 1
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "head starts on the node holding 2 — remember which box it stands on; every decision below is made from where the named pointers stand. n starts on the node holding 1 — remember which box it stands on; every decision below is made from where the named pointers stand.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n3",
+              "n": "n4"
+            }
+          },
+          "variables": {
+            "v": 1
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "The node holding 1 gets its arrow: it now points at the node holding 2. A link exists where there was none — the chain just grew by one connection.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": "n3",
+                "rewired": true
+              }
+            ],
+            "pointers": {
+              "head": "n3",
+              "n": "n4"
+            }
+          },
+          "variables": {
+            "v": 1
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "head advances to the node holding 1. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": "n3"
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "n": "n4"
+            }
+          },
+          "variables": {
+            "v": 1
+          }
+        },
+        {
+          "line": 14,
+          "explanation": "prev is now None — it has walked off the end of the chain. Reading prev.next here would crash: this exact moment is where null-checks earn their keep.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": "n3"
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": null
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "curr starts on the node holding 1 — remember which box it stands on; every decision below is made from where the named pointers stand.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": "n3"
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": null,
+              "curr": "n4"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 17,
+          "explanation": "nxt starts on the node holding 2 — remember which box it stands on; every decision below is made from where the named pointers stand.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": "n3"
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": null,
+              "curr": "n4",
+              "nxt": "n3"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 18,
+          "explanation": "The arrow out of the node holding 1 is CUT: it pointed at the node holding 2, and now it points at None — this node just became the tail of its chain.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null,
+                "rewired": true
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": null,
+              "curr": "n4",
+              "nxt": "n3"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 19,
+          "explanation": "prev advances to the node holding 1. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n4",
+              "curr": "n4",
+              "nxt": "n3"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "curr advances to the node holding 2. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n4",
+              "curr": "n3",
+              "nxt": "n3"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 17,
+          "explanation": "nxt advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n2"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n4",
+              "curr": "n3",
+              "nxt": "n2"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 18,
+          "explanation": "REWIRE: the arrow out of the node holding 2 flips from the node holding 3 to the node holding 1. This single reassignment is the heart of the operation — everything else is just walking pointers into position.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n4",
+                "rewired": true
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n4",
+              "curr": "n3",
+              "nxt": "n2"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 19,
+          "explanation": "prev advances to the node holding 2. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n3",
+              "curr": "n3",
+              "nxt": "n2"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "curr advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n3",
+              "curr": "n2",
+              "nxt": "n2"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 17,
+          "explanation": "nxt advances to the node holding 4. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n1"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n3",
+              "curr": "n2",
+              "nxt": "n1"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 18,
+          "explanation": "REWIRE: the arrow out of the node holding 3 flips from the node holding 4 to the node holding 2. This single reassignment is the heart of the operation — everything else is just walking pointers into position.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n3",
+                "rewired": true
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n3",
+              "curr": "n2",
+              "nxt": "n1"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 19,
+          "explanation": "prev advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n2",
+              "curr": "n2",
+              "nxt": "n1"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "curr advances to the node holding 4. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n2",
+              "curr": "n1",
+              "nxt": "n1"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 17,
+          "explanation": "nxt is now None — it has walked off the end of the chain. Reading nxt.next here would crash: this exact moment is where null-checks earn their keep.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": null
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n2",
+              "curr": "n1",
+              "nxt": null
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 18,
+          "explanation": "The node holding 4 gets its arrow: it now points at the node holding 3. A link exists where there was none — the chain just grew by one connection.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": "n2",
+                "rewired": true
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n2",
+              "curr": "n1",
+              "nxt": null
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 19,
+          "explanation": "prev advances to the node holding 4. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": "n2"
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n1",
+              "curr": "n1",
+              "nxt": null
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "curr is now None — it has walked off the end of the chain. Reading curr.next here would crash: this exact moment is where null-checks earn their keep.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": "n2"
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n1",
+              "curr": null,
+              "nxt": null
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "The operation is complete and the call returns \"n1\". Read the final chain off the arrows: 4 → 3 → 2 → 1. Every arrow in the final picture was rewired in front of you — replay the flips and you have re-derived the algorithm.",
+          "list": {
+            "nodes": [
+              {
+                "id": "n1",
+                "value": 4,
+                "next": "n2"
+              },
+              {
+                "id": "n2",
+                "value": 3,
+                "next": "n3"
+              },
+              {
+                "id": "n3",
+                "value": 2,
+                "next": "n4"
+              },
+              {
+                "id": "n4",
+                "value": 1,
+                "next": null
+              }
+            ],
+            "pointers": {
+              "head": "n4",
+              "prev": "n1",
+              "curr": null,
+              "nxt": null
+            }
+          },
+          "variables": {}
+        }
+      ]
+    }
+  },
+  {
+    "name": "Divide & conquer — quicksort",
+    "trace": {
+      "language": "python",
+      "code": "def qs(arr, low, high):\n    if low >= high:\n        return arr\n    p = arr[high]\n    i = low\n    for j in range(low, high):\n        if arr[j] < p:\n            arr[i], arr[j] = arr[j], arr[i]\n            i += 1\n    arr[i], arr[high] = arr[high], arr[i]\n    qs(arr, low, i - 1)\n    qs(arr, i + 1, high)\n    return arr",
+      "views": {
+        "array": {
+          "values": [
+            5,
+            2,
+            8,
+            1,
+            9,
+            3
+          ]
+        },
+        "graph": {
+          "nodes": [
+            {
+              "id": "c1",
+              "label": "qs(0..5)"
+            },
+            {
+              "id": "c2",
+              "label": "qs(0..1)"
+            },
+            {
+              "id": "c3",
+              "label": "qs(0..-1)"
+            },
+            {
+              "id": "c4",
+              "label": "qs(1..1)"
+            },
+            {
+              "id": "c5",
+              "label": "qs(3..5)"
+            },
+            {
+              "id": "c6",
+              "label": "qs(3..3)"
+            },
+            {
+              "id": "c7",
+              "label": "qs(5..5)"
+            }
+          ],
+          "edges": [
+            {
+              "from": "c1",
+              "to": "c2"
+            },
+            {
+              "from": "c2",
+              "to": "c3"
+            },
+            {
+              "from": "c2",
+              "to": "c4"
+            },
+            {
+              "from": "c1",
+              "to": "c5"
+            },
+            {
+              "from": "c5",
+              "to": "c6"
+            },
+            {
+              "from": "c5",
+              "to": "c7"
+            }
+          ],
+          "directed": true
+        }
+      },
+      "steps": [
+        {
+          "line": 1,
+          "explanation": "We run qs([5, 2, 8, 1, 9, 3], 0, 5) and watch two pictures at once: the array with the ACTIVE BAND lit (everything dimmed is another call's job), and the recursion tree growing as the problem splits. Divide and conquer means never thinking about more than one band at a time.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1,
+              9,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 1,
+          "explanation": "We enter qs(0..5): the problem is now JUST these 6 cells — watch the focus band shrink onto them. Nothing outside the band can be touched by this call; that discipline is the whole design.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1,
+              9,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "New state appears: low = 0, high = 5 — keep your eye on these values; every pointer move below is decided by them.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1,
+              9,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {
+            "low": 0,
+            "high": 5
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "New state appears: p = 3 — keep your eye on this value; every pointer move below is decided by it.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1,
+              9,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {
+            "p": 3
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "I starts at index 0, where the value is 5. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1,
+              9,
+              3
+            ],
+            "pointers": {
+              "i": 0
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "J starts at index 0, where the value is 5. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1,
+              9,
+              3
+            ],
+            "pointers": {
+              "i": 0,
+              "j": 0
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "J moves to index 1, where the value is 2. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1,
+              9,
+              3
+            ],
+            "pointers": {
+              "i": 0,
+              "j": 1
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 9,
+          "explanation": "Cells 0 and 1 trade contents: 2 now sits at index 0 and 5 at index 1. Watch the swap flash — in-place rearrangement is the whole trick: no second array, just disciplined exchanges.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1,
+              9,
+              3
+            ],
+            "pointers": {
+              "i": 0,
+              "j": 1
+            },
+            "swapped": [
+              0,
+              1
+            ]
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 6,
+          "explanation": "I moves to index 1, where the value is 5. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1,
+              9,
+              3
+            ],
+            "pointers": {
+              "i": 1,
+              "j": 1
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "J moves to index 2, where the value is 8. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1,
+              9,
+              3
+            ],
+            "pointers": {
+              "i": 1,
+              "j": 2
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "J moves to index 3, where the value is 1. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1,
+              9,
+              3
+            ],
+            "pointers": {
+              "i": 1,
+              "j": 3
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 9,
+          "explanation": "Cells 1 and 3 trade contents: 1 now sits at index 1 and 5 at index 3. Watch the swap flash — in-place rearrangement is the whole trick: no second array, just disciplined exchanges.",
+          "array": {
+            "values": [
+              2,
+              1,
+              8,
+              5,
+              9,
+              3
+            ],
+            "pointers": {
+              "i": 1,
+              "j": 3
+            },
+            "swapped": [
+              1,
+              3
+            ]
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 6,
+          "explanation": "I moves to index 2, where the value is 8. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              1,
+              8,
+              5,
+              9,
+              3
+            ],
+            "pointers": {
+              "i": 2,
+              "j": 3
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "J moves to index 4, where the value is 9. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              1,
+              8,
+              5,
+              9,
+              3
+            ],
+            "pointers": {
+              "i": 2,
+              "j": 4
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 11,
+          "explanation": "Cells 2 and 5 trade contents: 3 now sits at index 2 and 8 at index 5. Watch the swap flash — in-place rearrangement is the whole trick: no second array, just disciplined exchanges.",
+          "array": {
+            "values": [
+              2,
+              1,
+              3,
+              5,
+              9,
+              8
+            ],
+            "pointers": {
+              "i": 2,
+              "j": 4
+            },
+            "swapped": [
+              2,
+              5
+            ]
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 1,
+          "explanation": "We enter qs(0..1): qs(0..5) hands down the band 0..1 and the problem is now JUST these 2 cells — watch the focus band shrink onto them. Nothing outside the band can be touched by this call; that discipline is the whole design.",
+          "array": {
+            "values": [
+              2,
+              1,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c2",
+            "visited": [],
+            "revealed": [
+              "c1",
+              "c2"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c2"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)"
+          ],
+          "activeEdge": [
+            "c1",
+            "c2"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "The bookkeeping updates: high becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              2,
+              1,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c2",
+            "visited": [],
+            "revealed": [
+              "c1",
+              "c2"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c2"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)"
+          ],
+          "variables": {
+            "high": 1
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "The bookkeeping updates: p becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              2,
+              1,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c2",
+            "visited": [],
+            "revealed": [
+              "c1",
+              "c2"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c2"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)"
+          ],
+          "variables": {
+            "p": 1
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "I moves to index 0, where the value is 2. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              1,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "pointers": {
+              "i": 0
+            }
+          },
+          "graph": {
+            "current": "c2",
+            "visited": [],
+            "revealed": [
+              "c1",
+              "c2"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c2"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "J moves to index 0, where the value is 2. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              1,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "pointers": {
+              "i": 0,
+              "j": 0
+            }
+          },
+          "graph": {
+            "current": "c2",
+            "visited": [],
+            "revealed": [
+              "c1",
+              "c2"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c2"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 11,
+          "explanation": "Cells 0 and 1 trade contents: 1 now sits at index 0 and 2 at index 1. Watch the swap flash — in-place rearrangement is the whole trick: no second array, just disciplined exchanges.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "pointers": {
+              "i": 0,
+              "j": 0
+            },
+            "swapped": [
+              0,
+              1
+            ]
+          },
+          "graph": {
+            "current": "c2",
+            "visited": [],
+            "revealed": [
+              "c1",
+              "c2"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c2"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 1,
+          "explanation": "qs(0..-1) is the BASE CASE: a band of no cells is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c3",
+            "visited": [],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c3"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)",
+            "qs(0..-1)"
+          ],
+          "activeEdge": [
+            "c2",
+            "c3"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "The bookkeeping updates: high becomes -1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c3",
+            "visited": [],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c3"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)",
+            "qs(0..-1)"
+          ],
+          "variables": {
+            "high": -1
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "qs(0..-1) RETURNS: its band comes back as [] — sorted within itself, guaranteed. qs(0..1) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c2",
+            "visited": [
+              "c3"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {
+              "c3": "[]"
+            },
+            "pointers": {
+              "call": "c2"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)"
+          ],
+          "activeEdge": [
+            "c3",
+            "c2"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 12,
+          "explanation": "The bookkeeping updates: high becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "pointers": {
+              "i": 0,
+              "j": 0
+            }
+          },
+          "graph": {
+            "current": "c2",
+            "visited": [
+              "c3"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {
+              "c3": "[]"
+            },
+            "pointers": {
+              "call": "c2"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)"
+          ],
+          "variables": {
+            "high": 1
+          }
+        },
+        {
+          "line": 1,
+          "explanation": "qs(1..1) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              0,
+              2,
+              3,
+              4,
+              5
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c4",
+            "visited": [
+              "c3"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4"
+            ],
+            "returned": {
+              "c3": "[]"
+            },
+            "pointers": {
+              "call": "c4"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)",
+            "qs(1..1)"
+          ],
+          "activeEdge": [
+            "c2",
+            "c4"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "The bookkeeping updates: low becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              0,
+              2,
+              3,
+              4,
+              5
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c4",
+            "visited": [
+              "c3"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4"
+            ],
+            "returned": {
+              "c3": "[]"
+            },
+            "pointers": {
+              "call": "c4"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)",
+            "qs(1..1)"
+          ],
+          "variables": {
+            "low": 1
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "qs(1..1) RETURNS: its band comes back as [2] — sorted within itself, guaranteed. qs(0..1) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c2",
+            "visited": [
+              "c3",
+              "c4"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]"
+            },
+            "pointers": {
+              "call": "c2"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)"
+          ],
+          "activeEdge": [
+            "c4",
+            "c2"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 13,
+          "explanation": "The bookkeeping updates: low becomes 0. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "pointers": {
+              "i": 0,
+              "j": 0
+            }
+          },
+          "graph": {
+            "current": "c2",
+            "visited": [
+              "c3",
+              "c4"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]"
+            },
+            "pointers": {
+              "call": "c2"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(0..1)"
+          ],
+          "variables": {
+            "low": 0
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "qs(0..1) RETURNS: its band comes back as [1, 2] — sorted within itself, guaranteed. qs(0..5) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [
+              "c3",
+              "c4",
+              "c2"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]"
+            },
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "activeEdge": [
+            "c2",
+            "c1"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 12,
+          "explanation": "I moves to index 2, where the value is 3; j moves to index 4, where the value is 9. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The bookkeeping updates: high becomes 5, p becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "pointers": {
+              "i": 2,
+              "j": 4
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [
+              "c3",
+              "c4",
+              "c2"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]"
+            },
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {
+            "high": 5,
+            "p": 3
+          }
+        },
+        {
+          "line": 1,
+          "explanation": "We enter qs(3..5): qs(0..5) hands down the band 3..5 and the problem is now JUST these 3 cells — watch the focus band shrink onto them. Nothing outside the band can be touched by this call; that discipline is the whole design.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c3",
+              "c4",
+              "c2"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)"
+          ],
+          "activeEdge": [
+            "c1",
+            "c5"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "The bookkeeping updates: low becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c3",
+              "c4",
+              "c2"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)"
+          ],
+          "variables": {
+            "low": 3
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "The bookkeeping updates: p becomes 8. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c3",
+              "c4",
+              "c2"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)"
+          ],
+          "variables": {
+            "p": 8
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "I moves to index 3, where the value is 5. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {
+              "i": 3
+            }
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c3",
+              "c4",
+              "c2"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "J moves to index 3, where the value is 5. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {
+              "i": 3,
+              "j": 3
+            }
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c3",
+              "c4",
+              "c2"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 6,
+          "explanation": "I moves to index 4, where the value is 9. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {
+              "i": 4,
+              "j": 3
+            }
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c3",
+              "c4",
+              "c2"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "J moves to index 4, where the value is 9. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              9,
+              8
+            ],
+            "eliminated": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {
+              "i": 4,
+              "j": 4
+            }
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c3",
+              "c4",
+              "c2"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 11,
+          "explanation": "Cells 4 and 5 trade contents: 8 now sits at index 4 and 9 at index 5. Watch the swap flash — in-place rearrangement is the whole trick: no second array, just disciplined exchanges.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "eliminated": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {
+              "i": 4,
+              "j": 4
+            },
+            "swapped": [
+              4,
+              5
+            ]
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c3",
+              "c4",
+              "c2"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 1,
+          "explanation": "qs(3..3) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "eliminated": [
+              0,
+              1,
+              2,
+              4,
+              5
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c6",
+            "visited": [
+              "c3",
+              "c4",
+              "c2"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]"
+            },
+            "pointers": {
+              "call": "c6"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)",
+            "qs(3..3)"
+          ],
+          "activeEdge": [
+            "c5",
+            "c6"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "The bookkeeping updates: high becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "eliminated": [
+              0,
+              1,
+              2,
+              4,
+              5
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c6",
+            "visited": [
+              "c3",
+              "c4",
+              "c2"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]"
+            },
+            "pointers": {
+              "call": "c6"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)",
+            "qs(3..3)"
+          ],
+          "variables": {
+            "high": 3
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "qs(3..3) RETURNS: its band comes back as [5] — sorted within itself, guaranteed. qs(3..5) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "eliminated": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c3",
+              "c4",
+              "c2",
+              "c6"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]",
+              "c6": "[5]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)"
+          ],
+          "activeEdge": [
+            "c6",
+            "c5"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 12,
+          "explanation": "The bookkeeping updates: high becomes 5. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "eliminated": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {
+              "i": 4,
+              "j": 4
+            }
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c3",
+              "c4",
+              "c2",
+              "c6"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]",
+              "c6": "[5]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)"
+          ],
+          "variables": {
+            "high": 5
+          }
+        },
+        {
+          "line": 1,
+          "explanation": "qs(5..5) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "eliminated": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c7",
+            "visited": [
+              "c3",
+              "c4",
+              "c2",
+              "c6"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6",
+              "c7"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]",
+              "c6": "[5]"
+            },
+            "pointers": {
+              "call": "c7"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)",
+            "qs(5..5)"
+          ],
+          "activeEdge": [
+            "c5",
+            "c7"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "The bookkeeping updates: low becomes 5. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "eliminated": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c7",
+            "visited": [
+              "c3",
+              "c4",
+              "c2",
+              "c6"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6",
+              "c7"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]",
+              "c6": "[5]"
+            },
+            "pointers": {
+              "call": "c7"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)",
+            "qs(5..5)"
+          ],
+          "variables": {
+            "low": 5
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "qs(5..5) RETURNS: its band comes back as [9] — sorted within itself, guaranteed. qs(3..5) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "eliminated": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c3",
+              "c4",
+              "c2",
+              "c6",
+              "c7"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6",
+              "c7"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]",
+              "c6": "[5]",
+              "c7": "[9]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)"
+          ],
+          "activeEdge": [
+            "c7",
+            "c5"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 13,
+          "explanation": "The bookkeeping updates: low becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "eliminated": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {
+              "i": 4,
+              "j": 4
+            }
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c3",
+              "c4",
+              "c2",
+              "c6",
+              "c7"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6",
+              "c7"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]",
+              "c6": "[5]",
+              "c7": "[9]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "qs(0..5)",
+            "qs(3..5)"
+          ],
+          "variables": {
+            "low": 3
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "qs(3..5) RETURNS: its band comes back as [5, 8, 9] — sorted within itself, guaranteed. qs(0..5) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [
+              "c3",
+              "c4",
+              "c2",
+              "c6",
+              "c7",
+              "c5"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6",
+              "c7"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]",
+              "c6": "[5]",
+              "c7": "[9]",
+              "c5": "[5, 8, 9]"
+            },
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "activeEdge": [
+            "c5",
+            "c1"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 13,
+          "explanation": "I moves to index 2, where the value is 3. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The bookkeeping updates: low becomes 0, p becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "pointers": {
+              "i": 2,
+              "j": 4
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [
+              "c3",
+              "c4",
+              "c2",
+              "c6",
+              "c7",
+              "c5"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6",
+              "c7"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]",
+              "c6": "[5]",
+              "c7": "[9]",
+              "c5": "[5, 8, 9]"
+            },
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "qs(0..5)"
+          ],
+          "variables": {
+            "low": 0,
+            "p": 3
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "qs(0..5) RETURNS: its band comes back as [1, 2, 3, 5, 8, 9] — sorted within itself, guaranteed. The whole array is now conquered, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": null,
+            "visited": [
+              "c3",
+              "c4",
+              "c2",
+              "c6",
+              "c7",
+              "c5",
+              "c1"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6",
+              "c7"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]",
+              "c6": "[5]",
+              "c7": "[9]",
+              "c5": "[5, 8, 9]",
+              "c1": "[1, 2, 3, 5, 8, 9]"
+            },
+            "pointers": {}
+          },
+          "stack": [],
+          "variables": {}
+        },
+        {
+          "line": 13,
+          "explanation": "Every call has returned and the array reads [1, 2, 3, 5, 8, 9]. Walk the tree bottom-up in your head: one-cell bands were trivially sorted, and every merge/partition above them only ever combined already-solved halves — that is the entire proof, performed in front of you.",
+          "array": {
+            "values": [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": null,
+            "visited": [
+              "c3",
+              "c4",
+              "c2",
+              "c6",
+              "c7",
+              "c5",
+              "c1"
+            ],
+            "revealed": [
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6",
+              "c7"
+            ],
+            "returned": {
+              "c3": "[]",
+              "c4": "[2]",
+              "c2": "[1, 2]",
+              "c6": "[5]",
+              "c7": "[9]",
+              "c5": "[5, 8, 9]",
+              "c1": "[1, 2, 3, 5, 8, 9]"
+            },
+            "pointers": {}
+          },
+          "stack": [],
+          "variables": {}
+        }
+      ]
+    }
+  },
+  {
+    "name": "DP table — LCS",
+    "trace": {
+      "language": "python",
+      "code": "def lcs(a, b):\n    dp = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]\n    for i in range(1, len(a) + 1):\n        for j in range(1, len(b) + 1):\n            if a[i-1] == b[j-1]:\n                dp[i][j] = dp[i-1][j-1] + 1\n            else:\n                dp[i][j] = max(dp[i-1][j], dp[i][j-1])\n    return dp[-1][-1]",
+      "views": {
+        "array2d": {
+          "rows": 6,
+          "cols": 4,
+          "rowLabels": [
+            "",
+            "a",
+            "b",
+            "c",
+            "d",
+            "e"
+          ],
+          "colLabels": [
+            "",
+            "a",
+            "c",
+            "e"
+          ]
+        }
+      },
+      "steps": [
+        {
+          "line": 3,
+          "explanation": "We run lcs('abcde', 'ace') and watch the 6×4 table fill cell by cell. One rule before anything moves: know what a cell MEANS — dp[i][j] is the answer to a smaller version of the same question, and every write below only ever combines already-solved smaller answers.",
+          "array2d": {},
+          "variables": {}
+        },
+        {
+          "line": 3,
+          "explanation": "The table is created: 6 rows × 4 columns, seeded with its starting values. These are not answers yet — they are the scaffold the real answers will be built on.",
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                2,
+                0
+              ],
+              [
+                0,
+                3,
+                0
+              ],
+              [
+                1,
+                0,
+                0
+              ],
+              [
+                1,
+                1,
+                0
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                1,
+                3,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                0
+              ],
+              [
+                2,
+                2,
+                0
+              ],
+              [
+                2,
+                3,
+                0
+              ],
+              [
+                3,
+                0,
+                0
+              ],
+              [
+                3,
+                1,
+                0
+              ],
+              [
+                3,
+                2,
+                0
+              ],
+              [
+                3,
+                3,
+                0
+              ],
+              [
+                4,
+                0,
+                0
+              ],
+              [
+                4,
+                1,
+                0
+              ],
+              [
+                4,
+                2,
+                0
+              ],
+              [
+                4,
+                3,
+                0
+              ],
+              [
+                5,
+                0,
+                0
+              ],
+              [
+                5,
+                1,
+                0
+              ],
+              [
+                5,
+                2,
+                0
+              ],
+              [
+                5,
+                3,
+                0
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace"
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[1][1] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              1,
+              1
+            ],
+            "values": [
+              [
+                1,
+                1,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 1,
+            "j": 1
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[1][2] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              1,
+              2
+            ],
+            "values": [
+              [
+                1,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 1,
+            "j": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[1][3] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              1,
+              3
+            ],
+            "values": [
+              [
+                1,
+                3,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 1,
+            "j": 3
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[2][1] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              2,
+              1
+            ],
+            "values": [
+              [
+                2,
+                1,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 2,
+            "j": 1
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[2][2] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              2,
+              2
+            ],
+            "values": [
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 2,
+            "j": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[2][3] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              2,
+              3
+            ],
+            "values": [
+              [
+                2,
+                3,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                3
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 2,
+            "j": 3
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[3][1] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              3,
+              1
+            ],
+            "values": [
+              [
+                3,
+                1,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                1
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 3,
+            "j": 1
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[3][2] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              3,
+              2
+            ],
+            "values": [
+              [
+                3,
+                2,
+                2
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                3,
+                2
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 3,
+            "j": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[3][3] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              3,
+              3
+            ],
+            "values": [
+              [
+                3,
+                3,
+                2
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                3,
+                2
+              ],
+              [
+                3,
+                3
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 3,
+            "j": 3
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[4][1] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              4,
+              1
+            ],
+            "values": [
+              [
+                4,
+                1,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                3,
+                2
+              ],
+              [
+                3,
+                3
+              ],
+              [
+                4,
+                1
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 4,
+            "j": 1
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[4][2] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              4,
+              2
+            ],
+            "values": [
+              [
+                4,
+                2,
+                2
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                3,
+                2
+              ],
+              [
+                3,
+                3
+              ],
+              [
+                4,
+                1
+              ],
+              [
+                4,
+                2
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 4,
+            "j": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[4][3] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              4,
+              3
+            ],
+            "values": [
+              [
+                4,
+                3,
+                2
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                3,
+                2
+              ],
+              [
+                3,
+                3
+              ],
+              [
+                4,
+                1
+              ],
+              [
+                4,
+                2
+              ],
+              [
+                4,
+                3
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 4,
+            "j": 3
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[5][1] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              5,
+              1
+            ],
+            "values": [
+              [
+                5,
+                1,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                3,
+                2
+              ],
+              [
+                3,
+                3
+              ],
+              [
+                4,
+                1
+              ],
+              [
+                4,
+                2
+              ],
+              [
+                4,
+                3
+              ],
+              [
+                5,
+                1
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 5,
+            "j": 1
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[5][2] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              5,
+              2
+            ],
+            "values": [
+              [
+                5,
+                2,
+                2
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                3,
+                2
+              ],
+              [
+                3,
+                3
+              ],
+              [
+                4,
+                1
+              ],
+              [
+                4,
+                2
+              ],
+              [
+                4,
+                3
+              ],
+              [
+                5,
+                1
+              ],
+              [
+                5,
+                2
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 5,
+            "j": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dp[5][3] becomes 3 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+          "array2d": {
+            "current": [
+              5,
+              3
+            ],
+            "values": [
+              [
+                5,
+                3,
+                3
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                3,
+                2
+              ],
+              [
+                3,
+                3
+              ],
+              [
+                4,
+                1
+              ],
+              [
+                4,
+                2
+              ],
+              [
+                4,
+                3
+              ],
+              [
+                5,
+                1
+              ],
+              [
+                5,
+                2
+              ],
+              [
+                5,
+                3
+              ]
+            ]
+          },
+          "variables": {
+            "a": "abcde",
+            "b": "ace",
+            "i": 5,
+            "j": 3
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "The table is complete and the call returns 3. The answer was read out of dp[5][3] = 3 — the bottom-right of the region we just filled, the \"full problem\" cell. Count what you watched: one write per cell, each in constant time — that is the O(rows × cols) story, and the filled table IS the proof.",
+          "array2d": {
+            "current": [
+              5,
+              3
+            ],
+            "filled": [
+              [
+                1,
+                1
+              ],
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                3,
+                1
+              ],
+              [
+                3,
+                2
+              ],
+              [
+                3,
+                3
+              ],
+              [
+                4,
+                1
+              ],
+              [
+                4,
+                2
+              ],
+              [
+                4,
+                3
+              ],
+              [
+                5,
+                1
+              ],
+              [
+                5,
+                2
+              ],
+              [
+                5,
+                3
+              ]
+            ]
+          },
+          "variables": {}
+        }
+      ]
+    }
+  },
+  {
+    "name": "Sliding window — longest unique substring",
+    "trace": {
+      "language": "python",
+      "code": "def longest_unique(s):\n    seen = {}\n    left = 0\n    best = 0\n    for right in range(len(s)):\n        c = s[right]\n        if c in seen and seen[c] >= left:\n            left = seen[c] + 1\n        seen[c] = right\n        best = max(best, right - left + 1)\n    return best",
+      "views": {
+        "array": {
+          "values": [
+            "a",
+            "b",
+            "c",
+            "a",
+            "b",
+            "c",
+            "b",
+            "b"
+          ]
+        }
+      },
+      "steps": [
+        {
+          "line": 2,
+          "explanation": "New state appears: s = \"abcabcbb\" — keep your eye on this value; every pointer move below is decided by it.",
+          "array": {
+            "pointers": {}
+          },
+          "variables": {
+            "s": "abcabcbb"
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "Left starts at index 0, where the value is \"a\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "pointers": {
+              "left": 0
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "New state appears: best = 0 — keep your eye on this value; every pointer move below is decided by it.",
+          "array": {
+            "pointers": {
+              "left": 0
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0,
+            "best": 0
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "Right starts at index 0, where the value is \"a\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 0..0 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 0,
+            "pointers": {
+              "left": 0,
+              "right": 0
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0,
+            "best": 0,
+            "right": 0
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "New state appears: c = \"a\" — keep your eye on this value; every pointer move below is decided by it. The window now spans indices 0..0 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 0,
+            "pointers": {
+              "left": 0,
+              "right": 0
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0,
+            "best": 0,
+            "right": 0,
+            "c": "a"
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "The bookkeeping updates: best becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so. The window now spans indices 0..0 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 0,
+            "pointers": {
+              "left": 0,
+              "right": 0
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0,
+            "best": 1,
+            "right": 0,
+            "c": "a"
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "Right moves to index 1, where the value is \"b\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 0..1 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 1,
+            "pointers": {
+              "left": 0,
+              "right": 1
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0,
+            "best": 1,
+            "right": 1,
+            "c": "a"
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "The bookkeeping updates: c becomes \"b\". This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so. The window now spans indices 0..1 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 1,
+            "pointers": {
+              "left": 0,
+              "right": 1
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0,
+            "best": 1,
+            "right": 1,
+            "c": "b"
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "The bookkeeping updates: best becomes 2. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so. The window now spans indices 0..1 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 1,
+            "pointers": {
+              "left": 0,
+              "right": 1
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0,
+            "best": 2,
+            "right": 1,
+            "c": "b"
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "Right moves to index 2, where the value is \"c\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 0..2 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 2,
+            "pointers": {
+              "left": 0,
+              "right": 2
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0,
+            "best": 2,
+            "right": 2,
+            "c": "b"
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "The bookkeeping updates: c becomes \"c\". This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so. The window now spans indices 0..2 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 2,
+            "pointers": {
+              "left": 0,
+              "right": 2
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0,
+            "best": 2,
+            "right": 2,
+            "c": "c"
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "The bookkeeping updates: best becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so. The window now spans indices 0..2 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 2,
+            "pointers": {
+              "left": 0,
+              "right": 2
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0,
+            "best": 3,
+            "right": 2,
+            "c": "c"
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "Right moves to index 3, where the value is \"a\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 0..3 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 3,
+            "pointers": {
+              "left": 0,
+              "right": 3
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0,
+            "best": 3,
+            "right": 3,
+            "c": "c"
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "The bookkeeping updates: c becomes \"a\". This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so. The window now spans indices 0..3 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 3,
+            "pointers": {
+              "left": 0,
+              "right": 3
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 0,
+            "best": 3,
+            "right": 3,
+            "c": "a"
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "Left moves to index 1, where the value is \"b\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 1..3 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 3,
+            "pointers": {
+              "left": 1,
+              "right": 3
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 1,
+            "best": 3,
+            "right": 3,
+            "c": "a"
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "Right moves to index 4, where the value is \"b\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 1..4 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 4,
+            "pointers": {
+              "left": 1,
+              "right": 4
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 1,
+            "best": 3,
+            "right": 4,
+            "c": "a"
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "The bookkeeping updates: c becomes \"b\". This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so. The window now spans indices 1..4 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 4,
+            "pointers": {
+              "left": 1,
+              "right": 4
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 1,
+            "best": 3,
+            "right": 4,
+            "c": "b"
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "Left moves to index 2, where the value is \"c\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 2..4 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 4,
+            "pointers": {
+              "left": 2,
+              "right": 4
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 2,
+            "best": 3,
+            "right": 4,
+            "c": "b"
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "Right moves to index 5, where the value is \"c\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 2..5 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 5,
+            "pointers": {
+              "left": 2,
+              "right": 5
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 2,
+            "best": 3,
+            "right": 5,
+            "c": "b"
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "The bookkeeping updates: c becomes \"c\". This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so. The window now spans indices 2..5 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 5,
+            "pointers": {
+              "left": 2,
+              "right": 5
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 2,
+            "best": 3,
+            "right": 5,
+            "c": "c"
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "Left moves to index 3, where the value is \"a\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 3..5 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 5,
+            "pointers": {
+              "left": 3,
+              "right": 5
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 3,
+            "best": 3,
+            "right": 5,
+            "c": "c"
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "Right moves to index 6, where the value is \"b\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 3..6 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 6,
+            "pointers": {
+              "left": 3,
+              "right": 6
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 3,
+            "best": 3,
+            "right": 6,
+            "c": "c"
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "The bookkeeping updates: c becomes \"b\". This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so. The window now spans indices 3..6 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 6,
+            "pointers": {
+              "left": 3,
+              "right": 6
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 3,
+            "best": 3,
+            "right": 6,
+            "c": "b"
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "Left moves to index 5, where the value is \"c\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 5..6 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 6,
+            "pointers": {
+              "left": 5,
+              "right": 6
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 5,
+            "best": 3,
+            "right": 6,
+            "c": "b"
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "Right moves to index 7, where the value is \"b\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 5..7 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 7,
+            "pointers": {
+              "left": 5,
+              "right": 7
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 5,
+            "best": 3,
+            "right": 7,
+            "c": "b"
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "Left moves to index 7, where the value is \"b\". These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The window now spans indices 7..7 — watch it slide rather than restart; reusing the overlap is what makes this linear instead of quadratic.",
+          "array": {
+            "current": 7,
+            "pointers": {
+              "left": 7,
+              "right": 7
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 7,
+            "best": 3,
+            "right": 7,
+            "c": "b"
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "The walk is over and the call returns 3. Replay the arrows in your head: every move you watched was a decision the code made on real data — that decision pattern IS the algorithm.",
+          "array": {
+            "current": 7,
+            "pointers": {
+              "left": 7,
+              "right": 7
+            }
+          },
+          "variables": {
+            "s": "abcabcbb",
+            "left": 7,
+            "best": 3,
+            "right": 7,
+            "c": "b"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Stack — push/pop (LIFO)",
+    "trace": {
+      "language": "python",
+      "code": "s = []\ns.append(x)\ns.pop()\ns[-1]",
+      "views": {
+        "array": {
+          "values": [
+            "",
+            "",
+            ""
+          ]
+        }
+      },
+      "steps": [
+        {
+          "line": 2,
+          "explanation": "push(5): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now 1.",
+          "array": {
+            "values": [
+              5,
+              "",
+              ""
+            ],
+            "pointers": {
+              "top": 0
+            },
+            "current": 0
+          },
+          "stack": [
+            5
+          ],
+          "variables": {
+            "size": 1
+          }
+        },
+        {
+          "line": 2,
+          "explanation": "push(8): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now 2.",
+          "array": {
+            "values": [
+              5,
+              8,
+              ""
+            ],
+            "pointers": {
+              "top": 1
+            },
+            "current": 1
+          },
+          "stack": [
+            5,
+            8
+          ],
+          "variables": {
+            "size": 2
+          }
+        },
+        {
+          "line": 2,
+          "explanation": "push(3): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now 3.",
+          "array": {
+            "values": [
+              5,
+              8,
+              3
+            ],
+            "pointers": {
+              "top": 2
+            },
+            "current": 2
+          },
+          "stack": [
+            5,
+            8,
+            3
+          ],
+          "variables": {
+            "size": 3
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "pop(): 3 comes off the TOP — it was the most recent arrival, and it leaves first. Its slot empties and the top arrow drops down one place; notice nothing below it moved — a stack only ever touches its top. Size is now 2.",
+          "array": {
+            "values": [
+              5,
+              8,
+              ""
+            ],
+            "pointers": {
+              "top": 1
+            },
+            "current": 2
+          },
+          "stack": [
+            5,
+            8
+          ],
+          "variables": {
+            "size": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "peek(): we look at 8 WITHOUT removing it — the highlighted cell is only being read; reading costs nothing and changes nothing, and the size stays 2.",
+          "array": {
+            "values": [
+              5,
+              8,
+              ""
+            ],
+            "pointers": {
+              "top": 1
+            },
+            "current": 1
+          },
+          "stack": [
+            5,
+            8
+          ],
+          "variables": {
+            "size": 2
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "pop(): 8 comes off the TOP — it was the most recent arrival, and it leaves first. Its slot empties and the top arrow drops down one place; notice nothing below it moved — a stack only ever touches its top. Size is now 1.",
+          "array": {
+            "values": [
+              5,
+              "",
+              ""
+            ],
+            "pointers": {
+              "top": 0
+            },
+            "current": 1
+          },
+          "stack": [
+            5
+          ],
+          "variables": {
+            "size": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Queue — enqueue/dequeue (FIFO)",
+    "trace": {
+      "language": "python",
+      "code": "from collections import deque\nq = deque()\nq.append(x)\nq.popleft()",
+      "views": {
+        "array": {
+          "values": [
+            "",
+            "",
+            ""
+          ]
+        }
+      },
+      "steps": [
+        {
+          "line": 3,
+          "explanation": "enqueue(\"A\"): the new item joins the BACK of the queue — the back arrow slides onto it — and must wait its turn behind 0 others. First In, First Out, like any fair line. Size is now 1.",
+          "array": {
+            "values": [
+              "A",
+              "",
+              ""
+            ],
+            "pointers": {
+              "front": 0,
+              "back": 0
+            },
+            "current": 0
+          },
+          "queue": [
+            "A"
+          ],
+          "variables": {
+            "size": 1
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "enqueue(\"B\"): the new item joins the BACK of the queue — the back arrow slides onto it — and must wait its turn behind 1 other. First In, First Out, like any fair line. Size is now 2.",
+          "array": {
+            "values": [
+              "A",
+              "B",
+              ""
+            ],
+            "pointers": {
+              "front": 0,
+              "back": 1
+            },
+            "current": 1
+          },
+          "queue": [
+            "A",
+            "B"
+          ],
+          "variables": {
+            "size": 2
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "enqueue(\"C\"): the new item joins the BACK of the queue — the back arrow slides onto it — and must wait its turn behind 2 others. First In, First Out, like any fair line. Size is now 3.",
+          "array": {
+            "values": [
+              "A",
+              "B",
+              "C"
+            ],
+            "pointers": {
+              "front": 0,
+              "back": 2
+            },
+            "current": 2
+          },
+          "queue": [
+            "A",
+            "B",
+            "C"
+          ],
+          "variables": {
+            "size": 3
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dequeue(): \"A\" leaves from the FRONT — it waited longest, so it is served first. Everyone behind shifts one place closer to the front arrow. Size is now 2.",
+          "array": {
+            "values": [
+              "B",
+              "C",
+              ""
+            ],
+            "pointers": {
+              "front": 0,
+              "back": 1
+            },
+            "current": 0
+          },
+          "queue": [
+            "B",
+            "C"
+          ],
+          "variables": {
+            "size": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dequeue(): \"B\" leaves from the FRONT — it waited longest, so it is served first. Everyone behind shifts one place closer to the front arrow. Size is now 1.",
+          "array": {
+            "values": [
+              "C",
+              "",
+              ""
+            ],
+            "pointers": {
+              "front": 0,
+              "back": 0
+            },
+            "current": 0
+          },
+          "queue": [
+            "C"
+          ],
+          "variables": {
+            "size": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "Hash map — put/get with collision",
+    "trace": {
+      "language": "python",
+      "code": "m = {}\nm[k] = v\nm.get(k)\ndel m[k]",
+      "views": {
+        "array2d": {
+          "rows": 4,
+          "cols": 4,
+          "rowLabels": [
+            "b0",
+            "b1",
+            "b2",
+            "b3"
+          ]
+        }
+      },
+      "steps": [
+        {
+          "line": 2,
+          "explanation": "put(\"cat\", 1): the hash function turns the key into a bucket number — hash(\"cat\") = 1 — and the entry drops straight into empty bucket 1. No searching: that single jump is the O(1) magic.",
+          "array2d": {
+            "current": [
+              1,
+              0
+            ],
+            "values": [
+              [
+                1,
+                0,
+                "cat:1"
+              ]
+            ]
+          },
+          "variables": {
+            "bucket": 1,
+            "size": 1
+          }
+        },
+        {
+          "line": 2,
+          "explanation": "put(\"dog\", 2): the hash function turns the key into a bucket number — hash(\"dog\") = 3 — and the entry drops straight into empty bucket 3. No searching: that single jump is the O(1) magic.",
+          "array2d": {
+            "current": [
+              3,
+              0
+            ],
+            "values": [
+              [
+                1,
+                0,
+                "cat:1"
+              ],
+              [
+                3,
+                0,
+                "dog:2"
+              ]
+            ]
+          },
+          "variables": {
+            "bucket": 3,
+            "size": 2
+          }
+        },
+        {
+          "line": 2,
+          "explanation": "put(\"act\"): hash(\"act\") = 1, and bucket 1 is chained — slot 0 holds \"cat\", which is not our key, so we follow the link to the next entry. Every one of these hops is the price of a collision; a good hash function keeps this walk short.",
+          "array2d": {
+            "current": [
+              1,
+              0
+            ],
+            "values": [
+              [
+                1,
+                0,
+                "cat:1"
+              ],
+              [
+                3,
+                0,
+                "dog:2"
+              ]
+            ],
+            "highlight": [
+              [
+                1,
+                0
+              ]
+            ]
+          },
+          "variables": {
+            "bucket": 1,
+            "chainSlot": 0,
+            "size": 2
+          }
+        },
+        {
+          "line": 2,
+          "explanation": "put(\"act\", 3): hash(\"act\") = 1, but bucket 1 already holds 1 entry — a COLLISION. We chain the new entry behind the others; lookups in this bucket now walk the chain, which is exactly why too many collisions degrade a hash map toward a list.",
+          "array2d": {
+            "current": [
+              1,
+              1
+            ],
+            "values": [
+              [
+                1,
+                0,
+                "cat:1"
+              ],
+              [
+                1,
+                1,
+                "act:3"
+              ],
+              [
+                3,
+                0,
+                "dog:2"
+              ]
+            ]
+          },
+          "variables": {
+            "bucket": 1,
+            "size": 3
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "get(\"act\"): hash(\"act\") = 1, and bucket 1 is chained — slot 0 holds \"cat\", which is not our key, so we follow the link to the next entry. Every one of these hops is the price of a collision; a good hash function keeps this walk short.",
+          "array2d": {
+            "current": [
+              1,
+              0
+            ],
+            "values": [
+              [
+                1,
+                0,
+                "cat:1"
+              ],
+              [
+                1,
+                1,
+                "act:3"
+              ],
+              [
+                3,
+                0,
+                "dog:2"
+              ]
+            ],
+            "highlight": [
+              [
+                1,
+                0
+              ]
+            ]
+          },
+          "variables": {
+            "bucket": 1,
+            "chainSlot": 0,
+            "size": 3
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "get(\"act\"): hash straight to bucket 1, walk 2 chained entries (the collision cost), and find \"act\" = 3. One hash, 2 looks — no scanning the whole table.",
+          "array2d": {
+            "current": [
+              1,
+              1
+            ],
+            "values": [
+              [
+                1,
+                0,
+                "cat:1"
+              ],
+              [
+                1,
+                1,
+                "act:3"
+              ],
+              [
+                3,
+                0,
+                "dog:2"
+              ]
+            ]
+          },
+          "variables": {
+            "bucket": 1,
+            "size": 3
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "get(\"ghost\"): hash says bucket 2, but the bucket is empty — the key does not exist. A hash map answers \"not here\" just as fast as \"found\".",
+          "array2d": {
+            "values": [
+              [
+                1,
+                0,
+                "cat:1"
+              ],
+              [
+                1,
+                1,
+                "act:3"
+              ],
+              [
+                3,
+                0,
+                "dog:2"
+              ]
+            ]
+          },
+          "variables": {
+            "bucket": 2,
+            "size": 3
+          }
+        }
+      ]
+    }
+  }
+]

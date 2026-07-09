@@ -18,6 +18,9 @@ _events = []
 _registry = {}
 _keep = []
 _counter = [0]
+_root = [None]  # the TRUE trie root, PINNED once — never re-derived per frame (Python Tutor /
+                # debug-visualizer rule). Re-deriving from each frame's 'self' mistook a fresh
+                # TrieNode.__init__ self for the root and snapshotted a 1-node tree.
 
 def _nid(node):
     k = id(node)
@@ -81,6 +84,19 @@ def _scalars(lv):
             out[k] = v
     return out
 
+def _pin_root(frame):
+    # Resolve the declared root ONCE, preferring the global/enclosing ROOT_VAR (the Trie
+    # instance) over any frame 'self' — a node under construction is NOT the root.
+    if _root[0] is not None:
+        return _root[0]
+    holder = frame.f_globals.get(ROOT_VAR)
+    if holder is None:
+        holder = frame.f_locals.get(ROOT_VAR)
+    r = _find_root(holder) if holder is not None else None
+    if r is not None:
+        _root[0] = r
+    return _root[0]
+
 def _tracer(frame, event, arg):
     if event == 'line' and frame.f_code.co_filename == '<student>':
         if len(_events) >= MAX_EVENTS:
@@ -88,12 +104,7 @@ def _tracer(frame, event, arg):
                 _events.append({'truncated': True})
             sys.settrace(None)
             return None
-        holder = frame.f_locals.get(ROOT_VAR)
-        if holder is None:
-            holder = frame.f_locals.get('self')
-        if holder is None:
-            holder = frame.f_globals.get(ROOT_VAR)
-        root = _find_root(holder) if holder is not None else None
+        root = _pin_root(frame)
         if root is not None:
             _events.append({'line': frame.f_lineno, 'state': _snap(frame.f_locals, root), 'variables': _scalars(frame.f_locals)})
     return _tracer
