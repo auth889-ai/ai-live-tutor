@@ -46,6 +46,18 @@ export function buildTracedProgram({ constants = {}, trackerPy, code, entry, mar
     ...Object.entries(constants).map(([k, v]) => `${k} = ${pyLiteral(v)}`),
     trackerPy,
     '',
+    // json.dumps happily emits -Infinity/NaN — INVALID JSON that the parser rejects as if the
+    // marker never printed (LC124's best = float('-inf') killed whole traces this way). Every
+    // recorded payload passes through this finite-izer before printing.
+    'def _finite(v):',
+    '    if isinstance(v, float) and (v != v or v == float("inf") or v == float("-inf")):',
+    '        return repr(v)',
+    '    if isinstance(v, (list, tuple)):',
+    '        return [_finite(x) for x in v]',
+    '    if isinstance(v, dict):',
+    '        return {k: _finite(x) for k, x in v.items()}',
+    '    return v',
+    '',
     `_src = ${JSON.stringify(String(code))}`,
     `_compiled = compile(_src, '<student>', 'exec')`,
     '_ns = {}',
@@ -56,7 +68,7 @@ export function buildTracedProgram({ constants = {}, trackerPy, code, entry, mar
     'finally:',
     '    sys.settrace(None)',
     resultLine,
-    `print('${marker} ' + json.dumps({'events': _events, 'result': _out}))`,
+    `print('${marker} ' + json.dumps(_finite({'events': _events, 'result': _out})))`,
   ].join('\n');
 }
 

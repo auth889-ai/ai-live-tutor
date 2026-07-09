@@ -39,3 +39,13 @@ test('recursion tracker survives LeetCode-style null args (the Max Path Sum cras
   assert.equal(tree.result, 5, 'the real run counts the 5 non-null nodes');
   assert.ok(Object.keys(tree.vertices).length >= 5, 'one vertex per real call');
 });
+
+test('non-finite floats in recorded state cannot poison the payload (LC124 -inf)', async () => {
+  const { assembleStructureProgram, parseStructureEvents } = await import('../../../lib/execution/trace/engines.js');
+  const code = 'class N:\n    def __init__(self):\n        self.left = None\nroot = N()\ndef walk(node):\n    best = float("-inf")\n    best = max(best, 42)\n    return best';
+  const src = assembleStructureProgram({ code, entry: 'walk(root)' });
+  const out = execFileSync('python3', ['-c', src], { encoding: 'utf8', timeout: 15_000 });
+  const payload = parseStructureEvents(out);
+  assert.ok(payload, 'the @@STRUCTURE payload must survive -inf in locals');
+  assert.equal(payload.result, 42);
+});
