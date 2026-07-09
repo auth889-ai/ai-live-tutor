@@ -16,10 +16,12 @@ import { compileTrieTrace } from './trie/compiler.js';
 import { assembleTrieProgram, parseTrieEvents } from './trie/tracker.js';
 import { compileDpTable } from './dp-table/compiler.js';
 import { assembleDpProgram, parseDpEvents } from './dp-table/tracker.js';
+import { compileStructureTrace } from './structure/compiler.js';
+import { assembleStructureProgram, parseStructureEvents } from './structure/tracker.js';
 import { assembleLineProgram, parseLineEvents } from './line-sim/compiler.js';
 import { runCode } from '../run-code.js';
 
-export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk', 'graphwalk', 'linkedlist', 'divideconquer', 'trie', 'dptable']);
+export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk', 'graphwalk', 'linkedlist', 'divideconquer', 'trie', 'dptable', 'structure']);
 
 export async function retrace({ tool, params } = {}, deps = {}) {
   const exec = deps.runCode ?? runCode;
@@ -140,6 +142,19 @@ export async function retrace({ tool, params } = {}, deps = {}) {
     // they still fit; otherwise the grid falls back to numeric indices (honest, never stale).
     const trace = compileDpTable({ ...payload, code, entry, rowLabels: rowLabels ?? null, colLabels: colLabels ?? null });
     trace.meta = { tool, params: { code, entry, dp, rowLabels: rowLabels ?? null, colLabels: colLabels ?? null } };
+    return trace;
+  }
+
+  if (tool === 'structure') {
+    const { code, entry } = params ?? {};
+    if (String(code ?? '').length > 4000) throw new Error('code too large to retrace');
+    if (String(entry ?? '').length > 200) throw new Error('entry expression too large to retrace');
+    const run = await exec({ language: 'python', source: assembleStructureProgram({ code, entry }), timeoutMs: 8000 });
+    if (run.timedOut) throw new Error('the run timed out — try a smaller structure');
+    const payload = parseStructureEvents(run.stdout);
+    if (!payload) throw new Error(run.stderr ? `the run errored: ${run.stderr.slice(0, 200)}` : 'no structure was recorded');
+    const trace = compileStructureTrace({ ...payload, code, entry });
+    trace.meta = { tool, params: { code, entry } };
     return trace;
   }
 

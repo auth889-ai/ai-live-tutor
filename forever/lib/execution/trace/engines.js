@@ -44,6 +44,11 @@
 //     char by char, end-of-word nodes green, cursor           declared children attr; create vs
 //     rides under the student's variable name, prune          reuse fork, app-vs-apple end-flag
 //     fades — VisuAlgo has NO trie module at all)             lesson, bottom-up prune)
+//   ANY OTHER tree/graph problem (TreeNode/ListNode/Node    -> structure compiler (universal
+//     objects or adjacency dict/list: invert tree, LCA,        AUTO-EXTRACTION: BFS-follows the
+//     clone graph, serialize, path sum — the structure         real objects' reference fields /
+//     draws ITSELF from memory, zero declaration)              domain-closed adjacency; cursor =
+//                                                              whichever local's id() is a node)
 
 export { compileTraversalTrace, TRAVERSAL_KINDS } from './traversal/compiler.js';
 export { compileGraphWalk, GRAPH_LENS_ROLES } from './graph-walk/compiler.js';
@@ -55,6 +60,8 @@ export { compileTrieTrace } from './trie/compiler.js';
 export { assembleTrieProgram, parseTrieEvents, TRIE_TRACKER_PY } from './trie/tracker.js';
 export { compileDpTable } from './dp-table/compiler.js';
 export { assembleDpProgram, parseDpEvents, DP_TRACKER_PY } from './dp-table/tracker.js';
+export { compileStructureTrace } from './structure/compiler.js';
+export { assembleStructureProgram, parseStructureEvents, STRUCTURE_TRACKER_PY } from './structure/tracker.js';
 export { compileOperationsTrace, OPERATION_STRUCTURES } from './operations/compiler.js';
 export { compileRecursionTrace, assembleRecursionProgram, parseCallTree, RECURSION_TRACKER_PY } from './recursion/compiler.js';
 export { compilePointerWalk } from './pointer-walk/compiler.js';
