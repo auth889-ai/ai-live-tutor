@@ -14,7 +14,7 @@
 // edgeStatus); this file only renders them.
 
 import { memo, useEffect, useMemo } from 'react';
-import { ReactFlow, ReactFlowProvider, Background, Controls, MarkerType, useNodesInitialized, useReactFlow } from '@xyflow/react';
+import { ReactFlow, ReactFlowProvider, Background, Controls, MarkerType, useNodesInitialized, useReactFlow, useInternalNode, BaseEdge, EdgeLabelRenderer, getStraightPath } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { layoutGraph } from '../../../lib/board/diagrams/graph-layout.js';
@@ -48,7 +48,9 @@ const NodeInner = memo(function NodeInner({ label, status, circle, fontSize }) {
         height: '100%',
         boxSizing: 'border-box',
         borderRadius: circle ? '50%' : 10,
-        border: `${status === 'current' ? 4 : 3}px solid ${c.border}`,
+        // Reference weight (tree/'s vertice.tsx): 5px circle strokes — thin borders are the
+        // single biggest "looks weak" factor at a glance.
+        border: `${status === 'current' ? 5 : 4}px solid ${c.border}`,
         background: c.bg,
         color: c.fg,
         display: 'flex',
@@ -77,6 +79,45 @@ const KEYFRAMES = `
 .algo-node--current { animation: algoNodeGrow 0.26s cubic-bezier(0.65,0,0.265,1.55) both, algoNodePulse 1.7s ease-in-out 0.26s infinite; }
 `;
 
+// Rim-to-rim straight edge — the reference's pointOnLine trick (tree/'s directed-edge trims
+// each end to the circle radius so arrowheads TOUCH the circle instead of floating at the
+// wrapper's fixed top/bottom handles). Label renders as a bold pill at the midpoint.
+function FloatingEdge({ id, source, target, markerEnd, style, label, labelStyle }) {
+  const s = useInternalNode(source);
+  const t = useInternalNode(target);
+  if (!s || !t || source === target) return null;
+  const cx = (n) => n.internals.positionAbsolute.x + (n.measured?.width ?? 0) / 2;
+  const cy = (n) => n.internals.positionAbsolute.y + (n.measured?.height ?? 0) / 2;
+  const x1 = cx(s); const y1 = cy(s); const x2 = cx(t); const y2 = cy(t);
+  const d = Math.max(1, Math.hypot(x2 - x1, y2 - y1));
+  const ux = (x2 - x1) / d; const uy = (y2 - y1) / d;
+  const rs = (s.measured?.width ?? 56) / 2;
+  const rt = (t.measured?.width ?? 56) / 2 + 3; // + arrow breathing room
+  const [path, labelX, labelY] = getStraightPath({
+    sourceX: x1 + ux * rs, sourceY: y1 + uy * rs,
+    targetX: x2 - ux * rt, targetY: y2 - uy * rt,
+  });
+  return (
+    <>
+      <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
+      {label ? (
+        <EdgeLabelRenderer>
+          <div style={{
+            position: 'absolute', transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+            background: '#fffcfa', borderRadius: 7, padding: '1px 6px', pointerEvents: 'none',
+            fontFamily: 'ui-monospace, monospace', fontWeight: 800, fontSize: 13,
+            color: labelStyle?.fill ?? '#5a4a2a', boxShadow: '0 1px 4px rgba(120,90,40,0.18)',
+          }}>
+            {label}
+          </div>
+        </EdgeLabelRenderer>
+      ) : null}
+    </>
+  );
+}
+
+const EDGE_TYPES = { floating: FloatingEdge };
+
 // Build the ReactFlow node/edge arrays for one resolved step. Pure over (laid, content, state);
 // called from a useMemo so element identity is stable between clock ticks.
 function buildFlowElements(laid, content, state) {
@@ -91,7 +132,9 @@ function buildFlowElements(laid, content, state) {
     const value = returned[n.id];
     const label = value !== undefined ? `${n.label}\n= ${JSON.stringify(value)}` : n.label;
     const longest = Math.max(...String(label).split('\n').map((l) => l.length));
-    const fontSize = circle ? Math.max(9, Math.min(17, Math.floor((CIRCLE - 12) / Math.max(1, longest * 0.62)))) : 14;
+    // Reference sizing (tree/): text starts HUGE and scales down to fit — bold labels carry
+    // the drawing. Cap raised now that labels are compact (varying args only).
+    const fontSize = circle ? Math.max(10, Math.min(21, Math.floor((CIRCLE - 10) / Math.max(1, longest * 0.6)))) : 14;
     nodes.push({
       id: n.id,
       position: circle ? { x: n.x + (n.width - CIRCLE) / 2, y: n.y + (n.height - CIRCLE) / 2 } : { x: n.x, y: n.y },
@@ -155,14 +198,24 @@ function buildFlowElements(laid, content, state) {
     if (status === 'ghost') continue; // edge into the unrevealed future is absent
     const traversing = status === 'traversing';
     const active = traversing || status === 'active';
+    // Reference weight (tree/'s directed-edge): 5px STRAIGHT lines, bold labels with a light
+    // halo so they read over the stroke, arrowheads sized to the stroke.
     edges.push({
       id: e.id,
       source: e.from,
       target: e.to,
+      type: hasTrace ? 'floating' : 'straight', // circles get rim-to-rim edges; static boxes keep plain lines
       label: e.label || (returned[e.to] !== undefined ? `↑ ${JSON.stringify(returned[e.to])}` : ''),
-      animated: traversing || (active && (e.from === current || e.to === current)),
-      markerEnd: content.directed !== false ? { type: MarkerType.ArrowClosed, color: active ? '#d35400' : '#8a6d3b' } : undefined,
-      style: { stroke: traversing ? '#e8604c' : active ? '#d35400' : '#8a6d3b', strokeWidth: traversing ? 4 : active ? 2.5 : 1.5, transition: 'stroke 0.3s, stroke-width 0.3s' },
+      labelStyle: { fontFamily: 'ui-monospace, monospace', fontWeight: 800, fontSize: 13, fill: traversing ? '#b93c2b' : active ? '#20794a' : '#5a4a2a' },
+      labelBgStyle: { fill: '#fffcfa', fillOpacity: 0.92 },
+      labelBgPadding: [6, 3],
+      labelBgBorderRadius: 7,
+      // Algorithm Visualizer's trail rule: ONLY the edge being traversed right now animates;
+      // edges already walked settle into the solid visited color (a calm green trail), so the
+      // eye is drawn to the one moving thing instead of a screen of flashing dashes.
+      animated: traversing,
+      markerEnd: content.directed !== false ? { type: MarkerType.ArrowClosed, width: 16, height: 16, color: traversing ? '#d35400' : active ? '#2f9e5f' : '#7a6248' } : undefined,
+      style: { stroke: traversing ? '#e8604c' : active ? '#2f9e5f' : '#7a6248', strokeWidth: traversing ? 5 : active ? 4 : 3, transition: 'stroke 0.3s, stroke-width 0.3s' },
     });
   }
 
@@ -228,13 +281,15 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
           <LegendChip swatch={{ background: '#fffdf9', border: '2px solid #c9beac' }} label="not yet" />
           {state.memo.size > 0 ? <LegendChip swatch={{ background: '#8e44ad', border: '2px solid #6f3391' }} label="from memo" /> : null}
           {Object.keys(state.returned).length > 0 ? <LegendChip swatch={{ background: '#2f9e5f', border: '2px solid #20794a' }} label="= returned value" /> : null}
-          <LegendChip swatch={{ background: 'transparent', borderBottom: '3px solid #e8604c', borderRadius: 0, height: 3, marginTop: 6 }} label="active edge" />
+          <LegendChip swatch={{ background: 'transparent', borderBottom: '3px solid #e8604c', borderRadius: 0, height: 3, marginTop: 6 }} label="crossing now" />
+          <LegendChip swatch={{ background: 'transparent', borderBottom: '3px solid #2f9e5f', borderRadius: 0, height: 3, marginTop: 6 }} label="walked" />
         </div>
       ) : null}
       <div style={{ height, border: '1px solid #f0dcd5', borderRadius: 12, background: '#fffcfa' }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
+          edgeTypes={EDGE_TYPES}
           fitView
           fitViewOptions={{ padding: 0.2, maxZoom: 1.1 }}
           minZoom={0.15}
