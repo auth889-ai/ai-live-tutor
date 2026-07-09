@@ -19,10 +19,17 @@ user never picks a subject; the Domain Router detects it and the same engine ada
 - Shared files (`generate-lesson.js`, `board-objects.js`, player) — additive edits only.
 - One agent one job; no god files; nested folders; everything real/dynamic (no fallback
   content); research before design; build one step at a time.
-- All agent intelligence = **Qwen** (hackathon proof file `lib/qwen/client.js`).
-  RAG embeddings = **another AI** (user decision): local Transformers.js +
-  bge-small-en-v1.5 recommended (no key, no cost, region-free); Gemini/Jina = fallback
-  options. DashScope embeddings are Singapore-only — ruled out.
+- All agent/teaching intelligence = **Qwen** (hackathon proof file `lib/qwen/client.js`).
+  **RAG subsystem = ANOTHER AI's models (user decision, confirmed twice):**
+  - Embeddings: Gemini `gemini-embedding-001` (free tier, one GEMINI_API_KEY) — or local
+    Transformers.js bge-small if the user prefers zero keys.
+  - Retrieval-side LLM work (query rewrite, rerank, chunk selection for Q&A): Gemini
+    Flash — cheap, behind-the-scenes.
+  - GUARD: any text the STUDENT reads/hears (lesson content, Q&A answers) is still
+    composed by Qwen from the retrieved chunks — the other AI only finds and ranks,
+    never teaches. Keeps the hackathon story clean: "Qwen is the teacher; a second AI
+    is the librarian."
+  DashScope embeddings are Singapore-only — ruled out.
 
 ## 2. Why this beats a Udemy/Coursera video (the honest claim)
 
@@ -242,9 +249,86 @@ CS50 "Reinventing CS50" paper. Full URLs in notes/noncoding-elite-plan.md sessio
     payoff; at module boundaries add the encouragement beat.
 12. End each lesson with 1–2 recall questions about EARLIER lessons.
 
-## 12. PENDING: legendary-teacher style research (1 agent running at time of writing)
+## 12. LEGENDARY-TEACHER RULES (from ~20 teachers' own talks/theses/interviews)
 
-Per-domain signature techniques (3Blue1Brown, StatQuest, Ng, Lewin, Veritasium
-misconception-first, Abdul Bari, Malan/CS50, OverSimplified, LegalEagle, Ben Felix…) →
-mechanical encodable rules → domain-teaching.js style blocks. Append here when it lands;
-fold into Steps 3 and 7.
+Sources incl. PRIMARY: 3B1B's SoME criteria + Lex interview, Sal Khan's TED/book,
+Ng's teaching guide, Starmer method interviews, Lewin's MIT material, **Muller's
+(Veritasium) PhD thesis** — clear expository videos raise CONFIDENCE but NOT test scores
+(learners map clean explanations onto existing misconceptions); misconception-first
+dialogue videos nearly DOUBLED post-test scores despite feeling "confusing" —
+Malan's CS50 design essays, Nasser's Substack, Tabarrok's Cato essay, Cooper interviews,
+UChicago Socratic-method text, pretesting-effect literature (committed guess before
+instruction improves learning even when wrong).
+
+### 12.1 UNIVERSAL RULES → 'general' blueprint + Voice Writer + gate items (Step 3)
+
+1. **Concrete-before-abstract, always** — a specific instance (demo/dataset/trace/case/
+   packet/story) exists ON SCREEN before any rule, symbol, or definition. (The single
+   most shared rule across all ~20 teachers.)
+2. **Open with stakes, not a syllabus** — within ~30s it's clear why to care; topic name
+   may come AFTER the hook. Never open with a definition.
+3. **Prediction/misconception beat BEFORE the reveal** — learner commits to an answer,
+   or the common wrong belief is voiced plausibly then refuted in dialogue.
+   (Muller thesis + pretesting literature: works even when the guess is wrong.)
+4. One concept per lesson unit; explicit prerequisite chain; nothing used before built.
+5. **Symbols/jargon only after their referent exists on screen** — draw the quantity,
+   THEN name it (3B1B's dA rule, Ng, Bari).
+6. Content builds at speaking pace — incremental, never pre-rendered walls. (Matches
+   our progressive-reveal gate rule.)
+7. **Fixed ritual frame per course** — verbatim opener + sign-off + named recurring
+   segments (CS50's "This is CS50", StatQuest's "BAM!", CrashCourse's "Thought Bubble").
+   The repeated template itself is pedagogy. → Forever should have its OWN rituals.
+8. Persistent visual conventions — same color/shape per role across every lesson
+   (we already do this in the coding engines; extend to all domains).
+9. **Errors are content** — live failures diagnosed aloud, ignorance admitted, wrong
+   paths pursued to their visible consequence, penalty-free retries.
+10. **Structural callback ending** — return to the opening object/question and restate
+    the core claim (thesis return / "Physics works!" / definition sandwich).
+11. Verify the general rule against the opening concrete instance, numerically.
+12. **Checks target the misconception, not recall** — quiz distractors = the wrong
+    intuitive answer (Muller); mastery gates on demonstrated ability, not time (Khan).
+
+Conflict dial: intra-lesson repetition is a LEARNER-LEVEL parameter, not universal —
+beginners get the definition sandwich (PowerCert), advanced learners get zero recap (MRU).
+
+### 12.2 PER-DOMAIN OVERLAYS → domain-teaching.js style blocks (Step 7)
+
+- **MATH (3B1B/Khan/Leonard)**: rediscovery voice ("how you might invent this"); ONE
+  running concrete object interrogated all lesson; zero skipped algebra steps;
+  re-derive forgotten prerequisites inline; notation labels what's already drawn.
+- **ML/STATS (Ng/StatQuest)**: one seed model (y=wx+b), every new model a named delta on
+  it; every formula evaluated BY HAND on ~5 data points before symbols; explicit deferral
+  permission ("don't worry, we'll come back — and actually return"); escalating
+  celebration markers on sub-results; intuition → math → code, always that order.
+- **PHYSICS (Lewin/Muller)**: demo → question it raises → math, never equation-first;
+  committed numeric prediction (with ±uncertainty) BEFORE every reveal; payoff line
+  fires only on match; deliberate cognitive conflict is a feature — smooth = no learning.
+- **CS/ALGORITHMS (Bari/Malan/Eater)**: hand-trace on one concrete input before code;
+  one persistent mutating diagram; complexity derived by COUNTING the trace; one physical
+  anchor-analogy per abstraction referenced back by name ("remember the phone book");
+  planned live failure + diagnosis; strict no-black-box dependency order.
+- **SYSTEMS/NETWORKING (Nasser/ByteByteGo/PowerCert/Practical Networking)**:
+  origin-story opener (the pain before the tool); numbered-arrow master diagram walked
+  arrow by arrow; back-of-envelope numbers before any architecture; trade-off table +
+  explicit pick for every choice; follow ONE packet/request end-to-end, re-walked at
+  increasing depth; ≥2 "what happens if this fails" probes; quote the RFC by number.
+- **HISTORY/HUMANITIES (OverSimplified/CrashCourse/Fall of Civilizations)**: unbroken
+  causal chain (every event has stated cause AND consequence); every actor gets a motive;
+  argue a THESIS, don't list chronology; second-person sensory immersion beat ("imagine
+  you are standing in..."); primary sources performed as quoted voices; map updated one
+  move at a time; solemn-flag tone gate for grave material; bookend at the ruins/thesis.
+- **LAW (LegalEagle/Socratic)**: case/scenario before doctrine; IRAC slots in order;
+  mutate-ONE-fact hypothetical drills (2-4 rounds) to locate the rule's boundary;
+  wrong answers pursued to their consequence, not corrected; error-interrupt naming the
+  violated rule; single reusable takeaway separate from the verdict.
+- **ECON/FINANCE (MRU/Ben Felix)**: real-world puzzle before the model; EVERY causal
+  claim carries a named citation shown when invoked; steelman the popular belief before
+  testing it; affect-free lexicon (no superlatives/urgency/fear); 2-4 retrieval questions
+  per lesson; persistent cross-lesson comparison rubric. ANTI-PATTERN: single-cause
+  narratives without sources (Economics Explained's documented failure).
+- **META**: 5-Levels laddering (same concept restated at escalating abstraction — use
+  for learner-level adaptation); Feynman freshman-test as a generation-time gate (can't
+  render it at beginner level → the concept model is inadequate).
+
+→ Fold 12.1 into Step 3 (general blueprint + gate), 12.2 into Step 7 (domain packs).
+ALL RESEARCH COMPLETE — 9 agents total. Build starts at Step 1 upon user approval.
