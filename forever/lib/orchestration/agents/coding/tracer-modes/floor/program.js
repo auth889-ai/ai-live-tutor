@@ -17,6 +17,8 @@ where <state...> is the fields that apply this step:
     "highlight":[[i-1,j-1]] (dependency cells READ this step), "max":[i,j] (running best, when tracked)}
     — ONE step per cell write: the reads and the write belong to the SAME step (that is the dry run).
   - if it uses a stack or queue: "stack": [...]  and/or  "queue": [...]
+  - a MIN-HEAP / priority queue serializes as "queue" SORTED smallest-first (there is NO "heap"
+    field — the queue panel with the next-out item at the front IS the heap view)
   - "variables": {"i":2,"low":0,"mid":3,"high":6}   (only the key variables a student tracks)
 Hard requirements:
   - "line" MUST be the line number in "code" (1-based) that is executing at that step. Keep 'code' and 'program' aligned.
