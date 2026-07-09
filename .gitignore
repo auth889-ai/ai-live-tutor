@@ -117,5 +117,7 @@ tmp/
 !forever/scripts/**
 !forever/fixtures/**
 
-# Forever course-cover photos must ship (root *.png rule was hiding them — fresh clones 404ed covers)
-!forever/public/images/*.png
+# course-cover photos stay OUT of git (user decision — deploy copies them separately)
+forever/public/images/image*.png
+forever/public/images/study-*.png
+forever/public/images/*copy*.png

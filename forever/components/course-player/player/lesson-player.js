@@ -137,12 +137,12 @@ export function LessonPlayer({ lesson }) {
 
           {/* controls bar */}
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: UI.card, border: `1px solid ${UI.border}`, borderRadius: 14, padding: '10px 16px', marginTop: 12 }}>
-            <button onClick={player.togglePlay} aria-label={playing ? 'Pause' : 'Play'}
-              style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: UI.accent, color: '#fff', fontSize: 17, cursor: 'pointer' }}>
+            <button onClick={player.togglePlay} aria-label={playing ? 'Pause' : 'Play'} className="forever-btn"
+              style={{ width: 44, height: 44, borderRadius: '50%', fontSize: 17, cursor: 'pointer' }}>
               {playing ? '❚❚' : '▶'}
             </button>
-            <button onClick={() => player.skip(-10_000)} title="Back 10s" style={chip()}>−10s</button>
-            <button onClick={() => player.skip(10_000)} title="Forward 10s" style={chip()}>+10s</button>
+            <button onClick={() => player.skip(-10_000)} title="Back 10s" className="forever-chip" style={chip()}>−10s</button>
+            <button onClick={() => player.skip(10_000)} title="Forward 10s" className="forever-chip" style={chip()}>+10s</button>
             <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: 13, color: UI.muted, whiteSpace: 'nowrap' }}>
               {fmt(tMs)} / {fmt(durationMs)}
             </span>
@@ -153,12 +153,12 @@ export function LessonPlayer({ lesson }) {
             />
             <button
               onClick={() => player.setRate(SPEEDS[(SPEEDS.indexOf(player.rate) + 1) % SPEEDS.length])}
-              title="Playback speed" style={chip({ minWidth: 52 })}>
+              title="Playback speed" className="forever-chip" style={chip({ minWidth: 52 })}>
               {player.rate}x
             </button>
             <button
               onClick={() => (document.fullscreenElement ? document.exitFullscreen() : stageRef.current?.requestFullscreen())}
-              title="Fullscreen" style={chip()}>
+              title="Fullscreen" className="forever-chip" style={chip()}>
               ⛶
             </button>
           </div>
@@ -173,10 +173,12 @@ export function LessonPlayer({ lesson }) {
                 <button
                   key={s.sceneId}
                   onClick={() => player.goToScene(index)}
+                  className={active ? undefined : 'forever-chip'}
                   style={{
                     flexShrink: 0, width: 190, textAlign: 'left', padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
                     border: `2px solid ${active ? UI.accent : UI.border}`,
                     background: active ? '#fdece8' : '#fff',
+                    boxShadow: active ? '0 3px 12px rgba(244,115,104,0.28)' : undefined,
                   }}
                 >
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 3 }}>{index + 1}. {s.title}</div>
