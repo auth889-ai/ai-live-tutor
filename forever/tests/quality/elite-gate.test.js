@@ -102,6 +102,15 @@ test('[layout] cyclic graphs draw organically (reference style), clean trees sta
   assert.equal(wantsForceLayout(tree, true), false, 'a binary tree must stay hierarchical');
 });
 
+test('[visual] the floor still DRAWS: a line-sim run carrying a list ships the array view', () => {
+  const kadane = traces.find((t) => /kadane/i.test(t.name))?.trace;
+  assert.ok(kadane, 'need the Kadane floor fixture');
+  assert.ok(Array.isArray(kadane.views?.array?.values) && kadane.views.array.values.length > 0,
+    'the floor printed the list as text instead of drawing cells');
+  assert.ok(kadane.steps.every((s) => !s.array?.pointers || Object.keys(s.array.pointers).every((k) => kadane.code.includes(`a[${k}]`))),
+    'a value-integer is masquerading as an index pointer');
+});
+
 test('[visual] weighted graphs show their weights on the edges (reference parity)', () => {
   const dijkstra = traces.find((t) => /dijkstra/i.test(t.name))?.trace.views.graph;
   assert.ok(dijkstra, 'need the Dijkstra fixture');

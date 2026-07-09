@@ -119,5 +119,55 @@ export function compileLineTrace({ events, result, code, entry = null, language 
     variables: steps[steps.length - 1].variables,
   });
 
-  return validateExecutionTrace({ language, code: String(code ?? ''), views: {}, steps }, 'line-sim trace');
+  // FLOOR MUST STILL DRAW: if the run carries a list, the student sees CELLS, not a printed
+  // value. Pick the hero list (the list variable present in the most steps), draw it as the
+  // array view, flash the cell that changed, and ride integer index variables as pointers.
+  const views = {};
+  const hero = detectHeroList(steps);
+  if (hero) {
+    views.array = { values: hero.first };
+    let prevList = null;
+    for (const s of steps) {
+      const list = s.variables?.[hero.name];
+      if (!Array.isArray(list)) { prevList = null; continue; }
+      const arr = { values: list };
+      if (prevList) {
+        const at = list.findIndex((v, i) => JSON.stringify(v) !== JSON.stringify(prevList[i]));
+        if (at !== -1 || list.length !== prevList.length) arr.current = at !== -1 ? at : list.length - 1;
+      }
+      const pointers = {};
+      for (const [k, v] of Object.entries(s.variables ?? {})) {
+        // Only a variable the CODE subscripts the hero with (a[i]) is an index — an in-range
+        // integer that never indexes (Kadane's running cur/best) is a VALUE, and drawing it as
+        // a pointer would teach something false.
+        if (k !== hero.name && Number.isInteger(v) && v >= 0 && v < list.length
+          && String(code ?? '').includes(`${hero.name}[${k}]`) && Object.keys(pointers).length < 3) pointers[k] = v;
+      }
+      if (Object.keys(pointers).length > 0) arr.pointers = pointers;
+      s.array = arr;
+      prevList = list;
+    }
+  }
+
+  return validateExecutionTrace({ language, code: String(code ?? ''), views, steps }, 'line-sim trace');
+}
+
+// The list variable that appears in the most steps (ties: the longest) — primitives only, so
+// the cells stay readable. Null when the run simply has no list to draw.
+function detectHeroList(steps) {
+  const seen = new Map(); // name -> {count, first}
+  for (const s of steps) {
+    for (const [k, v] of Object.entries(s.variables ?? {})) {
+      if (!Array.isArray(v) || v.length < 2) continue;
+      if (!v.every((x) => x === null || ['number', 'string', 'boolean'].includes(typeof x))) continue;
+      const slot = seen.get(k) ?? { count: 0, first: v };
+      slot.count += 1;
+      seen.set(k, slot);
+    }
+  }
+  let best = null;
+  for (const [name, { count, first }] of seen) {
+    if (!best || count > best.count || (count === best.count && first.length > best.first.length)) best = { name, count, first };
+  }
+  return best && best.count >= Math.max(2, steps.length / 3) ? best : null;
 }

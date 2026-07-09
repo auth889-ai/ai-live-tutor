@@ -68,3 +68,22 @@ test('opening frame beat: the entry call is announced before anything moves', ()
   assert.match(trace.steps[0].explanation, /We run gcd\(48, 18\).*Keep your eye on the variables/s);
   assert.deepEqual(trace.steps[0].variables, {}, 'the frame beat precedes any recorded state');
 });
+
+test('the floor DRAWS: a run carrying a list gets the array view with flash + pointers', () => {
+  // Kadane-shaped locals: the hero list is present throughout, cur/best are scalars, x walks.
+  const events = [
+    { line: 2, locals: { a: [-2, 1, -3], best: -2 } },
+    { line: 4, locals: { a: [-2, 1, -3], best: -2, x: 1 } },
+    { line: 5, locals: { a: [-2, 1, -3], best: 1, x: 1 } },
+  ];
+  const trace = compileLineTrace({ events, result: 1, code: 'l1\nl2\nfor x in range(3):\n    v = a[x]\nl5' });
+  assert.deepEqual(trace.views.array, { values: [-2, 1, -3] }, 'hero list becomes the drawn array view');
+  const withPtr = trace.steps.find((s) => s.array?.pointers?.x !== undefined);
+  assert.ok(withPtr, 'a variable the code subscripts with (a[x]) rides as a pointer');
+  // Kadane's trap: best is an in-range INTEGER VALUE but never indexes a — it must NOT point.
+  const noIdx = compileLineTrace({ events, result: 1, code: 'l1\nl2\nl3\nl4\nl5' });
+  assert.ok(noIdx.steps.every((s) => !s.array?.pointers), 'value-integers never masquerade as pointers');
+  // A scalar-only run stays an honest text floor — no fake structure invented.
+  const scalars = compileLineTrace({ events: [{ line: 1, locals: { n: 3 } }, { line: 1, locals: { n: 6 } }], result: 6, code: 'l1' });
+  assert.deepEqual(scalars.views, {});
+});
