@@ -10,10 +10,12 @@ import { compilePointerWalk } from './pointer-walk/compiler.js';
 import { compileGraphWalk } from './graph-walk/compiler.js';
 import { compileLinkedListTrace } from './linked-list/compiler.js';
 import { assembleListProgram, parseListEvents } from './linked-list/tracker.js';
+import { compileDivideConquer } from './divide-conquer/compiler.js';
+import { assembleDivideProgram, parseDivideEvents } from './divide-conquer/tracker.js';
 import { assembleLineProgram, parseLineEvents } from './line-sim/compiler.js';
 import { runCode } from '../run-code.js';
 
-export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk', 'graphwalk', 'linkedlist']);
+export const RETRACE_TOOLS = Object.freeze(['traversal', 'recursion', 'pointerwalk', 'graphwalk', 'linkedlist', 'divideconquer']);
 
 export async function retrace({ tool, params } = {}, deps = {}) {
   const exec = deps.runCode ?? runCode;
@@ -89,6 +91,20 @@ export async function retrace({ tool, params } = {}, deps = {}) {
     if (!payload) throw new Error(run.stderr ? `the run errored: ${run.stderr.slice(0, 200)}` : 'no chain activity was recorded');
     const trace = compileLinkedListTrace({ ...payload, code, entry });
     trace.meta = { tool, params: { code, entry, roots, nextAttr, valAttr } };
+    return trace;
+  }
+
+  if (tool === 'divideconquer') {
+    const { code, entry, fn, arrayVar, lo, hi, pointers } = params ?? {};
+    if (String(code ?? '').length > 4000) throw new Error('code too large to retrace');
+    if (String(entry ?? '').length > 200) throw new Error('entry expression too large to retrace');
+    const source = assembleDivideProgram({ code, entry, fn, arrayVar, loVar: lo, hiVar: hi });
+    const run = await exec({ language: 'python', source, timeoutMs: 8000 });
+    if (run.timedOut) throw new Error('the run timed out — try a smaller array');
+    const payload = parseDivideEvents(run.stdout);
+    if (!payload) throw new Error(run.stderr ? `the run errored: ${run.stderr.slice(0, 200)}` : 'no run was recorded');
+    const trace = compileDivideConquer({ ...payload, code, entry, fn, pointers: Array.isArray(pointers) ? pointers : [] });
+    trace.meta = { tool, params: { code, entry, fn, arrayVar, lo, hi, pointers } };
     return trace;
   }
 

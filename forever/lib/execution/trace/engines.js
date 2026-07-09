@@ -12,8 +12,12 @@
 //     Kahn's topo sort, Prim, union-find, cycle detection:    run of the STUDENT'S real code +
 //     extract-min, relax old->new, finalize, union,           declared variable lens; the dist
 //     indegree drops — all from the real run)                 table IS the trace table)
-//   recursion & divide-and-conquer (fib, subsets, merge     -> recursion-compiler (call-tree
-//     sort splits, top-down DP with memo hits)                 recording + Euler-tour playback)
+//   recursion (fib, subsets, top-down DP with memo hits)   -> recursion-compiler (call-tree
+//                                                              recording + Euler-tour playback)
+//   divide & conquer on ARRAYS (merge sort, quicksort:     -> divide-conquer compiler (call/
+//     focus band dims everything outside the active call's    return/line tracker; array band
+//     segment, swaps flash, the recursion tree of segments    view + segment recursion tree
+//     grows and each call returns its sorted band)            from ONE real run, in lock-step)
 //   array pointer algorithms (binary search, two pointers,  -> pointer-walk-compiler (settrace
 //     sliding window, in-place sorting: arrows, eliminated     run + array lens; declared
 //     half, window span, swap flashes, live values)            examine/arrayVar semantics)
@@ -39,6 +43,8 @@ export { compileTraversalTrace, TRAVERSAL_KINDS } from './traversal/compiler.js'
 export { compileGraphWalk, GRAPH_LENS_ROLES } from './graph-walk/compiler.js';
 export { compileLinkedListTrace } from './linked-list/compiler.js';
 export { assembleListProgram, parseListEvents, LIST_TRACKER_PY } from './linked-list/tracker.js';
+export { compileDivideConquer } from './divide-conquer/compiler.js';
+export { assembleDivideProgram, parseDivideEvents, DIVIDE_TRACKER_PY } from './divide-conquer/tracker.js';
 export { compileOperationsTrace, OPERATION_STRUCTURES } from './operations/compiler.js';
 export { compileRecursionTrace, assembleRecursionProgram, parseCallTree, RECURSION_TRACKER_PY } from './recursion/compiler.js';
 export { compilePointerWalk } from './pointer-walk/compiler.js';

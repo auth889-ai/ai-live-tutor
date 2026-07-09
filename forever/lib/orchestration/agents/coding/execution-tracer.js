@@ -16,6 +16,7 @@ import { assembleRecursionProgram, parseCallTree, compileRecursionTrace } from '
 import { compileTraversalTrace } from '../../../execution/trace/engines.js';
 import { compileGraphWalk } from '../../../execution/trace/engines.js';
 import { compileLinkedListTrace, assembleListProgram, parseListEvents } from '../../../execution/trace/engines.js';
+import { compileDivideConquer, assembleDivideProgram, parseDivideEvents } from '../../../execution/trace/engines.js';
 import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../../../execution/trace/engines.js';
 import { compilePointerWalk } from '../../../execution/trace/engines.js';
 import { compileOperationsTrace } from '../../../execution/trace/engines.js';
@@ -81,6 +82,19 @@ two pointers, sliding window, in-place sorting/partitioning): INSTEAD of "progra
 with "code" = the clean function definition. Our engine runs it for real and animates the
 pointers riding the array — do not write tracking code. For sorting ALWAYS set "arrayVar" so
 every swap is a visible flash, and set "examine" for search algorithms so the probed cell lights up.
+
+DIVIDE-CONQUER MODE (python only) — for recursive ARRAY splitting (merge sort, quicksort, and
+any partition/segment recursion): INSTEAD of "program", output
+  "divideconquer": {"entry": "<ONE call, e.g. quick_sort([5,2,9,1,7,3], 0, 5)>",
+                    "fn": "quick_sort" (the RECURSIVE function's name),
+                    "arrayVar": "arr" (the array PARAMETER name inside 'code'),
+                    "lo": "low", "hi": "high" (the segment-bound parameter names),
+                    "pointers": ["i","j","pivot"] (index variables to show riding the array)}
+with "code" = the clean implementation that sorts IN PLACE on that one array (never slices into
+new lists — slices are invisible). Our tracker records every call/return/line of the real run:
+the student sees the focus band dim everything outside the active segment, swaps flash, AND the
+recursion tree of segments grow — with each call returning its sorted band. Do not write
+tracking code. Plain recursion WITHOUT an array (fib, subsets) stays in RECURSION MODE.
 
 LINKED-LIST MODE (python only) — for algorithms over node chains (traverse, reverse, insert,
 delete, middle via slow/fast, cycle detection): INSTEAD of "program", output
@@ -245,6 +259,32 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         return { trace, usage, fixes: attempt };
       } catch (error) {
         lastError = `Graph walk failed: ${error.message}`;
+        logAttempt(attempt, lastError);
+        continue;
+      }
+    }
+
+    // DIVIDE-CONQUER MODE: recursive array splitting — one real run drives the focus-band
+    // array view AND the growing segment recursion tree in lock-step.
+    if (json.divideconquer && typeof json.divideconquer === 'object' && lang === 'python' && code) {
+      try {
+        const dc = json.divideconquer;
+        const source = assembleDivideProgram({ code, entry: dc.entry, fn: dc.fn, arrayVar: dc.arrayVar, loVar: dc.lo, hiVar: dc.hi });
+        const run = await exec({ language: 'python', source });
+        if (run.timedOut) throw new Error('divide & conquer run timed out (likely unbounded recursion)');
+        const payload = parseDivideEvents(run.stdout);
+        if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(0, 300)}` : 'run printed no @@DIVIDE line');
+        const trace = compileDivideConquer({
+          ...payload, code, entry: dc.entry, fn: dc.fn, pointers: Array.isArray(dc.pointers) ? dc.pointers : [], language: 'python',
+        });
+        assertDryRunQuality(trace, { directive, code, attempt, maxFixes });
+        trace.meta = {
+          tool: 'divideconquer',
+          params: { code, entry: dc.entry, fn: dc.fn, arrayVar: dc.arrayVar, lo: dc.lo, hi: dc.hi, pointers: Array.isArray(dc.pointers) ? dc.pointers : [] },
+        };
+        return { trace, usage, fixes: attempt };
+      } catch (error) {
+        lastError = `Divide-conquer trace failed: ${error.message}`;
         logAttempt(attempt, lastError);
         continue;
       }
