@@ -83,7 +83,7 @@ function resolveState({ content, progress, activeNode, activeStep }) {
 // Build the ReactFlow node/edge arrays for one resolved step. Pure: same (laid, content, state)
 // -> same arrays. Called only from a useMemo so element identity is stable between clock ticks.
 function buildFlowElements(laid, content, state) {
-  const { current, visited, pointerAt, activeEdge, revealed, returned, memo } = state;
+  const { current, visited, pointerAt, activeEdge, revealed, returned, memo, note } = state;
   const hasTrace = state.stepTotal > 0;
 
   const nodeColor = (id) => {
@@ -172,6 +172,39 @@ function buildFlowElements(laid, content, state) {
           pointerEvents: 'none',
           boxShadow: `0 0 12px ${color}44`,
           transition: 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s, height 0.3s',
+        },
+      });
+    }
+  }
+
+  // ELITE DIGITAL CALLOUT (clean/polished like the studied tools, NOT handwritten): a crisp
+  // annotation chip anchored above-right of the current node with a small pointer aimed at it,
+  // showing a short clause of THIS step's real narration (dynamic, never canned). Rides the
+  // graph through zoom/pan and every step.
+  if (hasTrace && current && note) {
+    const base = laid.nodes.find((n) => n.id === current);
+    if (base) {
+      const clause = String(note).split(/(?<=[.:])\s/)[0].split(/\s+/).slice(0, 9).join(' ');
+      nodes.push({
+        id: '__callout__',
+        position: { x: base.x + base.width * 0.55 + 16, y: base.y - 58 },
+        data: { label: `◤ ${clause}` },
+        draggable: false, selectable: false, focusable: false, zIndex: 40,
+        style: {
+          width: 184,
+          background: 'linear-gradient(180deg,#fffdf9,#fff5ec)',
+          border: '1.5px solid #f0c39a',
+          borderRadius: 11,
+          padding: '6px 10px',
+          boxShadow: '0 6px 18px rgba(211,84,0,0.18)',
+          fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+          fontSize: 11.5,
+          fontWeight: 600,
+          lineHeight: 1.3,
+          color: '#8a3a12',
+          textAlign: 'left',
+          whiteSpace: 'normal',
+          pointerEvents: 'none',
         },
       });
     }
