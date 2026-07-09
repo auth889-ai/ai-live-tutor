@@ -24,14 +24,14 @@ export default function RootLayout({ children }) {
           .forever-pulse { animation: foreverPulse 2.6s ease-in-out infinite; }
           @keyframes foreverRowIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
           .forever-row { animation: foreverRowIn 0.45s ease both; transition: background 0.15s; }
-          .forever-row:hover { background: #fdf6ef; }
+          .forever-row:hover { background: #fbf0ec; }
           @keyframes foreverDot { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
           .forever-dot { animation: foreverDot 1.4s ease-in-out infinite; }
           .forever-shot { animation: foreverShot 0.45s ease; }
           :root { --caveat: ${caveat.style.fontFamily}; }
         `}</style>
       </head>
-      <body style={{ margin: 0, background: '#fff8f2', fontFamily: 'system-ui, sans-serif' }}>{children}</body>
+      <body style={{ margin: 0, background: '#fdf3f1', fontFamily: 'system-ui, sans-serif' }}>{children}</body>
     </html>
   );
 }

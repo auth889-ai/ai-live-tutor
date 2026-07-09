@@ -55,7 +55,7 @@ export function TraceTable({ history = [], allSteps = null, nodeLabels = null })
   if (nCols <= 1) return null;
 
   return (
-    <div style={{ overflowX: 'auto', border: '1px solid #e8ddc9', borderRadius: 10, background: '#fffdf8' }}>
+    <div style={{ overflowX: 'auto', border: '1px solid #f0dcd5', borderRadius: 10, background: '#fffcfa' }}>
       <div style={{ padding: '6px 12px', fontSize: 12, color: '#8a6d3b', background: '#fdeaa7', fontWeight: 700 }}>Dry Run Trace — step by step</div>
       <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13, fontFamily: 'ui-monospace, monospace' }}>
         <thead>
@@ -148,7 +148,7 @@ function fmtList(arr) {
 
 function cell(header) {
   return {
-    border: '1px solid #e8ddc9',
+    border: '1px solid #f0dcd5',
     padding: '5px 10px',
     textAlign: 'left',
     verticalAlign: 'top',

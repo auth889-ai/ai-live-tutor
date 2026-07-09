@@ -34,7 +34,7 @@ export function BoardView({ scene, tMs }) {
     <>
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
         <div
-          style={{ flex: codeObject ? '1 1 58%' : '1 1 100%', border: '1px solid #e8ddc9', borderRadius: 12, overflow: 'hidden', background: '#fdf8f0' }}
+          style={{ flex: codeObject ? '1 1 58%' : '1 1 100%', border: '1px solid #f0dcd5', borderRadius: 12, overflow: 'hidden', background: '#fdf6f3' }}
           dangerouslySetInnerHTML={{ __html: svg }}
         />
         {codeObject && codeReveal && (

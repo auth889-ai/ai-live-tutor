@@ -14,7 +14,7 @@ import { StagePresenter } from '../panels/stage-presenter.js';
 const UI = {
   text: '#3a2e22',
   muted: '#8a6d3b',
-  border: '#e8ddc9',
+  border: '#f0dcd5',
   card: '#fffdf7',
   accent: '#e8604c',
   accentSoft: '#fdeaa7',

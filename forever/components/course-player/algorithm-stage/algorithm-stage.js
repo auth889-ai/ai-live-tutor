@@ -157,12 +157,12 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
 // can pause before a step and guess what happens next — active engagement, not passive watching.
 function StepControls({ index, total, exploring, onStep, onJump, onFollow }) {
   const btn = (disabled) => ({
-    border: '1px solid #e8ddc9', borderRadius: 8, background: disabled ? '#f7f2e8' : '#fff',
+    border: '1px solid #f0dcd5', borderRadius: 8, background: disabled ? '#f7f2e8' : '#fff',
     color: disabled ? '#c9bda1' : '#2b211a', padding: '4px 10px', fontSize: 13, fontWeight: 800,
     cursor: disabled ? 'default' : 'pointer',
   });
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', border: '1px solid #e8ddc9', borderRadius: 10, background: '#fffdf8', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', border: '1px solid #f0dcd5', borderRadius: 10, background: '#fffcfa', flexWrap: 'wrap' }}>
       <button style={btn(index === 0)} disabled={index === 0} onClick={() => onJump(0)} title="First step">⏮</button>
       <button style={btn(index === 0)} disabled={index === 0} onClick={() => onStep(-1)} title="Previous step (←)">◀</button>
       <input
@@ -194,7 +194,7 @@ function StepControls({ index, total, exploring, onStep, onJump, onFollow }) {
 
 function Caption({ index, total, text }) {
   return (
-    <div style={{ borderRadius: 10, background: '#fffaf0', border: '1px solid #e8ddc9', overflow: 'hidden' }}>
+    <div style={{ borderRadius: 10, background: '#fff8f4', border: '1px solid #f0dcd5', overflow: 'hidden' }}>
       <div style={{ padding: '6px 14px', borderBottom: '1px solid #efe6d3', fontSize: 11, fontWeight: 700, color: '#d35400', fontFamily: 'ui-monospace, monospace' }}>
         Output / Explanation · Step {index + 1} of {total}
       </div>
@@ -212,7 +212,7 @@ function OrderStrip({ step, nodes }) {
   const slots = nodes.length;
   if (slots === 0) return null;
   return (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', border: '1px solid #e8ddc9', borderRadius: 10, background: '#fffdf8' }}>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', border: '1px solid #f0dcd5', borderRadius: 10, background: '#fffcfa' }}>
       <span style={{ fontSize: 12, fontWeight: 700, color: '#8a6d3b', fontFamily: 'ui-monospace, monospace', whiteSpace: 'nowrap' }}>Visit order (so far):</span>
       {Array.from({ length: slots }, (_, i) => {
         const id = visited[i];
@@ -257,7 +257,7 @@ function Vars({ step }) {
   const vars = step.variables;
   if (!vars || typeof vars !== 'object' || Array.isArray(vars) || Object.keys(vars).length === 0) return null;
   return (
-    <div style={{ border: '1px solid #e8ddc9', borderRadius: 10, background: '#fffdf8', padding: 10 }}>
+    <div style={{ border: '1px solid #f0dcd5', borderRadius: 10, background: '#fffcfa', padding: 10 }}>
       <div style={{ fontSize: 11, color: '#2f7d4a', fontWeight: 700, marginBottom: 6, fontFamily: 'ui-monospace, monospace' }}>variables</div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {Object.entries(vars).map(([name, value]) => (
@@ -285,7 +285,7 @@ function Collections({ step }) {
 
 function Collection({ label, items, accent }) {
   return (
-    <div style={{ flex: '1 1 140px', border: '1px solid #e8ddc9', borderRadius: 10, background: '#fffdf8', padding: 10 }}>
+    <div style={{ flex: '1 1 140px', border: '1px solid #f0dcd5', borderRadius: 10, background: '#fffcfa', padding: 10 }}>
       <div style={{ fontSize: 11, color: accent, fontWeight: 700, marginBottom: 6, fontFamily: 'ui-monospace, monospace' }}>{label}</div>
       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
         {items.length === 0 ? (

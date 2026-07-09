@@ -29,7 +29,7 @@ const STATUS_STYLE = {
   memoized: { border: '#8e44ad', bg: '#f3e8fb', fg: '#5b2c6f' },
   visited: { border: '#27ae60', bg: '#eafaf0', fg: '#1c6b3a' },
   notyet: { border: '#b8b0a0', bg: '#fbf8f2', fg: '#8a8172' },
-  plain: { border: '#c0392b', bg: '#fffdf8', fg: '#3a3327' },
+  plain: { border: '#c0392b', bg: '#fffcfa', fg: '#3a3327' },
 };
 
 // The visible node is an INNER div (rendered as ReactFlow node.data.label). The RF wrapper stays
@@ -224,7 +224,7 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
           <LegendChip swatch={{ background: 'transparent', borderBottom: '3px solid #e8604c', borderRadius: 0, height: 3, marginTop: 6 }} label="active edge" />
         </div>
       ) : null}
-      <div style={{ height, border: '1px solid #e8ddc9', borderRadius: 12, background: '#fffdf8' }}>
+      <div style={{ height, border: '1px solid #f0dcd5', borderRadius: 12, background: '#fffcfa' }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -248,7 +248,7 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
         </ReactFlow>
       </div>
       {hasTrace ? (
-        <div style={{ marginTop: 8, padding: '8px 12px', border: '1px solid #e8ddc9', borderRadius: 10, background: '#fffaf0', fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#5a4a2a', display: 'flex', gap: 10, alignItems: 'baseline' }}>
+        <div style={{ marginTop: 8, padding: '8px 12px', border: '1px solid #f0dcd5', borderRadius: 10, background: '#fff8f4', fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#5a4a2a', display: 'flex', gap: 10, alignItems: 'baseline' }}>
           <span style={{ color: '#d35400', fontWeight: 700, whiteSpace: 'nowrap' }}>Step {stepNum}/{stepTotal}</span>
           <span>{note}</span>
         </div>

@@ -26,7 +26,7 @@ function Annotation({ a }) {
     return (
       <g>
         {a.verb === 'arrow' && <line x1={tx} y1={ty + 2} x2={cx} y2={cy} {...A_STYLE} strokeWidth={1.8} markerEnd="url(#forever-arrowhead)" />}
-        <text x={tx} y={ty} fill="#c0392b" fontSize="4.6" fontWeight="700" textAnchor="middle" style={{ paintOrder: 'stroke', stroke: '#fffdf8', strokeWidth: 1.4 }}>{a.text}</text>
+        <text x={tx} y={ty} fill="#c0392b" fontSize="4.6" fontWeight="700" textAnchor="middle" style={{ paintOrder: 'stroke', stroke: '#fffcfa', strokeWidth: 1.4 }}>{a.text}</text>
       </g>
     );
   }
@@ -38,7 +38,7 @@ export function ImageView({ content, progress = 1 }) {
   const shown = Math.ceil(progress * annotations.length); // reveal in order across the narration window
   return (
     <figure style={{ margin: 0, maxWidth: 720, marginInline: 'auto' }}>
-      <div style={{ position: 'relative', display: 'inline-block', border: '1px solid #e8ddc9', borderRadius: 12, overflow: 'hidden', background: '#fffdf8' }}>
+      <div style={{ position: 'relative', display: 'inline-block', border: '1px solid #f0dcd5', borderRadius: 12, overflow: 'hidden', background: '#fffcfa' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt={alt} style={{ display: 'block', maxWidth: '100%', height: 'auto' }} />
         {annotations.length > 0 && (

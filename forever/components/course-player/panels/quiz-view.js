@@ -26,7 +26,7 @@ export function QuizView({ content, onAnswered }) {
           const isCorrect = i === content.answerIndex;
           const isPicked = i === picked;
           let bg = '#fff';
-          let border = '#e8ddc9';
+          let border = '#f0dcd5';
           if (answered && isCorrect) {
             bg = '#eafaf0';
             border = '#27ae60';

@@ -66,7 +66,7 @@ export default function DevPlayerPage() {
         product (enforced by tests/fixtures/fixture-isolation.test.js).
       </p>
       <div
-        style={{ border: '1px solid #e8ddc9', borderRadius: 12, overflow: 'hidden', background: '#fdf8f0' }}
+        style={{ border: '1px solid #f0dcd5', borderRadius: 12, overflow: 'hidden', background: '#fdf6f3' }}
         // Our own renderer's escaped output — the SVG string is trusted by construction.
         dangerouslySetInnerHTML={{ __html: svg }}
       />

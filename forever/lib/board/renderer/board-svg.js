@@ -15,7 +15,7 @@ import { BOARD_WIDTH, BOARD_HEIGHT, getRegion } from '../layout/layout-regions.j
 import { layoutDiagram } from '../diagrams/diagram-layout.js';
 
 const INK = '#c0392b'; // primary handwriting ink (mockups: warm red)
-const PAPER = '#fdf8f0';
+const PAPER = '#fdf6f3';
 const HIGHLIGHT = '#fdeaa7';
 const CODE_BG = '#1e2430';
 const CODE_INK = '#e8eef7';
@@ -145,7 +145,7 @@ function renderDiagram(object, pos, progress) {
 
   shapes.slice(0, visible).forEach((shape, index) => {
     if (shape.kind === 'box') {
-      const rect = generator.rectangle(shape.x, shape.y, shape.w, shape.h, { stroke: shape.color, strokeWidth: 2, fill: '#fffdf8', fillStyle: 'solid' });
+      const rect = generator.rectangle(shape.x, shape.y, shape.w, shape.h, { stroke: shape.color, strokeWidth: 2, fill: '#fffcfa', fillStyle: 'solid' });
       for (const p of generator.toPaths(rect)) {
         out.push(`<path d="${p.d}" stroke="${p.stroke}" stroke-width="${p.strokeWidth}" fill="${p.fill || 'none'}"/>`);
       }

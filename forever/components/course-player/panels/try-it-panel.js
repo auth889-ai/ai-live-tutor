@@ -36,7 +36,7 @@ export function TryItPanel({ seedCode = '', language = 'python' }) {
 
   if (!open) {
     return (
-      <div style={{ padding: '10px 24px', borderTop: `1px solid #efe6d3`, background: '#fffdf8', textAlign: 'center' }}>
+      <div style={{ padding: '10px 24px', borderTop: `1px solid #efe6d3`, background: '#fffcfa', textAlign: 'center' }}>
         <button onClick={() => { setOpen(true); if (!code) setCode(seedCode); }}
           style={{ border: `1.5px solid ${UI.accent}`, color: UI.accentDark, background: '#fff', borderRadius: 999, padding: '8px 22px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer' }}>
           💻 Try it yourself — edit &amp; run this code
@@ -46,7 +46,7 @@ export function TryItPanel({ seedCode = '', language = 'python' }) {
   }
 
   return (
-    <div style={{ borderTop: `1px solid #efe6d3`, background: '#fffdf8', padding: '14px 24px 18px', textAlign: 'left' }}>
+    <div style={{ borderTop: `1px solid #efe6d3`, background: '#fffcfa', padding: '14px 24px 18px', textAlign: 'left' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <span style={{ fontWeight: 800, fontSize: 14, color: UI.ink }}>💻 Try it yourself</span>
         <select value={lang} onChange={(e) => setLang(e.target.value)}

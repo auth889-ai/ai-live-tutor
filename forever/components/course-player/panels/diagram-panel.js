@@ -30,7 +30,7 @@ function TraceTable({ content }) {
   const columns = content.columns ?? [];
   const rows = content.rows ?? [];
   return (
-    <div style={{ overflowX: 'auto', border: '1px solid #e8ddc9', borderRadius: 12, background: '#fffdf8' }}>
+    <div style={{ overflowX: 'auto', border: '1px solid #f0dcd5', borderRadius: 12, background: '#fffcfa' }}>
       <div style={{ padding: '6px 12px', fontSize: 12, color: '#8a6d3b', background: '#fdeaa7', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
         Dry run — variables at each step (real execution)
       </div>
@@ -136,19 +136,19 @@ function MermaidDiagram({ content, progress = 1 }) {
     // structured notes so the teaching content survives a bad render.
     const lines = String(content.code ?? '').split('\n').map((l) => l.trim()).filter((l) => l && !/^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|erDiagram|mindmap|timeline)/.test(l)).slice(0, 8);
     return (
-      <div style={{ background: '#fffdf8', borderRadius: 12, border: '1px solid #e8ddc9', padding: '14px 18px', fontSize: 14.5, lineHeight: 1.7, color: '#3a2e22' }}>
+      <div style={{ background: '#fffcfa', borderRadius: 12, border: '1px solid #f0dcd5', padding: '14px 18px', fontSize: 14.5, lineHeight: 1.7, color: '#3a2e22' }}>
         {lines.length ? lines.map((l, i) => <div key={i}>• {l.replace(/[-=]{2,}>?|[[\]{}()"]/g, ' ').trim()}</div>) : 'Diagram unavailable for this step.'}
       </div>
     );
   }
-  return <div ref={ref} style={{ display: 'flex', justifyContent: 'center', padding: 12, background: '#fffdf8', borderRadius: 12, border: '1px solid #e8ddc9' }} />;
+  return <div ref={ref} style={{ display: 'flex', justifyContent: 'center', padding: 12, background: '#fffcfa', borderRadius: 12, border: '1px solid #f0dcd5' }} />;
 }
 
 function ComparisonTable({ content }) {
   const columns = content.columns ?? [];
   const rows = content.rows ?? [];
   return (
-    <div style={{ overflowX: 'auto', border: '1px solid #e8ddc9', borderRadius: 12, background: '#fffdf8' }}>
+    <div style={{ overflowX: 'auto', border: '1px solid #f0dcd5', borderRadius: 12, background: '#fffcfa' }}>
       <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 14 }}>
         <thead>
           <tr>
@@ -175,7 +175,7 @@ function ComparisonTable({ content }) {
 
 function cell(header) {
   return {
-    border: '1px solid #e8ddc9',
+    border: '1px solid #f0dcd5',
     padding: '8px 12px',
     textAlign: 'left',
     verticalAlign: 'top',

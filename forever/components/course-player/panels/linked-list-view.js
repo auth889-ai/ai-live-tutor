@@ -48,7 +48,7 @@ export function LinkedListView({ content, activeStep = null }) {
   }
 
   return (
-    <div style={{ border: '1px solid #e8ddc9', borderRadius: 12, background: '#fffdf8', padding: 14 }}>
+    <div style={{ border: '1px solid #f0dcd5', borderRadius: 12, background: '#fffcfa', padding: 14 }}>
       <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
         <svg width={width} height={height} style={{ display: 'block' }}>
           {/* next-arrows first (under the boxes' text but visually between them) */}
@@ -125,7 +125,7 @@ export function LinkedListView({ content, activeStep = null }) {
         </div>
       ) : null}
       {step.note ? (
-        <div style={{ marginTop: 10, padding: '8px 12px', border: '1px solid #e8ddc9', borderRadius: 10, background: '#fffaf0', fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#5a4a2a', display: 'flex', gap: 10, alignItems: 'baseline' }}>
+        <div style={{ marginTop: 10, padding: '8px 12px', border: '1px solid #f0dcd5', borderRadius: 10, background: '#fff8f4', fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#5a4a2a', display: 'flex', gap: 10, alignItems: 'baseline' }}>
           <span style={{ color: '#d35400', fontWeight: 700, whiteSpace: 'nowrap' }}>Step {stepNum}/{stepTotal}</span>
           <span>{step.note}</span>
         </div>

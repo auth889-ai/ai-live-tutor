@@ -53,7 +53,7 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
   }, [quizBlocking, setHold]);
 
   return (
-    <div style={{ background: '#fdf8f0', border: '1px solid #e8ddc9', borderRadius: 14, overflow: 'hidden' }}>
+    <div style={{ background: '#fdf6f3', border: '1px solid #f0dcd5', borderRadius: 14, overflow: 'hidden' }}>
       <div style={{ padding: '10px 20px', borderBottom: '1px solid #efe6d3', fontFamily: 'var(--font-caveat), Caveat, cursive', fontSize: 26, color: '#c0392b', textAlign: 'center' }}>
         {title}
       </div>
@@ -80,7 +80,7 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
           </motion.div>
         </AnimatePresence>
       </div>
-      <div style={{ minHeight: 54, padding: '12px 24px', background: '#fffdf8', borderTop: '1px solid #efe6d3', color: '#5a4a2a', fontSize: 18, textAlign: 'center', lineHeight: 1.5 }}>
+      <div style={{ minHeight: 54, padding: '12px 24px', background: '#fffcfa', borderTop: '1px solid #efe6d3', color: '#5a4a2a', fontSize: 18, textAlign: 'center', lineHeight: 1.5 }}>
         {/* Karaoke sync: when TTS word timings exist, the word being SPOKEN right now lights
             up (Mayer's temporal contiguity — eye and ear on the same thing). Fallback: prose. */}
         {activeLine?.words?.length ? (

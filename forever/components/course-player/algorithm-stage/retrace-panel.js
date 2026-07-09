@@ -35,7 +35,7 @@ export function RetracePanel({ meta, onTrace }) {
   };
 
   const chip = {
-    border: '1px solid #e8ddc9', borderRadius: 8, background: '#fff', color: '#2b211a',
+    border: '1px solid #f0dcd5', borderRadius: 8, background: '#fff', color: '#2b211a',
     padding: '4px 10px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
   };
 
@@ -122,7 +122,7 @@ export function RetracePanel({ meta, onTrace }) {
 function EntryCallControls({ meta, busy, request, setError }) {
   const [entry, setEntry] = useState(String(meta?.params?.entry ?? ''));
   const chip = {
-    border: '1px solid #e8ddc9', borderRadius: 8, background: '#fff', color: '#2b211a',
+    border: '1px solid #f0dcd5', borderRadius: 8, background: '#fff', color: '#2b211a',
     padding: '4px 10px', fontSize: 12.5, fontWeight: 700,
   };
   return (

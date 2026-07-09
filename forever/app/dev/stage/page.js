@@ -74,7 +74,7 @@ export default function StagePreview() {
 
       <div style={{ display: 'flex', gap: 8, margin: '12px 0', flexWrap: 'wrap' }}>
         {Object.keys(SAMPLES).map((k) => (
-          <button key={k} onClick={() => { setName(k); setProgress(0); }} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #e8ddc9', background: k === name ? '#d35400' : '#fffdf8', color: k === name ? '#fff' : '#5a4a2a', cursor: 'pointer', fontSize: 13 }}>
+          <button key={k} onClick={() => { setName(k); setProgress(0); }} style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #f0dcd5', background: k === name ? '#d35400' : '#fffcfa', color: k === name ? '#fff' : '#5a4a2a', cursor: 'pointer', fontSize: 13 }}>
             {k}
           </button>
         ))}

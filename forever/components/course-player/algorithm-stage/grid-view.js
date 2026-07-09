@@ -25,7 +25,7 @@ export function GridView({ view, step, history = [] }) {
   const rowLabels = view.rowLabels ?? (rows > 1 ? Array.from({ length: rows }, (_, i) => String(i)) : null);
 
   return (
-    <div style={{ overflowX: 'auto', border: '1px solid #e8ddc9', borderRadius: 12, background: '#fffdf8', padding: 10 }}>
+    <div style={{ overflowX: 'auto', border: '1px solid #f0dcd5', borderRadius: 12, background: '#fffcfa', padding: 10 }}>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 6, fontSize: 11, fontFamily: 'ui-monospace, monospace', color: '#5a4a2a' }}>
         <span>🟧 write (now)</span>
         <span>🟨 reads (deps)</span>
@@ -52,7 +52,7 @@ export function GridView({ view, step, history = [] }) {
                 const isHi = highlight.has(key);
                 const isMax = key === maxCell;
                 const border = isCurrent ? '#d35400' : isHi ? '#c9a227' : isFilled ? '#27ae60' : '#e0d6c2';
-                const bg = isCurrent ? '#ffd9a8' : isHi ? '#fdeaa7' : isFilled ? '#eafaf0' : '#fffdf8';
+                const bg = isCurrent ? '#ffd9a8' : isHi ? '#fdeaa7' : isFilled ? '#eafaf0' : '#fffcfa';
                 const val = valueAt.has(key) ? String(valueAt.get(key)) : '';
                 return (
                   <td

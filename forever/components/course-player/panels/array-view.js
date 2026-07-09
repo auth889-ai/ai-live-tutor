@@ -49,7 +49,7 @@ export function ArrayView({ content, progress = 1, activeStep = null }) {
   const shown = liveValues && liveValues.length === values.length ? liveValues : values;
 
   return (
-    <div style={{ border: '1px solid #e8ddc9', borderRadius: 12, background: '#fffdf8', padding: 14 }}>
+    <div style={{ border: '1px solid #f0dcd5', borderRadius: 12, background: '#fffcfa', padding: 14 }}>
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
         {shown.map((value, i) => {
           const pointers = pointerAt.get(i);
@@ -101,9 +101,9 @@ export function ArrayView({ content, progress = 1, activeStep = null }) {
           style={{
             marginTop: 10,
             padding: '8px 12px',
-            border: '1px solid #e8ddc9',
+            border: '1px solid #f0dcd5',
             borderRadius: 10,
-            background: '#fffaf0',
+            background: '#fff8f4',
             fontFamily: 'ui-monospace, monospace',
             fontSize: 13,
             color: '#5a4a2a',
