@@ -104,3 +104,21 @@ test('honest failures: no events, no array, pointers that never move', () => {
     /no pointer movement/,
   );
 });
+
+test('monotonic stack: live stack rides every step, pushes/pops narrated (LC84 family)', () => {
+  const code = 'def largest(heights):\n    st = []\n    for i in range(len(heights)):\n        st.append(i)\n    return st';
+  const events = [
+    { line: 3, locals: { i: 0, st: [] } },
+    { line: 4, locals: { i: 0, st: [0] } },
+    { line: 3, locals: { i: 1, st: [0] } },
+    { line: 4, locals: { i: 1, st: [0, 1] } },
+    { line: 3, locals: { i: 2, st: [1] } },
+  ];
+  const trace = compilePointerWalk({
+    events, result: [1], code, array: [2, 1, 5], pointers: ['i'], stackVar: 'st',
+  });
+  const withStack = trace.steps.filter((s) => Array.isArray(s.stack));
+  assert.ok(withStack.length >= 3, 'the live stack rides the steps');
+  assert.ok(trace.steps.some((s) => /PUSHED onto the stack/.test(s.explanation)), 'a push is narrated');
+  assert.ok(trace.steps.some((s) => /OFF the stack/.test(s.explanation)), 'a pop is narrated');
+});

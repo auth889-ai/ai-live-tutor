@@ -18,7 +18,7 @@ import { validateExecutionTrace } from '../../../board/execution/execution-trace
 
 import {
   narrateMoves, narrateSwap, narrateWrite, narrateIntroduced, narrateUpdated,
-  narrateEliminated, narrateWindow, narrateClose,
+  narrateEliminated, narrateWindow, narrateClose, narrateCollection,
 } from './narrate.js';
 
 // compilePointerWalk({ events, result, code, array, pointers, examine?, arrayVar?,
@@ -29,7 +29,7 @@ import {
 // (binary search). window: [leftName, rightName] — cells inside are the current window.
 export function compilePointerWalk({
   events, result, code, array, pointers = [], examine = null, arrayVar = null,
-  eliminatedOutside = null, window = null, language = 'python',
+  eliminatedOutside = null, window = null, stackVar = null, queueVar = null, language = 'python',
 } = {}) {
   if (!Array.isArray(events) || events.length === 0) throw new Error('pointer walk recorded no events');
   // The shared line tracker appends {'truncated': true} at its recording cap — honor it here
@@ -62,8 +62,14 @@ export function compilePointerWalk({
     // The old engine dropped these — comparisons and bookkeeping vanished from the dry run.
     const changedScalars = Object.entries(locals)
       .filter(([k, v]) => !pointers.includes(k) && k !== arrayVar && isScalar(v) && JSON.stringify(prev[k]) !== JSON.stringify(v));
+    // Declared companion collection (monotonic stack / BFS queue): its live contents ride
+    // every step, and a push/pop is a step of its own even when no pointer moved.
+    const stackSnap = stackVar && Array.isArray(locals[stackVar]) ? locals[stackVar] : null;
+    const queueSnap = queueVar && Array.isArray(locals[queueVar]) ? locals[queueVar] : null;
+    const stackChanged = stackSnap && JSON.stringify(prev[stackVar]) !== JSON.stringify(stackSnap);
+    const queueChanged = queueSnap && JSON.stringify(prev[queueVar]) !== JSON.stringify(queueSnap);
 
-    if (moved.length === 0 && written.length === 0 && changedScalars.length === 0) {
+    if (moved.length === 0 && written.length === 0 && changedScalars.length === 0 && !stackChanged && !queueChanged) {
       prev = { ...prev, ...locals };
       continue;
     }
@@ -94,6 +100,8 @@ export function compilePointerWalk({
     const updated = changedScalars.filter(([k]) => k in prev);
     if (introduced.length > 0) parts.push(narrateIntroduced(introduced));
     if (updated.length > 0) parts.push(narrateUpdated(updated));
+    if (stackChanged) parts.push(narrateCollection({ kind: 'stack', was: Array.isArray(prev[stackVar]) ? prev[stackVar] : [], now: stackSnap }));
+    if (queueChanged) parts.push(narrateCollection({ kind: 'queue', was: Array.isArray(prev[queueVar]) ? prev[queueVar] : [], now: queueSnap }));
     const searchNote = eliminatedOutside && eliminated.length > 0
       ? narrateEliminated({ lo: locals[eliminatedOutside[0]], hi: locals[eliminatedOutside[1]], eliminatedCount: eliminated.length, total: array.length })
       : '';
@@ -112,17 +120,22 @@ export function compilePointerWalk({
         ...(written.length > 0 && written.length !== 2 ? { comparing: written } : {}),
         ...(liveValues ? { values: [...liveValues] } : {}),
       },
+      ...(stackSnap ? { stack: stackSnap } : {}),
+      ...(queueSnap ? { queue: queueSnap } : {}),
       variables: Object.fromEntries(Object.entries(locals).filter(([k, v]) => k !== arrayVar && isScalar(v))),
     });
     prev = { ...prev, ...locals };
   }
   if (steps.length === 0 || !anyPointerMoved) throw new Error('pointer walk saw no pointer movement — check the declared pointer names');
 
+  const last = steps[steps.length - 1];
   steps.push({
-    line: steps[steps.length - 1].line,
+    line: last.line,
     explanation: narrateClose({ truncated, result, liveValues }),
-    array: steps[steps.length - 1].array,
-    variables: steps[steps.length - 1].variables,
+    array: last.array,
+    ...(last.stack ? { stack: last.stack } : {}),
+    ...(last.queue ? { queue: last.queue } : {}),
+    variables: last.variables,
   });
 
   return validateExecutionTrace({

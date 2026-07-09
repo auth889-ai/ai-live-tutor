@@ -12,7 +12,9 @@ two pointers, sliding window, in-place sorting/partitioning): INSTEAD of "progra
                   "examine": "mid" (optional: the pointer whose cell the code READS each step — that cell gets the highlight),
                   "arrayVar": "arr" (optional: the list variable the code mutates IN PLACE — swaps then animate with live values),
                   "eliminatedOutside": ["low","high"] (optional, binary-search style: cells outside low..high dim),
-                  "window": ["left","right"] (optional, sliding-window style)}
+                  "window": ["left","right"] (optional, sliding-window style),
+                  "stackVar": "st" (REQUIRED for monotonic-stack algorithms: the list used as the stack — its live contents then show every push/pop),
+                  "queueVar": "q" (same for a BFS-style queue)}
 with "code" = the clean function definition. Our engine runs it for real and animates the
 pointers riding the array — do not write tracking code. For sorting ALWAYS set "arrayVar" so
 every swap is a visible flash, and set "examine" for search algorithms so the probed cell lights up.`,
@@ -32,6 +34,8 @@ every swap is a visible flash, and set "examine" for search algorithms so the pr
       arrayVar: json.pointerwalk.arrayVar ?? null,
       eliminatedOutside: json.pointerwalk.eliminatedOutside ?? null,
       window: json.pointerwalk.window ?? null,
+      stackVar: json.pointerwalk.stackVar ?? null,
+      queueVar: json.pointerwalk.queueVar ?? null,
     });
     trace.meta = {
       tool: 'pointerwalk',
@@ -44,6 +48,8 @@ every swap is a visible flash, and set "examine" for search algorithms so the pr
         arrayVar: json.pointerwalk.arrayVar ?? null,
         eliminatedOutside: json.pointerwalk.eliminatedOutside ?? null,
         window: json.pointerwalk.window ?? null,
+        stackVar: json.pointerwalk.stackVar ?? null,
+        queueVar: json.pointerwalk.queueVar ?? null,
       },
     };
     return trace;

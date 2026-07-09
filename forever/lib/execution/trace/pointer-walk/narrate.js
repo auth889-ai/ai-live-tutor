@@ -56,3 +56,18 @@ export function narrateClose({ truncated, result, liveValues }) {
     : '';
   return `The walk is over and the call returns ${JSON.stringify(result)}.${finalValues} Replay the arrows in your head: every move you watched was a decision the code made on real data — that decision pattern IS the algorithm.`;
 }
+
+// Collection beat (monotonic stack / BFS queue): pushes and pops narrated from the REAL
+// recorded contents — the moment the structure grows or gives something up is the teaching.
+export function narrateCollection({ kind, was, now }) {
+  const show = (a) => (a.length ? `[${a.map((v) => JSON.stringify(v)).join(', ')}]` : '[] (empty)');
+  if (now.length > was.length) {
+    const pushed = now[now.length - 1];
+    return ` ${JSON.stringify(pushed)} is PUSHED onto the ${kind} — it now holds ${show(now)}; whatever sits on top decides what happens next.`;
+  }
+  if (now.length < was.length) {
+    const popped = kind === 'queue' ? was[0] : was[was.length - 1];
+    return ` ${JSON.stringify(popped)} comes ${kind === 'queue' ? 'OFF THE FRONT of the queue' : 'OFF the stack'} — ${show(now)} remains; that departure is exactly what the algorithm was waiting for.`;
+  }
+  return ` The ${kind} is rewritten in place to ${show(now)}.`;
+}
