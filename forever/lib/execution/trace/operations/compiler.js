@@ -13,6 +13,11 @@
 
 import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
+import {
+  narrateAdd, narrateUnderflow, narrateRemove, narratePeek,
+  narrateChainHop, narratePutUpdate, narratePutInsert, narrateGet, narrateMapRemove,
+} from './narrate.js';
+
 export const OPERATION_STRUCTURES = Object.freeze(['stack', 'queue', 'hash_map']);
 
 // Deterministic string hash (djb2-style, shown to the student digit by digit).
@@ -60,26 +65,20 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
       if (op === 'push' || op === 'enqueue') {
         items.push(value);
         touched = items.length - 1;
-        explanation = isStack
-          ? `push(${JSON.stringify(value)}): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now ${items.length}.`
-          : `enqueue(${JSON.stringify(value)}): the new item joins the BACK of the queue — the back arrow slides onto it — and must wait its turn behind ${items.length - 1} other${items.length === 2 ? '' : 's'}. First In, First Out, like any fair line. Size is now ${items.length}.`;
+        explanation = narrateAdd({ isStack, structure, value, size: items.length });
       } else if (op === 'pop' || op === 'dequeue') {
         if (items.length === 0) {
-          explanation = isStack
-            ? `pop() on an EMPTY stack — this is the classic crash (stack underflow). Real code must guard with "if not stack:" before popping; watch how the state simply has nothing to give.`
-            : `dequeue() on an EMPTY queue — the classic underflow bug. Production code checks emptiness first; there is nothing at the front to hand back.`;
+          explanation = narrateUnderflow({ isStack });
         } else {
           const out = isStack ? items.pop() : items.shift();
           touched = isStack ? items.length : 0; // the slot the action just emptied / shifted into
-          explanation = isStack
-            ? `pop(): ${JSON.stringify(out)} comes off the TOP — it was the most recent arrival, and it leaves first. Its slot empties and the top arrow drops down one place; notice nothing below it moved — a stack only ever touches its top. Size is now ${items.length}.`
-            : `dequeue(): ${JSON.stringify(out)} leaves from the FRONT — it waited longest, so it is served first. Everyone behind shifts one place closer to the front arrow. Size is now ${items.length}.`;
+          explanation = narrateRemove({ isStack, out, size: items.length });
         }
       } else if (op === 'peek' || op === 'front') {
         touched = items.length === 0 ? null : isStack ? items.length - 1 : 0;
-        explanation = items.length === 0
-          ? `${op}() on an empty ${structure}: there is nothing to look at — another case your code must guard.`
-          : `${op}(): we look at ${JSON.stringify(isStack ? items[items.length - 1] : items[0])} WITHOUT removing it — the highlighted cell is only being read; reading costs nothing and changes nothing, and the size stays ${items.length}.`;
+        explanation = narratePeek({
+          op, structure, empty: items.length === 0, value: isStack ? items[items.length - 1] : items[0], size: items.length,
+        });
       } else {
         throw new Error(`unknown ${structure} operation "${op}"`);
       }
@@ -109,7 +108,7 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
       for (let k = 0; k < upto; k += 1) {
         steps.push({
           line: lineOf(op),
-          explanation: `${op}(${JSON.stringify(key)}): hash(${JSON.stringify(key)}) = ${b}, and bucket ${b} is chained — slot ${k} holds ${JSON.stringify(chain[k].key)}, which is not our key, so we follow the link to the next entry. Every one of these hops is the price of a collision; a good hash function keeps this walk short.`,
+          explanation: narrateChainHop({ op, key, bucket: b, slot: k, slotKey: chain[k].key }),
           array2d: gridState([b, col(k)], chain.slice(0, k + 1).map((_, i) => [b, col(i)])),
           variables: { bucket: b, chainSlot: k, size: mapSize() },
         });
@@ -126,28 +125,20 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
         if (at >= 0) {
           chain[at] = { key, value };
           current = [b, col(at)];
-          explanation = `put(${JSON.stringify(key)}, ${JSON.stringify(value)}): hash(${JSON.stringify(key)}) = ${b}, and ${JSON.stringify(key)} is ALREADY in bucket ${b} — so this is an update, not an insert. The old value is overwritten in place; a map holds one value per key.`;
+          explanation = narratePutUpdate({ key, value, bucket: b });
         } else {
           chain.push({ key, value });
           current = [b, col(chain.length - 1)];
-          explanation = chain.length > 1
-            ? `put(${JSON.stringify(key)}, ${JSON.stringify(value)}): hash(${JSON.stringify(key)}) = ${b}, but bucket ${b} already holds ${chain.length - 1} entr${chain.length === 2 ? 'y' : 'ies'} — a COLLISION. We chain the new entry behind the others; lookups in this bucket now walk the chain, which is exactly why too many collisions degrade a hash map toward a list.`
-            : `put(${JSON.stringify(key)}, ${JSON.stringify(value)}): the hash function turns the key into a bucket number — hash(${JSON.stringify(key)}) = ${b} — and the entry drops straight into empty bucket ${b}. No searching: that single jump is the O(1) magic.`;
+          explanation = narratePutInsert({ key, value, bucket: b, chainLength: chain.length });
         }
       } else if (op === 'get') {
         walkChain(op, key, b, at >= 0 ? at : chain.length);
         current = at >= 0 ? [b, col(at)] : null;
-        explanation = at >= 0
-          ? `get(${JSON.stringify(key)}): hash straight to bucket ${b}, ${at > 0 ? `walk ${at + 1} chained entr${at === 0 ? 'y' : 'ies'} (the collision cost), ` : ''}and find ${JSON.stringify(key)} = ${JSON.stringify(chain[at].value)}. One hash, ${at + 1} look${at === 0 ? '' : 's'} — no scanning the whole table.`
-          : `get(${JSON.stringify(key)}): hash says bucket ${b}, but the ${chain.length === 0 ? 'bucket is empty' : 'chain there does not contain it'} — the key does not exist. A hash map answers "not here" just as fast as "found".`;
+        explanation = narrateGet({ key, bucket: b, at, value: at >= 0 ? chain[at].value : undefined, chainLength: chain.length });
       } else if (op === 'remove') {
         walkChain(op, key, b, Math.max(at, 0));
-        if (at >= 0) {
-          chain.splice(at, 1);
-          explanation = `remove(${JSON.stringify(key)}): hash to bucket ${b}, unlink the entry, and the chain closes up behind it. Size bookkeeping is the map's job — no other bucket was touched.`;
-        } else {
-          explanation = `remove(${JSON.stringify(key)}): bucket ${b} does not contain the key — removing a missing key is a no-op (or an error, depending on the API; know which one YOUR language does).`;
-        }
+        if (at >= 0) chain.splice(at, 1);
+        explanation = narrateMapRemove({ key, bucket: b, found: at >= 0 });
       } else {
         throw new Error(`unknown hash_map operation "${op}"`);
       }
