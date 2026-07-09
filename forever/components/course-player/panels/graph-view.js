@@ -18,17 +18,20 @@ import { ReactFlow, ReactFlowProvider, Background, Controls, MarkerType, useNode
 import '@xyflow/react/dist/style.css';
 
 import { layoutGraph } from '../../../lib/board/diagrams/graph-layout.js';
+import { layoutForce, wantsForceLayout } from '../../../lib/board/diagrams/force-layout.js';
 import { wantsTreeLayout, layoutTree } from '../../../lib/board/diagrams/tree-layout.js';
 import { resolveTraceStep, nodeStatus, edgeStatus, isGhostNode } from '../../../lib/board/diagrams/graph-view-model.js';
 
 const CIRCLE = 56;
 
 // status -> {border, bg, fg}. One source of truth for node color, shared with the legend.
+// SOLID fills for the states that matter (reference visualizers use full-color nodes with
+// white labels — instantly readable at a glance); "not yet" stays hollow so the frontier pops.
 const STATUS_STYLE = {
-  current: { border: '#d35400', bg: '#ffd9a8', fg: '#8a3a12' },
-  memoized: { border: '#8e44ad', bg: '#f3e8fb', fg: '#5b2c6f' },
-  visited: { border: '#27ae60', bg: '#eafaf0', fg: '#1c6b3a' },
-  notyet: { border: '#b8b0a0', bg: '#fbf8f2', fg: '#8a8172' },
+  current: { border: '#b93c2b', bg: '#e8604c', fg: '#fff' },
+  memoized: { border: '#6f3391', bg: '#8e44ad', fg: '#fff' },
+  visited: { border: '#20794a', bg: '#2f9e5f', fg: '#fff' },
+  notyet: { border: '#c9beac', bg: '#fffdf9', fg: '#9a9182' },
   plain: { border: '#c0392b', bg: '#fffcfa', fg: '#3a3327' },
 };
 
@@ -69,7 +72,7 @@ const NodeInner = memo(function NodeInner({ label, status, circle, fontSize }) {
 // node on mount), and the current-node pulse (box-shadow only, so it never fights the scale).
 const KEYFRAMES = `
 @keyframes algoNodeGrow { from { transform: scale(0.35); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@keyframes algoNodePulse { 0%,100% { box-shadow: 0 0 0 4px rgba(211,84,0,0.30), 0 3px 14px rgba(211,84,0,0.36); } 50% { box-shadow: 0 0 0 10px rgba(211,84,0,0.12), 0 4px 20px rgba(211,84,0,0.5); } }
+@keyframes algoNodePulse { 0%,100% { box-shadow: 0 0 0 4px rgba(232,96,76,0.30), 0 3px 14px rgba(232,96,76,0.36); } 50% { box-shadow: 0 0 0 10px rgba(232,96,76,0.12), 0 4px 20px rgba(232,96,76,0.5); } }
 .algo-node { transform-origin: center; animation: algoNodeGrow 0.26s cubic-bezier(0.65,0,0.265,1.55) both; transition: background 0.3s, border-color 0.3s, color 0.3s; }
 .algo-node--current { animation: algoNodeGrow 0.26s cubic-bezier(0.65,0,0.265,1.55) both, algoNodePulse 1.7s ease-in-out 0.26s infinite; }
 `;
@@ -180,7 +183,11 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
   const laid = useMemo(() => {
     try {
       const spec = { nodes: content.nodes ?? [], edges: content.edges ?? [] };
-      return wantsTreeLayout(spec) ? layoutTree(spec) : layoutGraph({ ...spec, direction: content.direction ?? 'LR' });
+      if (wantsTreeLayout(spec)) return layoutTree(spec);
+      // General graphs (cycles, cross-edges, undirected) get the ORGANIC force layout the
+      // reference visualizers use; only clean layered DAGs fall through to dagre rows.
+      if (wantsForceLayout(spec, content.directed)) return layoutForce(spec);
+      return layoutGraph({ ...spec, direction: content.direction ?? 'LR' });
     } catch {
       return null;
     }
@@ -216,11 +223,11 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
       <style>{KEYFRAMES}</style>
       {hasTrace ? (
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6, fontSize: 11.5, fontFamily: 'ui-monospace, monospace', color: '#5a4a2a' }}>
-          <LegendChip swatch={{ background: '#ffd9a8', border: '2px solid #d35400' }} label="current" />
-          <LegendChip swatch={{ background: '#eafaf0', border: '2px solid #27ae60' }} label="visited" />
-          <LegendChip swatch={{ background: '#fbf8f2', border: '2px solid #b8b0a0' }} label="not yet" />
-          {state.memo.size > 0 ? <LegendChip swatch={{ background: '#f3e8fb', border: '2px solid #8e44ad' }} label="from memo" /> : null}
-          {Object.keys(state.returned).length > 0 ? <LegendChip swatch={{ background: '#eafaf0', border: '2px solid #27ae60' }} label="= returned value" /> : null}
+          <LegendChip swatch={{ background: '#e8604c', border: '2px solid #b93c2b' }} label="current" />
+          <LegendChip swatch={{ background: '#2f9e5f', border: '2px solid #20794a' }} label="visited" />
+          <LegendChip swatch={{ background: '#fffdf9', border: '2px solid #c9beac' }} label="not yet" />
+          {state.memo.size > 0 ? <LegendChip swatch={{ background: '#8e44ad', border: '2px solid #6f3391' }} label="from memo" /> : null}
+          {Object.keys(state.returned).length > 0 ? <LegendChip swatch={{ background: '#2f9e5f', border: '2px solid #20794a' }} label="= returned value" /> : null}
           <LegendChip swatch={{ background: 'transparent', borderBottom: '3px solid #e8604c', borderRadius: 0, height: 3, marginTop: 6 }} label="active edge" />
         </div>
       ) : null}
