@@ -58,12 +58,17 @@ export async function callQwenJson({
   let lastError;
   // Retry transient failures (timeout/abort, network, 429/5xx) with backoff — the workspace
   // API is intermittently slow, and a whole lesson shouldn't die on one flaky call.
+  // Empty content / unparseable JSON also retry HERE (with response_format json_object they
+  // mean a degraded provider window — one empty response dropped a whole dry-run scene,
+  // measured 2026-07-09) — but they stay OUT of isTransient, which callers use to judge
+  // whether a fully-failed call deserves a whole new scene attempt.
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
       return await callOnce();
     } catch (error) {
       lastError = error;
-      if (!isTransient(error) || attempt === retries) throw error;
+      const flakyResponse = /returned no content|returned invalid JSON/.test(String(error?.message || error));
+      if ((!isTransient(error) && !flakyResponse) || attempt === retries) throw error;
       await sleep(1000 * (attempt + 1));
     }
   }
