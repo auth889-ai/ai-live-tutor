@@ -40,10 +40,13 @@ function resolveState({ content, progress, activeNode, activeStep }) {
     for (let i = 0; i <= idx; i += 1) if (trace[i].current != null) path.add(String(trace[i].current));
     const current = step.current != null ? String(step.current) : null;
     if (current) path.delete(current); // current wins its own colour
-    // pointerAt: nodeId -> ['low','mid'] labels riding on it this step.
+    // pointerAt: nodeId -> ['low','mid'] labels riding on it this step. A pointer that sits on
+    // the CURRENT node is skipped — the orange current highlight already marks it, so a second
+    // ring labeled "curr" is just redundant clutter (verified on the Dijkstra view).
     const pointerAt = new Map();
     for (const [name, nid] of Object.entries(step.pointers ?? {})) {
       const key = String(nid);
+      if (current && key === current) continue;
       if (!pointerAt.has(key)) pointerAt.set(key, []);
       pointerAt.get(key).push(name);
     }
@@ -214,8 +217,10 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
     try {
       const spec = { nodes: content.nodes ?? [], edges: content.edges ?? [] };
       // Branching rooted trees (BST, heap, recursion trees) get the tidy-tree layout — true
-      // left/right child positions. Everything else (cycles, DAGs, linked lists) stays on dagre.
-      return wantsTreeLayout(spec) ? layoutTree(spec) : layoutGraph({ ...spec, direction: content.direction ?? 'TB' });
+      // left/right child positions. Everything else (cycles, DAGs like Dijkstra, linked lists)
+      // lays out LEFT-TO-RIGHT: a wide-short player panel fits a horizontal chain far better
+      // than a vertical one, which was clipping the last node no matter how fitView zoomed.
+      return wantsTreeLayout(spec) ? layoutTree(spec) : layoutGraph({ ...spec, direction: content.direction ?? 'LR' });
     } catch {
       return null;
     }
@@ -239,8 +244,8 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
   const nodeCount = laid?.nodes.length ?? 0;
   useEffect(() => {
     if (!nodesInitialized || nodeCount === 0) return undefined;
-    fitView({ padding: 0.2, duration: 0 });
-    const settle = setTimeout(() => fitView({ padding: 0.2, duration: 0 }), 420);
+    fitView({ padding: 0.2, duration: 0, maxZoom: 1.1, minZoom: 0.15 });
+    const settle = setTimeout(() => fitView({ padding: 0.2, duration: 0, maxZoom: 1.1, minZoom: 0.15 }), 420);
     return () => clearTimeout(settle);
   }, [nodesInitialized, nodeCount, fitView]);
 
@@ -250,7 +255,9 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
   const { note, stepNum, stepTotal } = state;
   const hasTrace = stepTotal > 0; // (was Boolean(note) — AlgorithmStage passes note:'' and lost the trace styling)
 
-  const height = Math.min(460, Math.max(200, laid.height + 40));
+  // Give the canvas enough room that fitView never has to clip a tall graph; ReactFlow's
+  // fitView still zooms to frame everything, but a too-short box was cropping vertical chains.
+  const height = Math.min(560, Math.max(240, laid.height + 60));
   return (
     <div>
       {hasTrace ? (
@@ -268,6 +275,12 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
           nodes={nodes}
           edges={edges}
           fitView
+          fitViewOptions={{ padding: 0.2, maxZoom: 1.1 }}
+          minZoom={0.15}
+          // onInit fires once ReactFlow has mounted AND measured the nodes — the reliable moment
+          // to frame the whole graph. The useNodesInitialized effect alone was not firing in
+          // static (non-clock) renders, leaving the graph at raw layout coords (clipped).
+          onInit={(instance) => instance.fitView({ padding: 0.2, maxZoom: 1.1, minZoom: 0.15 })}
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}
