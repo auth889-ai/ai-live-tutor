@@ -279,17 +279,19 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
   );
   const flow = useMemo(() => (laid ? buildFlowElements(laid, content, state) : null), [laid, content, state]);
 
-  // onInit + a settle fit reliably frame the whole graph once nodes are measured (the
-  // useNodesInitialized effect alone did not fire in static, non-clock renders).
+  // CAMERA RULE (bug measured live: "all the nodes are gone"): the tree GROWS while the step
+  // advances, so framing must follow every step — not just count changes (a callout swapping
+  // in/out keeps the count equal while new nodes land outside the old frame). Refit on every
+  // rebuilt flow, plus a settle pass after the grow-in animation.
   const nodesInitialized = useNodesInitialized();
   const { fitView } = useReactFlow();
-  const nodeCount = flow?.nodes.length ?? 0;
   useEffect(() => {
-    if (!nodesInitialized || nodeCount === 0) return undefined;
-    fitView({ padding: 0.2, duration: 0, maxZoom: 1.1, minZoom: 0.15 });
-    const settle = setTimeout(() => fitView({ padding: 0.2, duration: 0, maxZoom: 1.1, minZoom: 0.15 }), 420);
+    if (!nodesInitialized || !flow || flow.nodes.length === 0) return undefined;
+    const fit = () => fitView({ padding: 0.2, duration: 200, maxZoom: 1.1, minZoom: 0.15 });
+    fit();
+    const settle = setTimeout(fit, 420);
     return () => clearTimeout(settle);
-  }, [nodesInitialized, nodeCount, fitView]);
+  }, [nodesInitialized, flow, fitView]);
 
   if (!laid || !flow) return <div style={{ color: '#c0392b', fontSize: 13 }}>diagram unavailable</div>;
 
