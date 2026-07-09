@@ -22,6 +22,7 @@ import { assembleTrieProgram, parseTrieEvents } from '../lib/execution/trace/tri
 import { compileDpTable } from '../lib/execution/trace/dp-table/compiler.js';
 import { assembleDpProgram, parseDpEvents } from '../lib/execution/trace/dp-table/tracker.js';
 import { compileOperationsTrace } from '../lib/execution/trace/operations/compiler.js';
+import { detectCollectionOps } from '../lib/execution/trace/collections/detect.js';
 
 const py = (source) => execFileSync('python3', ['-c', source], { encoding: 'utf8', timeout: 20000 });
 const out = [];
@@ -97,11 +98,19 @@ add('Hash map — put/get with collision', compileOperationsTrace({
   ops: [{ op: 'put', key: 'cat', value: 1 }, { op: 'put', key: 'dog', value: 2 }, { op: 'put', key: 'act', value: 3 }, { op: 'get', key: 'act' }, { op: 'get', key: 'ghost' }],
 }));
 
-// --- LINE-SIM FLOOR examples (fit no engine — the honest "floor": real line-by-line trace) ---
+// --- AUTO-UPGRADE: an in-code stack is DETECTED from the real run and rendered as the elite
+// operations view (no declared family) — the operation-pattern edge over shape-only tools. ---
 {
   const code = 'def valid(s):\n    st = []\n    pairs = {")": "(", "]": "[", "}": "{"}\n    for c in s:\n        if c in pairs:\n            if not st or st.pop() != pairs[c]:\n                return False\n        else:\n            st.append(c)\n    return not st';
   const entry = 'valid("([{}])")';
-  add('FLOOR: Valid Parentheses (line-sim)', compileLineTrace({ ...parseLineEvents(py(assembleLineProgram({ code, entry }))), code, entry }));
+  const payload = parseLineEvents(py(assembleLineProgram({ code, entry })));
+  const detected = detectCollectionOps(payload.events);
+  add(
+    detected ? 'AUTO-STACK: Valid Parentheses (detected)' : 'FLOOR: Valid Parentheses (line-sim)',
+    detected
+      ? compileOperationsTrace({ structure: detected.structure, ops: detected.ops, code, lines: detected.lines })
+      : compileLineTrace({ ...payload, code, entry }),
+  );
 }
 {
   const code = 'def kadane(a):\n    best = a[0]\n    cur = a[0]\n    for x in a[1:]:\n        cur = max(x, cur + x)\n        best = max(best, cur)\n    return best';

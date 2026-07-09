@@ -19,6 +19,7 @@ import { compileLinkedListTrace, assembleListProgram, parseListEvents } from '..
 import { compileDivideConquer, assembleDivideProgram, parseDivideEvents } from '../../../execution/trace/engines.js';
 import { compileTrieTrace, assembleTrieProgram, parseTrieEvents } from '../../../execution/trace/engines.js';
 import { compileDpTable, assembleDpProgram, parseDpEvents } from '../../../execution/trace/engines.js';
+import { detectCollectionOps } from '../../../execution/trace/collections/detect.js';
 import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../../../execution/trace/engines.js';
 import { compilePointerWalk } from '../../../execution/trace/engines.js';
 import { compileOperationsTrace } from '../../../execution/trace/engines.js';
@@ -482,6 +483,18 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
         if (run.timedOut) throw new Error('simulation timed out (likely an infinite loop)');
         const payload = parseLineEvents(run.stdout);
         if (!payload) throw new Error(run.stderr ? `simulation errored: ${run.stderr.slice(0, 300)}` : 'simulation printed no @@LINESIM line');
+        // AUTO-UPGRADE off the floor: if the REAL run reveals a clean in-code stack/queue/hash-map
+        // (our operation-pattern edge over shape-only tools), render the elite operations view
+        // instead of a plain line trace — no per-problem declaration needed (Valid Parentheses,
+        // monotonic stack, BFS-with-a-list, hash problems). Falls through to line-sim on failure.
+        const detected = detectCollectionOps(payload.events);
+        if (detected && detected.ops.length >= 3 && detected.ops.length <= 40) {
+          try {
+            const opsTrace = compileOperationsTrace({ structure: detected.structure, ops: detected.ops, code, lines: detected.lines });
+            assertDryRunQuality(opsTrace, { directive, code, attempt, maxFixes });
+            return { trace: opsTrace, usage, fixes: attempt };
+          } catch { /* detection was a false positive for the elite view — keep the honest floor */ }
+        }
         const trace = compileLineTrace({ ...payload, code, entry: json.linesim.entry, language: 'python' });
         // The gate is what keeps line-sim honest: a structural algorithm routed here fails the
         // pointer/collection bar and the retry pushes the model UP to the matching engine mode.

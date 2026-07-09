@@ -6834,365 +6834,144 @@
     }
   },
   {
-    "name": "FLOOR: Valid Parentheses (line-sim)",
+    "name": "AUTO-STACK: Valid Parentheses (detected)",
     "trace": {
       "language": "python",
       "code": "def valid(s):\n    st = []\n    pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\n    for c in s:\n        if c in pairs:\n            if not st or st.pop() != pairs[c]:\n                return False\n        else:\n            st.append(c)\n    return not st",
-      "views": {},
+      "views": {
+        "array": {
+          "values": [
+            "",
+            "",
+            ""
+          ]
+        }
+      },
       "steps": [
         {
-          "line": 2,
-          "explanation": "We run valid(\"([{}])\") and let the real machine execute it line by line. Keep your eye on the variables panel — every value you are about to see was recorded from this exact run, and the story of this algorithm is nothing but how those values change.",
-          "variables": {}
-        },
-        {
-          "line": 2,
-          "explanation": "Line 2 runs: `st = []`. As a result s starts as \"([{}])\" — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
-          "variables": {
-            "s": "([{}])"
-          }
-        },
-        {
-          "line": 3,
-          "explanation": "Line 3 runs: `pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}`. As a result st starts as [] — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
-          "variables": {
-            "s": "([{}])",
-            "st": []
-          }
-        },
-        {
           "line": 4,
-          "explanation": "Line 4 runs: `for c in s:`. As a result pairs starts as {\")\":\"(\",\"]\":\"[\",\"}\":\"{\"} — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
-          "variables": {
-            "s": "([{}])",
-            "st": [],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            }
-          }
-        },
-        {
-          "line": 5,
-          "explanation": "Line 5 runs: `if c in pairs:`. As a result c starts as \"(\" — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
-          "variables": {
-            "s": "([{}])",
-            "st": [],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": "("
-          }
-        },
-        {
-          "line": 9,
-          "explanation": "Line 9 runs: `st.append(c)`. No variable changes here — this line is deciding WHERE the execution goes next, and the line highlight shows you the path it chose.",
-          "variables": {
-            "s": "([{}])",
-            "st": [],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": "("
-          }
-        },
-        {
-          "line": 4,
-          "explanation": "Line 4 runs: `for c in s:`. As a result st becomes [\"(\"] — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
-          "variables": {
-            "s": "([{}])",
-            "st": [
-              "("
-            ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": "("
-          }
-        },
-        {
-          "line": 5,
-          "explanation": "Line 5 runs: `if c in pairs:`. As a result c becomes \"[\" — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
-          "variables": {
-            "s": "([{}])",
-            "st": [
-              "("
-            ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": "["
-          }
-        },
-        {
-          "line": 9,
-          "explanation": "Line 9 runs: `st.append(c)`. No variable changes here — this line is deciding WHERE the execution goes next, and the line highlight shows you the path it chose.",
-          "variables": {
-            "s": "([{}])",
-            "st": [
-              "("
-            ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": "["
-          }
-        },
-        {
-          "line": 4,
-          "explanation": "Line 4 runs: `for c in s:`. As a result st becomes [\"(\",\"[\"] — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
-          "variables": {
-            "s": "([{}])",
-            "st": [
+          "explanation": "push(\"(\"): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now 1.",
+          "array": {
+            "values": [
               "(",
-              "["
+              "",
+              ""
             ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
+            "pointers": {
+              "top": 0
             },
-            "c": "["
-          }
-        },
-        {
-          "line": 5,
-          "explanation": "Line 5 runs: `if c in pairs:`. As a result c becomes \"{\" — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
+            "current": 0
+          },
+          "stack": [
+            "("
+          ],
           "variables": {
-            "s": "([{}])",
-            "st": [
-              "(",
-              "["
-            ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": "{"
-          }
-        },
-        {
-          "line": 9,
-          "explanation": "Line 9 runs: `st.append(c)`. No variable changes here — this line is deciding WHERE the execution goes next, and the line highlight shows you the path it chose.",
-          "variables": {
-            "s": "([{}])",
-            "st": [
-              "(",
-              "["
-            ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": "{"
+            "size": 1
           }
         },
         {
           "line": 4,
-          "explanation": "Line 4 runs: `for c in s:`. As a result st becomes [\"(\",\"[\",\"{\"] — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
+          "explanation": "push(\"[\"): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now 2.",
+          "array": {
+            "values": [
+              "(",
+              "[",
+              ""
+            ],
+            "pointers": {
+              "top": 1
+            },
+            "current": 1
+          },
+          "stack": [
+            "(",
+            "["
+          ],
           "variables": {
-            "s": "([{}])",
-            "st": [
+            "size": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "push(\"{\"): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now 3.",
+          "array": {
+            "values": [
               "(",
               "[",
               "{"
             ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
+            "pointers": {
+              "top": 2
             },
-            "c": "{"
+            "current": 2
+          },
+          "stack": [
+            "(",
+            "[",
+            "{"
+          ],
+          "variables": {
+            "size": 3
           }
         },
         {
-          "line": 5,
-          "explanation": "Line 5 runs: `if c in pairs:`. As a result c becomes \"}\" — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
-          "variables": {
-            "s": "([{}])",
-            "st": [
+          "line": 4,
+          "explanation": "pop(): \"{\" comes off the TOP — it was the most recent arrival, and it leaves first. Its slot empties and the top arrow drops down one place; notice nothing below it moved — a stack only ever touches its top. Size is now 2.",
+          "array": {
+            "values": [
               "(",
               "[",
-              "{"
+              ""
             ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
+            "pointers": {
+              "top": 1
             },
-            "c": "}"
-          }
-        },
-        {
-          "line": 6,
-          "explanation": "Line 6 runs: `if not st or st.pop() != pairs[c]:`. No variable changes here — this line is deciding WHERE the execution goes next, and the line highlight shows you the path it chose.",
+            "current": 2
+          },
+          "stack": [
+            "(",
+            "["
+          ],
           "variables": {
-            "s": "([{}])",
-            "st": [
-              "(",
-              "[",
-              "{"
-            ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": "}"
+            "size": 2
           }
         },
         {
           "line": 4,
-          "explanation": "Line 4 runs: `for c in s:`. As a result st becomes [\"(\",\"[\"] — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
-          "variables": {
-            "s": "([{}])",
-            "st": [
+          "explanation": "pop(): \"[\" comes off the TOP — it was the most recent arrival, and it leaves first. Its slot empties and the top arrow drops down one place; notice nothing below it moved — a stack only ever touches its top. Size is now 1.",
+          "array": {
+            "values": [
               "(",
-              "["
+              "",
+              ""
             ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
+            "pointers": {
+              "top": 0
             },
-            "c": "}"
-          }
-        },
-        {
-          "line": 5,
-          "explanation": "Line 5 runs: `if c in pairs:`. As a result c becomes \"]\" — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
+            "current": 1
+          },
+          "stack": [
+            "("
+          ],
           "variables": {
-            "s": "([{}])",
-            "st": [
-              "(",
-              "["
-            ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": "]"
-          }
-        },
-        {
-          "line": 6,
-          "explanation": "Line 6 runs: `if not st or st.pop() != pairs[c]:`. No variable changes here — this line is deciding WHERE the execution goes next, and the line highlight shows you the path it chose.",
-          "variables": {
-            "s": "([{}])",
-            "st": [
-              "(",
-              "["
-            ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": "]"
+            "size": 1
           }
         },
         {
           "line": 4,
-          "explanation": "Line 4 runs: `for c in s:`. As a result st becomes [\"(\"] — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
-          "variables": {
-            "s": "([{}])",
-            "st": [
-              "("
+          "explanation": "pop(): \"(\" comes off the TOP — it was the most recent arrival, and it leaves first. Its slot empties and the top arrow drops down one place; notice nothing below it moved — a stack only ever touches its top. Size is now 0.",
+          "array": {
+            "values": [
+              "",
+              "",
+              ""
             ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": "]"
-          }
-        },
-        {
-          "line": 5,
-          "explanation": "Line 5 runs: `if c in pairs:`. As a result c becomes \")\" — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
+            "pointers": {},
+            "current": 0
+          },
+          "stack": [],
           "variables": {
-            "s": "([{}])",
-            "st": [
-              "("
-            ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": ")"
-          }
-        },
-        {
-          "line": 6,
-          "explanation": "Line 6 runs: `if not st or st.pop() != pairs[c]:`. No variable changes here — this line is deciding WHERE the execution goes next, and the line highlight shows you the path it chose.",
-          "variables": {
-            "s": "([{}])",
-            "st": [
-              "("
-            ],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": ")"
-          }
-        },
-        {
-          "line": 4,
-          "explanation": "Line 4 runs: `for c in s:`. As a result st becomes [] — watch the variables panel update at this exact moment. The state you see is real: it was recorded from an actual run of this code, not predicted.",
-          "variables": {
-            "s": "([{}])",
-            "st": [],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": ")"
-          }
-        },
-        {
-          "line": 10,
-          "explanation": "Line 10 runs: `return not st`. No variable changes here — this line is deciding WHERE the execution goes next, and the line highlight shows you the path it chose.",
-          "variables": {
-            "s": "([{}])",
-            "st": [],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": ")"
-          }
-        },
-        {
-          "line": 10,
-          "explanation": "Execution finishes and the call returns true. Scroll back through the steps and notice how every value on screen came from the real run — that is the whole story of this algorithm, line by line.",
-          "variables": {
-            "s": "([{}])",
-            "st": [],
-            "pairs": {
-              ")": "(",
-              "]": "[",
-              "}": "{"
-            },
-            "c": ")"
+            "size": 0
           }
         }
       ]
