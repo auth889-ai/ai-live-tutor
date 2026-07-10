@@ -2,6 +2,7 @@
 // The engine itself lives in lib/execution/trace/recursion/ (tracker -> compiler -> narrate).
 
 import { assembleRecursionProgram, parseCallTree, compileRecursionTrace } from '../../../../../execution/trace/engines.js';
+import { assembleNestedRecursionProgram } from '../../../../../execution/trace/recursion/tracker.js';
 
 export const recursionMode = {
   key: 'recursion',
@@ -12,10 +13,11 @@ export const recursionMode = {
                 "lines": {"call": <line of the recursive call>, "base": <line of the base-case return>,
                           "memo": <line of the memo check, if any>, "combine": <line combining results>}}
 and make "code" EXACTLY the clean recursive function definition (def fnName(...)), nothing else.
-The def MUST be at MODULE TOP LEVEL (column 0) — NEVER nested inside a wrapper function. If the
-idiomatic solution uses an inner helper closing over outer state (e.g. maxPathSum's gain updating
-a nonlocal best), FLATTEN it: the recursive function stands alone and RETURNS everything it
-computes (return a tuple if it needs to carry the running best). The function must be PURE and
+If the recursive function is NESTED inside a wrapper (the idiomatic LeetCode shape — e.g.
+maxPathSum's inner gain() updating a nonlocal best), KEEP that shape and ALSO provide
+"entry": "<ONE outer call, e.g. maxPathSum(tree)>" with its input built at module level in
+"code" (tree = build(...)) — the tracer records the nested calls natively. Top-level recursive
+functions use "args" instead and support "memoize". The function must be PURE and
 SELF-CONTAINED: its parameters are its ONLY inputs — no global
 variables, no own memo/cache dict, no prints. Its arguments MUST be plain JSON literals
 (numbers/strings/lists) — NEVER tree nodes or objects. A recursive TREE/GRAPH walk is NOT
@@ -25,12 +27,18 @@ tracker supplies the memo and the animation shows every memo hit; the recursive 
 animation step — do not write tracking code.`,
   canHandle: ({ json, lang, code }) => Boolean(json.recursion && typeof json.recursion === 'object' && lang === 'python' && code),
   async run({ json, code, exec }) {
-    const source = assembleRecursionProgram({
-      code,
-      fnName: json.recursion.fnName,
-      args: json.recursion.args,
-      memoize: json.recursion.memoize === true,
-    });
+    // A nested recursive fn (idiomatic LeetCode) with an outer entry call is traced natively
+    // via settrace; the classic top-level shape keeps the rebinding tracker (which adds memo).
+    const fnName = json.recursion.fnName;
+    const nested = !new RegExp(`^def ${fnName}\\(`, 'm').test(String(code ?? ''));
+    const source = nested && json.recursion.entry
+      ? assembleNestedRecursionProgram({ code, entry: json.recursion.entry, fnName })
+      : assembleRecursionProgram({
+        code,
+        fnName,
+        args: json.recursion.args,
+        memoize: json.recursion.memoize === true,
+      });
     const run = await exec({ language: 'python', source });
     if (run.timedOut) throw new Error('tracker timed out (likely unbounded recursion)');
     const callTree = parseCallTree(run.stdout);

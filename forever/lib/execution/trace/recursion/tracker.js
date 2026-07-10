@@ -4,6 +4,7 @@
 // The model never writes any of this machinery.
 
 import { pyLiteral } from '../harness/py-literal.js';
+import { assertEntryNamesDefined } from '../harness/assemble.js';
 
 // Python instrumentation template — definitions only; assembleRecursionProgram() adds the
 // student's function and the run line.
@@ -70,9 +71,9 @@ export function assembleRecursionProgram({ code, fnName, args = [], memoize = fa
   if (!String(code ?? '').includes(`def ${name}(`)) throw new Error(`recursion code must define "def ${name}(...)"`);
   // The tracker rebinds the function in MODULE scope (`_fn = name; name = fn`) — a def nested
   // inside a wrapper is invisible there and dies as a confusing NameError at run time. Fail
-  // fast with the fix spelled out, so the agent's retry actually corrects the shape.
+  // fast pointing at the nested-def recorder, which traces that shape natively.
   if (!new RegExp(`^def ${name}\\(`, 'm').test(String(code ?? ''))) {
-    throw new Error(`recursion fnName "${name}" is a NESTED def — it must be at module top level (column 0). Flatten the helper out of its wrapper and return any outer state (e.g. a running best) from the function itself.`);
+    throw new Error(`recursion fnName "${name}" is a NESTED def. Keep the idiomatic shape and ADD "entry": "<one outer call, e.g. maxPathSum(tree)>" with its input built at module level in code — the tracer then records the nested calls natively.`);
   }
   return [
     RECURSION_TRACKER_PY,
@@ -125,4 +126,78 @@ export function parseCallTree(stdout) {
     }
   }
   return null;
+}
+
+// NESTED-DEF RECORDER — the idiomatic-LeetCode shape (def gain() INSIDE maxPathSum(), closing
+// over a running best) cannot be traced by global rebinding: the inner name never exists at
+// module scope, and battery evidence shows the model writes this shape no matter how firmly
+// the prompt says to flatten. So trace it natively: sys.settrace sees every 'call'/'return'
+// frame regardless of nesting; we record exactly the frames whose code object bears FN_NAME.
+// (memoize is not injectable here — closures own their state — so this variant records plain.)
+const NESTED_RECURSION_TRACKER_PY = `
+import json, sys, math
+
+MAX_CALLS = 60
+vertices = {}
+_curr = [0]
+_stack = []
+
+def _safe(v, depth=0):
+    if isinstance(v, bool) or v is None or isinstance(v, str):
+        return v
+    if isinstance(v, (int, float)):
+        return v if (not isinstance(v, float) or math.isfinite(v)) else repr(v)
+    if depth >= 3:
+        return repr(v)[:40]
+    if isinstance(v, (list, tuple)):
+        return [_safe(x, depth + 1) for x in list(v)[:20]]
+    if isinstance(v, dict):
+        return {str(k): _safe(x, depth + 1) for k, x in list(v.items())[:20]}
+    return repr(v)[:40]
+
+def _tr(frame, event, arg):
+    if event == 'call' and frame.f_code.co_name == FN_NAME:
+        vid = _curr[0]
+        _curr[0] += 1
+        if vid > MAX_CALLS:
+            print('@@CALLTREE ' + json.dumps({'error': 'too many recursive calls', 'maxCalls': MAX_CALLS}))
+            sys.exit(0)
+        names = frame.f_code.co_varnames[:frame.f_code.co_argcount]
+        vertices[vid] = {'args': _safe([frame.f_locals.get(n) for n in names]), 'children': [], 'memoized': False}
+        if _stack:
+            vertices[_stack[-1]]['children'].append({'id': vid, 'value': None})
+        _stack.append(vid)
+        return _tr
+    if event == 'return' and frame.f_code.co_name == FN_NAME and _stack:
+        vid = _stack.pop()
+        if _stack:
+            for c in vertices[_stack[-1]]['children']:
+                if c['id'] == vid:
+                    c['value'] = _safe(arg)
+    return _tr
+`.trim();
+
+// assembleNestedRecursionProgram({ code, entry, fnName }) — code defines everything (including
+// the wrapper and its module-level input); entry is ONE call expression; fnName is the nested
+// recursive function whose call tree we record.
+export function assembleNestedRecursionProgram({ code, entry, fnName }) {
+  const name = String(fnName ?? '').trim();
+  const call = String(entry ?? '').trim();
+  if (!/^[A-Za-z]\w*$/.test(name)) throw new Error(`recursion fnName must be a python identifier not starting with "_" (got "${fnName}")`);
+  if (!call || /[;\n]/.test(call)) throw new Error('nested recursion needs "entry": ONE call expression like "maxPathSum(tree)"');
+  if (!String(code ?? '').includes(`def ${name}(`)) throw new Error(`recursion code must define "def ${name}(...)"`);
+  assertEntryNamesDefined(call, String(code));
+  return [
+    NESTED_RECURSION_TRACKER_PY,
+    '',
+    `FN_NAME = ${JSON.stringify(name)}`,
+    String(code).trim(),
+    '',
+    'sys.settrace(_tr)',
+    'try:',
+    `    result = ${call}`,
+    'finally:',
+    '    sys.settrace(None)',
+    "print('@@CALLTREE ' + json.dumps({'fnName': FN_NAME, 'result': _safe(result), 'vertices': vertices}))",
+  ].join('\n');
 }

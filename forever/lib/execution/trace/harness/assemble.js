@@ -20,7 +20,7 @@ const PY_BUILTINS = new Set(['True', 'False', 'None', 'len', 'range', 'list', 'd
 // root in the code — Python then dies with a NameError so cryptic that FOUR retries repeat the
 // same mistake. Checking BEFORE the run, with the fix spelled out, turns that into a one-retry
 // self-correction (the actionable-error pattern that made other modes recover).
-function assertEntryNamesDefined(entry, code) {
+export function assertEntryNamesDefined(entry, code) {
   const noStrings = entry.replace(/'[^']*'|"[^"]*"/g, '');
   const names = noStrings.match(/(?<![\w.])[A-Za-z_]\w*(?!\s*=[^=])/g) ?? [];
   for (const name of new Set(names)) {

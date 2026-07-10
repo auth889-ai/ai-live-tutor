@@ -100,7 +100,7 @@ test('assembleRecursionProgram instruments the UNMODIFIED student function via g
   // A nested helper (LeetCode's idiomatic inner `gain` closing over `best`) is invisible at
   // module scope, where the tracker rebinds — reject it with the fix spelled out.
   const nested = 'def maxPathSum(root):\n    def gain(node):\n        return 0\n    return gain(root)';
-  assert.throws(() => assembleRecursionProgram({ code: nested, fnName: 'gain', args: [null] }), /NESTED def.*top level/);
+  assert.throws(() => assembleRecursionProgram({ code: nested, fnName: 'gain', args: [null] }), /NESTED def.*entry/);
 });
 
 test('parseCallTree extracts the payload from noisy stdout, null when absent/broken', () => {

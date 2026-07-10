@@ -49,3 +49,19 @@ test('non-finite floats in recorded state cannot poison the payload (LC124 -inf)
   assert.ok(payload, 'the @@STRUCTURE payload must survive -inf in locals');
   assert.equal(payload.result, 42);
 });
+
+test('nested recursive defs trace natively via settrace (the idiomatic LeetCode shape)', async () => {
+  const { assembleNestedRecursionProgram } = await import('../../../lib/execution/trace/recursion/tracker.js');
+  const code = 'class T:\n    def __init__(self, v, l=None, r=None):\n        self.v = v; self.l = l; self.r = r\ntree = T(-10, T(9), T(20, T(15), T(7)))\ndef maxPathSum(root):\n    best = float("-inf")\n    def gain(node):\n        nonlocal best\n        if node is None: return 0\n        l = max(0, gain(node.l)); r = max(0, gain(node.r))\n        best = max(best, node.v + l + r)\n        return node.v + max(l, r)\n    gain(root)\n    return best';
+  const src = assembleNestedRecursionProgram({ code, entry: 'maxPathSum(tree)', fnName: 'gain' });
+  const out = execFileSync('python3', ['-c', src], { encoding: 'utf8', timeout: 15_000 });
+  const line = out.split('\n').find((l) => l.includes('@@CALLTREE '));
+  const tree = JSON.parse(line.slice(line.indexOf('@@CALLTREE ') + '@@CALLTREE '.length));
+  assert.equal(tree.result, 42, 'the classic example answers 42');
+  assert.ok(Object.keys(tree.vertices).length >= 5, 'one vertex per real nested call');
+  // Undefined entry names still fail fast with the fix spelled out.
+  assert.throws(
+    () => assembleNestedRecursionProgram({ code: 'def f():\n    def g():\n        return 0\n    return g()', entry: 'f(tree)', fnName: 'g' }),
+    /entry references "tree"/,
+  );
+});
