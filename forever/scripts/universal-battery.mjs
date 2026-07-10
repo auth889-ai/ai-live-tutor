@@ -647,6 +647,20 @@ def dijkstra(adj, weights, start):
     return dist
 g = {'A': ['B', 'C'], 'B': ['C'], 'C': []}
 w = {('A', 'B'): 4, ('A', 'C'): 8, ('B', 'C'): 3}`, "dijkstra(g, w, 'A')"],
+  ['graphs', 'LC323 Connected Components (union-find)', `def components(n, edges):
+    parent = list(range(n))
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    count = n
+    for a, b in edges:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+            count -= 1
+    return count`, 'components(5, [[0, 1], [1, 2], [3, 4]])'],
   ['graphs', 'G-42 Floyd Warshall', `def floyd(dist):
     n = len(dist)
     for k in range(n):
