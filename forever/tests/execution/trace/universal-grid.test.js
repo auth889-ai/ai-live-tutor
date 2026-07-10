@@ -104,8 +104,8 @@ test('the universal-path trace passes the SAME elite gate every hand-built mode 
 test('detectLenses registry: best plan first, carrying its compiler', () => {
   const rec = record({ code: ORANGES, entry: ORANGES_ENTRY });
   const plans = detectLenses(rec, { code: ORANGES });
-  assert.equal(plans.length, 1);
-  assert.equal(plans[0].lens, 'grid-walk');
+  assert.equal(plans[0].lens, 'grid-walk', 'the board is the primary lens');
+  assert.ok(plans.slice(1).every((p) => p.confidence <= plans[0].confidence), 'runner-up lenses (the BFS queue) rank behind the board');
   assert.equal(typeof plans[0].compile, 'function');
   assert.deepEqual(detectLenses(record({ code: 'def f(x):\n    return x + 1', entry: 'f(1)' }), { code: '' }), [], 'no family -> empty, honestly');
 });

@@ -60,6 +60,7 @@ function analyzeList(varName, states) {
   const opLines = {};
   let tailRemovals = 0;
   let frontRemovals = 0;
+  let ambiguousRemovals = 0; // 1 element -> empty: tail and front are the SAME cell
   let dirty = false; // a change that is NOT a single clean end-operation -> not a pure stack/queue
 
   for (let i = 1; i < states.length; i += 1) {
@@ -71,6 +72,13 @@ function analyzeList(varName, states) {
     if (cur.length === prev.length + 1 && eq(cur.slice(0, -1), prev)) {
       ops.push({ op: 'add', value: cur[cur.length - 1] });
       opLines.add = states[i].line;
+    } else if (prev.length === 1 && cur.length === 0) {
+      // Popping the LAST element empties the list from both ends at once — calling it a tail
+      // removal here mislabeled every queue that ever drained (BFS queues always do) as
+      // "mixed ends". Record it as ambiguous; the unambiguous pops decide the discipline.
+      ops.push({ op: 'popAmbiguous', value: prev[0] });
+      opLines.popAmbiguous = states[i].line;
+      ambiguousRemovals += 1;
     } else if (cur.length === prev.length - 1 && eq(cur, prev.slice(0, -1))) {
       ops.push({ op: 'popTail', value: prev[prev.length - 1] });
       opLines.popTail = states[i].line;
@@ -85,16 +93,17 @@ function analyzeList(varName, states) {
   }
 
   // Require a clean, consistent LIFO or FIFO discipline with enough operations to be worth it.
-  const removals = tailRemovals + frontRemovals;
+  const removals = tailRemovals + frontRemovals + ambiguousRemovals;
   if (dirty || ops.length < 3 || removals === 0) return null;
   if (tailRemovals > 0 && frontRemovals > 0) return null; // mixed ends -> ambiguous, stay on the floor
 
-  const structure = frontRemovals > 0 ? 'queue' : 'stack';
+  const structure = frontRemovals > 0 ? 'queue' : 'stack'; // all-ambiguous (size never passed 1) reads as a stack
   const isStack = structure === 'stack';
   const mapped = ops.map((o) => (o.op === 'add' ? { op: isStack ? 'push' : 'enqueue', value: o.value } : { op: isStack ? 'pop' : 'dequeue' }));
+  const popLine = isStack ? opLines.popTail ?? opLines.popAmbiguous : opLines.popFront ?? opLines.popAmbiguous;
   const lines = isStack
-    ? { push: opLines.add ?? 1, pop: opLines.popTail ?? 1 }
-    : { enqueue: opLines.add ?? 1, dequeue: opLines.popFront ?? 1 };
+    ? { push: opLines.add ?? 1, pop: popLine ?? 1 }
+    : { enqueue: opLines.add ?? 1, dequeue: popLine ?? 1 };
   return { varName, structure, ops: mapped, lines };
 }
 

@@ -73,4 +73,5 @@ export { detectRecursionTree, compileRecursionTree } from './universal/lenses/re
 export { detectPointerArray, compilePointerArray } from './universal/lenses/pointer-array.js';
 export { detectLinkedList, compileLinkedListLens } from './universal/lenses/linked-list.js';
 export { detectObjectStructure, compileObjectStructure } from './universal/lenses/object-structure.js';
+export { detectCollectionLens, compileCollectionOps } from './universal/lenses/collection-ops.js';
 export { parseStepEvents, STEP_MARKER } from './parse-steps.js';

@@ -65,11 +65,23 @@ test('NOT upgraded: an in-place-mutated array (sorting) stays on the floor', () 
   assert.equal(detectCollectionOps(events), null);
 });
 
-test('NOT upgraded: mixed-end removals are ambiguous; too-few ops stay on the floor', () => {
-  const mixed = [
+test('a drained queue is NOT mixed ends: the last pop (1 element -> empty) is ambiguous and follows the discipline', () => {
+  // BFS queues always drain to empty — the final pop empties the list from BOTH ends at once,
+  // and mislabeling it a tail removal used to reject every queue that finished its work.
+  const drained = [
     ev(1, { x: [] }), ev(1, { x: [1] }), ev(1, { x: [1, 2] }),
-    ev(1, { x: [2] }), // front pop
-    ev(1, { x: [] }), // tail pop  -> mixed ends
+    ev(1, { x: [2] }), // front pop -> FIFO
+    ev(1, { x: [] }), // ambiguous (singleton -> empty) -> resolves to the FIFO discipline
+  ];
+  assert.equal(detectCollectionOps(drained)?.structure, 'queue');
+});
+
+test('NOT upgraded: genuinely mixed-end removals are ambiguous; too-few ops stay on the floor', () => {
+  const mixed = [
+    ev(1, { x: [1, 2, 3] }),
+    ev(1, { x: [1, 2] }), // tail pop (unambiguous: 3 -> 2 elements)
+    ev(1, { x: [2] }), // front pop (unambiguous: 2 -> 1) -> mixed ends for real
+    ev(1, { x: [2, 4] }),
   ];
   assert.equal(detectCollectionOps(mixed), null);
   const tooFew = [ev(1, { y: [] }), ev(1, { y: [1] })];
