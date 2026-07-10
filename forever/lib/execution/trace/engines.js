@@ -66,4 +66,7 @@ export { compileOperationsTrace, OPERATION_STRUCTURES } from './operations/compi
 export { compileRecursionTrace, assembleRecursionProgram, parseCallTree, RECURSION_TRACKER_PY } from './recursion/compiler.js';
 export { compilePointerWalk } from './pointer-walk/compiler.js';
 export { compileLineTrace, assembleLineProgram, parseLineEvents, LINE_TRACKER_PY } from './line-sim/compiler.js';
+export { assembleUniversalProgram, parseUniversalEvents, validateUniversalRecording, UNIVERSAL_TRACKER_PY } from './universal/recorder.js';
+export { detectLenses, LENS_DETECTORS } from './universal/detect.js';
+export { detectGridWalk, compileGridWalk } from './universal/lenses/grid-walk.js';
 export { parseStepEvents, STEP_MARKER } from './parse-steps.js';
