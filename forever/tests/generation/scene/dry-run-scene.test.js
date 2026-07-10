@@ -67,3 +67,23 @@ test('a non-dry_run scene attaches no algorithm object (tracer not called)', asy
   assert.ok(!scene.scene.objects.some((o) => o.renderHint === 'algorithm'));
   assert.equal(traced, false);
 });
+
+test('a real trace REPLACES the static imitations (diagram/list/code), never sits under them', async () => {
+  const withDupes = async () => ({
+    objects: [
+      { id: 'obj_title', objectType: 'scene_title', renderHint: 'text', region: 'notebook_body', lineNumber: 1, content: 'Dry Run', sourceRef: { chunkId: sourcePack.chunks[0].id } },
+      { id: 'dup_diagram', objectType: 'graph', renderHint: 'diagram', region: 'notebook_body', lineNumber: 2, content: { nodes: [], edges: [] }, sourceRef: { chunkId: sourcePack.chunks[0].id } },
+      { id: 'dup_steps', objectType: 'step_trace', renderHint: 'list', region: 'notebook_body', lineNumber: 3, content: { items: ['Step 1'] }, sourceRef: { chunkId: sourcePack.chunks[0].id } },
+    ],
+    transcript: [], usages: [], rounds: 0,
+  });
+  const scene = await generateSceneFromSourcePack(sourcePack, {
+    sceneId: 'sc_dedup', layout: 'teacher_notebook_code',
+    brief: { pedagogicalRole: 'dry_run', directive: 'trace it' },
+    agents: { runGroundingReview: withDupes, traceExecution: fakeTrace, writeVoice: fakeVoice },
+  });
+  const hints = scene.scene.objects.map((o) => o.renderHint);
+  assert.ok(hints.includes('algorithm'), 'the real trace ships');
+  assert.ok(hints.includes('text'), 'text/callouts stay');
+  assert.ok(!hints.includes('diagram') && !hints.includes('list'), 'static imitations are gone');
+});

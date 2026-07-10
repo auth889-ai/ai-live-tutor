@@ -49,6 +49,14 @@ export async function generateSceneFromSourcePack(
       content: traced.trace,
       sourceRef: { chunkId: sourcePack.chunks[0].id },
     };
+    // The dry run IS the scene: the Board Director's static diagram/step-list duplicates the
+    // real animated trace with hand-authored (driftable) content and buries it under clutter —
+    // measured live on the Alien Dictionary lesson, where a static graph + static step list
+    // rendered above the correct animated one. Keep text/callouts, drop the imitations.
+    const DUPLICATED_BY_TRACE = new Set(['diagram', 'list', 'code']);
+    for (let i = objects.length - 1; i >= 0; i -= 1) {
+      if (DUPLICATED_BY_TRACE.has(objects[i]?.renderHint)) objects.splice(i, 1);
+    }
     objects.push(algorithmObject);
   }
 
