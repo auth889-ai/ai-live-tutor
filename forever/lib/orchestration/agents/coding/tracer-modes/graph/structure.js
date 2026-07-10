@@ -22,7 +22,7 @@ itself and grows/walks exactly as the real run did. Do not write tracking code.`
     const run = await exec({ language: 'python', source });
     if (run.timedOut) throw new Error('structure run timed out (likely an infinite loop or a cycle without a guard)');
     const payload = parseStructureEvents(run.stdout);
-    if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(0, 300)}` : 'run printed no @@STRUCTURE line');
+    if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(-400).trim()}` : 'run printed no @@STRUCTURE line');
     const trace = compileStructureTrace({ ...payload, code, entry: json.structure.entry, language: 'python' });
     trace.meta = { tool: 'structure', params: { code, entry: json.structure.entry } };
     return trace;

@@ -21,7 +21,7 @@ algorithm is a quality failure, not a safe choice.`,
     const run = await exec({ language: 'python', source: assembleLineProgram({ code, entry: json.linesim.entry }) });
     if (run.timedOut) throw new Error('simulation timed out (likely an infinite loop)');
     const payload = parseLineEvents(run.stdout);
-    if (!payload) throw new Error(run.stderr ? `simulation errored: ${run.stderr.slice(0, 300)}` : 'simulation printed no @@LINESIM line');
+    if (!payload) throw new Error(run.stderr ? `simulation errored: ${run.stderr.slice(-400).trim()}` : 'simulation printed no @@LINESIM line');
     // AUTO-UPGRADE off the floor: a clean in-code collection (tail add/pop = stack, front pop =
     // queue, growing string-keyed dict = hash map) renders the elite operations view instead —
     // no per-problem declaration. Falls back to the honest line trace when unsure.

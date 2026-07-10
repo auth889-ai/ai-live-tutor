@@ -79,6 +79,9 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
         explanation = narratePeek({
           op, structure, empty: items.length === 0, value: isStack ? items[items.length - 1] : items[0], size: items.length,
         });
+      } else if (op === 'init' || op === 'create' || op === 'new') {
+        // Constructor beat (LRU cache, custom classes): a real teaching moment, not an error.
+        explanation = `The ${isStack ? 'stack' : 'queue'} is created${value !== undefined ? ` with capacity ${JSON.stringify(value)}` : ''} — empty for now; every slot you see will be earned by an operation, not assumed.`;
       } else {
         throw new Error(`unknown ${structure} operation "${op}"`);
       }
@@ -139,6 +142,9 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
         walkChain(op, key, b, Math.max(at, 0));
         if (at >= 0) chain.splice(at, 1);
         explanation = narrateMapRemove({ key, bucket: b, found: at >= 0 });
+      } else if (op === 'init' || op === 'create' || op === 'new') {
+        // Constructor beat (LRU cache): the empty table is the honest starting frame.
+        explanation = `The map is created${value !== undefined ? ` with capacity ${JSON.stringify(value)}` : ''} — ${buckets} empty buckets; watch each key hash into its home as the operations arrive.`;
       } else {
         throw new Error(`unknown hash_map operation "${op}"`);
       }

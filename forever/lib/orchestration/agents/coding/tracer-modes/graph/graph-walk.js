@@ -26,7 +26,7 @@ tracking code. Declare every lens role that exists in the code; skip roles it do
     const run = await exec({ language: 'python', source: assembleLineProgram({ code, entry: json.graphwalk.entry }) });
     if (run.timedOut) throw new Error('graph walk timed out (likely an infinite loop)');
     const payload = parseLineEvents(run.stdout);
-    if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(0, 300)}` : 'run printed no @@LINESIM line');
+    if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(-400).trim()}` : 'run printed no @@LINESIM line');
     const trace = compileGraphWalk({
       ...payload,
       code,

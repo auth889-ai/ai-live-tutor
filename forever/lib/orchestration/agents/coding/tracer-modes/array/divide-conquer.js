@@ -24,7 +24,7 @@ tracking code. Plain recursion WITHOUT an array (fib, subsets) stays in RECURSIO
     const run = await exec({ language: 'python', source });
     if (run.timedOut) throw new Error('divide & conquer run timed out (likely unbounded recursion)');
     const payload = parseDivideEvents(run.stdout);
-    if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(0, 300)}` : 'run printed no @@DIVIDE line');
+    if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(-400).trim()}` : 'run printed no @@DIVIDE line');
     const trace = compileDivideConquer({
       ...payload,
       code,

@@ -31,7 +31,7 @@ under the student's own variable name. Do not write tracking code.`,
     const run = await exec({ language: 'python', source });
     if (run.timedOut) throw new Error('trie run timed out (likely an infinite loop)');
     const payload = parseTrieEvents(run.stdout);
-    if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(0, 300)}` : 'run printed no @@TRIE line');
+    if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(-400).trim()}` : 'run printed no @@TRIE line');
     const trace = compileTrieTrace({ ...payload, code, entry: t.entry, language: 'python' });
     trace.meta = {
       tool: 'trie',

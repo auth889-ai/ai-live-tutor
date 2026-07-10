@@ -23,7 +23,7 @@ every swap is a visible flash, and set "examine" for search algorithms so the pr
     const run = await exec({ language: 'python', source: assembleLineProgram({ code, entry: json.pointerwalk.entry }) });
     if (run.timedOut) throw new Error('pointer walk timed out (likely an infinite loop)');
     const payload = parseLineEvents(run.stdout);
-    if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(0, 300)}` : 'run printed no @@LINESIM line');
+    if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(-400).trim()}` : 'run printed no @@LINESIM line');
     const trace = compilePointerWalk({
       ...payload,
       code,

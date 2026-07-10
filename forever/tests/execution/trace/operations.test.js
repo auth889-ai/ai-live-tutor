@@ -88,3 +88,16 @@ test('honest failures: unknown structure/op, empty or runaway ops', () => {
   assert.throws(() => compileOperationsTrace({ structure: 'stack', code: CODE, ops: [{ op: 'yeet', value: 1 }] }), /unknown stack operation/);
   assert.throws(() => compileOperationsTrace({ structure: 'queue', code: CODE, ops: Array.from({ length: 41 }, () => ({ op: 'enqueue', value: 1 })) }), /capped at 40/);
 });
+
+test('constructor ops (init/create) are a teaching beat, not an error (LRU family)', () => {
+  const st = compileOperationsTrace({
+    structure: 'stack', code: 'x', lines: {},
+    ops: [{ op: 'init', value: 2 }, { op: 'push', value: 1 }],
+  });
+  assert.match(st.steps[0].explanation, /created with capacity 2/);
+  const hm = compileOperationsTrace({
+    structure: 'hash_map', code: 'x', lines: {},
+    ops: [{ op: 'init' }, { op: 'put', key: 'a', value: 1 }],
+  });
+  assert.match(hm.steps[0].explanation, /map is created/);
+});

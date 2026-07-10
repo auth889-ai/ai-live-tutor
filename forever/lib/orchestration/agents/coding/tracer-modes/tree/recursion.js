@@ -34,7 +34,7 @@ animation step — do not write tracking code.`,
     const run = await exec({ language: 'python', source });
     if (run.timedOut) throw new Error('tracker timed out (likely unbounded recursion)');
     const callTree = parseCallTree(run.stdout);
-    if (!callTree) throw new Error(run.stderr ? `tracker errored: ${run.stderr.slice(0, 300)}` : 'tracker printed no @@CALLTREE line');
+    if (!callTree) throw new Error(run.stderr ? `tracker errored: ${run.stderr.slice(-400).trim()}` : 'tracker printed no @@CALLTREE line');
     const trace = compileRecursionTrace({ callTree, code, language: 'python', lines: json.recursion.lines ?? {} });
     // The trace carries its own recipe so the PLAYER can re-run this engine on student input.
     trace.meta = {

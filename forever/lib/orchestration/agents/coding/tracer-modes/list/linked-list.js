@@ -30,7 +30,7 @@ tracking code.`,
     const run = await exec({ language: 'python', source });
     if (run.timedOut) throw new Error('linked-list run timed out (likely an infinite loop — a cycle without Floyd?)');
     const payload = parseListEvents(run.stdout);
-    if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(0, 300)}` : 'run printed no @@LISTWALK line');
+    if (!payload) throw new Error(run.stderr ? `run errored: ${run.stderr.slice(-400).trim()}` : 'run printed no @@LISTWALK line');
     const trace = compileLinkedListTrace({ ...payload, code, entry: json.linkedlist.entry, language: 'python' });
     trace.meta = {
       tool: 'linkedlist',
