@@ -12,6 +12,7 @@ import { detectLinkedList, compileLinkedListLens } from './lenses/linked-list.js
 import { detectObjectStructure, compileObjectStructure } from './lenses/object-structure.js';
 import { detectCollectionLens, compileCollectionOps } from './lenses/collection-ops.js';
 import { detectDpTable, compileDpTableLens } from './lenses/dp-table.js';
+import { detectGraphAdjacency, compileGraphAdjacency } from './lenses/graph-adjacency.js';
 
 export const LENS_DETECTORS = Object.freeze([
   // dp-table above grid-walk: both fire on a mutating 2D list, but the DP detector demands
@@ -25,6 +26,9 @@ export const LENS_DETECTORS = Object.freeze([
   // collection IS the story (Valid Parentheses, frequency counters).
   { key: 'dp-table', detect: detectDpTable, compile: compileDpTableLens },
   { key: 'grid-walk', detect: detectGridWalk, compile: compileGridWalk },
+  // graph-adjacency (0.88) between the boards and the object lenses: a walked adjacency dict
+  // beats its own queue/recursion (Course Schedule shows the GRAPH, not just Kahn's queue).
+  { key: 'graph-adjacency', detect: detectGraphAdjacency, compile: compileGraphAdjacency },
   { key: 'linked-list', detect: detectLinkedList, compile: compileLinkedListLens },
   { key: 'object-structure', detect: detectObjectStructure, compile: compileObjectStructure },
   { key: 'recursion-tree', detect: detectRecursionTree, compile: compileRecursionTree },

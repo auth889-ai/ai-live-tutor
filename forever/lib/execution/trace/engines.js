@@ -75,4 +75,5 @@ export { detectLinkedList, compileLinkedListLens } from './universal/lenses/link
 export { detectObjectStructure, compileObjectStructure } from './universal/lenses/object-structure.js';
 export { detectCollectionLens, compileCollectionOps } from './universal/lenses/collection-ops.js';
 export { detectDpTable, compileDpTableLens } from './universal/lenses/dp-table.js';
+export { detectGraphAdjacency, compileGraphAdjacency } from './universal/lenses/graph-adjacency.js';
 export { parseStepEvents, STEP_MARKER } from './parse-steps.js';
