@@ -18,7 +18,7 @@ import { validateExecutionTrace } from '../../../board/execution/execution-trace
 
 import {
   narrateMoves, narrateSwap, narrateWrite, narrateIntroduced, narrateUpdated,
-  narrateEliminated, narrateWindow, narrateClose, narrateCollection,
+  narrateEliminated, narrateWindow, narrateClose, narrateCollection, narrateMap,
 } from './narrate.js';
 
 // compilePointerWalk({ events, result, code, array, pointers, examine?, arrayVar?,
@@ -29,7 +29,7 @@ import {
 // (binary search). window: [leftName, rightName] — cells inside are the current window.
 export function compilePointerWalk({
   events, result, code, array, pointers = [], examine = null, arrayVar = null,
-  eliminatedOutside = null, window = null, stackVar = null, queueVar = null, language = 'python',
+  eliminatedOutside = null, window = null, stackVar = null, queueVar = null, mapVar = null, language = 'python',
 } = {}) {
   if (!Array.isArray(events) || events.length === 0) throw new Error('pointer walk recorded no events');
   // The shared line tracker appends {'truncated': true} at its recording cap — honor it here
@@ -45,6 +45,7 @@ export function compilePointerWalk({
   const steps = [];
   let prev = {};
   let liveValues = null; // latest known in-place contents (arrayVar tracking)
+  let lastMap = null; // latest known companion-map contents (mapVar tracking)
   let anyPointerMoved = false; // a walk where no pointer EVER moves is a mis-declared trace
   for (const ev of events) {
     const line = Number(ev.line);
@@ -68,8 +69,18 @@ export function compilePointerWalk({
     const queueSnap = queueVar && Array.isArray(locals[queueVar]) ? locals[queueVar] : null;
     const stackChanged = stackSnap && JSON.stringify(prev[stackVar]) !== JSON.stringify(stackSnap);
     const queueChanged = queueSnap && JSON.stringify(prev[queueVar]) !== JSON.stringify(queueSnap);
+    // Declared companion map (Two Sum's seen, window counts): its live entries ride every step
+    // as the trace table, and a put/update is a step of its own even when no pointer moved.
+    const mapSnap = mapVar && locals[mapVar] && typeof locals[mapVar] === 'object' && !Array.isArray(locals[mapVar]) ? locals[mapVar] : null;
+    // Compare CONTENTS against contents ({} on first sight): the dict merely APPEARING empty
+    // is not a teaching moment, and an empty narration must never trigger a step.
+    const prevMap = prev[mapVar] && typeof prev[mapVar] === 'object' && !Array.isArray(prev[mapVar]) ? prev[mapVar] : {};
+    const mapNote = mapSnap && JSON.stringify(prevMap) !== JSON.stringify(mapSnap)
+      ? narrateMap({ name: mapVar, was: prevMap, now: mapSnap })
+      : '';
+    if (mapSnap) lastMap = mapSnap;
 
-    if (moved.length === 0 && written.length === 0 && changedScalars.length === 0 && !stackChanged && !queueChanged) {
+    if (moved.length === 0 && written.length === 0 && changedScalars.length === 0 && !stackChanged && !queueChanged && !mapNote) {
       prev = { ...prev, ...locals };
       continue;
     }
@@ -102,6 +113,7 @@ export function compilePointerWalk({
     if (updated.length > 0) parts.push(narrateUpdated(updated));
     if (stackChanged) parts.push(narrateCollection({ kind: 'stack', was: Array.isArray(prev[stackVar]) ? prev[stackVar] : [], now: stackSnap }));
     if (queueChanged) parts.push(narrateCollection({ kind: 'queue', was: Array.isArray(prev[queueVar]) ? prev[queueVar] : [], now: queueSnap }));
+    if (mapNote) parts.push(mapNote);
     const searchNote = eliminatedOutside && eliminated.length > 0
       ? narrateEliminated({ lo: locals[eliminatedOutside[0]], hi: locals[eliminatedOutside[1]], eliminatedCount: eliminated.length, total: array.length })
       : '';
@@ -122,6 +134,7 @@ export function compilePointerWalk({
       },
       ...(stackSnap ? { stack: stackSnap } : {}),
       ...(queueSnap ? { queue: queueSnap } : {}),
+      ...(lastMap ? { traceRow: { ...lastMap } } : {}),
       variables: Object.fromEntries(Object.entries(locals).filter(([k, v]) => k !== arrayVar && isScalar(v))),
     });
     prev = { ...prev, ...locals };
@@ -135,6 +148,7 @@ export function compilePointerWalk({
     array: last.array,
     ...(last.stack ? { stack: last.stack } : {}),
     ...(last.queue ? { queue: last.queue } : {}),
+    ...(last.traceRow ? { traceRow: last.traceRow } : {}),
     variables: last.variables,
   });
 

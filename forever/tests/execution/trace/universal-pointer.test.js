@@ -100,6 +100,29 @@ test('in-place reversal: the hero is its own arrayVar and swaps flash as real ce
   assert.deepEqual(finalValues, [5, 4, 3, 2, 1], 'the final cells are the really-reversed array');
 });
 
+test('COMPOSITION: Two Sum shows the array AND its memory — the seen map rides as a live table', () => {
+  const twoSum = [
+    'def two_sum(arr, t):',
+    '    seen = {}',
+    '    for i in range(len(arr)):',
+    '        need = t - arr[i]',
+    '        if need in seen:',
+    '            return [seen[need], i]',
+    '        seen[arr[i]] = i',
+    '    return []',
+  ].join('\n');
+  const rec = record({ code: twoSum, entry: 'two_sum([2, 7, 11, 15], 18)' });
+  const plan = detectPointerArray(rec, { code: twoSum });
+  assert.equal(plan.mapVar, 'seen', "the growing scalar-valued dict is the walk's memory — int keys count");
+
+  const trace = compilePointerArray({ recording: rec, plan, code: twoSum });
+  const put = trace.steps.find((s) => /seen\[2\] = 0 lands in the map/.test(s.explanation));
+  assert.ok(put, 'a map put is narrated with its REAL key and value');
+  const tabled = trace.steps.filter((s) => s.traceRow);
+  assert.ok(tabled.length >= 3, 'the live map rides steps as the trace table');
+  assert.deepEqual(tabled.at(-1).traceRow, { 2: 0, 7: 1 }, 'the final table is the real recorded map');
+});
+
 test('honest refusals + registry routing', () => {
   const fib = record({ code: 'def fib(n):\n    if n <= 1:\n        return n\n    return fib(n - 1) + fib(n - 2)', entry: 'fib(4)' });
   assert.equal(detectPointerArray(fib, { code: '' }), null, 'no array -> null');

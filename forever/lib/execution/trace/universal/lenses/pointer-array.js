@@ -131,6 +131,23 @@ export function detectPointerArray(recording, { code = '' } = {}) {
     }
   }
 
+  // A COMPANION map is the walk's MEMORY (Two Sum's seen, window counts): a scalar-valued
+  // dict that changes as the pointers move. Int keys count — this is a side table, not the
+  // bucket-grid lesson, so the collection-ops string-key rule does not apply here.
+  let mapVar = null;
+  for (const name of new Set(heroLines.flatMap((e) => Object.keys(e.locals)))) {
+    if (name === hero.name || name === stackVar || name === queueVar) continue;
+    const snaps = heroLines
+      .map((e) => e.locals[name])
+      .filter((v) => v && typeof v === 'object' && !Array.isArray(v) && !('@ref' in v));
+    if (snaps.length < 2) continue;
+    if (!snaps.every((s) => Object.values(s).every((v) => v === null || ['number', 'string', 'boolean'].includes(typeof v)))) continue;
+    let changesCount = 0;
+    for (let i = 1; i < snaps.length; i += 1) if (JSON.stringify(snaps[i - 1]) !== JSON.stringify(snaps[i])) changesCount += 1;
+    const gained = Object.keys(snaps.at(-1)).length > Object.keys(snaps[0]).length;
+    if (changesCount >= 2 && gained) { mapVar = name; break; }
+  }
+
   return {
     lens: 'pointer-array',
     confidence: role.eliminatedOutside || role.window ? 0.8 : 0.75,
@@ -141,6 +158,7 @@ export function detectPointerArray(recording, { code = '' } = {}) {
     window: role.window ?? null,
     stackVar,
     queueVar,
+    mapVar,
   };
 }
 
@@ -161,5 +179,6 @@ export function compilePointerArray({ recording, plan, code, language = 'python'
     window: plan.window,
     stackVar: plan.stackVar,
     queueVar: plan.queueVar,
+    mapVar: plan.mapVar,
   });
 }

@@ -57,6 +57,22 @@ export function narrateClose({ truncated, result, liveValues }) {
   return `The walk is over and the call returns ${JSON.stringify(result)}.${finalValues} Replay the arrows in your head: every move you watched was a decision the code made on real data — that decision pattern IS the algorithm.`;
 }
 
+// Map beat (Two Sum's seen, sliding-window counts): the entry that just landed or changed,
+// narrated with its real key and value — the map is the walk's MEMORY, and that memory is
+// the whole reason a second pass never happens.
+export function narrateMap({ name, was, now }) {
+  const added = Object.keys(now).filter((k) => !(k in was));
+  const updated = Object.keys(now).filter((k) => k in was && JSON.stringify(was[k]) !== JSON.stringify(now[k]));
+  const removed = Object.keys(was).filter((k) => !(k in now));
+  const bits = [];
+  if (added.length > 0) bits.push(added.map((k) => `${name}[${k}] = ${JSON.stringify(now[k])} lands in the map`).join('; '));
+  if (updated.length > 0) bits.push(updated.map((k) => `${name}[${k}] updates to ${JSON.stringify(now[k])}`).join('; '));
+  if (removed.length > 0) bits.push(removed.map((k) => `${name}[${k}] is forgotten (dropped from the map)`).join('; '));
+  if (bits.length === 0) return '';
+  const size = Object.keys(now).length;
+  return ` ${bits.join(', and ')} — ${size} entr${size === 1 ? 'y' : 'ies'} remembered. The map is the walk's memory of what it has already seen, and checking it beats re-scanning every time.`;
+}
+
 // Collection beat (monotonic stack / BFS queue): pushes and pops narrated from the REAL
 // recorded contents — the moment the structure grows or gives something up is the teaching.
 export function narrateCollection({ kind, was, now }) {
