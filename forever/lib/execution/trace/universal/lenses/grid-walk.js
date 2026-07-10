@@ -101,7 +101,10 @@ export function detectGridWalk(recording, { code = '' } = {}) {
 
   return {
     lens: 'grid-walk',
-    confidence: queue ? 0.9 : 0.7,
+    // 0.85 even WITHOUT a queue: a recursive flood fill has no frontier list, but its lesson
+    // is still the board — the tie with recursion-tree breaks toward grid-walk by registry
+    // order, exactly as the registry comment promises.
+    confidence: queue ? 0.9 : 0.85,
     grid: { name: grid.name, rows: grid.rows, cols: grid.cols },
     queue,
     counters,
