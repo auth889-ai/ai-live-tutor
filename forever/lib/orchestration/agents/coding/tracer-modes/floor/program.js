@@ -42,7 +42,11 @@ Hard requirements:
     const steps = parseStepEvents(run.stdout);
     if (steps.length === 0) {
       if (process.env.TRACE_DEBUG) console.error(`[tracer] --program--\n${program}\n--stdout--\n${run.stdout?.slice(0, 300)}`);
-      throw new Error(run.stderr ? `Program errored: ${run.stderr.slice(0, 400)}` : 'Program printed no @@STEP lines.');
+      // Battery-measured: a bare "printed no @@STEP lines" burned 4 blind retries — show the
+      // agent what the program ACTUALLY printed and name the usual cause.
+      throw new Error(run.stderr
+        ? `Program errored: ${run.stderr.slice(-400).trim()}`
+        : `Program printed no @@STEP lines — it ran but never printed. Usual cause: the printing loop is inside a function that is never CALLED at module level, or steps are collected in a list without printing. Actual stdout started with: ${JSON.stringify((run.stdout ?? '').slice(0, 120))}`);
     }
     const trace = { language: lang, code, views, steps };
     try {

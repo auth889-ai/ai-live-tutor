@@ -9,7 +9,9 @@ export const lineSimMode = {
   key: 'linesim',
   label: 'Line simulation',
   prompt: `LINE-SIM MODE (python only) — ONLY for algorithms with genuinely NO structure to draw (pure math
-like GCD, string building, greedy counting): INSTEAD of "program", output
+like GCD, BIT MANIPULATION / XOR tricks, string building, greedy counting — and for those,
+PREFER this over a hand-written "program": the tracer records every line and variable for free,
+and any list in the run is still drawn as cells automatically): INSTEAD of "program", output
   "linesim": {"entry": "<ONE call expression invoking 'code', e.g. gcd(48, 18)>"}
 and make "code" the clean runnable function definition. Our tracer executes it for real and
 records every line + variable change. NEVER pick line-sim because another mode looks hard or a
