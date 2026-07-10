@@ -601,6 +601,35 @@ def safe_nodes(adj):
                 q.append(v)
     return sorted(safe)
 g = {'A': ['B'], 'B': ['C'], 'C': [], 'D': ['A', 'C']}`, 'safe_nodes(g)'],
+  ['graphs', 'Dijkstra (weighted adjacency idiom)', `import heapq
+def dijkstra(adj, start):
+    dist = {u: 999 for u in adj}
+    dist[start] = 0
+    pq = [(0, start)]
+    while pq:
+        d, u = heapq.heappop(pq)
+        if d > dist[u]:
+            continue
+        for v, w in adj[u]:
+            if d + w < dist[v]:
+                dist[v] = d + w
+                heapq.heappush(pq, (dist[v], v))
+    return dist
+g = {'A': [('B', 4), ('C', 8)], 'B': [('C', 3)], 'C': []}`, "dijkstra(g, 'A')"],
+  ['graphs', 'BFS (list-of-lists adjacency idiom)', `from collections import deque
+def bfs(adj, start):
+    visited = [start]
+    q = deque([start])
+    order = []
+    while q:
+        u = q.popleft()
+        order.append(u)
+        for v in adj[u]:
+            if v not in visited:
+                visited.append(v)
+                q.append(v)
+    return order
+g = [[1, 2], [0, 3], [0], [1]]`, 'bfs(g, 0)'],
   ['graphs', 'G-32 Dijkstra (heap + dist)', `import heapq
 def dijkstra(adj, weights, start):
     dist = {u: 999 for u in adj}

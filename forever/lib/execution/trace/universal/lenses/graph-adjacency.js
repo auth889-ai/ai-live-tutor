@@ -5,9 +5,19 @@
 // dist table as trace rows — but needs the graph and a role lens DECLARED. This detector
 // derives both from the recording:
 //
-//   graph     = the dict-of-lists local with the most edges (keys ∪ members = node ids;
-//               symmetric pairs render undirected). Dict only, deliberately: a list-of-lists
-//               is ambiguous with 2D grids — that boundary stays with grid-walk/dp-table.
+//   graph     = the adjacency local with the most edges, in any of the three idioms the
+//               family is written in:
+//                 dict-of-lists   {u: [v, ...]}          — keys ∪ members = node ids
+//                 weighted dict   {u: [(v, w), ...]}     — the pair position holding node ids
+//                                                          is resolved by consistency across
+//                                                          ALL members; weights ride the edges
+//                 list-of-lists   adj[u] = [v, ...]      — accepted only when it CANNOT be a
+//                                                          grid: ragged/short rows, append-only
+//                                                          history (a walked grid mutates cells
+//                                                          in place), members in [0, n)
+//               Symmetric edge sets render undirected. Raw edge lists ([[u,v],...] walked
+//               directly) are deliberately NOT claimed here — that shape belongs to the future
+//               union-find lens; the floor covers it honestly until then.
 //   current   = the scalar local that SUBSCRIPTS the adjacency in code (adj[u]) and only
 //               ever holds node ids
 //   visited   = a node-member collection that only GROWS
@@ -26,20 +36,15 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
   const lines = (recording?.events ?? []).filter((e) => e.ev === 'line');
   if (lines.length === 0) return null;
 
-  // THE ADJACENCY: last (most complete) sighting of a dict whose every value is a list.
+  // THE ADJACENCY: the local holding the most edges in any of the three idioms.
   let adj = null;
   for (const name of new Set(lines.flatMap((e) => Object.keys(e.locals)))) {
-    const snaps = lines.map((e) => e.locals[name]).filter(isPlainObj);
+    const snaps = lines.map((e) => e.locals[name]).filter((v) => v !== undefined && v !== null);
     const final = snaps.at(-1);
     if (!final) continue;
-    const entries = Object.entries(final);
-    if (entries.length < 2 || !entries.every(([, v]) => Array.isArray(v))) continue;
-    const ids = new Set(entries.map(([k]) => String(k)));
-    const members = entries.flatMap(([, v]) => v);
-    if (!members.every((m) => (typeof m === 'string' || typeof m === 'number') && ids.has(String(m)))) continue;
-    const edges = entries.flatMap(([k, v]) => v.map((m) => [String(k), String(m)]));
-    if (edges.length === 0) continue;
-    if (!adj || edges.length > adj.edges.length) adj = { name, ids, edges };
+    const cand = isPlainObj(final) ? adjFromDict(final) : Array.isArray(final) ? adjFromLists(final, snaps) : null;
+    if (!cand || cand.edges.length === 0) continue;
+    if (!adj || cand.edges.length > adj.edges.length) adj = { name, ...cand };
   }
   if (!adj) return null;
   const isNodeVal = (v) => (typeof v === 'string' || typeof v === 'number') && adj.ids.has(String(v));
@@ -131,11 +136,58 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
     adjName: adj.name,
     graph: {
       nodes: [...adj.ids].map((id) => ({ id, label: id })),
-      edges: adj.edges.map(([from, to]) => ({ from, to })),
+      edges: adj.edges.map(([from, to, weight]) => ({ from, to, ...(weight !== undefined ? { weight } : {}) })),
       directed,
     },
     roles,
   };
+}
+
+// {u: [v, ...]} or {u: [(v, w), ...]} -> {ids, edges: [[from, to, weight?]]} | null.
+// The pair position holding node ids is resolved by CONSISTENCY across all members — a lone
+// coincidence (a weight that equals some node id) cannot flip the reading.
+function adjFromDict(final) {
+  const entries = Object.entries(final);
+  if (entries.length < 2 || !entries.every(([, v]) => Array.isArray(v))) return null;
+  const ids = new Set(entries.map(([k]) => String(k)));
+  const members = entries.flatMap(([, v]) => v);
+  const scalarId = (m) => (typeof m === 'string' || typeof m === 'number') && ids.has(String(m));
+  const isPair = (m) => Array.isArray(m) && m.length === 2 && m.every((x) => typeof x === 'string' || typeof x === 'number');
+  if (members.every(scalarId)) {
+    return { ids, edges: entries.flatMap(([k, v]) => v.map((m) => [String(k), String(m)])) };
+  }
+  if (members.length > 0 && members.every(isPair)) {
+    const nodePos = members.every((m) => ids.has(String(m[0]))) ? 0 : members.every((m) => ids.has(String(m[1]))) ? 1 : null;
+    if (nodePos === null) return null;
+    return { ids, edges: entries.flatMap(([k, v]) => v.map((m) => [String(k), String(m[nodePos]), m[1 - nodePos]])) };
+  }
+  return null;
+}
+
+// adj[u] = [v, ...] -> {ids, edges} | null — accepted only when it CANNOT be a walked grid:
+// members are ints in [0, n), the shape is un-grid-like (ragged or thin rows), and the history
+// is append-only (a walked grid REWRITES cells in place; adjacency only ever gains members).
+function adjFromLists(final, snaps) {
+  const n = final.length;
+  if (n < 2 || !final.every((row) => Array.isArray(row))) return null;
+  if (!final.every((row) => row.every((m) => Number.isInteger(m) && m >= 0 && m < n))) return null;
+  const lens = final.map((row) => row.length);
+  const gridShaped = new Set(lens).size === 1 && lens[0] >= 2;
+  if (gridShaped) return null; // a rectangle of ints >=2 wide belongs to the grid family
+  for (let i = 1; i < snaps.length; i += 1) {
+    const prev = snaps[i - 1];
+    const cur = snaps[i];
+    if (!Array.isArray(prev) || !Array.isArray(cur)) continue;
+    for (let r = 0; r < Math.min(prev.length, cur.length); r += 1) {
+      if (!Array.isArray(prev[r]) || !Array.isArray(cur[r])) return null;
+      if (cur[r].length < prev[r].length) return null;
+      for (let k = 0; k < prev[r].length; k += 1) {
+        if (JSON.stringify(prev[r][k]) !== JSON.stringify(cur[r][k])) return null; // in-place rewrite -> a grid
+      }
+    }
+  }
+  const ids = new Set(final.map((_, i) => String(i)));
+  return { ids, edges: final.flatMap((row, u) => row.map((v) => [String(u), String(v)])) };
 }
 
 // Adapt the recording to the proven graph-walk compiler: its events ARE our line events.
