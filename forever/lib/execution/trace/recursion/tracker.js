@@ -30,6 +30,10 @@ def _safe(v, depth=0):
         return [_safe(x, depth + 1) for x in list(v)[:20]]
     if isinstance(v, dict):
         return {str(k): _safe(x, depth + 1) for k, x in list(v.items())[:20]}
+    for attr in ('val', 'value', 'v', 'data', 'name', 'key'):
+        p = getattr(v, attr, None)
+        if isinstance(p, (int, float, str, bool)):
+            return type(v).__name__ + '(' + repr(p) + ')'
     return repr(v)[:40]
 
 def _trace_call(*args):
@@ -153,6 +157,10 @@ def _safe(v, depth=0):
         return [_safe(x, depth + 1) for x in list(v)[:20]]
     if isinstance(v, dict):
         return {str(k): _safe(x, depth + 1) for k, x in list(v.items())[:20]}
+    for attr in ('val', 'value', 'v', 'data', 'name', 'key'):
+        p = getattr(v, attr, None)
+        if isinstance(p, (int, float, str, bool)):
+            return type(v).__name__ + '(' + repr(p) + ')'
     return repr(v)[:40]
 
 def _tr(frame, event, arg):
