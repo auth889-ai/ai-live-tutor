@@ -8,11 +8,15 @@
 import { detectGridWalk, compileGridWalk } from './lenses/grid-walk.js';
 import { detectRecursionTree, compileRecursionTree } from './lenses/recursion-tree.js';
 import { detectPointerArray, compilePointerArray } from './lenses/pointer-array.js';
+import { detectLinkedList, compileLinkedListLens } from './lenses/linked-list.js';
 
 export const LENS_DETECTORS = Object.freeze([
   // grid-walk before recursion-tree: a recursive flood fill is BOTH, but the board is the
   // teaching view there — the call tree of a 40-cell DFS is noise, the spreading grid is the lesson.
+  // linked-list before recursion-tree for the same reason: a recursive reversal's lesson is the
+  // arrows flipping on the chain, not its call tree (equal confidence — registry order breaks the tie).
   { key: 'grid-walk', detect: detectGridWalk, compile: compileGridWalk },
+  { key: 'linked-list', detect: detectLinkedList, compile: compileLinkedListLens },
   { key: 'recursion-tree', detect: detectRecursionTree, compile: compileRecursionTree },
   { key: 'pointer-array', detect: detectPointerArray, compile: compilePointerArray },
 ]);
