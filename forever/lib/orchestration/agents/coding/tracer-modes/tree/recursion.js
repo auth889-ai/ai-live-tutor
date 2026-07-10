@@ -10,6 +10,7 @@ export const recursionMode = {
   prompt: `RECURSION MODE (python only) — when the algorithm IS a recursive function whose CALL TREE is the lesson
 (fibonacci, subsets, tree recursion, top-down DP/memoization): INSTEAD of "program", output
   "recursion": {"fnName": "fib", "args": [5], "memoize": true,
+                "entry": "maxPathSum(tree)" (ONLY when fnName is NESTED inside a wrapper: the ONE outer call; build its input at module level in code),
                 "lines": {"call": <line of the recursive call>, "base": <line of the base-case return>,
                           "memo": <line of the memo check, if any>, "combine": <line combining results>}}
 and make "code" EXACTLY the clean recursive function definition (def fnName(...)), nothing else.
