@@ -72,4 +72,5 @@ export { detectGridWalk, compileGridWalk } from './universal/lenses/grid-walk.js
 export { detectRecursionTree, compileRecursionTree } from './universal/lenses/recursion-tree.js';
 export { detectPointerArray, compilePointerArray } from './universal/lenses/pointer-array.js';
 export { detectLinkedList, compileLinkedListLens } from './universal/lenses/linked-list.js';
+export { detectObjectStructure, compileObjectStructure } from './universal/lenses/object-structure.js';
 export { parseStepEvents, STEP_MARKER } from './parse-steps.js';
