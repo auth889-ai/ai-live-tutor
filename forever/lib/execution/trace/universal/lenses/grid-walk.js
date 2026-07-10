@@ -39,23 +39,26 @@ export function detectGridWalk(recording, { code = '' } = {}) {
       dims.set(k, d);
     }
   }
+  // THE BOARD is the candidate that MUTATES the most, not the one seen most often: in
+  // 0/1-Matrix the static input grid and the filling dist table appear in the same events —
+  // the lesson is on the one whose cells change.
   let grid = null;
   for (const [name, d] of dims) {
     if (d.unstable || d.count < Math.max(2, lines.length / 3)) continue;
-    if (!grid || d.count > grid.count) grid = { name, rows: d.rows, cols: d.cols, count: d.count };
+    let mutations = 0;
+    let prev = null;
+    for (const e of lines) {
+      const g = e.locals[name];
+      if (!is2d(g)) continue;
+      if (prev) mutations += diffCells(prev, g).length;
+      prev = g;
+    }
+    if (mutations === 0) continue; // a board nobody writes to is scenery, not a walk
+    if (!grid || mutations > grid.mutations || (mutations === grid.mutations && d.count > grid.count)) {
+      grid = { name, rows: d.rows, cols: d.cols, count: d.count, mutations };
+    }
   }
   if (!grid) return null;
-
-  // BEHAVIOR: the board must actually mutate — otherwise this run is not a grid walk.
-  let mutations = 0;
-  let prev = null;
-  for (const e of lines) {
-    const g = e.locals[grid.name];
-    if (!is2d(g)) continue;
-    if (prev) mutations += diffCells(prev, g).length;
-    prev = g;
-  }
-  if (mutations === 0) return null;
 
   // THE QUEUE/STACK: a list local whose elements are in-bounds [r,c] pairs whenever it is
   // non-empty, and whose length both GREW and SHRANK (a frontier breathes; a grid does not).
