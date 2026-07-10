@@ -69,4 +69,5 @@ export { compileLineTrace, assembleLineProgram, parseLineEvents, LINE_TRACKER_PY
 export { assembleUniversalProgram, parseUniversalEvents, validateUniversalRecording, UNIVERSAL_TRACKER_PY } from './universal/recorder.js';
 export { detectLenses, LENS_DETECTORS } from './universal/detect.js';
 export { detectGridWalk, compileGridWalk } from './universal/lenses/grid-walk.js';
+export { detectRecursionTree, compileRecursionTree } from './universal/lenses/recursion-tree.js';
 export { parseStepEvents, STEP_MARKER } from './parse-steps.js';

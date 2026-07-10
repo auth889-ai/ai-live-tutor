@@ -6,9 +6,13 @@
 // specific) family wins.
 
 import { detectGridWalk, compileGridWalk } from './lenses/grid-walk.js';
+import { detectRecursionTree, compileRecursionTree } from './lenses/recursion-tree.js';
 
 export const LENS_DETECTORS = Object.freeze([
+  // grid-walk before recursion-tree: a recursive flood fill is BOTH, but the board is the
+  // teaching view there — the call tree of a 40-cell DFS is noise, the spreading grid is the lesson.
   { key: 'grid-walk', detect: detectGridWalk, compile: compileGridWalk },
+  { key: 'recursion-tree', detect: detectRecursionTree, compile: compileRecursionTree },
 ]);
 
 // All lens plans this recording supports, best first. ctx carries { code } so detectors can use
