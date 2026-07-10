@@ -11,6 +11,7 @@ import { structureMode } from './graph/structure.js';
 import { dpTableMode } from './array/dp-table.js';
 import { divideConquerMode } from './array/divide-conquer.js';
 import { pointerWalkMode } from './array/pointer-walk.js';
+import { intervalsMode } from './array/intervals.js';
 import { linkedListMode } from './list/linked-list.js';
 import { operationsMode } from './collection/operations.js';
 import { lineSimMode } from './floor/line-sim.js';
@@ -27,6 +28,7 @@ export const TRACER_MODES = Object.freeze([
   linkedListMode,
   operationsMode,
   pointerWalkMode,
+  intervalsMode,
   lineSimMode,
   programMode,
 ]);

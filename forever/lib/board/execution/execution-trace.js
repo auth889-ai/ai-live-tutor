@@ -45,6 +45,16 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     if (!Array.isArray(views.list.nodes) || views.list.nodes.length === 0) throw new Error(`${context} views.list needs nodes[]`);
     listIds = new Set(views.list.nodes.map((n) => String(n.id)));
   }
+  // Number-line intervals (merge intervals, meeting rooms): sorted [start,end] bars that fuse.
+  let intervalCount = 0;
+  if (views.intervals !== undefined) {
+    const list = views.intervals.intervals;
+    const pair = (iv) => Array.isArray(iv) && iv.length === 2 && iv.every((n) => typeof n === 'number');
+    if (!Array.isArray(list) || list.length === 0 || !list.every(pair)) {
+      throw new Error(`${context} views.intervals needs a non-empty intervals[] of [start,end] number pairs`);
+    }
+    intervalCount = list.length;
+  }
   // Array2DTracer equivalent: a grid / DP table (Fibonacci memo, LCS, knapsack, matrices, grids).
   let grid = null;
   if (views.array2d !== undefined) {
@@ -75,6 +85,16 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     if (step.array !== undefined) {
       if (arrayLen === 0) throw new Error(`${at} has array state but no views.array is declared`);
       validateArrayState(step.array, arrIn, at, arrayLen);
+    }
+    if (step.intervals !== undefined) {
+      if (intervalCount === 0) throw new Error(`${at} has intervals state but no views.intervals is declared`);
+      const pair = (iv) => Array.isArray(iv) && iv.length === 2 && iv.every((n) => typeof n === 'number');
+      if (!Array.isArray(step.intervals.merged) || !step.intervals.merged.every(pair)) {
+        throw new Error(`${at} intervals.merged must be an array of [start,end] number pairs`);
+      }
+      if (step.intervals.current !== undefined && (!Number.isInteger(step.intervals.current) || step.intervals.current < 0 || step.intervals.current >= intervalCount)) {
+        throw new Error(`${at} intervals.current must index the declared intervals`);
+      }
     }
     if (step.graph !== undefined) {
       if (!graphIds) throw new Error(`${at} has graph state but no views.graph is declared`);

@@ -12,6 +12,7 @@ import { dirname, join } from 'node:path';
 
 import { compilePointerWalk } from '../lib/execution/trace/pointer-walk/compiler.js';
 import { compileRecursionTrace, assembleRecursionProgram, parseCallTree } from '../lib/execution/trace/recursion/compiler.js';
+import { compileIntervals } from '../lib/execution/trace/intervals/compiler.js';
 import { assembleLineProgram, parseLineEvents, compileLineTrace } from '../lib/execution/trace/line-sim/compiler.js';
 import { compileGraphWalk } from '../lib/execution/trace/graph-walk/compiler.js';
 import { compileLinkedListTrace } from '../lib/execution/trace/linked-list/compiler.js';
@@ -149,6 +150,14 @@ add('Hash map — put/get with collision', compileOperationsTrace({
     callTree: parseCallTree(py(program)), code, language: 'python',
     lines: { base: 3, call: 4, combine: 6 },
   }));
+}
+
+// --- intervals — LC56 Merge Intervals on the researched number line (bars fuse into islands) ---
+{
+  const code = 'def merge(raw):\n    intervals = sorted(raw)\n    merged = []\n    for iv in intervals:\n        if merged and iv[0] <= merged[-1][1]:\n            merged[-1] = [merged[-1][0], max(merged[-1][1], iv[1])]\n        else:\n            merged.append(list(iv))\n    return merged';
+  const entry = 'merge([[15,18],[1,3],[8,10],[2,6]])';
+  const payload = parseLineEvents(py(assembleLineProgram({ code, entry })));
+  add('Intervals — LC56 merge (number line)', compileIntervals({ ...payload, code, intervalsVar: 'intervals', mergedVar: 'merged' }));
 }
 
 const dir = dirname(fileURLToPath(import.meta.url));

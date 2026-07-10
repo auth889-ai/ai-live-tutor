@@ -14544,5 +14544,145 @@
         }
       ]
     }
+  },
+  {
+    "name": "Intervals — LC56 merge (number line)",
+    "trace": {
+      "language": "python",
+      "code": "def merge(raw):\n    intervals = sorted(raw)\n    merged = []\n    for iv in intervals:\n        if merged and iv[0] <= merged[-1][1]:\n            merged[-1] = [merged[-1][0], max(merged[-1][1], iv[1])]\n        else:\n            merged.append(list(iv))\n    return merged",
+      "views": {
+        "intervals": {
+          "intervals": [
+            [
+              1,
+              3
+            ],
+            [
+              2,
+              6
+            ],
+            [
+              8,
+              10
+            ],
+            [
+              15,
+              18
+            ]
+          ]
+        }
+      },
+      "steps": [
+        {
+          "line": 2,
+          "explanation": "We sort the 4 intervals by start: [1,3] [2,6] [8,10] [15,18]. Sorting is the whole trick — once sorted, any interval that overlaps something can only overlap the island RIGHT BEFORE it, so one left-to-right pass decides everything.",
+          "intervals": {
+            "merged": []
+          },
+          "variables": {
+            "merged": 0
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "[1,3] opens the first island — nothing exists yet to overlap with, so it goes straight into the answer.",
+          "intervals": {
+            "merged": [
+              [
+                1,
+                3
+              ]
+            ],
+            "current": 0
+          },
+          "variables": {
+            "merged": 1
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "Does [2,6] overlap the current island [1,3]? Its start 2 is ≤ the island's end 3 — YES, they touch. The island absorbs it and now reaches [1,6] (end = max(3, 6) = 6).",
+          "intervals": {
+            "merged": [
+              [
+                1,
+                6
+              ]
+            ],
+            "current": 1
+          },
+          "variables": {
+            "merged": 1
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "Does [8,10] overlap the current island [1,6]? Its start 8 is > the island's end 6 — NO, there is a gap. The island is sealed and [8,10] opens a NEW one.",
+          "intervals": {
+            "merged": [
+              [
+                1,
+                6
+              ],
+              [
+                8,
+                10
+              ]
+            ],
+            "current": 2
+          },
+          "variables": {
+            "merged": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "Does [15,18] overlap the current island [8,10]? Its start 15 is > the island's end 10 — NO, there is a gap. The island is sealed and [15,18] opens a NEW one.",
+          "intervals": {
+            "merged": [
+              [
+                1,
+                6
+              ],
+              [
+                8,
+                10
+              ],
+              [
+                15,
+                18
+              ]
+            ],
+            "current": 3
+          },
+          "variables": {
+            "merged": 3
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "Every interval has been consumed: 3 islands remain — [1,6] [8,10] [15,18]. That is the answer the real run returned: [[1,6],[8,10],[15,18]].",
+          "intervals": {
+            "merged": [
+              [
+                1,
+                6
+              ],
+              [
+                8,
+                10
+              ],
+              [
+                15,
+                18
+              ]
+            ]
+          },
+          "variables": {
+            "merged": 3
+          }
+        }
+      ]
+    }
   }
 ]

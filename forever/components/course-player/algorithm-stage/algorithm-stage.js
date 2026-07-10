@@ -18,6 +18,7 @@ import { ArrayView } from '../panels/array-view.js';
 import { GraphView } from '../panels/graph-view.js';
 import { LinkedListView } from '../panels/linked-list-view.js';
 import { GridView } from './grid-view.js';
+import { IntervalsView } from '../panels/intervals-view.js';
 import { TraceTable } from './trace-table.js';
 
 export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, stepIndex = null, setHold }) {
@@ -103,6 +104,12 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
           <ArrayView content={{ values: views.array.values, trace: [{ note: '', ...step.array }] }} activeStep={0} />
         ) : null}
         {views.array2d && step.array2d ? <GridView view={views.array2d} step={step} history={historySteps} /> : null}
+        {views.intervals ? (
+          <IntervalsView
+            content={{ intervals: views.intervals.intervals, trace: trace.steps.map((s) => ({ ...(s.intervals ?? {}) })) }}
+            activeStep={index}
+          />
+        ) : null}
         {/* Mounted for the WHOLE trace, never per-step: unmounting on a step without `graph`
             state forces ReactFlow to remount, re-measure and re-fit — the flicker/invisible
             class of bugs. A step with no graph payload simply renders the tree unhighlighted. */}

@@ -86,6 +86,48 @@ law = IRAC 4-row reveal + fact↔element wiring; econ = ghost-curve 4-beat shift
 
 ## 5. BUILD ORDER (approve each step; each independently verifiable)
 
+**EXECUTION METHOD (user-mandated, permanent): ONE STEP AT A TIME — never all at once.**
+Every step runs the same loop:
+1. VALIDATE DESIGN — check how the best production GitHub repo does this exact piece
+   (OpenMAIC / MinerU / Presenton / the 9 research reports; fresh targeted search if
+   a gap remains). No code until the pattern is confirmed.
+2. BUILD — smallest complete vertical slice, one-file-one-job, nested folders.
+3. VERIFY — unit tests green + headless-Chrome screenshot (SEE the render) + one real
+   lesson exercising the step end-to-end.
+4. SHOW the user → approval → next step. A step that isn't verified doesn't count.
+
+**EXECUTION CHECKLIST (validated against OpenMAIC/marker/MinerU/TEA repo practices):**
+- Freeze the 3-min demo script FIRST; every task must improve that path or gets cut
+  (Vercel hackathon finding: shippable-and-demoable wins).
+- Trunk-based, hour-scale commits, `feat(scope): thing (Epic Part A)` convention —
+  OpenMAIC lands big features as many small Part-A/Part-B PRs on main; main never
+  undemoable overnight.
+- Vertical slices only (agent → renderer → fixture → test in one strip). NO refactors/
+  extractions mid-sprint — OpenMAIC extracted @openmaic/dsl only at v0.3.0, after the
+  boundary survived production.
+- Test the SCAFFOLDING, not the model (OpenMAIC tests/generation shape: JSON repair,
+  retry boundaries, routing gates, prompt wiring — all model-free). Every live-Qwen
+  flake becomes a recorded fixture + deterministic regression test.
+- CI model-free and fast; live evals out-of-band, never a merge gate.
+- Golden fixtures assert PROPERTIES (schema-valid, required fields, no overlapping
+  bboxes — OpenMAIC ships a geometry-conflict detector), never string equality.
+- Stage-isolation flags (TEA's --only_plan/--only_render pattern): each agent stage
+  runnable against the previous stage's recorded output — never burn Qwen calls
+  iterating on rendering. (Our /dev/gallery + gen-trace-fixtures already do this for
+  traces; extend per stage.)
+- Screenshot check fails → feed the image back for ONE automated fix attempt before
+  failing (TEA --use_visual_fix_code; matches our SEE→FIX loop).
+- Prompts versioned in-repo; risky new stages behind env flags (FOREVER_X_ENABLED=,
+  default off) — demo day = flip flags, not merge branches.
+- Renderers TOLERATE malformed generated data (OpenMAIC: "fix(slide): tolerate
+  malformed generated slide data") — degrade beats white-screen.
+- Tag a release every 2-3 days; **feature freeze day 9-10** — after that only fixes,
+  fixtures, demo polish (OpenMAIC's last-20%-of-release-notes is always hardening).
+
+UI premium pass: see docs/PREMIUM_UI_SPEC.md (research-backed palette/type/depth/motion
+spec that elevates the Pandio-blush baseline — deep espresso ink, Fraunces+Inter,
+hue-matched layered shadows, theater-mode player).
+
 ### Step 1 — Deterministic lesson gate + validate-before-TTS   ← START HERE
 Zero tokens; biggest measured win in the literature (compliance 0.47→0.94).
 - New `lib/generation/gate/` (pure, unit-tested): every voiceLine refs an existing board
