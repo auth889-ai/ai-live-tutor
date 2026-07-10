@@ -14,6 +14,7 @@ import { pointerWalkMode } from './array/pointer-walk.js';
 import { intervalsMode } from './array/intervals.js';
 import { linkedListMode } from './list/linked-list.js';
 import { operationsMode } from './collection/operations.js';
+import { autoMode } from './universal/auto.js';
 import { lineSimMode } from './floor/line-sim.js';
 import { programMode } from './floor/program.js';
 
@@ -29,6 +30,9 @@ export const TRACER_MODES = Object.freeze([
   operationsMode,
   pointerWalkMode,
   intervalsMode,
+  // auto (universal recorder) sits ABOVE the floor: an unsure classification now detects its
+  // structure from the real execution instead of dropping to a line trace — never a downgrade.
+  autoMode,
   lineSimMode,
   programMode,
 ]);
