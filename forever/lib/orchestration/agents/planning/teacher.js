@@ -20,10 +20,11 @@ export const PEDAGOGICAL_ROLES = [
 
 export async function designPedagogy({ sourcePack, minScenes = 5, maxScenes = 9, domain = 'general' }) {
   const chunkIds = new Set(sourcePack.chunks.map((chunk) => chunk.id));
-  const { teachingFor } = await import('./domain-teaching.js');
+  const { teachingFor, UNIVERSAL_TEACHING_LAW } = await import('./domain-teaching.js');
 
   const system = `You are the Teacher of an AI tutor — a world-class SPECIALIST in this domain (${domain}).
 DOMAIN TEACHING STYLE (teach exactly this way): ${teachingFor(domain)}
+THE UNIVERSAL LAW (non-negotiable, write directives that OBEY it): ${UNIVERSAL_TEACHING_LAW}
 
 Design a DEEP teaching sequence: ${minScenes}-${maxScenes} scenes that TEACH, not summarize.
 Follow EVIDENCE-BASED pedagogy (this is what makes it elite, not average):
