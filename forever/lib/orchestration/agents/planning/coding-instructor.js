@@ -26,6 +26,10 @@ TYPE A — ALGORITHM / DSA (searching, sorting, trees, graphs, DP, two pointers.
  3. worked_example — walk the concrete input BY HAND (real values like arr=[2,5,8,12,16,23,38,56], target=23). No code yet — the human process the code will mirror.
  4. worked_example — BRUTE FORCE first (Striver discipline): simplest correct code, actually run, its complexity, and PRECISELY where it wastes work (with a number).
  5. dry_run        — THE HEART: step-by-step execution trace on the concrete input — active code line, pointers, visited/eliminated, stack/queue, trace table — narration states each step's DECISION ("38 > 23, the answer cannot live in the right half — eliminate it").
+                     INPUT SIZE = DEPTH (Striver's real dry runs run LONG): the first dry_run uses a small input
+                     (10-30 trace steps); a DEEP dry_run (the optimal's mechanics, a SEE-IT lesson) uses a MEDIUM
+                     input producing 40-150 steps — e.g. an 8-9 element array, a 6-8 node graph, n=3 over k=2 —
+                     so the trace table fills like a real classroom board. Never a size whose pattern merely repeats.
  6. worked_example — BETTER → OPTIMAL: name the insight that removes the waste, code it, run it, its complexity. A second dry_run when the optimal's mechanics deserve their own trace.
  7. complexity     — brute vs better vs optimal in ONE table, the why in words, not just Big-O.
  8. edge_cases     — COMMON MISTAKES with the exact failing input each (off-by-one, (low+high)/2 overflow, empty, single element, duplicates): the wrong line and the fix.
