@@ -125,7 +125,15 @@ async function runBoardCall({ system, user, sourcePack, layout, brief = null }) 
   let lastError;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const repair = attempt === 0 ? '' : `\nYour previous output was rejected: ${lastError}. Fix exactly that and output the full JSON again.`;
-    const { json, usage } = await callQwenJson({ agent: 'board_director', system: system + repair, user });
+    // 10k budget: qwen3.7-plus spends 1.5-3k tokens REASONING before it writes (measured:
+    // 1,621 reasoning tokens on a trivial prompt), and a rich 4-object board is 2-3k more.
+    // At the old 4k cap the model ran dry and closed with "{}" — which parses, validates as
+    // "At least one board object is required", and silently killed the richest scenes.
+    const { json, usage } = await callQwenJson({ agent: 'board_director', system: system + repair, user, maxTokens: 10_000 });
+    if (!Array.isArray(json.objects) || json.objects.length === 0) {
+      lastError = 'output had no "objects" array — return the full board JSON';
+      continue;
+    }
     try {
       // Deterministic shape coercion BEFORE validation — 62% of drops were mechanical shape
       // slips on content that was otherwise fine (see board-coercion.js).
