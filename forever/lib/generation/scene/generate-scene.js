@@ -7,7 +7,7 @@
 import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
 import { runGroundingReview } from '../../orchestration/review/grounding-review-loop.js';
 import { writeVoice } from '../../orchestration/agents/authoring/voice-writer.js';
-import { warmNarration } from '../../orchestration/agents/authoring/narration-warmth.js';
+import { warmNarration, directVisualRun } from '../../orchestration/agents/authoring/narration-warmth.js';
 import { voiceLinesForTrace } from '../voice/algo-voice.js';
 import { generateExecutedCode } from '../../orchestration/agents/coding/code-runner.js';
 import { traceExecution } from '../../orchestration/agents/coding/execution-tracer.js';
@@ -47,7 +47,11 @@ export async function generateSceneFromSourcePack(
     // invents a number, and rejected steps keep their template sentence. Never wronger.
     let finalTrace = traced.trace;
     try {
-      const warm = agents.warmNarration ?? warmNarration;
+      // Experiment (AI_VISUAL_DIRECTOR=1): the same agent grown into the Visual Director —
+      // AI directs the screen per step (voice + beat + spotlight + turning point) in parallel
+      // segments; positions still come only from the recording, numbers still validated.
+      const warm = agents.warmNarration
+        ?? (process.env.AI_VISUAL_DIRECTOR === '1' ? directVisualRun : warmNarration);
       const warmed = await warm({ trace: traced.trace, directive: brief.directive });
       finalTrace = warmed.trace;
     } catch { /* warmth is enrichment — the guaranteed template narration ships regardless */ }
