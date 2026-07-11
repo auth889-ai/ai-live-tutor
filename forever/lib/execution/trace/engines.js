@@ -77,5 +77,7 @@ export { detectCollectionLens, compileCollectionOps } from './universal/lenses/c
 export { detectDpTable, compileDpTableLens } from './universal/lenses/dp-table.js';
 export { detectGraphAdjacency, compileGraphAdjacency } from './universal/lenses/graph-adjacency.js';
 export { detectUnionFind, compileUnionFind } from './universal/lenses/union-find.js';
+export { detectAdjacencyMatrix, compileAdjacencyMatrix } from './universal/lenses/adjacency-matrix.js';
+export { detectHeap, compileHeap } from './universal/lenses/heap.js';
 export { traceUniversal } from './universal/trace.js';
 export { parseStepEvents, STEP_MARKER } from './parse-steps.js';

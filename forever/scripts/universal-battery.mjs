@@ -685,6 +685,26 @@ w = {('A', 'B'): 4, ('A', 'C'): 8, ('B', 'C'): 3}`, "dijkstra(g, w, 'A')"],
             dfs(i)
     return count`, 'provinces([[1,1,0],[1,1,0],[0,0,1]])'],
 
+  // ——— heaps ———
+  ['heap', 'LC215 Kth Largest (heap as the lesson)', `import heapq
+def kth_largest(nums, k):
+    heap = []
+    for x in nums:
+        heapq.heappush(heap, x)
+        if len(heap) > k:
+            heapq.heappop(heap)
+    return heap[0]`, 'kth_largest([3, 2, 1, 5, 6, 4], 2)'],
+  ['heap', 'LC1046 Last Stone Weight (max-heap idiom)', `import heapq
+def last_stone(stones):
+    heap = [-s for s in stones]
+    heapq.heapify(heap)
+    while len(heap) > 1:
+        a = -heapq.heappop(heap)
+        b = -heapq.heappop(heap)
+        if a != b:
+            heapq.heappush(heap, -(a - b))
+    return -heap[0] if heap else 0`, 'last_stone([2, 7, 4, 1, 8, 1])'],
+
   // ——— the honest floor ———
   ['math', 'GCD (Euclid) — floor territory', `def gcd(a, b):
     while b:
@@ -732,14 +752,6 @@ def ladder(begin, end, words):
                 order.remove(key)
             order.append(key)
     return out`, "lru_ops(2, [('put', 1), ('put', 2), ('get', 1), ('put', 3), ('get', 2)])"],
-  ['LC215 Kth Largest (heap as the lesson)', `import heapq
-def kth_largest(nums, k):
-    heap = []
-    for x in nums:
-        heapq.heappush(heap, x)
-        if len(heap) > k:
-            heapq.heappop(heap)
-    return heap[0]`, 'kth_largest([3, 2, 1, 5, 6, 4], 2)'],
   ['LC208 Trie built inline (dict-of-dicts)', `def build_trie(words):
     root = {}
     for w in words:
