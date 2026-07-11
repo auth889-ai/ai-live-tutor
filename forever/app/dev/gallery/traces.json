@@ -14684,5 +14684,5711 @@
         }
       ]
     }
+  },
+  {
+    "name": "AUTO(grid-walk) — Rotten Oranges spreads",
+    "trace": {
+      "language": "python",
+      "code": "from collections import deque\ndef rot(grid):\n    R, C = len(grid), len(grid[0])\n    q = deque()\n    for r in range(R):\n        for c in range(C):\n            if grid[r][c] == 2:\n                q.append((r, c))\n    minutes = 0\n    while q:\n        for _ in range(len(q)):\n            r, c = q.popleft()\n            for dr, dc in ((1,0),(-1,0),(0,1),(0,-1)):\n                nr, nc = r + dr, c + dc\n                if 0 <= nr < R and 0 <= nc < C and grid[nr][nc] == 1:\n                    grid[nr][nc] = 2\n                    q.append((nr, nc))\n        if q:\n            minutes += 1\n    return minutes",
+      "views": {
+        "array2d": {
+          "rows": 3,
+          "cols": 3
+        }
+      },
+      "steps": [
+        {
+          "line": 3,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                1
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": []
+          },
+          "queue": [],
+          "variables": {},
+          "explanation": "We run `rot([[2,1,1],[1,1,0],[0,1,1]])` and record the real execution. The board is a 3×3 grid, and this walk is a rhythm you can watch: the highlighted current cell, the queue of coordinates waiting their turn, `minutes` counting the rounds. Every value that follows was recorded from this exact run — nothing is imagined."
+        },
+        {
+          "line": 8,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                1
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": []
+          },
+          "queue": [
+            "(0, 0)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 0
+          },
+          "explanation": "Line 8 runs `q.append((r, c))`. (0, 0) joins the queue — freshly changed cells always queue up so their own neighbours get examined later. The queue now holds 1: (0, 0)."
+        },
+        {
+          "line": 9,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                1
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": []
+          },
+          "queue": [
+            "(0, 0)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 2,
+            "c": 2,
+            "minutes": 0
+          },
+          "explanation": "Line 9: `minutes = 0` — `minutes` ticks up to 0. A full round of the walk is complete — every coordinate that was waiting when this round began has been processed, and the next round starts from the cells just added."
+        },
+        {
+          "line": 12,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                1
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                1
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": []
+          },
+          "queue": [],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 0,
+            "minutes": 0
+          },
+          "explanation": "Line 12: `r, c = q.popleft()`. (0, 0) leaves the front of the queue and becomes the cell we process now. The queue is empty — if nothing new joins, the walk is about to end."
+        },
+        {
+          "line": 16,
+          "array2d": {
+            "current": [
+              1,
+              0
+            ],
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                1
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ]
+            ]
+          },
+          "queue": [],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 0,
+            "minutes": 0,
+            "dr": 1,
+            "dc": 0,
+            "nr": 1
+          },
+          "explanation": "Line 16 runs `grid[nr][nc] = 2`. Cell (1, 0) changes from 1 to 2 — that is 1 cell rewritten so far. The board you see is the recorded state at this exact moment of the run."
+        },
+        {
+          "line": 17,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                1
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ]
+            ]
+          },
+          "queue": [
+            "(1, 0)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 0,
+            "minutes": 0,
+            "dr": 1,
+            "dc": 0,
+            "nr": 1
+          },
+          "explanation": "Line 17 runs `q.append((nr, nc))`. (1, 0) joins the queue — freshly changed cells always queue up so their own neighbours get examined later. The queue now holds 1: (1, 0)."
+        },
+        {
+          "line": 16,
+          "array2d": {
+            "current": [
+              0,
+              1
+            ],
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          "queue": [
+            "(1, 0)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 0,
+            "minutes": 0,
+            "dr": 0,
+            "dc": 1,
+            "nr": 0
+          },
+          "explanation": "Line 16 runs `grid[nr][nc] = 2`. Cell (0, 1) changes from 1 to 2 — that is 2 cells rewritten so far. The board you see is the recorded state at this exact moment of the run."
+        },
+        {
+          "line": 17,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          "queue": [
+            "(1, 0)",
+            "(0, 1)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 0,
+            "minutes": 0,
+            "dr": 0,
+            "dc": 1,
+            "nr": 0
+          },
+          "explanation": "Line 17 runs `q.append((nr, nc))`. (0, 1) joins the queue — freshly changed cells always queue up so their own neighbours get examined later. The queue now holds 2: (1, 0), (0, 1)."
+        },
+        {
+          "line": 19,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          "queue": [
+            "(1, 0)",
+            "(0, 1)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 0,
+            "minutes": 1,
+            "dr": 0,
+            "dc": -1,
+            "nr": 0
+          },
+          "explanation": "Line 19: `minutes += 1` — `minutes` ticks up to 1. A full round of the walk is complete — every coordinate that was waiting when this round began has been processed, and the next round starts from the cells just added."
+        },
+        {
+          "line": 12,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                1
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          "queue": [
+            "(0, 1)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 1,
+            "c": 0,
+            "minutes": 1,
+            "dr": 0,
+            "dc": -1,
+            "nr": 0
+          },
+          "explanation": "Line 12: `r, c = q.popleft()`. (1, 0) leaves the front of the queue and becomes the cell we process now. Still waiting: (0, 1)."
+        },
+        {
+          "line": 16,
+          "array2d": {
+            "current": [
+              1,
+              1
+            ],
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          },
+          "queue": [
+            "(0, 1)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 1,
+            "c": 0,
+            "minutes": 1,
+            "dr": 0,
+            "dc": 1,
+            "nr": 1
+          },
+          "explanation": "Line 16 runs `grid[nr][nc] = 2`. Cell (1, 1) changes from 1 to 2 — that is 3 cells rewritten so far. The board you see is the recorded state at this exact moment of the run."
+        },
+        {
+          "line": 17,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          },
+          "queue": [
+            "(0, 1)",
+            "(1, 1)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 1,
+            "c": 0,
+            "minutes": 1,
+            "dr": 0,
+            "dc": 1,
+            "nr": 1
+          },
+          "explanation": "Line 17 runs `q.append((nr, nc))`. (1, 1) joins the queue — freshly changed cells always queue up so their own neighbours get examined later. The queue now holds 2: (0, 1), (1, 1)."
+        },
+        {
+          "line": 12,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ]
+          },
+          "queue": [
+            "(1, 1)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 1,
+            "minutes": 1,
+            "dr": 0,
+            "dc": -1,
+            "nr": 1
+          },
+          "explanation": "Line 12: `r, c = q.popleft()`. (0, 1) leaves the front of the queue and becomes the cell we process now. Still waiting: (1, 1)."
+        },
+        {
+          "line": 16,
+          "array2d": {
+            "current": [
+              0,
+              2
+            ],
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ]
+            ]
+          },
+          "queue": [
+            "(1, 1)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 1,
+            "minutes": 1,
+            "dr": 0,
+            "dc": 1,
+            "nr": 0
+          },
+          "explanation": "Line 16 runs `grid[nr][nc] = 2`. Cell (0, 2) changes from 1 to 2 — that is 4 cells rewritten so far. The board you see is the recorded state at this exact moment of the run."
+        },
+        {
+          "line": 17,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ]
+            ]
+          },
+          "queue": [
+            "(1, 1)",
+            "(0, 2)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 1,
+            "minutes": 1,
+            "dr": 0,
+            "dc": 1,
+            "nr": 0
+          },
+          "explanation": "Line 17 runs `q.append((nr, nc))`. (0, 2) joins the queue — freshly changed cells always queue up so their own neighbours get examined later. The queue now holds 2: (1, 1), (0, 2)."
+        },
+        {
+          "line": 19,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ]
+            ]
+          },
+          "queue": [
+            "(1, 1)",
+            "(0, 2)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 1,
+            "minutes": 2,
+            "dr": 0,
+            "dc": -1,
+            "nr": 0
+          },
+          "explanation": "Line 19: `minutes += 1` — `minutes` ticks up to 2. A full round of the walk is complete — every coordinate that was waiting when this round began has been processed, and the next round starts from the cells just added."
+        },
+        {
+          "line": 12,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                1
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ]
+            ]
+          },
+          "queue": [
+            "(0, 2)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 1,
+            "c": 1,
+            "minutes": 2,
+            "dr": 0,
+            "dc": -1,
+            "nr": 0
+          },
+          "explanation": "Line 12: `r, c = q.popleft()`. (1, 1) leaves the front of the queue and becomes the cell we process now. Still waiting: (0, 2)."
+        },
+        {
+          "line": 16,
+          "array2d": {
+            "current": [
+              2,
+              1
+            ],
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                2
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ],
+              [
+                2,
+                1
+              ]
+            ]
+          },
+          "queue": [
+            "(0, 2)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 1,
+            "c": 1,
+            "minutes": 2,
+            "dr": 1,
+            "dc": 0,
+            "nr": 2
+          },
+          "explanation": "Line 16 runs `grid[nr][nc] = 2`. Cell (2, 1) changes from 1 to 2 — that is 5 cells rewritten so far. The board you see is the recorded state at this exact moment of the run."
+        },
+        {
+          "line": 17,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                2
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ],
+              [
+                2,
+                1
+              ]
+            ]
+          },
+          "queue": [
+            "(0, 2)",
+            "(2, 1)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 1,
+            "c": 1,
+            "minutes": 2,
+            "dr": 1,
+            "dc": 0,
+            "nr": 2
+          },
+          "explanation": "Line 17 runs `q.append((nr, nc))`. (2, 1) joins the queue — freshly changed cells always queue up so their own neighbours get examined later. The queue now holds 2: (0, 2), (2, 1)."
+        },
+        {
+          "line": 12,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                2
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ],
+              [
+                2,
+                1
+              ]
+            ]
+          },
+          "queue": [
+            "(2, 1)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 2,
+            "minutes": 2,
+            "dr": 0,
+            "dc": -1,
+            "nr": 1
+          },
+          "explanation": "Line 12: `r, c = q.popleft()`. (0, 2) leaves the front of the queue and becomes the cell we process now. Still waiting: (2, 1)."
+        },
+        {
+          "line": 19,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                2
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ],
+              [
+                2,
+                1
+              ]
+            ]
+          },
+          "queue": [
+            "(2, 1)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 0,
+            "c": 2,
+            "minutes": 3,
+            "dr": 0,
+            "dc": -1,
+            "nr": 0
+          },
+          "explanation": "Line 19: `minutes += 1` — `minutes` ticks up to 3. A full round of the walk is complete — every coordinate that was waiting when this round began has been processed, and the next round starts from the cells just added."
+        },
+        {
+          "line": 12,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                2
+              ],
+              [
+                2,
+                2,
+                1
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ],
+              [
+                2,
+                1
+              ]
+            ]
+          },
+          "queue": [],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 2,
+            "c": 1,
+            "minutes": 3,
+            "dr": 0,
+            "dc": -1,
+            "nr": 0
+          },
+          "explanation": "Line 12: `r, c = q.popleft()`. (2, 1) leaves the front of the queue and becomes the cell we process now. The queue is empty — if nothing new joins, the walk is about to end."
+        },
+        {
+          "line": 16,
+          "array2d": {
+            "current": [
+              2,
+              2
+            ],
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                2
+              ],
+              [
+                2,
+                2,
+                2
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ]
+            ]
+          },
+          "queue": [],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 2,
+            "c": 1,
+            "minutes": 3,
+            "dr": 0,
+            "dc": 1,
+            "nr": 2
+          },
+          "explanation": "Line 16 runs `grid[nr][nc] = 2`. Cell (2, 2) changes from 1 to 2 — that is 6 cells rewritten so far. The board you see is the recorded state at this exact moment of the run."
+        },
+        {
+          "line": 17,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                2
+              ],
+              [
+                2,
+                2,
+                2
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ]
+            ]
+          },
+          "queue": [
+            "(2, 2)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 2,
+            "c": 1,
+            "minutes": 3,
+            "dr": 0,
+            "dc": 1,
+            "nr": 2
+          },
+          "explanation": "Line 17 runs `q.append((nr, nc))`. (2, 2) joins the queue — freshly changed cells always queue up so their own neighbours get examined later. The queue now holds 1: (2, 2)."
+        },
+        {
+          "line": 19,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                2
+              ],
+              [
+                2,
+                2,
+                2
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ]
+            ]
+          },
+          "queue": [
+            "(2, 2)"
+          ],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 2,
+            "c": 1,
+            "minutes": 4,
+            "dr": 0,
+            "dc": -1,
+            "nr": 2
+          },
+          "explanation": "Line 19: `minutes += 1` — `minutes` ticks up to 4. A full round of the walk is complete — every coordinate that was waiting when this round began has been processed, and the next round starts from the cells just added."
+        },
+        {
+          "line": 12,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                2
+              ],
+              [
+                2,
+                2,
+                2
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ]
+            ]
+          },
+          "queue": [],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 2,
+            "c": 2,
+            "minutes": 4,
+            "dr": 0,
+            "dc": -1,
+            "nr": 2
+          },
+          "explanation": "Line 12: `r, c = q.popleft()`. (2, 2) leaves the front of the queue and becomes the cell we process now. The queue is empty — if nothing new joins, the walk is about to end."
+        },
+        {
+          "line": 12,
+          "array2d": {
+            "values": [
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                2,
+                2
+              ],
+              [
+                1,
+                0,
+                2
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                1,
+                2,
+                0
+              ],
+              [
+                2,
+                0,
+                0
+              ],
+              [
+                2,
+                1,
+                2
+              ],
+              [
+                2,
+                2,
+                2
+              ]
+            ],
+            "filled": [
+              [
+                1,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                2
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                2,
+                2
+              ]
+            ]
+          },
+          "queue": [],
+          "variables": {
+            "R": 3,
+            "C": 3,
+            "r": 2,
+            "c": 2,
+            "minutes": 4,
+            "dr": 0,
+            "dc": -1,
+            "nr": 2
+          },
+          "explanation": "The walk is over and the call returns 4. Scroll back and notice the rhythm — take a cell, rewrite it, queue its fresh neighbours — because that rhythm, repeated until nothing is left, IS the whole algorithm."
+        }
+      ]
+    }
+  },
+  {
+    "name": "AUTO(heap) — Kth Largest heap",
+    "trace": {
+      "language": "python",
+      "code": "import heapq\ndef kth_largest(nums, k):\n    heap = []\n    for x in nums:\n        heapq.heappush(heap, x)\n        if len(heap) > k:\n            heapq.heappop(heap)\n    return heap[0]",
+      "views": {
+        "array": {
+          "values": [
+            "5",
+            "6",
+            ""
+          ]
+        }
+      },
+      "steps": [
+        {
+          "line": 4,
+          "explanation": "We run `kth_largest([3, 2, 1, 5, 6, 4], 2)` and record the real execution. The row of 3 slots you see IS a binary tree in disguise — the children of slot i live at slots 2i+1 and 2i+2, and the rule of the heap is simply: every parent stays ≤ its children. Watch slot 0: whatever sifts its way there is always the minimum.",
+          "array": {
+            "values": [
+              "",
+              "",
+              ""
+            ],
+            "pointers": {
+              "top": 0
+            }
+          },
+          "variables": {
+            "k": 2
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "Line 5 runs `heapq.heappush(heap, x)`. 3 enters at the end and SIFTS UP, settling at slot 0. It sifted all the way to slot 0 — a new minimum.",
+          "array": {
+            "values": [
+              "3",
+              "",
+              ""
+            ],
+            "pointers": {
+              "top": 0
+            },
+            "current": 0
+          },
+          "variables": {
+            "k": 2,
+            "x": 3
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "Line 5 runs `heapq.heappush(heap, x)`. 2 enters at the end and SIFTS UP, settling at slot 0 (2 slots shifted on its way). It sifted all the way to slot 0 — a new minimum.",
+          "array": {
+            "values": [
+              "2",
+              "3",
+              ""
+            ],
+            "pointers": {
+              "top": 0
+            },
+            "current": 0,
+            "swapped": [
+              0,
+              1
+            ]
+          },
+          "variables": {
+            "k": 2,
+            "x": 2
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "Line 5 runs `heapq.heappush(heap, x)`. 1 enters at the end and SIFTS UP, settling at slot 0 (2 slots shifted on its way). It sifted all the way to slot 0 — a new minimum.",
+          "array": {
+            "values": [
+              "1",
+              "3",
+              "2"
+            ],
+            "pointers": {
+              "top": 0
+            },
+            "current": 0,
+            "swapped": [
+              0,
+              2
+            ]
+          },
+          "variables": {
+            "k": 2,
+            "x": 1
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "Line 7 runs `heapq.heappop(heap)`. The root 1 is REMOVED — the root is always the minimum, that is the heap's whole promise. The last element 2 takes slot 0 and sifts DOWN, settling at slot 0; the new root is 2.",
+          "array": {
+            "values": [
+              "2",
+              "3",
+              ""
+            ],
+            "pointers": {
+              "top": 0
+            },
+            "current": 0
+          },
+          "variables": {
+            "k": 2,
+            "x": 1
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "Line 5 runs `heapq.heappush(heap, x)`. 5 enters at the end and SIFTS UP, settling at slot 2. Its parent, slot 0 holding 2, is ≤ it — so the sift stops here and the heap property holds.",
+          "array": {
+            "values": [
+              "2",
+              "3",
+              "5"
+            ],
+            "pointers": {
+              "top": 0,
+              "parent": 0
+            },
+            "current": 2
+          },
+          "variables": {
+            "k": 2,
+            "x": 5
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "Line 7 runs `heapq.heappop(heap)`. The root 2 is REMOVED — the root is always the minimum, that is the heap's whole promise. The last element 5 takes slot 0 and sifts DOWN, settling at slot 1; the new root is 3.",
+          "array": {
+            "values": [
+              "3",
+              "5",
+              ""
+            ],
+            "pointers": {
+              "top": 0
+            },
+            "current": 1
+          },
+          "variables": {
+            "k": 2,
+            "x": 5
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "Line 5 runs `heapq.heappush(heap, x)`. 6 enters at the end and SIFTS UP, settling at slot 2. Its parent, slot 0 holding 3, is ≤ it — so the sift stops here and the heap property holds.",
+          "array": {
+            "values": [
+              "3",
+              "5",
+              "6"
+            ],
+            "pointers": {
+              "top": 0,
+              "parent": 0
+            },
+            "current": 2
+          },
+          "variables": {
+            "k": 2,
+            "x": 6
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "Line 7 runs `heapq.heappop(heap)`. The root 3 is REMOVED — the root is always the minimum, that is the heap's whole promise. The last element 6 takes slot 0 and sifts DOWN, settling at slot 1; the new root is 5.",
+          "array": {
+            "values": [
+              "5",
+              "6",
+              ""
+            ],
+            "pointers": {
+              "top": 0
+            },
+            "current": 1
+          },
+          "variables": {
+            "k": 2,
+            "x": 6
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "Line 5 runs `heapq.heappush(heap, x)`. 4 enters at the end and SIFTS UP, settling at slot 0 (2 slots shifted on its way). It sifted all the way to slot 0 — a new minimum.",
+          "array": {
+            "values": [
+              "4",
+              "6",
+              "5"
+            ],
+            "pointers": {
+              "top": 0
+            },
+            "current": 0,
+            "swapped": [
+              0,
+              2
+            ]
+          },
+          "variables": {
+            "k": 2,
+            "x": 4
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "Line 7 runs `heapq.heappop(heap)`. The root 4 is REMOVED — the root is always the minimum, that is the heap's whole promise. The last element 5 takes slot 0 and sifts DOWN, settling at slot 0; the new root is 5.",
+          "array": {
+            "values": [
+              "5",
+              "6",
+              ""
+            ],
+            "pointers": {
+              "top": 0
+            },
+            "current": 0
+          },
+          "variables": {
+            "k": 2,
+            "x": 4
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "Execution finishes and the call returns 5. Read the final row as a tree one last time — slot 0 over slots 1 and 2, and so on down — and notice the promise held at every step: the parent never exceeded its children, so the minimum was always one glance away.",
+          "array": {
+            "values": [
+              "5",
+              "6",
+              ""
+            ],
+            "pointers": {
+              "top": 0
+            }
+          },
+          "variables": {
+            "k": 2,
+            "x": 4
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "AUTO(explored-graph) — Word Ladder discovery tree",
+    "trace": {
+      "language": "python",
+      "code": "from collections import deque\ndef ladder(begin, end, words):\n    seen = [begin]\n    q = deque([(begin, 1)])\n    while q:\n        word, steps = q.popleft()\n        if word == end:\n            return steps\n        for i in range(len(word)):\n            for ch in 'cdghiot':\n                nxt = word[:i] + ch + word[i+1:]\n                if nxt in words and nxt not in seen:\n                    seen.append(nxt)\n                    q.append((nxt, steps + 1))\n    return 0",
+      "views": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "hit",
+              "label": "hit"
+            },
+            {
+              "id": "hot",
+              "label": "hot"
+            },
+            {
+              "id": "dot",
+              "label": "dot"
+            },
+            {
+              "id": "dog",
+              "label": "dog"
+            },
+            {
+              "id": "cog",
+              "label": "cog"
+            }
+          ],
+          "edges": [
+            {
+              "from": "hit",
+              "to": "hot"
+            },
+            {
+              "from": "hot",
+              "to": "dot"
+            },
+            {
+              "from": "dot",
+              "to": "dog"
+            },
+            {
+              "from": "dog",
+              "to": "cog"
+            }
+          ],
+          "directed": true
+        }
+      },
+      "steps": [
+        {
+          "line": 7,
+          "explanation": "We run ladder('hit', 'cog', ['hot', 'dot', 'dog', 'cog']) and watch the structure itself: every circle is a real node object (or adjacency entry) extracted live from memory, every arrow a real reference. Nothing here was declared — the picture IS the program's own data, drawn as it exists at each step.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "revealed": [],
+            "pointers": {}
+          },
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "node steps to the node holding 'hit' — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "hit",
+            "visited": [],
+            "revealed": [
+              "hit"
+            ],
+            "pointers": {
+              "node": "hit"
+            }
+          },
+          "variables": {
+            "begin": "hit",
+            "end": "cog",
+            "word": "hit",
+            "steps": 1
+          }
+        },
+        {
+          "line": 14,
+          "explanation": "The structure grows: a node holding 'hot' appears and is linked in — 2 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "graph": {
+            "current": "hit",
+            "visited": [],
+            "revealed": [
+              "hit",
+              "hot"
+            ],
+            "pointers": {
+              "node": "hit"
+            }
+          },
+          "variables": {
+            "begin": "hit",
+            "end": "cog",
+            "word": "hit",
+            "steps": 1,
+            "i": 1,
+            "ch": "o",
+            "nxt": "hot"
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "node steps to the node holding 'hot' leaving 'hit' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "hot",
+            "visited": [
+              "hit"
+            ],
+            "revealed": [
+              "hit",
+              "hot"
+            ],
+            "pointers": {
+              "node": "hot"
+            }
+          },
+          "activeEdge": [
+            "hit",
+            "hot"
+          ],
+          "variables": {
+            "begin": "hit",
+            "end": "cog",
+            "word": "hot",
+            "steps": 2,
+            "i": 2,
+            "ch": "t",
+            "nxt": "hit"
+          }
+        },
+        {
+          "line": 14,
+          "explanation": "The structure grows: a node holding 'dot' appears and is linked in — 3 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "graph": {
+            "current": "hot",
+            "visited": [
+              "hit"
+            ],
+            "revealed": [
+              "hit",
+              "hot",
+              "dot"
+            ],
+            "pointers": {
+              "node": "hot"
+            }
+          },
+          "variables": {
+            "begin": "hit",
+            "end": "cog",
+            "word": "hot",
+            "steps": 2,
+            "i": 0,
+            "ch": "d",
+            "nxt": "dot"
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "node steps to the node holding 'dot' leaving 'hot' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "dot",
+            "visited": [
+              "hit",
+              "hot"
+            ],
+            "revealed": [
+              "hit",
+              "hot",
+              "dot"
+            ],
+            "pointers": {
+              "node": "dot"
+            }
+          },
+          "activeEdge": [
+            "hot",
+            "dot"
+          ],
+          "variables": {
+            "begin": "hit",
+            "end": "cog",
+            "word": "dot",
+            "steps": 3,
+            "i": 2,
+            "ch": "t",
+            "nxt": "hot"
+          }
+        },
+        {
+          "line": 14,
+          "explanation": "The structure grows: a node holding 'dog' appears and is linked in — 4 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "graph": {
+            "current": "dot",
+            "visited": [
+              "hit",
+              "hot"
+            ],
+            "revealed": [
+              "hit",
+              "hot",
+              "dot",
+              "dog"
+            ],
+            "pointers": {
+              "node": "dot"
+            }
+          },
+          "variables": {
+            "begin": "hit",
+            "end": "cog",
+            "word": "dot",
+            "steps": 3,
+            "i": 2,
+            "ch": "g",
+            "nxt": "dog"
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "node steps to the node holding 'dog' leaving 'dot' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "dog",
+            "visited": [
+              "hit",
+              "hot",
+              "dot"
+            ],
+            "revealed": [
+              "hit",
+              "hot",
+              "dot",
+              "dog"
+            ],
+            "pointers": {
+              "node": "dog"
+            }
+          },
+          "activeEdge": [
+            "dot",
+            "dog"
+          ],
+          "variables": {
+            "begin": "hit",
+            "end": "cog",
+            "word": "dog",
+            "steps": 4,
+            "i": 2,
+            "ch": "t",
+            "nxt": "dot"
+          }
+        },
+        {
+          "line": 14,
+          "explanation": "The structure grows: a node holding 'cog' appears and is linked in — 5 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "graph": {
+            "current": "dog",
+            "visited": [
+              "hit",
+              "hot",
+              "dot"
+            ],
+            "revealed": [
+              "hit",
+              "hot",
+              "dot",
+              "dog",
+              "cog"
+            ],
+            "pointers": {
+              "node": "dog"
+            }
+          },
+          "variables": {
+            "begin": "hit",
+            "end": "cog",
+            "word": "dog",
+            "steps": 4,
+            "i": 0,
+            "ch": "c",
+            "nxt": "cog"
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "node steps to the node holding 'cog' leaving 'dog' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "cog",
+            "visited": [
+              "hit",
+              "hot",
+              "dot",
+              "dog"
+            ],
+            "revealed": [
+              "hit",
+              "hot",
+              "dot",
+              "dog",
+              "cog"
+            ],
+            "pointers": {
+              "node": "cog"
+            }
+          },
+          "activeEdge": [
+            "dog",
+            "cog"
+          ],
+          "variables": {
+            "begin": "hit",
+            "end": "cog",
+            "word": "cog",
+            "steps": 5,
+            "i": 2,
+            "ch": "t",
+            "nxt": "dot"
+          }
+        },
+        {
+          "line": 7,
+          "explanation": "The run is complete and the call returns 5. The final structure holds 5 nodes and 4 links — every one extracted from the real objects the code created and walked. That picture is not an illustration of the algorithm; it IS the algorithm's memory.",
+          "graph": {
+            "current": null,
+            "visited": [
+              "hit",
+              "hot",
+              "dot",
+              "dog"
+            ],
+            "revealed": [
+              "hit",
+              "hot",
+              "dot",
+              "dog",
+              "cog"
+            ],
+            "pointers": {}
+          },
+          "variables": {}
+        }
+      ]
+    }
+  },
+  {
+    "name": "AUTO(graph-adjacency) — Course Schedule graph",
+    "trace": {
+      "language": "python",
+      "code": "from collections import deque\ndef can_finish(n, pres):\n    adj = {i: [] for i in range(n)}\n    indeg = [0] * n\n    for a, b in pres:\n        adj[b].append(a)\n        indeg[a] += 1\n    q = deque(i for i in range(n) if indeg[i] == 0)\n    done = 0\n    while q:\n        u = q.popleft()\n        done += 1\n        for v in adj[u]:\n            indeg[v] -= 1\n            if indeg[v] == 0:\n                q.append(v)\n    return done == n",
+      "views": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "0",
+              "label": "0"
+            },
+            {
+              "id": "1",
+              "label": "1"
+            },
+            {
+              "id": "2",
+              "label": "2"
+            },
+            {
+              "id": "3",
+              "label": "3"
+            }
+          ],
+          "edges": [
+            {
+              "from": "0",
+              "to": "1"
+            },
+            {
+              "from": "0",
+              "to": "2"
+            },
+            {
+              "from": "1",
+              "to": "3"
+            },
+            {
+              "from": "2",
+              "to": "3"
+            }
+          ],
+          "directed": true
+        }
+      },
+      "steps": [
+        {
+          "line": 9,
+          "explanation": "We run can_finish(4, [[1, 0], [2, 0], [3, 1], [3, 2]]) on this exact graph and watch the algorithm's own variables — the node being processed, the distance table, the frontier. Every value below was recorded from the real run; the picture can never disagree with the code.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "pointers": {}
+          },
+          "variables": {}
+        },
+        {
+          "line": 9,
+          "explanation": "The queue now holds 0 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "pointers": {}
+          },
+          "queue": [
+            "0"
+          ],
+          "variables": {
+            "n": 4,
+            "a": 3,
+            "b": 2
+          }
+        },
+        {
+          "line": 12,
+          "explanation": "Now 0 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 0's edges.",
+          "graph": {
+            "current": "0",
+            "visited": [],
+            "pointers": {
+              "curr": "0"
+            }
+          },
+          "queue": [],
+          "variables": {
+            "n": 4,
+            "a": 3,
+            "b": 2,
+            "done": 0
+          }
+        },
+        {
+          "line": 15,
+          "explanation": "1's indegree drops to 0 — every prerequisite it was waiting on is done, so 1 is now FREE and joins the frontier to be scheduled.",
+          "graph": {
+            "current": "0",
+            "visited": [],
+            "pointers": {
+              "curr": "0"
+            }
+          },
+          "queue": [],
+          "variables": {
+            "n": 4,
+            "a": 3,
+            "b": 2,
+            "done": 1,
+            "v": 1
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "The queue now holds 1 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+          "graph": {
+            "current": "0",
+            "visited": [],
+            "pointers": {
+              "curr": "0"
+            }
+          },
+          "queue": [
+            "1"
+          ],
+          "variables": {
+            "n": 4,
+            "a": 3,
+            "b": 2,
+            "done": 1,
+            "v": 1
+          }
+        },
+        {
+          "line": 15,
+          "explanation": "2's indegree drops to 0 — every prerequisite it was waiting on is done, so 2 is now FREE and joins the frontier to be scheduled.",
+          "graph": {
+            "current": "0",
+            "visited": [],
+            "pointers": {
+              "curr": "0"
+            }
+          },
+          "queue": [
+            "1"
+          ],
+          "variables": {
+            "n": 4,
+            "a": 3,
+            "b": 2,
+            "done": 1,
+            "v": 2
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "The queue now holds 1, 2 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+          "graph": {
+            "current": "0",
+            "visited": [],
+            "pointers": {
+              "curr": "0"
+            }
+          },
+          "queue": [
+            "1",
+            "2"
+          ],
+          "variables": {
+            "n": 4,
+            "a": 3,
+            "b": 2,
+            "done": 1,
+            "v": 2
+          }
+        },
+        {
+          "line": 12,
+          "explanation": "Now 1 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
+          "graph": {
+            "current": "1",
+            "visited": [],
+            "pointers": {
+              "curr": "1"
+            }
+          },
+          "queue": [
+            "2"
+          ],
+          "variables": {
+            "n": 4,
+            "a": 3,
+            "b": 2,
+            "done": 1,
+            "v": 2
+          }
+        },
+        {
+          "line": 15,
+          "explanation": "One incoming edge of 3 is satisfied; its indegree drops to 1. It still waits — a node may only be scheduled when NOTHING points at it anymore.",
+          "graph": {
+            "current": "1",
+            "visited": [],
+            "pointers": {
+              "curr": "1"
+            }
+          },
+          "queue": [
+            "2"
+          ],
+          "variables": {
+            "n": 4,
+            "a": 3,
+            "b": 2,
+            "done": 2,
+            "v": 3
+          }
+        },
+        {
+          "line": 12,
+          "explanation": "Now 2 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 2's edges.",
+          "graph": {
+            "current": "2",
+            "visited": [],
+            "pointers": {
+              "curr": "2"
+            }
+          },
+          "queue": [],
+          "variables": {
+            "n": 4,
+            "a": 3,
+            "b": 2,
+            "done": 2,
+            "v": 3
+          }
+        },
+        {
+          "line": 15,
+          "explanation": "3's indegree drops to 0 — every prerequisite it was waiting on is done, so 3 is now FREE and joins the frontier to be scheduled.",
+          "graph": {
+            "current": "2",
+            "visited": [],
+            "pointers": {
+              "curr": "2"
+            }
+          },
+          "queue": [],
+          "variables": {
+            "n": 4,
+            "a": 3,
+            "b": 2,
+            "done": 3,
+            "v": 3
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "The queue now holds 3 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+          "graph": {
+            "current": "2",
+            "visited": [],
+            "pointers": {
+              "curr": "2"
+            }
+          },
+          "queue": [
+            "3"
+          ],
+          "variables": {
+            "n": 4,
+            "a": 3,
+            "b": 2,
+            "done": 3,
+            "v": 3
+          }
+        },
+        {
+          "line": 12,
+          "explanation": "Now 3 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 3's edges.",
+          "graph": {
+            "current": "3",
+            "visited": [],
+            "pointers": {
+              "curr": "3"
+            }
+          },
+          "queue": [],
+          "variables": {
+            "n": 4,
+            "a": 3,
+            "b": 2,
+            "done": 3,
+            "v": 3
+          }
+        },
+        {
+          "line": 12,
+          "explanation": "The walk is complete and the call returns true. Every number in the final table was earned by a relaxation you watched happen — that is the whole proof, performed in front of you.",
+          "graph": {
+            "current": "3",
+            "visited": [],
+            "pointers": {
+              "curr": "3"
+            }
+          },
+          "variables": {}
+        }
+      ]
+    }
+  },
+  {
+    "name": "AUTO(divide-conquer) — Merge Sort band + segment tree",
+    "trace": {
+      "language": "python",
+      "code": "def merge_sort(arr, lo, hi):\n    if hi - lo <= 1:\n        return\n    mid = (lo + hi) // 2\n    merge_sort(arr, lo, mid)\n    merge_sort(arr, mid, hi)\n    tmp = []\n    i, j = lo, mid\n    while i < mid and j < hi:\n        if arr[i] <= arr[j]:\n            tmp.append(arr[i]); i += 1\n        else:\n            tmp.append(arr[j]); j += 1\n    tmp.extend(arr[i:mid]); tmp.extend(arr[j:hi])\n    arr[lo:hi] = tmp",
+      "views": {
+        "array": {
+          "values": [
+            5,
+            2,
+            8,
+            1
+          ]
+        },
+        "graph": {
+          "nodes": [
+            {
+              "id": "c0",
+              "label": "merge_sort(0..3)"
+            },
+            {
+              "id": "c1",
+              "label": "merge_sort(0..1)"
+            },
+            {
+              "id": "c2",
+              "label": "merge_sort(0..0)"
+            },
+            {
+              "id": "c3",
+              "label": "merge_sort(1..1)"
+            },
+            {
+              "id": "c4",
+              "label": "merge_sort(2..3)"
+            },
+            {
+              "id": "c5",
+              "label": "merge_sort(2..2)"
+            },
+            {
+              "id": "c6",
+              "label": "merge_sort(3..3)"
+            }
+          ],
+          "edges": [
+            {
+              "from": "c0",
+              "to": "c1"
+            },
+            {
+              "from": "c1",
+              "to": "c2"
+            },
+            {
+              "from": "c1",
+              "to": "c3"
+            },
+            {
+              "from": "c0",
+              "to": "c4"
+            },
+            {
+              "from": "c4",
+              "to": "c5"
+            },
+            {
+              "from": "c4",
+              "to": "c6"
+            }
+          ],
+          "directed": true
+        }
+      },
+      "steps": [
+        {
+          "line": 1,
+          "explanation": "We run merge_sort([5, 2, 8, 1], 0, 4) and watch two pictures at once: the array with the ACTIVE BAND lit (everything dimmed is another call's job), and the recursion tree growing as the problem splits. Divide and conquer means never thinking about more than one band at a time.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [],
+            "revealed": [
+              "c0"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 1,
+          "explanation": "We enter merge_sort(0..3): the problem is now JUST these 4 cells — watch the focus band shrink onto them. Nothing outside the band can be touched by this call; that discipline is the whole design.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [],
+            "revealed": [
+              "c0"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "New state appears: lo = 0, hi = 4 — keep your eye on these values; every pointer move below is decided by them.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [],
+            "revealed": [
+              "c0"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "variables": {
+            "lo": 0,
+            "hi": 4
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "Mid starts at index 2, where the value is 8. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "pointers": {
+              "mid": 2
+            }
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [],
+            "revealed": [
+              "c0"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 1,
+          "explanation": "We enter merge_sort(0..1): merge_sort(0..3) hands down the band 0..1 and the problem is now JUST these 2 cells — watch the focus band shrink onto them. Nothing outside the band can be touched by this call; that discipline is the whole design.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              2,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c0",
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)"
+          ],
+          "activeEdge": [
+            "c0",
+            "c1"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "The bookkeeping updates: hi becomes 2. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              2,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c0",
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)"
+          ],
+          "variables": {
+            "hi": 2
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "Mid moves to index 1, where the value is 2. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              2,
+              3
+            ],
+            "pointers": {
+              "mid": 1
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [],
+            "revealed": [
+              "c0",
+              "c1"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 1,
+          "explanation": "merge_sort(0..0) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              1,
+              2,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c2",
+            "visited": [],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c2"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)",
+            "merge_sort(0..0)"
+          ],
+          "activeEdge": [
+            "c1",
+            "c2"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "The bookkeeping updates: hi becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              1,
+              2,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c2",
+            "visited": [],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2"
+            ],
+            "returned": {},
+            "pointers": {
+              "call": "c2"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)",
+            "merge_sort(0..0)"
+          ],
+          "variables": {
+            "hi": 1
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "merge_sort(0..0) RETURNS: its band comes back as [5] — sorted within itself, guaranteed. merge_sort(0..1) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              2,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [
+              "c2"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2"
+            ],
+            "returned": {
+              "c2": "[5]"
+            },
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)"
+          ],
+          "activeEdge": [
+            "c2",
+            "c1"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 6,
+          "explanation": "The bookkeeping updates: hi becomes 2. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              2,
+              3
+            ],
+            "pointers": {
+              "mid": 1
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [
+              "c2"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2"
+            ],
+            "returned": {
+              "c2": "[5]"
+            },
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)"
+          ],
+          "variables": {
+            "hi": 2
+          }
+        },
+        {
+          "line": 1,
+          "explanation": "merge_sort(1..1) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              2,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c3",
+            "visited": [
+              "c2"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {
+              "c2": "[5]"
+            },
+            "pointers": {
+              "call": "c3"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)",
+            "merge_sort(1..1)"
+          ],
+          "activeEdge": [
+            "c1",
+            "c3"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "The bookkeeping updates: lo becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              2,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c3",
+            "visited": [
+              "c2"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {
+              "c2": "[5]"
+            },
+            "pointers": {
+              "call": "c3"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)",
+            "merge_sort(1..1)"
+          ],
+          "variables": {
+            "lo": 1
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "merge_sort(1..1) RETURNS: its band comes back as [2] — sorted within itself, guaranteed. merge_sort(0..1) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              2,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [
+              "c2",
+              "c3"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]"
+            },
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)"
+          ],
+          "activeEdge": [
+            "c3",
+            "c1"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "The bookkeeping updates: lo becomes 0. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              2,
+              3
+            ],
+            "pointers": {
+              "mid": 1
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [
+              "c2",
+              "c3"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]"
+            },
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)"
+          ],
+          "variables": {
+            "lo": 0
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "I starts at index 0, where the value is 5; j starts at index 1, where the value is 2. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              2,
+              3
+            ],
+            "pointers": {
+              "mid": 1,
+              "i": 0,
+              "j": 1
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [
+              "c2",
+              "c3"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]"
+            },
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 9,
+          "explanation": "J moves to index 2, where the value is 8. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              5,
+              2,
+              8,
+              1
+            ],
+            "dimmed": [
+              2,
+              3
+            ],
+            "pointers": {
+              "mid": 1,
+              "i": 0,
+              "j": 2
+            }
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [
+              "c2",
+              "c3"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]"
+            },
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "Cells 0 and 1 trade contents: 2 now sits at index 0 and 5 at index 1. Watch the swap flash — in-place rearrangement is the whole trick: no second array, just disciplined exchanges.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              2,
+              3
+            ],
+            "pointers": {},
+            "swapped": [
+              0,
+              1
+            ]
+          },
+          "graph": {
+            "current": "c1",
+            "visited": [
+              "c2",
+              "c3"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]"
+            },
+            "pointers": {
+              "call": "c1"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(0..1)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "merge_sort(0..1) RETURNS: its band comes back as [2, 5] — sorted within itself, guaranteed. merge_sort(0..3) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [
+              "c2",
+              "c3",
+              "c1"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]"
+            },
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "activeEdge": [
+            "c1",
+            "c0"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 6,
+          "explanation": "Mid moves to index 2, where the value is 8. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The bookkeeping updates: hi becomes 4. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "pointers": {
+              "mid": 2
+            }
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [
+              "c2",
+              "c3",
+              "c1"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]"
+            },
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "variables": {
+            "hi": 4
+          }
+        },
+        {
+          "line": 1,
+          "explanation": "We enter merge_sort(2..3): merge_sort(0..3) hands down the band 2..3 and the problem is now JUST these 2 cells — watch the focus band shrink onto them. Nothing outside the band can be touched by this call; that discipline is the whole design.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              1
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c4",
+            "visited": [
+              "c2",
+              "c3",
+              "c1"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]"
+            },
+            "pointers": {
+              "call": "c4"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)"
+          ],
+          "activeEdge": [
+            "c0",
+            "c4"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "The bookkeeping updates: lo becomes 2. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              1
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c4",
+            "visited": [
+              "c2",
+              "c3",
+              "c1"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]"
+            },
+            "pointers": {
+              "call": "c4"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)"
+          ],
+          "variables": {
+            "lo": 2
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "Mid moves to index 3, where the value is 1. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              1
+            ],
+            "pointers": {
+              "mid": 3
+            }
+          },
+          "graph": {
+            "current": "c4",
+            "visited": [
+              "c2",
+              "c3",
+              "c1"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]"
+            },
+            "pointers": {
+              "call": "c4"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 1,
+          "explanation": "merge_sort(2..2) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              1,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c2",
+              "c3",
+              "c1"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)",
+            "merge_sort(2..2)"
+          ],
+          "activeEdge": [
+            "c4",
+            "c5"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "The bookkeeping updates: hi becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              1,
+              3
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c5",
+            "visited": [
+              "c2",
+              "c3",
+              "c1"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]"
+            },
+            "pointers": {
+              "call": "c5"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)",
+            "merge_sort(2..2)"
+          ],
+          "variables": {
+            "hi": 3
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "merge_sort(2..2) RETURNS: its band comes back as [8] — sorted within itself, guaranteed. merge_sort(2..3) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              1
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c4",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]"
+            },
+            "pointers": {
+              "call": "c4"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)"
+          ],
+          "activeEdge": [
+            "c5",
+            "c4"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 6,
+          "explanation": "The bookkeeping updates: hi becomes 4. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              1
+            ],
+            "pointers": {
+              "mid": 3
+            }
+          },
+          "graph": {
+            "current": "c4",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]"
+            },
+            "pointers": {
+              "call": "c4"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)"
+          ],
+          "variables": {
+            "hi": 4
+          }
+        },
+        {
+          "line": 1,
+          "explanation": "merge_sort(3..3) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c6",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]"
+            },
+            "pointers": {
+              "call": "c6"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)",
+            "merge_sort(3..3)"
+          ],
+          "activeEdge": [
+            "c4",
+            "c6"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 2,
+          "explanation": "The bookkeeping updates: lo becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              1,
+              2
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c6",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]"
+            },
+            "pointers": {
+              "call": "c6"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)",
+            "merge_sort(3..3)"
+          ],
+          "variables": {
+            "lo": 3
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "merge_sort(3..3) RETURNS: its band comes back as [1] — sorted within itself, guaranteed. merge_sort(2..3) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              1
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c4",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]"
+            },
+            "pointers": {
+              "call": "c4"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)"
+          ],
+          "activeEdge": [
+            "c6",
+            "c4"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "The bookkeeping updates: lo becomes 2. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              1
+            ],
+            "pointers": {
+              "mid": 3
+            }
+          },
+          "graph": {
+            "current": "c4",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]"
+            },
+            "pointers": {
+              "call": "c4"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)"
+          ],
+          "variables": {
+            "lo": 2
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "I moves to index 2, where the value is 8; j moves to index 3, where the value is 1. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              5,
+              8,
+              1
+            ],
+            "dimmed": [
+              0,
+              1
+            ],
+            "pointers": {
+              "mid": 3,
+              "i": 2,
+              "j": 3
+            }
+          },
+          "graph": {
+            "current": "c4",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]"
+            },
+            "pointers": {
+              "call": "c4"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "Cells 2 and 3 trade contents: 1 now sits at index 2 and 8 at index 3. Watch the swap flash — in-place rearrangement is the whole trick: no second array, just disciplined exchanges.",
+          "array": {
+            "values": [
+              2,
+              5,
+              1,
+              8
+            ],
+            "dimmed": [
+              0,
+              1
+            ],
+            "pointers": {},
+            "swapped": [
+              2,
+              3
+            ]
+          },
+          "graph": {
+            "current": "c4",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]"
+            },
+            "pointers": {
+              "call": "c4"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)",
+            "merge_sort(2..3)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "merge_sort(2..3) RETURNS: its band comes back as [1, 8] — sorted within itself, guaranteed. merge_sort(0..3) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              2,
+              5,
+              1,
+              8
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6",
+              "c4"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]",
+              "c4": "[1, 8]"
+            },
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "activeEdge": [
+            "c4",
+            "c0"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 7,
+          "explanation": "Mid moves to index 2, where the value is 1. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The bookkeeping updates: lo becomes 0. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "values": [
+              2,
+              5,
+              1,
+              8
+            ],
+            "pointers": {
+              "mid": 2
+            }
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6",
+              "c4"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]",
+              "c4": "[1, 8]"
+            },
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "variables": {
+            "lo": 0
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "I moves to index 0, where the value is 2; j moves to index 2, where the value is 1. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              5,
+              1,
+              8
+            ],
+            "pointers": {
+              "mid": 2,
+              "i": 0,
+              "j": 2
+            }
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6",
+              "c4"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]",
+              "c4": "[1, 8]"
+            },
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 9,
+          "explanation": "J moves to index 3, where the value is 8. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              5,
+              1,
+              8
+            ],
+            "pointers": {
+              "mid": 2,
+              "i": 0,
+              "j": 3
+            }
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6",
+              "c4"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]",
+              "c4": "[1, 8]"
+            },
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 9,
+          "explanation": "I moves to index 1, where the value is 5. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              5,
+              1,
+              8
+            ],
+            "pointers": {
+              "mid": 2,
+              "i": 1,
+              "j": 3
+            }
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6",
+              "c4"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]",
+              "c4": "[1, 8]"
+            },
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 9,
+          "explanation": "I moves to index 2, where the value is 1. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "values": [
+              2,
+              5,
+              1,
+              8
+            ],
+            "pointers": {
+              "mid": 2,
+              "i": 2,
+              "j": 3
+            }
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6",
+              "c4"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]",
+              "c4": "[1, 8]"
+            },
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "The array itself changes at indices 0, 1, 2 — a real in-place write recorded from the run, not an animation guess.",
+          "array": {
+            "values": [
+              1,
+              2,
+              5,
+              8
+            ],
+            "pointers": {},
+            "comparing": [
+              0,
+              1,
+              2
+            ]
+          },
+          "graph": {
+            "current": "c0",
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6",
+              "c4"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]",
+              "c4": "[1, 8]"
+            },
+            "pointers": {
+              "call": "c0"
+            }
+          },
+          "stack": [
+            "merge_sort(0..3)"
+          ],
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "merge_sort(0..3) RETURNS: its band comes back as [1, 2, 5, 8] — sorted within itself, guaranteed. The whole array is now conquered, and combining solved halves is all the work that remains at this level.",
+          "array": {
+            "values": [
+              1,
+              2,
+              5,
+              8
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": null,
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6",
+              "c4",
+              "c0"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]",
+              "c4": "[1, 8]",
+              "c0": "[1, 2, 5, 8]"
+            },
+            "pointers": {}
+          },
+          "stack": [],
+          "variables": {}
+        },
+        {
+          "line": 15,
+          "explanation": "Every call has returned and the array reads [1, 2, 5, 8]. Walk the tree bottom-up in your head: one-cell bands were trivially sorted, and every merge/partition above them only ever combined already-solved halves — that is the entire proof, performed in front of you.",
+          "array": {
+            "values": [
+              1,
+              2,
+              5,
+              8
+            ],
+            "pointers": {}
+          },
+          "graph": {
+            "current": null,
+            "visited": [
+              "c2",
+              "c3",
+              "c1",
+              "c5",
+              "c6",
+              "c4",
+              "c0"
+            ],
+            "revealed": [
+              "c0",
+              "c1",
+              "c2",
+              "c3",
+              "c4",
+              "c5",
+              "c6"
+            ],
+            "returned": {
+              "c2": "[5]",
+              "c3": "[2]",
+              "c1": "[2, 5]",
+              "c5": "[8]",
+              "c6": "[1]",
+              "c4": "[1, 8]",
+              "c0": "[1, 2, 5, 8]"
+            },
+            "pointers": {}
+          },
+          "stack": [],
+          "variables": {}
+        }
+      ]
+    }
+  },
+  {
+    "name": "AUTO(pointer-array) — Two Sum + its memory",
+    "trace": {
+      "language": "python",
+      "code": "def two_sum(arr, t):\n    seen = {}\n    for i in range(len(arr)):\n        need = t - arr[i]\n        if need in seen:\n            return [seen[need], i]\n        seen[arr[i]] = i\n    return []",
+      "views": {
+        "array": {
+          "values": [
+            2,
+            7,
+            11,
+            15
+          ]
+        }
+      },
+      "steps": [
+        {
+          "line": 2,
+          "explanation": "New state appears: t = 18 — keep your eye on this value; every pointer move below is decided by it.",
+          "array": {
+            "pointers": {}
+          },
+          "variables": {
+            "t": 18
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "I starts at index 0, where the value is 2. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "current": 0,
+            "pointers": {
+              "i": 0
+            }
+          },
+          "traceRow": {},
+          "variables": {
+            "t": 18,
+            "i": 0
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "New state appears: need = 16 — keep your eye on this value; every pointer move below is decided by it.",
+          "array": {
+            "pointers": {
+              "i": 0
+            }
+          },
+          "traceRow": {},
+          "variables": {
+            "t": 18,
+            "i": 0,
+            "need": 16
+          }
+        },
+        {
+          "line": 3,
+          "explanation": " seen[2] = 0 lands in the map — 1 entry remembered. The map is the walk's memory of what it has already seen, and checking it beats re-scanning every time.",
+          "array": {
+            "pointers": {
+              "i": 0
+            }
+          },
+          "traceRow": {
+            "2": 0
+          },
+          "variables": {
+            "t": 18,
+            "i": 0,
+            "need": 16
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "I moves to index 1, where the value is 7. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "current": 1,
+            "pointers": {
+              "i": 1
+            }
+          },
+          "traceRow": {
+            "2": 0
+          },
+          "variables": {
+            "t": 18,
+            "i": 1,
+            "need": 16
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "The bookkeeping updates: need becomes 11. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 1
+            }
+          },
+          "traceRow": {
+            "2": 0
+          },
+          "variables": {
+            "t": 18,
+            "i": 1,
+            "need": 11
+          }
+        },
+        {
+          "line": 3,
+          "explanation": " seen[7] = 1 lands in the map — 2 entries remembered. The map is the walk's memory of what it has already seen, and checking it beats re-scanning every time.",
+          "array": {
+            "pointers": {
+              "i": 1
+            }
+          },
+          "traceRow": {
+            "2": 0,
+            "7": 1
+          },
+          "variables": {
+            "t": 18,
+            "i": 1,
+            "need": 11
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "I moves to index 2, where the value is 11. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "current": 2,
+            "pointers": {
+              "i": 2
+            }
+          },
+          "traceRow": {
+            "2": 0,
+            "7": 1
+          },
+          "variables": {
+            "t": 18,
+            "i": 2,
+            "need": 11
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "The bookkeeping updates: need becomes 7. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 2
+            }
+          },
+          "traceRow": {
+            "2": 0,
+            "7": 1
+          },
+          "variables": {
+            "t": 18,
+            "i": 2,
+            "need": 7
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "The walk is over and the call returns [1,2]. Replay the arrows in your head: every move you watched was a decision the code made on real data — that decision pattern IS the algorithm.",
+          "array": {
+            "pointers": {
+              "i": 2
+            }
+          },
+          "traceRow": {
+            "2": 0,
+            "7": 1
+          },
+          "variables": {
+            "t": 18,
+            "i": 2,
+            "need": 7
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "AUTO(trie-dict) — Trie grows inline",
+    "trace": {
+      "language": "python",
+      "code": "def build_trie(words):\n    root = {}\n    for w in words:\n        node = root\n        for ch in w:\n            if ch not in node:\n                node[ch] = {}\n            node = node[ch]\n        node['$'] = True\n    return root",
+      "views": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "root",
+              "label": "root"
+            },
+            {
+              "id": "root/a",
+              "label": "a"
+            },
+            {
+              "id": "root/a/p",
+              "label": "p"
+            },
+            {
+              "id": "root/a/p/$",
+              "label": "$ (word ends)"
+            },
+            {
+              "id": "root/a/n",
+              "label": "n"
+            },
+            {
+              "id": "root/a/n/$",
+              "label": "$ (word ends)"
+            }
+          ],
+          "edges": [
+            {
+              "from": "root",
+              "to": "root/a"
+            },
+            {
+              "from": "root/a",
+              "to": "root/a/p"
+            },
+            {
+              "from": "root/a",
+              "to": "root/a/n"
+            },
+            {
+              "from": "root/a/p",
+              "to": "root/a/p/$"
+            },
+            {
+              "from": "root/a/n",
+              "to": "root/a/n/$"
+            }
+          ],
+          "directed": true
+        }
+      },
+      "steps": [
+        {
+          "line": 8,
+          "explanation": "We run build_trie(['ap', 'an']) and watch the structure itself: every circle is a real node object (or adjacency entry) extracted live from memory, every arrow a real reference. Nothing here was declared — the picture IS the program's own data, drawn as it exists at each step.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "revealed": [],
+            "pointers": {}
+          },
+          "variables": {}
+        },
+        {
+          "line": 8,
+          "explanation": "The structure grows: a node holding 'a' appears and is linked in — 2 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "revealed": [
+              "root",
+              "root/a"
+            ],
+            "pointers": {}
+          },
+          "variables": {
+            "w": "ap",
+            "ch": "a"
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "The structure grows: a node holding 'p' appears and is linked in — 3 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "revealed": [
+              "root",
+              "root/a",
+              "root/a/p"
+            ],
+            "pointers": {}
+          },
+          "variables": {
+            "w": "ap",
+            "ch": "p"
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "The structure grows: a node holding '$ (word ends)' appears and is linked in — 4 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "revealed": [
+              "root",
+              "root/a",
+              "root/a/p",
+              "root/a/p/$"
+            ],
+            "pointers": {}
+          },
+          "variables": {
+            "w": "ap",
+            "ch": "p"
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "The structure grows: a node holding 'n' appears and is linked in — 5 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "revealed": [
+              "root",
+              "root/a",
+              "root/a/p",
+              "root/a/p/$",
+              "root/a/n"
+            ],
+            "pointers": {}
+          },
+          "variables": {
+            "w": "an",
+            "ch": "n"
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "The structure grows: a node holding '$ (word ends)' appears and is linked in — 6 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "revealed": [
+              "root",
+              "root/a",
+              "root/a/p",
+              "root/a/p/$",
+              "root/a/n",
+              "root/a/n/$"
+            ],
+            "pointers": {}
+          },
+          "variables": {
+            "w": "an",
+            "ch": "n"
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "The run is complete and the call returns {\"a\":{\"p\":{\"$\":true},\"n\":{\"$\":true}}}. The final structure holds 6 nodes and 5 links — every one extracted from the real objects the code created and walked. That picture is not an illustration of the algorithm; it IS the algorithm's memory.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "revealed": [
+              "root",
+              "root/a",
+              "root/a/p",
+              "root/a/p/$",
+              "root/a/n",
+              "root/a/n/$"
+            ],
+            "pointers": {}
+          },
+          "variables": {}
+        }
+      ]
+    }
+  },
+  {
+    "name": "AUTO(union-find) — Union-Find components",
+    "trace": {
+      "language": "python",
+      "code": "def components(n, edges):\n    parent = list(range(n))\n    def find(x):\n        while parent[x] != x:\n            parent[x] = parent[parent[x]]\n            x = parent[x]\n        return x\n    count = n\n    for a, b in edges:\n        ra, rb = find(a), find(b)\n        if ra != rb:\n            parent[ra] = rb\n            count -= 1\n    return count",
+      "views": {
+        "graph": {
+          "nodes": [
+            {
+              "id": "0",
+              "label": "0"
+            },
+            {
+              "id": "1",
+              "label": "1"
+            },
+            {
+              "id": "2",
+              "label": "2"
+            },
+            {
+              "id": "3",
+              "label": "3"
+            },
+            {
+              "id": "4",
+              "label": "4"
+            }
+          ],
+          "edges": [
+            {
+              "from": "0",
+              "to": "1"
+            },
+            {
+              "from": "1",
+              "to": "2"
+            },
+            {
+              "from": "3",
+              "to": "4"
+            }
+          ],
+          "directed": false
+        }
+      },
+      "steps": [
+        {
+          "line": 3,
+          "explanation": "We run components(5, [[0, 1], [1, 2], [3, 4]]) on this exact graph and watch the algorithm's own variables — the node being processed, the distance table, the frontier. Every value below was recorded from the real run; the picture can never disagree with the code.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "pointers": {}
+          },
+          "variables": {}
+        },
+        {
+          "line": 3,
+          "explanation": "0 starts as its own root — every element begins as a lone set of one, and the parent table simply points each element at itself until a union merges it into a family. 1 starts as its own root — every element begins as a lone set of one, and the parent table simply points each element at itself until a union merges it into a family. 2 starts as its own root — every element begins as a lone set of one, and the parent table simply points each element at itself until a union merges it into a family.",
+          "graph": {
+            "current": null,
+            "visited": [],
+            "pointers": {}
+          },
+          "variables": {
+            "n": 5
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "Now 0 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 0's edges.",
+          "graph": {
+            "current": "0",
+            "visited": [],
+            "pointers": {
+              "curr": "0"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 4,
+          "explanation": "Now 1 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
+          "graph": {
+            "current": "1",
+            "visited": [],
+            "pointers": {
+              "curr": "1"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 13,
+          "explanation": "Union: 0's root becomes 1 — the two sets merge into one family, and any future find() on 0's side will now walk up to 1. Watch the forest get flatter as unions accumulate.",
+          "graph": {
+            "current": "1",
+            "visited": [],
+            "pointers": {
+              "curr": "1"
+            }
+          },
+          "variables": {
+            "n": 5,
+            "find": "<function components.<locals>.find at 0x",
+            "count": 5,
+            "a": 0,
+            "b": 1,
+            "ra": 0,
+            "rb": 1
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "Now 2 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 2's edges.",
+          "graph": {
+            "current": "2",
+            "visited": [],
+            "pointers": {
+              "curr": "2"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 13,
+          "explanation": "Union: 1's root becomes 2 — the two sets merge into one family, and any future find() on 1's side will now walk up to 2. Watch the forest get flatter as unions accumulate.",
+          "graph": {
+            "current": "2",
+            "visited": [],
+            "pointers": {
+              "curr": "2"
+            }
+          },
+          "variables": {
+            "n": 5,
+            "find": "<function components.<locals>.find at 0x",
+            "count": 4,
+            "a": 1,
+            "b": 2,
+            "ra": 1,
+            "rb": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "Now 3 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 3's edges.",
+          "graph": {
+            "current": "3",
+            "visited": [],
+            "pointers": {
+              "curr": "3"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 4,
+          "explanation": "Now 4 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 4's edges.",
+          "graph": {
+            "current": "4",
+            "visited": [],
+            "pointers": {
+              "curr": "4"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 13,
+          "explanation": "Union: 3's root becomes 4 — the two sets merge into one family, and any future find() on 3's side will now walk up to 4. Watch the forest get flatter as unions accumulate.",
+          "graph": {
+            "current": "4",
+            "visited": [],
+            "pointers": {
+              "curr": "4"
+            }
+          },
+          "variables": {
+            "n": 5,
+            "find": "<function components.<locals>.find at 0x",
+            "count": 3,
+            "a": 3,
+            "b": 4,
+            "ra": 3,
+            "rb": 4
+          }
+        },
+        {
+          "line": 13,
+          "explanation": "The walk is complete and the call returns 2. Every number in the final table was earned by a relaxation you watched happen — that is the whole proof, performed in front of you.",
+          "graph": {
+            "current": "4",
+            "visited": [],
+            "pointers": {
+              "curr": "4"
+            }
+          },
+          "variables": {}
+        }
+      ]
+    }
   }
 ]

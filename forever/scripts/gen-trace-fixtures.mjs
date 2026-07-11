@@ -160,6 +160,30 @@ add('Hash map — put/get with collision', compileOperationsTrace({
   add('Intervals — LC56 merge (number line)', compileIntervals({ ...payload, code, intervalsVar: 'intervals', mergedVar: 'merged' }));
 }
 
+// ══════ THE UNIVERSAL ENGINE — record once, detect the lens after ══════
+// Each entry below goes through traceUniversal BLIND: no mode, no declarations — the code and
+// one entry call. The lens named in the gallery chip is what the DETECTORS chose.
+{
+  const { traceUniversal } = await import('../lib/execution/trace/universal/trace.js');
+  const exec = async ({ source }) => {
+    try { return { stdout: py(source), stderr: '', timedOut: false }; }
+    catch (err) { return { stdout: String(err.stdout ?? ''), stderr: String(err.stderr ?? err.message), timedOut: false }; }
+  };
+  const auto = async (name, code, entry) => {
+    const { trace, lens } = await traceUniversal({ code, entry, exec });
+    add(`AUTO(${lens}) — ${name}`, trace);
+  };
+
+  await auto('Rotten Oranges spreads', 'from collections import deque\ndef rot(grid):\n    R, C = len(grid), len(grid[0])\n    q = deque()\n    for r in range(R):\n        for c in range(C):\n            if grid[r][c] == 2:\n                q.append((r, c))\n    minutes = 0\n    while q:\n        for _ in range(len(q)):\n            r, c = q.popleft()\n            for dr, dc in ((1,0),(-1,0),(0,1),(0,-1)):\n                nr, nc = r + dr, c + dc\n                if 0 <= nr < R and 0 <= nc < C and grid[nr][nc] == 1:\n                    grid[nr][nc] = 2\n                    q.append((nr, nc))\n        if q:\n            minutes += 1\n    return minutes', 'rot([[2,1,1],[1,1,0],[0,1,1]])');
+  await auto('Kth Largest heap', 'import heapq\ndef kth_largest(nums, k):\n    heap = []\n    for x in nums:\n        heapq.heappush(heap, x)\n        if len(heap) > k:\n            heapq.heappop(heap)\n    return heap[0]', 'kth_largest([3, 2, 1, 5, 6, 4], 2)');
+  await auto('Word Ladder discovery tree', "from collections import deque\ndef ladder(begin, end, words):\n    seen = [begin]\n    q = deque([(begin, 1)])\n    while q:\n        word, steps = q.popleft()\n        if word == end:\n            return steps\n        for i in range(len(word)):\n            for ch in 'cdghiot':\n                nxt = word[:i] + ch + word[i+1:]\n                if nxt in words and nxt not in seen:\n                    seen.append(nxt)\n                    q.append((nxt, steps + 1))\n    return 0", "ladder('hit', 'cog', ['hot', 'dot', 'dog', 'cog'])");
+  await auto('Course Schedule graph', 'from collections import deque\ndef can_finish(n, pres):\n    adj = {i: [] for i in range(n)}\n    indeg = [0] * n\n    for a, b in pres:\n        adj[b].append(a)\n        indeg[a] += 1\n    q = deque(i for i in range(n) if indeg[i] == 0)\n    done = 0\n    while q:\n        u = q.popleft()\n        done += 1\n        for v in adj[u]:\n            indeg[v] -= 1\n            if indeg[v] == 0:\n                q.append(v)\n    return done == n', 'can_finish(4, [[1, 0], [2, 0], [3, 1], [3, 2]])');
+  await auto('Merge Sort band + segment tree', 'def merge_sort(arr, lo, hi):\n    if hi - lo <= 1:\n        return\n    mid = (lo + hi) // 2\n    merge_sort(arr, lo, mid)\n    merge_sort(arr, mid, hi)\n    tmp = []\n    i, j = lo, mid\n    while i < mid and j < hi:\n        if arr[i] <= arr[j]:\n            tmp.append(arr[i]); i += 1\n        else:\n            tmp.append(arr[j]); j += 1\n    tmp.extend(arr[i:mid]); tmp.extend(arr[j:hi])\n    arr[lo:hi] = tmp', 'merge_sort([5, 2, 8, 1], 0, 4)');
+  await auto('Two Sum + its memory', 'def two_sum(arr, t):\n    seen = {}\n    for i in range(len(arr)):\n        need = t - arr[i]\n        if need in seen:\n            return [seen[need], i]\n        seen[arr[i]] = i\n    return []', 'two_sum([2, 7, 11, 15], 18)');
+  await auto('Trie grows inline', "def build_trie(words):\n    root = {}\n    for w in words:\n        node = root\n        for ch in w:\n            if ch not in node:\n                node[ch] = {}\n            node = node[ch]\n        node['$'] = True\n    return root", "build_trie(['ap', 'an'])");
+  await auto('Union-Find components', 'def components(n, edges):\n    parent = list(range(n))\n    def find(x):\n        while parent[x] != x:\n            parent[x] = parent[parent[x]]\n            x = parent[x]\n        return x\n    count = n\n    for a, b in edges:\n        ra, rb = find(a), find(b)\n        if ra != rb:\n            parent[ra] = rb\n            count -= 1\n    return count', 'components(5, [[0, 1], [1, 2], [3, 4]])');
+}
+
 const dir = dirname(fileURLToPath(import.meta.url));
 const target = join(dir, '..', 'app', 'dev', 'gallery', 'traces.json');
 writeFileSync(target, JSON.stringify(out, null, 2));
