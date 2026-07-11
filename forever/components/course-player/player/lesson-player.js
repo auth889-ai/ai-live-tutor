@@ -5,21 +5,17 @@
 // real player chrome with speed/skip/fullscreen, and a scene timeline strip). Playback
 // logic lives in useLessonClock; this component is pure presentation around it.
 // Progress persists per lesson in localStorage so "continue where you left off" is real.
+//
+// PREMIUM PASS (docs/PREMIUM_UI_SPEC.md): THEATER MODE — the animated board sits on an
+// espresso-dark surround so it glows (the MasterClass move in our hue); glass chrome header;
+// cards are the brightest surface on a warm-tinted field with layered hue-matched shadows;
+// Fraunces display over Inter UI; coral is the accent, NEVER the canvas; completion is amber,
+// the grown-up sparkle. The photo backdrop rides at whisper opacity — texture, not wallpaper.
 
 import { useEffect, useRef, useState } from 'react';
 
 import { useLessonClock } from './use-lesson-clock.js';
 import { StagePresenter } from '../panels/stage-presenter.js';
-
-const UI = {
-  text: '#3a2e22',
-  muted: '#8a6d3b',
-  border: '#f0dcd5',
-  card: '#fffdf7',
-  accent: '#e8604c',
-  accentSoft: '#fdeaa7',
-  done: '#3f9d63',
-};
 
 const fmt = (ms) => {
   const s = Math.max(0, Math.round(ms / 1000));
@@ -27,6 +23,7 @@ const fmt = (ms) => {
 };
 
 const SPEEDS = [1, 1.25, 1.5, 1.75, 0.75];
+const V = (name) => `var(${name})`;
 
 export function LessonPlayer({ lesson }) {
   const player = useLessonClock(lesson.scenes);
@@ -67,32 +64,60 @@ export function LessonPlayer({ lesson }) {
   let stripOffset = 0;
 
   return (
-    <div style={{ minHeight: '100vh', color: UI.text }}>
-      {/* ---- header ---- */}
-      <header style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 24px', borderBottom: `1px solid ${UI.border}`, background: UI.card }}>
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: UI.text }}>
-          <span style={{ width: 30, height: 30, borderRadius: 9, background: UI.accent, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800 }}>F</span>
-          <span style={{ fontWeight: 800, fontSize: 17 }}>Forever <span style={{ fontWeight: 500, fontSize: 12, color: UI.muted }}>AI Tutor</span></span>
+    <div style={{ minHeight: '100vh', color: V('--ink-body'), fontFamily: 'var(--font-inter), system-ui, sans-serif', position: 'relative', isolation: 'isolate' }}>
+      {/* Photo backdrop at whisper opacity — page-level texture only, never on cards (spec §C). */}
+      <div aria-hidden style={{
+        position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none',
+        backgroundImage: 'url(/premium-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center 30%',
+        opacity: 0.05, filter: 'saturate(0.7) blur(1.5px)',
+        maskImage: 'linear-gradient(180deg, black 0%, rgba(0,0,0,.55) 45%, transparent 90%)',
+        WebkitMaskImage: 'linear-gradient(180deg, black 0%, rgba(0,0,0,.55) 45%, transparent 90%)',
+      }} />
+
+      {/* ---- header: glass chrome (spec §C) ---- */}
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 14, padding: '12px 24px',
+        background: 'rgba(255,252,250,.72)', backdropFilter: 'blur(14px) saturate(160%)', WebkitBackdropFilter: 'blur(14px) saturate(160%)',
+        borderBottom: '1px solid rgba(227,200,189,.5)',
+      }}>
+        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', color: V('--ink') }}>
+          <span style={{
+            width: 30, height: 30, borderRadius: 9, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800,
+            background: 'linear-gradient(180deg, #F5837A, #EF6154)', boxShadow: '0 2px 6px rgba(232,96,76,.35), inset 0 1px 0 rgba(255,255,255,.35)',
+          }}>F</span>
+          <span style={{ fontWeight: 700, fontSize: 16.5, letterSpacing: '-0.01em' }}>Forever <span style={{ fontWeight: 500, fontSize: 11.5, color: V('--ink-muted') }}>AI Tutor</span></span>
         </a>
-        <div style={{ marginLeft: 18, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{lesson.lessonTitle}</div>
-          <div style={{ fontSize: 12, color: UI.muted }}>Scene {sceneIndex + 1} of {lesson.scenes.length} · {scene.title}</div>
+        <div style={{ marginLeft: 14, minWidth: 0 }}>
+          <div style={{
+            fontFamily: 'var(--font-fraunces), Georgia, serif', fontWeight: 600, fontSize: 16.5, color: V('--ink'),
+            letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>{lesson.lessonTitle}</div>
+          <div style={{ fontSize: 12, color: V('--ink-muted'), fontVariantNumeric: 'tabular-nums' }}>
+            Scene {sceneIndex + 1} of {lesson.scenes.length} · <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>{scene.title}</span>
+          </div>
         </div>
-        <div style={{ marginLeft: 'auto', fontSize: 12, color: UI.muted, whiteSpace: 'nowrap' }}>
+        <div style={{ marginLeft: 'auto', fontSize: 12, color: V('--ink-muted'), whiteSpace: 'nowrap' }}>
           {lesson.voiced ? 'voiced by the agent society' : 'generated by the agent society'}
         </div>
       </header>
 
-      <main style={{ display: 'flex', gap: 18, maxWidth: 1360, margin: '18px auto', padding: '0 18px', alignItems: 'flex-start' }}>
-        {/* ---- episode sidebar ---- */}
-        <aside style={{ width: 280, flexShrink: 0, background: UI.card, border: `1px solid ${UI.border}`, borderRadius: 14, padding: 16 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 2 }}>{lesson.lessonTitle}</div>
-          <div style={{ fontSize: 12, color: UI.muted, marginBottom: 10 }}>{lesson.scenes.length} scenes · {fmt(totalMs)} total</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <div style={{ flex: 1, height: 7, borderRadius: 4, background: '#f0e6d2' }}>
-              <div style={{ width: `${pct}%`, height: '100%', borderRadius: 4, background: UI.accent, transition: 'width 0.3s' }} />
+      <main style={{ display: 'flex', gap: 20, maxWidth: 1380, margin: '20px auto', padding: '0 20px', alignItems: 'flex-start' }}>
+        {/* ---- episode sidebar: brightest card on the field (spec law 3) ---- */}
+        <aside style={{
+          width: 284, flexShrink: 0, background: '#FFFFFF', border: `1px solid ${V('--border')}`,
+          borderRadius: 20, padding: 18, boxShadow: V('--card-shadow'),
+        }}>
+          <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontWeight: 620, fontSize: 16, color: V('--ink'), letterSpacing: '-0.015em', lineHeight: 1.3, marginBottom: 3 }}>
+            {lesson.lessonTitle}
+          </div>
+          <div style={{ fontSize: 12, color: V('--ink-muted'), marginBottom: 12, fontVariantNumeric: 'tabular-nums' }}>
+            {lesson.scenes.length} scenes · {fmt(totalMs)} total
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <div style={{ flex: 1, height: 6, borderRadius: 4, background: V('--surface-sunken') }}>
+              <div style={{ width: `${pct}%`, height: '100%', borderRadius: 4, background: `linear-gradient(90deg, ${V('--coral')}, #EF6154)`, transition: 'width 600ms var(--ease-out-soft)' }} />
             </div>
-            <span style={{ fontSize: 12, fontWeight: 700, color: UI.muted }}>{pct}%</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: pct === 100 ? V('--amber') : V('--ink-muted'), fontVariantNumeric: 'tabular-nums' }}>{pct}%</span>
           </div>
 
           {lesson.scenes.map((s, index) => {
@@ -104,67 +129,83 @@ export function LessonPlayer({ lesson }) {
                 onClick={() => player.goToScene(index)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
-                  padding: '10px 10px', marginBottom: 6, borderRadius: 10, cursor: 'pointer',
-                  border: `1px solid ${active ? UI.accent : UI.border}`,
-                  background: active ? '#fdece8' : '#fff',
+                  padding: '10px 10px 10px 13px', marginBottom: 6, borderRadius: 12, cursor: 'pointer',
+                  fontFamily: 'inherit', position: 'relative',
+                  border: '1px solid transparent',
+                  borderColor: active ? 'transparent' : V('--border'),
+                  background: active ? '#FDECE8' : '#FFFDFB',
+                  boxShadow: active ? 'inset 3px 0 0 0 ' + 'var(--coral-deep)' : 'none',
+                  transition: 'background 200ms var(--ease-out-soft), box-shadow 200ms var(--ease-out-soft)',
                 }}
               >
                 <span style={{
                   width: 22, height: 22, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center',
-                  fontSize: 12, fontWeight: 700,
-                  background: isDone ? UI.done : active ? UI.accent : '#f0e6d2',
-                  color: isDone || active ? '#fff' : UI.muted,
+                  fontSize: 11.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+                  background: isDone ? V('--amber') : active ? V('--coral-deep') : V('--surface-sunken'),
+                  color: isDone || active ? '#fff' : V('--ink-muted'),
                 }}>
                   {isDone ? '✓' : index + 1}
                 </span>
                 <span style={{ minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 13, fontWeight: 600, lineHeight: 1.25 }}>{s.title}</span>
-                  <span style={{ fontSize: 11, color: UI.muted }}>{fmt(s.durationMs)}{s.pedagogicalRole ? ` · ${s.pedagogicalRole}` : ''}</span>
+                  <span style={{ display: 'block', fontSize: 13, fontWeight: 600, lineHeight: 1.3, color: V('--ink') }}>{s.title}</span>
+                  <span style={{ fontSize: 11, color: V('--ink-muted'), fontVariantNumeric: 'tabular-nums' }}>
+                    {fmt(s.durationMs)}{s.pedagogicalRole ? ` · ${s.pedagogicalRole.replace(/_/g, ' ')}` : ''}
+                  </span>
                 </span>
               </button>
             );
           })}
         </aside>
 
-        {/* ---- stage + controls + timeline strip ---- */}
+        {/* ---- THEATER: the board glows on an espresso-dark surround (spec §E) ---- */}
         <section style={{ flex: 1, minWidth: 0 }}>
           {player.audioUrl && (
             <audio ref={player.audioRef} src={player.audioUrl} preload="auto" key={player.audioUrl} />
           )}
-          <div ref={stageRef} style={{ background: UI.card, border: `1px solid ${UI.border}`, borderRadius: 14, overflow: 'hidden' }}>
-            <StagePresenter scene={scene} tMs={tMs} title={scene.title} setHold={player.setHold} />
-          </div>
+          <div style={{
+            background: `linear-gradient(180deg, ${V('--theater-surface')}, ${V('--theater-bg')})`,
+            borderRadius: 24, padding: 16,
+            boxShadow: '0 2px 4px rgba(34,21,18,.18), 0 12px 28px rgba(34,21,18,.22), 0 32px 64px rgba(34,21,18,.18), inset 0 1px 0 rgba(255,255,255,.06)',
+          }}>
+            <div ref={stageRef} style={{ background: V('--surface'), borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(255,255,255,.08)' }}>
+              <StagePresenter scene={scene} tMs={tMs} title={scene.title} setHold={player.setHold} />
+            </div>
 
-          {/* controls bar */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: UI.card, border: `1px solid ${UI.border}`, borderRadius: 14, padding: '10px 16px', marginTop: 12 }}>
-            <button onClick={player.togglePlay} aria-label={playing ? 'Pause' : 'Play'} className="forever-btn"
-              style={{ width: 44, height: 44, borderRadius: '50%', fontSize: 17, cursor: 'pointer' }}>
-              {playing ? '❚❚' : '▶'}
-            </button>
-            <button onClick={() => player.skip(-10_000)} title="Back 10s" className="forever-chip" style={chip()}>−10s</button>
-            <button onClick={() => player.skip(10_000)} title="Forward 10s" className="forever-chip" style={chip()}>+10s</button>
-            <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: 13, color: UI.muted, whiteSpace: 'nowrap' }}>
-              {fmt(tMs)} / {fmt(durationMs)}
-            </span>
-            <input
-              type="range" min="0" max={durationMs || 1} value={Math.min(tMs, durationMs)}
-              onChange={(e) => player.seek(Number(e.target.value))}
-              style={{ flex: 1, accentColor: UI.accent }}
-            />
-            <button
-              onClick={() => player.setRate(SPEEDS[(SPEEDS.indexOf(player.rate) + 1) % SPEEDS.length])}
-              title="Playback speed" className="forever-chip" style={chip({ minWidth: 52 })}>
-              {player.rate}x
-            </button>
-            <button
-              onClick={() => (document.fullscreenElement ? document.exitFullscreen() : stageRef.current?.requestFullscreen())}
-              title="Fullscreen" className="forever-chip" style={chip()}>
-              ⛶
-            </button>
+            {/* dark glass controls — chrome lives inside the theater */}
+            <div style={{
+              display: 'flex', gap: 11, alignItems: 'center', marginTop: 14, padding: '8px 12px',
+              background: 'rgba(34,21,18,.55)', border: '1px solid rgba(247,233,227,.12)', borderRadius: 14,
+              backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: V('--theater-ink'),
+            }}>
+              <button onClick={player.togglePlay} aria-label={playing ? 'Pause' : 'Play'} className="forever-btn"
+                style={{ width: 42, height: 42, borderRadius: '50%', fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>
+                {playing ? '❚❚' : '▶'}
+              </button>
+              <button onClick={() => player.skip(-10_000)} title="Back 10s" style={theaterChip()}>−10s</button>
+              <button onClick={() => player.skip(10_000)} title="Forward 10s" style={theaterChip()}>+10s</button>
+              <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12.5, color: 'rgba(247,233,227,.75)', whiteSpace: 'nowrap' }}>
+                {fmt(tMs)} / {fmt(durationMs)}
+              </span>
+              <input
+                type="range" min="0" max={durationMs || 1} value={Math.min(tMs, durationMs)}
+                onChange={(e) => player.seek(Number(e.target.value))}
+                style={{ flex: 1, accentColor: V('--coral') }}
+              />
+              <button
+                onClick={() => player.setRate(SPEEDS[(SPEEDS.indexOf(player.rate) + 1) % SPEEDS.length])}
+                title="Playback speed" style={theaterChip({ minWidth: 50, fontVariantNumeric: 'tabular-nums' })}>
+                {player.rate}x
+              </button>
+              <button
+                onClick={() => (document.fullscreenElement ? document.exitFullscreen() : stageRef.current?.requestFullscreen())}
+                title="Fullscreen" style={theaterChip()}>
+                ⛶
+              </button>
+            </div>
           </div>
 
           {/* scene timeline strip */}
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '12px 2px 4px' }}>
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '16px 2px 6px' }}>
             {lesson.scenes.map((s, index) => {
               const startMs = stripOffset;
               stripOffset += s.durationMs || 0;
@@ -175,14 +216,15 @@ export function LessonPlayer({ lesson }) {
                   onClick={() => player.goToScene(index)}
                   className={active ? undefined : 'forever-chip'}
                   style={{
-                    flexShrink: 0, width: 190, textAlign: 'left', padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
-                    border: `2px solid ${active ? UI.accent : UI.border}`,
-                    background: active ? '#fdece8' : '#fff',
-                    boxShadow: active ? '0 3px 12px rgba(244,115,104,0.28)' : undefined,
+                    flexShrink: 0, width: 192, textAlign: 'left', padding: '10px 13px', borderRadius: 12, cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    border: `1px solid ${active ? V('--coral') : V('--border')}`,
+                    background: active ? '#FDECE8' : '#FFFDFB',
+                    boxShadow: active ? '0 2px 3px hsl(14deg 45% 42% / .09), 0 8px 18px hsl(14deg 45% 42% / .12)' : undefined,
                   }}
                 >
-                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 3 }}>{index + 1}. {s.title}</div>
-                  <div style={{ fontSize: 11, color: UI.muted }}>{fmt(startMs)} – {fmt(startMs + (s.durationMs || 0))}</div>
+                  <div style={{ fontSize: 12, fontWeight: 650, marginBottom: 3, color: V('--ink'), lineHeight: 1.3 }}>{index + 1}. {s.title}</div>
+                  <div style={{ fontSize: 11, color: V('--ink-muted'), fontVariantNumeric: 'tabular-nums' }}>{fmt(startMs)} – {fmt(startMs + (s.durationMs || 0))}</div>
                 </button>
               );
             })}
@@ -193,9 +235,13 @@ export function LessonPlayer({ lesson }) {
   );
 }
 
-function chip(extra = {}) {
+// Chips inside the dark theater chrome: quiet glass, light warm ink — never grey (spec law 1).
+function theaterChip(extra = {}) {
   return {
-    padding: '7px 12px', borderRadius: 9, border: `1px solid ${UI.border}`, background: '#fff',
-    fontSize: 12, fontWeight: 700, color: UI.text, cursor: 'pointer', ...extra,
+    padding: '7px 11px', borderRadius: 9, cursor: 'pointer', fontSize: 12, fontWeight: 650,
+    fontFamily: 'inherit', color: 'var(--theater-ink)',
+    background: 'rgba(247,233,227,.08)', border: '1px solid rgba(247,233,227,.16)',
+    transition: 'background 150ms var(--ease-out-soft)',
+    ...extra,
   };
 }

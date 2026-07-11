@@ -1,7 +1,12 @@
 import 'katex/dist/katex.min.css';
-import { Caveat } from 'next/font/google';
+import { Caveat, Fraunces, Inter, Newsreader } from 'next/font/google';
 
 const caveat = Caveat({ subsets: ['latin'], variable: '--font-caveat' });
+// PREMIUM_UI_SPEC §B: serif/sans tension reads expensive — Fraunces for display,
+// Inter for everything interactive, Newsreader italic for editorial accents.
+const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces' });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const newsreader = Newsreader({ subsets: ['latin'], style: ['italic'], variable: '--font-newsreader' });
 
 export const metadata = {
   title: 'Forever — AI Tutor',
@@ -10,7 +15,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={caveat.variable}>
+    <html lang="en" className={`${caveat.variable} ${fraunces.variable} ${inter.variable} ${newsreader.variable}`}>
       <head>
         {/* Crossfade for the single-focus stage (video "cut between shots" feel). */}
         <style>{`
@@ -28,7 +33,24 @@ export default function RootLayout({ children }) {
           @keyframes foreverDot { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
           .forever-dot { animation: foreverDot 1.4s ease-in-out infinite; }
           .forever-shot { animation: foreverShot 0.45s ease; }
-          :root { --caveat: ${caveat.style.fontFamily}; }
+          :root {
+            --caveat: ${caveat.style.fontFamily};
+            /* PREMIUM_UI_SPEC §A — every neutral warm-tinted, coral as highlight never canvas */
+            --bg: #FBF1EE; --surface: #FFFDFB; --surface-sunken: #F6E9E4;
+            --border: #F1DED6; --border-strong: #E3C8BD;
+            --ink: #33201B; --ink-body: #4A342E; --ink-muted: #8A6F66;
+            --coral: #F47368; --coral-deep: #C2453A; --amber: #C98B2D;
+            --theater-bg: #221512; --theater-surface: #2E1E1A; --theater-ink: #F7E9E3;
+            /* §C depth recipe — blush-hue-matched layered shadows, top light inset */
+            --shadow-hue: 14deg 45% 42%;
+            --card-shadow:
+              0 1px 2px hsl(var(--shadow-hue) / .06), 0 2px 4px hsl(var(--shadow-hue) / .06),
+              0 4px 8px hsl(var(--shadow-hue) / .05), inset 0 1px 0 rgba(255,255,255,.65);
+            --card-shadow-lift:
+              0 2px 3px hsl(var(--shadow-hue) / .07), 0 6px 12px hsl(var(--shadow-hue) / .07),
+              0 16px 32px hsl(var(--shadow-hue) / .06), inset 0 1px 0 rgba(255,255,255,.65);
+            --ease-out-soft: cubic-bezier(.22, 1, .36, 1);
+          }
           /* PREMIUM SURFACE (beyond flat): a whisper of radial warmth at the top of the page —
              depth without a background image, so dense lesson content stays readable. */
           body {
