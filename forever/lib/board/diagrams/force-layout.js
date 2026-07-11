@@ -70,8 +70,36 @@ export function layoutForce({ nodes = [], edges = [] } = {}, { iterations = 320 
     }
   }
 
-  // Normalize into a padded box and emit dagre-shaped output.
+  // BOX-AWARE separation: FR treats nodes as points, but our pills are WIDE — a 25-char label
+  // is ~270px, so two centers an "ideal" k apart can still overlap badly (the two-node De
+  // Bruijn sketch stacked its pills). Resolve residual box overlaps deterministically: push
+  // apart along the axis of least penetration until clean (or the pass budget ends).
   const widths = nodes.map((node) => Math.max(48, String(node.label ?? node.id).length * 10 + 24));
+  const HGAP = 28;
+  const VGAP = 18;
+  for (let pass = 0; pass < 80; pass += 1) {
+    let moved = false;
+    for (let i = 0; i < n; i += 1) {
+      for (let j = i + 1; j < n; j += 1) {
+        const ox = (widths[i] + widths[j]) / 2 + HGAP - Math.abs(px[i] - px[j]);
+        const oy = NODE_H + VGAP - Math.abs(py[i] - py[j]);
+        if (ox <= 0 || oy <= 0) continue;
+        moved = true;
+        if (ox <= oy) {
+          const s = px[i] === px[j] ? (i % 2 ? 1 : -1) : Math.sign(px[i] - px[j]);
+          px[i] += (s * ox) / 2;
+          px[j] -= (s * ox) / 2;
+        } else {
+          const s = py[i] === py[j] ? (i % 2 ? 1 : -1) : Math.sign(py[i] - py[j]);
+          py[i] += (s * oy) / 2;
+          py[j] -= (s * oy) / 2;
+        }
+      }
+    }
+    if (!moved) break;
+  }
+
+  // Normalize into a padded box and emit dagre-shaped output.
   const minX = Math.min(...px);
   const minY = Math.min(...py);
   const PAD = 30;

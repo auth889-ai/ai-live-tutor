@@ -47,8 +47,8 @@ function TraceTable({ content }) {
           {rows.map((row) => (
             <tr key={row.label}>
               <td style={{ ...cell(false), color: '#8a6d3b' }}>{row.label}</td>
-              {row.values.map((value, i) => (
-                <td key={i} style={cell(false)}>{value}</td>
+              {Array.from({ length: columns.length }, (_, i) => (
+                <td key={i} style={cell(false)}>{(row.values ?? [])[i] ?? ''}</td>
               ))}
             </tr>
           ))}
@@ -162,8 +162,10 @@ function ComparisonTable({ content }) {
           {rows.map((row) => (
             <tr key={row.label}>
               <td style={{ ...cell(false), fontWeight: 600 }}>{row.label}</td>
-              {(row.values ?? []).map((value, i) => (
-                <td key={i} style={cell(false)}>{value}</td>
+              {/* Clamp/pad to the header width — a mis-authored extra or missing cell must
+                  never shift every column after it. */}
+              {Array.from({ length: columns.length }, (_, i) => (
+                <td key={i} style={cell(false)}>{(row.values ?? [])[i] ?? ''}</td>
               ))}
             </tr>
           ))}

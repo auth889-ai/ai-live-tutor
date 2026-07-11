@@ -49,3 +49,26 @@ test('wantsForceLayout: cycles/cross-edges/undirected -> organic; clean rooted t
   const sharedChild = { nodes: [{ id: 'a' }, { id: 'b' }, { id: 'c' }], edges: [{ from: 'a', to: 'c' }, { from: 'b', to: 'c' }] };
   assert.equal(wantsForceLayout(sharedChild, true), true, 'a shared child (DAG) is organic');
 });
+
+test('wide-label pills never overlap: boxes separate, not just centers (the De Bruijn regression)', () => {
+  // The exact shape that stacked on screen: two nodes with LONG labels and mutual self-loopy
+  // edges — point-distance k kept centers ~180px apart while each pill was ~270px wide.
+  const out = layoutForce({
+    nodes: [
+      { id: '0', label: "Node '0' (1-digit prefix)" },
+      { id: '1', label: "Node '1' (1-digit prefix)" },
+    ],
+    edges: [
+      { from: '0', to: '1', label: '01' }, { from: '1', to: '0', label: '10' },
+      { from: '0', to: '0', label: '00' }, { from: '1', to: '1', label: '11' },
+    ],
+  });
+  const [a, b] = out.nodes;
+  const xOverlap = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
+  const yOverlap = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+  assert.ok(xOverlap === 0 || yOverlap === 0, `pills overlap by ${xOverlap}x${yOverlap}px`);
+  // And with margin: the boxes are separated by a readable gap on at least one axis.
+  const xGap = Math.max(a.x, b.x) - Math.min(a.x + a.width, b.x + b.width);
+  const yGap = Math.max(a.y, b.y) - Math.min(a.y + a.height, b.y + b.height);
+  assert.ok(Math.max(xGap, yGap) >= 12, `separation gap is only ${Math.max(xGap, yGap)}px`);
+});
