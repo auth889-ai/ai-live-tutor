@@ -141,7 +141,7 @@ test('hot loops hit the cap as an explicit truncated sentinel', () => {
   const code = 'def spin():\n    total = 0\n    for i in range(100000):\n        total += i\n    return total';
   const rec = record({ code, entry: 'spin()' });
   assert.equal(rec.events.at(-1).truncated, true, 'the recording says out loud that it stopped');
-  assert.ok(rec.events.length <= 401, 'the cap actually caps');
+  assert.ok(rec.events.length <= 1201, 'the cap actually caps (1200 events ≈ a 300-600 step lesson — deep problems NEED that)');
 });
 
 test('validateUniversalRecording: malformed recordings fail loudly with the event named', () => {

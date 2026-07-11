@@ -14,11 +14,12 @@ import { compileRecursionTrace } from '../../recursion/compiler.js';
 //   { lens: 'recursion-tree', confidence, fnName, calls }
 export function detectRecursionTree(recording, _ctx = {}) {
   const events = recording?.events ?? [];
-  if (events.at(-1)?.truncated === true) return null; // an unfinished tree would lie
+  const truncated = events.at(-1)?.truncated === true;
 
   // Self-recursion = a call of fn opens while another call of THE SAME fn is still open.
   const stack = [];
   const callCounts = new Map();
+  const returnCounts = new Map();
   const recursive = new Set();
   for (const e of events) {
     if (e.ev === 'call') {
@@ -26,18 +27,24 @@ export function detectRecursionTree(recording, _ctx = {}) {
       stack.push(e.fn);
       callCounts.set(e.fn, (callCounts.get(e.fn) ?? 0) + 1);
     } else if (e.ev === 'return') {
-      if (stack.at(-1) === e.fn) stack.pop();
+      if (stack.at(-1) === e.fn) {
+        stack.pop();
+        returnCounts.set(e.fn, (returnCounts.get(e.fn) ?? 0) + 1);
+      }
     }
   }
-  if (stack.length > 0) return null; // unbalanced recording — never build a tree on a guess
+  // A truncated recording is a PREFIX, not a lie — the deep problems that need 180-300 steps
+  // are exactly the ones that hit the cap, and refusing them dropped the whole family to the
+  // floor. Unbalanced WITHOUT a truncation sentinel is a genuinely broken recording: refuse.
+  if (stack.length > 0 && !truncated) return null;
 
   let best = null;
   for (const fn of recursive) {
-    const calls = callCounts.get(fn) ?? 0;
-    if (calls >= 3 && (!best || calls > best.calls)) best = { fnName: fn, calls };
+    const closed = returnCounts.get(fn) ?? 0; // enough COMPLETED calls to teach from
+    if (closed >= 3 && (!best || closed > best.closed)) best = { fnName: fn, calls: callCounts.get(fn) ?? closed, closed };
   }
   if (!best) return null;
-  return { lens: 'recursion-tree', confidence: 0.85, ...best };
+  return { lens: 'recursion-tree', confidence: 0.85, fnName: best.fnName, calls: best.calls };
 }
 
 // Rebuild the call tree in the exact shape recursion/compiler.js animates, then delegate.
@@ -92,6 +99,15 @@ export function compileRecursionTree({ recording, plan, code, language = 'python
     }
   }
   if (nextId === 0) throw new Error(`the recording holds no calls of "${fnName}"`);
+
+  // A truncated recording leaves the deepest spine unclosed — mark those returns as the CUT,
+  // openly, never as a fake result (the same honest-cut convention every engine follows).
+  for (const vid of open) {
+    for (const v of Object.values(vertices)) {
+      const slot = v.children.find((c) => c.id === vid && c.value === null);
+      if (slot) slot.value = '⟨recording cut⟩';
+    }
+  }
 
   const lines = {
     call: winner(callLineVotes) ?? winner(combineLines) ?? 1,

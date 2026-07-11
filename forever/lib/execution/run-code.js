@@ -54,7 +54,9 @@ export function runLocal(cmd, args, stdin, timeoutMs) {
 
     child.stdout.on('data', (chunk) => {
       stdout += chunk;
-      if (stdout.length > 100_000) child.kill('SIGKILL');
+      // 1MB, not 100KB: a universal recording of a 300-step dry run is ~90KB of JSON — the
+      // old cap silently killed exactly the richest traces (a deep lesson needs 180-300 steps).
+      if (stdout.length > 1_000_000) child.kill('SIGKILL');
     });
     child.stderr.on('data', (chunk) => {
       stderr += chunk;

@@ -16,7 +16,7 @@ import { buildTracedProgram, parseTracedEvents } from '../harness/assemble.js';
 export const UNIVERSAL_TRACKER_PY = `
 import json, sys, math
 
-MAX_EVENTS = 400
+MAX_EVENTS = 1200
 MAX_NODES = 40
 _events = []
 _depth = [0]
