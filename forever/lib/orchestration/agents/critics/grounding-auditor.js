@@ -6,8 +6,28 @@ import { callQwenJson } from '../../../qwen/client.js';
 import { createSocietyMessage } from '../../messages/society-messages.js';
 import { FOREVER_AGENT_ROLES } from '../../roles/agent-roles.js';
 
-export async function auditGrounding({ sceneId, objects, sourcePack }) {
+// Formal fields whose textbook knowledge is verifiable by derivation or execution — a lesson
+// on a pasted LeetCode problem legitimately teaches Hierholzer's algorithm even though the
+// paste never mentions it (the dry run PROVES the algorithm by running it). Humanities/law
+// stay strict: there, interpretation must trace to the source (the 14-course spec's
+// source-proof rule is about exactly those fields).
+const KNOWLEDGE_DOMAINS = new Set(['dsa', 'programming', 'ml_ai', 'math', 'science', 'systems_swe', 'business_finance']);
+
+export async function auditGrounding({ sceneId, objects, sourcePack, domain = 'general', deps = {} }) {
   const chunkText = new Map(sourcePack.chunks.map((chunk) => [chunk.id, chunk.text]));
+
+  // Measured 2026-07-11: 35% of all dropped scenes were the auditor refusing STANDARD domain
+  // knowledge (named algorithms, complexity facts, textbook formulas) because the pasted
+  // source is just a problem statement. In formal domains that knowledge is the teacher's
+  // own; what must stay grounded is every claim ABOUT the source material itself.
+  const knowledgeClause = KNOWLEDGE_DOMAINS.has(domain)
+    ? `\nSTANDARD ${domain.toUpperCase()} KNOWLEDGE IS THE TEACHER'S OWN: textbook definitions, named
+algorithms/theorems/protocols and their well-known properties, complexity facts, and standard formulas
+are NOT source claims — never object that they "are not in the chunk". Object to them ONLY when stated
+INCORRECTLY or when they CONTRADICT the chunk. What MUST stay grounded in the cited chunk: every claim
+about the source material itself — its specific problem, numbers, examples, constraints, figures, and
+anything phrased as "the problem/source/text says".`
+    : '';
 
   const system = `You are the Grounding Auditor of an AI tutor. You are an INDEPENDENT fact-checker.
 For each board object, decide if its content is DIRECTLY supported by the exact source chunk it cites.
@@ -18,7 +38,7 @@ questions with worked answers, and concrete illustrative examples (a specific ar
 are the TEACHER'S craft — by nature they are not sentences from the source. Audit only the
 FACTUAL/technical claims inside them: object when a device CONTRADICTS the chunk or asserts a
 specific technical fact/number the chunk does not support — never because the device itself
-"is not in the source".
+"is not in the source".${knowledgeClause}
 Output ONLY JSON: {"objections":[{"objectId","reason","citedChunkId"}]}. Empty array means everything is grounded.
 Be strict but fair — do not object to correct teaching just because it is concise.
 VERDICTS ONLY: each reason is ONE short sentence naming the unsupported claim. Never restate
@@ -34,7 +54,7 @@ the scene, never quote long passages — output tokens are latency.`;
     })),
   });
 
-  const { json, usage } = await callQwenJson({
+  const { json, usage } = await (deps.callQwenJson ?? callQwenJson)({
     agent: 'grounding_auditor',
     system,
     user,

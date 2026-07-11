@@ -16,6 +16,7 @@ export async function runGroundingReview({
   sourcePack,
   layout = 'teacher_notebook_code',
   brief = null,
+  domain = 'general',
   maxRounds,
   // Agents are injectable so the state machine is unit-testable without spending tokens.
   agents = { designBoard, reviseBoard, auditGrounding, auditPedagogy },
@@ -41,7 +42,7 @@ export async function runGroundingReview({
     // scene cannot ship). PEDAGOGY is ADVISORY — it drives revision to improve teaching, but
     // a well-grounded scene is never dropped just because the critic wants it richer.
     const [grounding, pedagogy] = await Promise.all([
-      agents.auditGrounding({ sceneId, objects: board.objects, sourcePack }),
+      agents.auditGrounding({ sceneId, objects: board.objects, sourcePack, domain }),
       agents.auditPedagogy
         ? agents.auditPedagogy({ sceneId, objects: board.objects, brief })
         : Promise.resolve({ objections: [], usage: null }),

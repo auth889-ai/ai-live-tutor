@@ -16,7 +16,7 @@ const CODE_ROLES = new Set(['worked_example', 'dry_run']);
 
 export async function generateSceneFromSourcePack(
   sourcePack,
-  { layout = 'teacher_notebook_code', sceneId, brief = null, agents = {} } = {},
+  { layout = 'teacher_notebook_code', sceneId, brief = null, domain = 'general', agents = {} } = {},
 ) {
   const id = sceneId ?? `gen_${sourcePack.id.slice(3)}`;
   const runCodeAgent = agents.generateExecutedCode ?? generateExecutedCode;
@@ -27,7 +27,7 @@ export async function generateSceneFromSourcePack(
 
   // Board goes through the society's grounding review cycle (generate -> audit -> revise)
   // before it is allowed to be narrated. Ungrounded boards never reach the student.
-  const review = await reviewAgent({ sceneId: id, sourcePack, layout, brief });
+  const review = await reviewAgent({ sceneId: id, sourcePack, layout, brief, domain });
   const objects = [...review.objects];
 
   // DRY-RUN scenes get the ELITE path: the Execution Tracer runs the real algorithm and

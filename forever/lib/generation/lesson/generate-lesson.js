@@ -50,6 +50,7 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
       return genScene(focused, {
         sceneId: `sc_${String(index + 1).padStart(2, '0')}`,
         brief,
+        domain,
       })
         .then((result) => ({ title: brief.title, pedagogicalRole: brief.pedagogicalRole, ...result }))
         .finally(() => {
