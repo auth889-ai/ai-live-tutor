@@ -720,18 +720,8 @@ def last_stone(stones):
             heapq.heappush(heap, -(a - b))
     return -heap[0] if heap else 0`, 'last_stone([2, 7, 4, 1, 8, 1])'],
 
-  // ——— the honest floor ———
-  ['math', 'GCD (Euclid) — floor territory', `def gcd(a, b):
-    while b:
-        a, b = b, a % b
-    return a`, 'gcd(48, 18)'],
-];
-
-// THE FRONTIER — every KNOWN-GAP shape, run and reported honestly. These rows are excluded
-// from the headline elite % (they document the boundary, they don't inflate or deflate it);
-// when a frontier row goes structural, its lens just landed — promote it into PROBLEMS.
-const FRONTIER = [
-  ['LC146 LRU Cache (two structures in sync)', `def lru_ops(cap, ops):
+  // ——— design / composed structures ———
+  ['design', 'LC146 LRU Cache (map + recency in sync)', `def lru_ops(cap, ops):
     cache = {}
     order = []
     out = []
@@ -752,7 +742,7 @@ const FRONTIER = [
                 order.remove(key)
             order.append(key)
     return out`, "lru_ops(2, [('put', 1), ('put', 2), ('get', 1), ('put', 3), ('get', 2)])"],
-  ['LC208 Trie built inline (dict-of-dicts)', `def build_trie(words):
+  ['design', 'LC208 Trie built inline (dict-of-dicts)', `def build_trie(words):
     root = {}
     for w in words:
         node = root
@@ -761,8 +751,19 @@ const FRONTIER = [
                 node[ch] = {}
             node = node[ch]
         node['$'] = True
-    return root`, "build_trie(['app', 'apple'])"],
+    return root`, "build_trie(['ap', 'an'])"],
+
+  // ——— the honest floor ———
+  ['math', 'GCD (Euclid) — floor territory', `def gcd(a, b):
+    while b:
+        a, b = b, a % b
+    return a`, 'gcd(48, 18)'],
 ];
+
+// THE FRONTIER — every KNOWN-GAP shape, run and reported honestly. These rows are excluded
+// from the headline elite % (they document the boundary, they don't inflate or deflate it);
+// when a frontier row goes structural, its lens just landed — promote it into PROBLEMS.
+const FRONTIER = [];
 
 const rows = [];
 let structural = 0;
@@ -797,6 +798,7 @@ console.log(`  line-table floor : ${floor}/${total}`);
 console.log(`  errors           : ${errors}/${total}`);
 
 console.log(`\n— frontier (known gaps, tracked honestly — excluded from the headline) —`);
+if (FRONTIER.length === 0) console.log('  (clear — every previously known gap has its lens; add new gap shapes here as they surface)');
 for (const [name, code, entry] of FRONTIER) {
   try {
     const { trace, lens } = await traceUniversal({ code, entry, exec });

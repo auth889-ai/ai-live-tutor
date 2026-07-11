@@ -106,25 +106,26 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
     });
     const mapSize = () => table.reduce((a, c) => a + c.length, 0);
     // The collision walk, one visible hop per chained entry — this walk IS the collision cost.
-    const walkChain = (op, key, b, upto) => {
+    const walkChain = (op, key, b, upto, companion) => {
       const chain = table[b];
       for (let k = 0; k < upto; k += 1) {
         steps.push({
           line: lineOf(op),
           explanation: narrateChainHop({ op, key, bucket: b, slot: k, slotKey: chain[k].key }),
           array2d: gridState([b, col(k)], chain.slice(0, k + 1).map((_, i) => [b, col(i)])),
+          ...(companion ? { queue: companion.map(String) } : {}),
           variables: { bucket: b, chainSlot: k, size: mapSize() },
         });
       }
     };
-    for (const { op, key, value } of ops) {
+    for (const { op, key, value, companion } of ops) {
       const b = hashOf(key, buckets);
       const chain = table[b];
       const at = chain.findIndex((e) => e.key === key);
       let explanation;
       let current = null;
       if (op === 'put') {
-        walkChain(op, key, b, at >= 0 ? at : chain.length);
+        walkChain(op, key, b, at >= 0 ? at : chain.length, companion);
         if (at >= 0) {
           chain[at] = { key, value };
           current = [b, col(at)];
@@ -135,11 +136,11 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
           explanation = narratePutInsert({ key, value, bucket: b, chainLength: chain.length });
         }
       } else if (op === 'get') {
-        walkChain(op, key, b, at >= 0 ? at : chain.length);
+        walkChain(op, key, b, at >= 0 ? at : chain.length, companion);
         current = at >= 0 ? [b, col(at)] : null;
         explanation = narrateGet({ key, bucket: b, at, value: at >= 0 ? chain[at].value : undefined, chainLength: chain.length });
       } else if (op === 'remove') {
-        walkChain(op, key, b, Math.max(at, 0));
+        walkChain(op, key, b, Math.max(at, 0), companion);
         if (at >= 0) chain.splice(at, 1);
         explanation = narrateMapRemove({ key, bucket: b, found: at >= 0 });
       } else if (op === 'init' || op === 'create' || op === 'new') {
@@ -152,6 +153,9 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
         line: lineOf(op),
         explanation,
         array2d: gridState(current),
+        // The companion snapshot (LRU's recency order, least-recent first) rides as the queue
+        // panel — the two structures the lesson is ABOUT, moving in sync on every op.
+        ...(companion ? { queue: companion.map(String) } : {}),
         variables: { bucket: b, size: mapSize() },
       });
     }

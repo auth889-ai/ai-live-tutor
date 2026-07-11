@@ -13,6 +13,7 @@ import { detectObjectStructure, compileObjectStructure } from './lenses/object-s
 import { detectCollectionLens, compileCollectionOps } from './lenses/collection-ops.js';
 import { detectHeap, compileHeap } from './lenses/heap.js';
 import { detectExploredGraph, compileExploredGraph } from './lenses/explored-graph.js';
+import { detectTrieDict, compileTrieDict } from './lenses/trie-dict.js';
 import { detectDpTable, compileDpTableLens } from './lenses/dp-table.js';
 import { detectGraphAdjacency, compileGraphAdjacency } from './lenses/graph-adjacency.js';
 import { detectUnionFind, compileUnionFind } from './lenses/union-find.js';
@@ -47,6 +48,9 @@ export const LENS_DETECTORS = Object.freeze([
   // explored-graph (0.83) above collection-ops: on an implicit graph the discovery TREE is the
   // lesson, not the queue that drives it; real-adjacency walks still route to graph-adjacency.
   { key: 'explored-graph', detect: detectExploredGraph, compile: compileExploredGraph },
+  // trie-dict (0.84) above collection-ops: a NESTED growing char-keyed dict is a tree being
+  // built, not a flat map being filled — shared prefixes are the lesson.
+  { key: 'trie-dict', detect: detectTrieDict, compile: compileTrieDict },
   { key: 'collection-ops', detect: detectCollectionLens, compile: compileCollectionOps },
   { key: 'pointer-array', detect: detectPointerArray, compile: compilePointerArray },
 ]);

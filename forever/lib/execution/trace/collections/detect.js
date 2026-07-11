@@ -14,36 +14,47 @@
 
 const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-// detectCollectionOps(events) -> { varName, structure, ops, lines } | null
+// detectCollectionOps(events, opts?) -> { varName, structure, ops, lines } | null
 // events: [{ line, locals }] from the line-sim run. Picks the single best collection variable.
-export function detectCollectionOps(events) {
+// opts.companionVar: a second variable whose live snapshot rides each op (LRU's recency order
+// beside its cache map) — ops then carry {companion} for the compiler's side panel.
+// opts.varName: analyze exactly this variable instead of holding the op-count contest.
+export function detectCollectionOps(events, opts = {}) {
   if (!Array.isArray(events) || events.length < 2) return null;
   const lineEvents = events.filter((e) => e && typeof e === 'object' && e.locals && typeof e.locals === 'object' && !e.truncated);
   if (lineEvents.length < 2) return null;
 
   // Every variable that is EVER a list or a plain dict is a candidate.
   const candidates = new Set();
-  for (const ev of lineEvents) {
-    for (const [k, v] of Object.entries(ev.locals)) {
-      if (Array.isArray(v) || (v && typeof v === 'object' && !Array.isArray(v))) candidates.add(k);
+  if (opts.varName) {
+    candidates.add(opts.varName);
+  } else {
+    for (const ev of lineEvents) {
+      for (const [k, v] of Object.entries(ev.locals)) {
+        if (Array.isArray(v) || (v && typeof v === 'object' && !Array.isArray(v))) candidates.add(k);
+      }
     }
   }
 
   let best = null;
   for (const varName of candidates) {
-    const found = analyzeVariable(varName, lineEvents);
+    const found = analyzeVariable(varName, lineEvents, opts);
     if (found && (!best || found.ops.length > best.ops.length)) best = found;
   }
   return best;
 }
 
-function analyzeVariable(varName, lineEvents) {
+function analyzeVariable(varName, lineEvents, opts = {}) {
   // Reduce to the states where the variable exists, keeping the line each state was seen on.
   const states = [];
   for (const ev of lineEvents) {
     const v = ev.locals[varName];
     if (v === undefined) continue;
-    states.push({ value: v, line: ev.line });
+    states.push({
+      value: v,
+      line: ev.line,
+      ...(opts.companionVar && Array.isArray(ev.locals[opts.companionVar]) ? { companion: ev.locals[opts.companionVar] } : {}),
+    });
   }
   if (states.length < 2) return null;
 
@@ -111,10 +122,12 @@ function analyzeDict(varName, states) {
   const ops = [];
   const opLines = {};
   const keyType = new Set();
+  const transitions = []; // {firstOp, count, at} — for settled-companion assignment below
   for (let i = 1; i < states.length; i += 1) {
     const prev = states[i - 1].value;
     const cur = states[i].value;
     if (!isPlainObject(prev) || !isPlainObject(cur)) continue;
+    const before = ops.length;
     for (const k of Object.keys(cur)) {
       if (!(k in prev)) {
         ops.push({ op: 'put', key: k, value: cur[k] });
@@ -125,11 +138,31 @@ function analyzeDict(varName, states) {
         opLines.put = states[i].line;
       }
     }
+    // A key that VANISHES is a remove — the eviction beat an LRU lesson lives on.
+    for (const k of Object.keys(prev)) {
+      if (!(k in cur)) {
+        ops.push({ op: 'remove', key: k });
+        opLines.remove = states[i].line;
+      }
+    }
+    if (ops.length > before) transitions.push({ firstOp: before, count: ops.length - before, at: i });
+  }
+  // The companion rides each op SETTLED, not mid-flight: the map changes first and its
+  // recency list catches up a line or two later — so an op shows the last companion sighting
+  // BEFORE the next map change (the state the student should read the panel in).
+  for (let t = 0; t < transitions.length; t += 1) {
+    const settleAt = t + 1 < transitions.length ? transitions[t + 1].at - 1 : states.length - 1;
+    let companion = null;
+    for (let i = settleAt; i >= 0; i -= 1) {
+      if (states[i].companion) { companion = states[i].companion; break; }
+    }
+    if (!companion) continue;
+    for (let k = 0; k < transitions[t].count; k += 1) ops[transitions[t].firstOp + k].companion = companion;
   }
   // Only upgrade a dict to the hash-map view when the keys are STRINGS (the collision/chain
   // lesson is about hashing string keys) and there are enough puts to be a lesson.
   if (ops.length < 3 || ![...keyType].every((t) => t === 'string')) return null;
-  return { varName, structure: 'hash_map', ops, lines: { put: opLines.put ?? 1, get: opLines.put ?? 1, remove: opLines.put ?? 1 } };
+  return { varName, structure: 'hash_map', ops, lines: { put: opLines.put ?? 1, get: opLines.put ?? 1, remove: opLines.remove ?? opLines.put ?? 1 } };
 }
 
 function isPlainObject(v) {

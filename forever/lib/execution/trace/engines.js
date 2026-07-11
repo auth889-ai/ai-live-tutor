@@ -80,5 +80,6 @@ export { detectUnionFind, compileUnionFind } from './universal/lenses/union-find
 export { detectAdjacencyMatrix, compileAdjacencyMatrix } from './universal/lenses/adjacency-matrix.js';
 export { detectHeap, compileHeap } from './universal/lenses/heap.js';
 export { detectExploredGraph, compileExploredGraph } from './universal/lenses/explored-graph.js';
+export { detectTrieDict, compileTrieDict } from './universal/lenses/trie-dict.js';
 export { traceUniversal } from './universal/trace.js';
 export { parseStepEvents, STEP_MARKER } from './parse-steps.js';
