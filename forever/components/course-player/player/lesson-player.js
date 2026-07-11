@@ -69,7 +69,7 @@ export function LessonPlayer({ lesson }) {
       <div aria-hidden style={{
         position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none',
         backgroundImage: 'url(/premium-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center 30%',
-        opacity: 0.05, filter: 'saturate(0.7) blur(1.5px)',
+        opacity: 0.12, filter: 'saturate(0.7) blur(1.5px)',
         maskImage: 'linear-gradient(180deg, black 0%, rgba(0,0,0,.55) 45%, transparent 90%)',
         WebkitMaskImage: 'linear-gradient(180deg, black 0%, rgba(0,0,0,.55) 45%, transparent 90%)',
       }} />
