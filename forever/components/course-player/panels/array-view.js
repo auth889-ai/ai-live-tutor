@@ -10,7 +10,14 @@
 // narration line) wins over write-progress so pointers move exactly as the tutor speaks.
 function resolveState({ content, progress, activeStep }) {
   const trace = Array.isArray(content.trace) && content.trace.length ? content.trace : null;
-  if (!trace) return { pointerAt: new Map(), eliminated: new Set(), current: null, note: null, stepNum: 0, stepTotal: 0 };
+  if (!trace) {
+    // A static array (no trace) must return the FULL state shape — a stored lesson whose
+    // diagram carries plain values crashed on comparing.has when these were missing.
+    return {
+      pointerAt: new Map(), eliminated: new Set(), comparing: new Set(), swapped: new Set(),
+      sorted: new Set(), dimmed: new Set(), current: null, liveValues: null, note: null, stepNum: 0, stepTotal: 0,
+    };
+  }
   const idx = activeStep != null
     ? Math.max(0, Math.min(trace.length - 1, activeStep))
     : Math.min(trace.length - 1, Math.max(0, Math.floor(progress * trace.length + 1e-9)));

@@ -53,11 +53,15 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
   }, [quizBlocking, setHold]);
 
   return (
-    <div style={{ background: '#fdf6f3', border: '1px solid #f0dcd5', borderRadius: 14, overflow: 'hidden' }}>
-      <div style={{ padding: '10px 20px', borderBottom: '1px solid #efe6d3', fontFamily: 'var(--font-caveat), Caveat, cursive', fontSize: 26, color: '#c0392b', textAlign: 'center' }}>
+    <div style={{ background: 'linear-gradient(180deg, #FFFDFB 0%, #FBF2ED 100%)', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{
+        padding: '11px 20px', borderBottom: '1px solid rgba(235,214,203,.8)', textAlign: 'center',
+        fontFamily: 'var(--font-fraunces), Georgia, serif', fontWeight: 620, fontSize: 19,
+        color: 'var(--ink, #2A1713)', letterSpacing: '-0.02em',
+      }}>
         {title}
       </div>
-      <div style={{ minHeight: 360, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 28 }}>
+      <div style={{ minHeight: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 28 }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={focusObj?.id}
@@ -80,14 +84,15 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
           </motion.div>
         </AnimatePresence>
       </div>
-      <div style={{ minHeight: 54, padding: '12px 24px', background: '#fffcfa', borderTop: '1px solid #efe6d3', color: '#5a4a2a', fontSize: 18, textAlign: 'center', lineHeight: 1.5 }}>
+      <div style={{ minHeight: 54, padding: '13px 26px', background: 'rgba(255,252,250,.92)', borderTop: '1px solid rgba(235,214,203,.8)', color: 'var(--ink-body, #45302A)', fontSize: 16.5, textAlign: 'center', lineHeight: 1.55 }}>
         {/* Karaoke sync: when TTS word timings exist, the word being SPOKEN right now lights
-            up (Mayer's temporal contiguity — eye and ear on the same thing). Fallback: prose. */}
+            up (Mayer's temporal contiguity — eye and ear on the same thing). Spec §D4: spoken
+            word on a blush pill in deep coral; past words settle to ink — no hard flicker. */}
         {activeLine?.words?.length ? (
           activeLine.words.map((w, i) => (
             <span key={i} style={tMs >= w.startMs && tMs < w.endMs
-              ? { background: '#fdeaa7', borderRadius: 4, padding: '0 2px', color: '#2b211a', fontWeight: 700 }
-              : tMs >= w.endMs ? { color: '#2b211a' } : undefined}>
+              ? { background: '#FDE1DB', borderRadius: 5, padding: '1px 3px', color: 'var(--coral-deep, #BC3F34)', fontWeight: 650 }
+              : tMs >= w.endMs ? { color: 'var(--ink, #2A1713)' } : { color: 'var(--ink-muted, #84685E)' }}>
               {w.word}{' '}
             </span>
           ))
@@ -151,19 +156,39 @@ function Handwritten({ object, progress }) {
   }).join('');
 
   const isTitle = object.objectType?.includes('title');
+  if (isTitle) {
+    // Editorial title card (spec law 4: serif/sans tension, script never carries a headline):
+    // Fraunces display in espresso with a thin amber rule — the MasterClass chapter card.
+    return (
+      <div style={{ textAlign: 'center', maxWidth: 820, margin: '0 auto' }}>
+        <div style={{
+          fontFamily: 'var(--font-fraunces), Georgia, serif', fontWeight: 600, fontSize: 46,
+          color: 'var(--ink, #2A1713)', letterSpacing: '-0.03em', lineHeight: 1.12, textWrap: 'balance',
+        }}>
+          {out}
+        </div>
+        <div style={{ width: 46, height: 2, background: 'var(--amber, #B87F24)', opacity: 0.8, borderRadius: 1, margin: '22px auto 0' }} />
+      </div>
+    );
+  }
+  // Handwritten notes keep the board's handwriting identity — but on a crafted mat, never
+  // floating in a void: bright card, warm border, the layered shadow recipe.
   return (
-    <div
-      style={{
-        fontFamily: 'var(--font-caveat), Caveat, cursive',
-        fontSize: isTitle ? 40 : 30,
-        color: isTitle ? '#c0392b' : '#3a3327',
-        whiteSpace: 'pre-wrap',
-        textAlign: isTitle ? 'center' : 'left',
-        maxWidth: 760,
-        margin: '0 auto',
-        lineHeight: 1.6,
-      }}
-    >
+    <div style={{
+      fontFamily: 'var(--font-caveat), Caveat, cursive',
+      fontSize: 28,
+      color: 'var(--ink-body, #45302A)',
+      whiteSpace: 'pre-wrap',
+      textAlign: 'left',
+      maxWidth: 720,
+      margin: '0 auto',
+      lineHeight: 1.55,
+      background: 'var(--surface, #FFFDFB)',
+      border: '1px solid var(--border, #EBD6CB)',
+      borderRadius: 16,
+      padding: '24px 30px',
+      boxShadow: 'var(--card-shadow, 0 2px 8px rgba(190,120,100,.12))',
+    }}>
       {out}
     </div>
   );
