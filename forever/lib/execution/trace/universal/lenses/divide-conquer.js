@@ -51,7 +51,9 @@ export function detectDivideConquer(recording, { code = '' } = {}) {
     for (const lo of intArgs) {
       for (const hi of intArgs) {
         if (lo === hi) continue;
-        const ordered = calls.every((c) => c.args[lo] <= c.args[hi]);
+        // lo <= hi + 1, not lo <= hi: quicksort's base calls carry EMPTY segments
+        // (quicksort(arr, 0, -1)) — one past each other is the empty-segment convention.
+        const ordered = calls.every((c) => c.args[lo] <= c.args[hi] + 1);
         const nested = calls.every((c) => !c.parentArgs || (c.args[lo] >= c.parentArgs[lo] && c.args[hi] <= c.parentArgs[hi]));
         if (ordered && nested) { bounds = { lo, hi }; break; }
       }
