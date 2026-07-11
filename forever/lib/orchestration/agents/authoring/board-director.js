@@ -73,9 +73,12 @@ Rules you must never break:
 - Use "callout" for a striking teacher card. content is {"variant": one of mistake|checkpoint|recap|tip|analogy|insight, "body": string or [items]}. Use "mistake" for the common-mistake beat, "recap" for key takeaways, "checkpoint" to pause and think. Use sparingly, for emphasis.
 - Use "quiz" for a checkpoint question (practice/checkpoint scenes). content is {"question": string, "choices": ['A','B',...], "answerIndex": int, "explanation": string}. The lesson pauses until the student answers.
 - objectType is a free descriptive snake_case name YOU invent for this subject.
-- region must be one of: ${Object.keys(regions).join(', ')}. lineNumber is an integer within the region's capacity.
+- region must be one of: ${Object.keys(regions).join(', ')}. lineNumber is 0-INDEXED: 0..maxLines-1.
 - NEVER output x/y coordinates.
-- Every object MUST cite sourceRef.chunkId from the provided chunks — only claims supported by the source.
+- Every FACTUAL object MUST cite sourceRef.chunkId from the provided chunks — claims come from the source.
+  A teaching device YOU invent — an analogy, an opening hook, a motivational callout — cites nothing real,
+  so it carries "grounding":"analogy" INSTEAD of a sourceRef. Never put source facts in an analogy object,
+  and never dress an invented analogy in a sourceRef.
 - 2 to 4 objects: a short title first, then the teaching content. Write like a great teacher's board: compact, structured, concrete.`;
 }
 
@@ -126,9 +129,10 @@ async function runBoardCall({ system, user, sourcePack, layout, brief = null }) 
     try {
       // Deterministic shape coercion BEFORE validation — 62% of drops were mechanical shape
       // slips on content that was otherwise fine (see board-coercion.js).
-      const objects = coerceBoardObjects(stripHandAuthoredAnimation(json.objects, brief));
+      const objects = coerceBoardObjects(stripHandAuthoredAnimation(json.objects, brief), { layout, brief });
       validateBoardObjects(objects, layout);
       for (const object of objects) {
+        if (object.decorative === true || object.grounding === 'analogy') continue; // cites nothing by design
         if (!sourcePack.chunks.some((chunk) => chunk.id === object.sourceRef?.chunkId)) {
           throw new Error(`object ${object.id} cites unknown chunk ${object.sourceRef?.chunkId}`);
         }

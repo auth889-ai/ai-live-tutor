@@ -7,6 +7,12 @@
 // these safe moves still goes to the LLM repair round and, failing that, drops loudly.
 
 import { RENDER_HINTS } from '../../../board/objects/board-objects.js';
+import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
+
+// Scene roles whose whole point is invented teaching devices (hooks, analogies, recaps) —
+// an unsourced object here is an analogy the model forgot to label, not a fact to fabricate
+// proof for. Everywhere else a missing sourceRef still fails loudly.
+const TEACHING_DEVICE_ROLES = new Set(['motivate', 'intuition', 'hook', 'recap']);
 
 // Common renderHint synonyms the model reaches for — mapped to the legal vocabulary.
 const HINT_ALIASES = Object.freeze({
@@ -22,7 +28,7 @@ const HINT_ALIASES = Object.freeze({
 const isScalar = (v) => v === null || ['number', 'string', 'boolean'].includes(typeof v);
 const cellText = (v) => (v === null || v === undefined ? '' : isScalar(v) ? String(v) : JSON.stringify(v));
 
-export function coerceBoardObjects(objects) {
+export function coerceBoardObjects(objects, { layout = null, brief = null } = {}) {
   if (!Array.isArray(objects)) return objects;
   return objects.filter((o) => o && typeof o === 'object').map((object) => {
     const out = { ...object };
@@ -31,6 +37,20 @@ export function coerceBoardObjects(objects) {
     if (typeof out.renderHint === 'string' && !RENDER_HINTS.includes(out.renderHint)) {
       const alias = HINT_ALIASES[out.renderHint.toLowerCase().trim()];
       if (alias) out.renderHint = alias;
+    }
+
+    // lineNumber is 0-indexed; models think 1-indexed and write lineNumber 10 into a 10-line
+    // region (measured: killed a recap scene). Clamping into range moves nothing but the slot.
+    const maxLines = layout ? LAYOUT_REGIONS[layout]?.[out.region]?.maxLines : undefined;
+    if (Number.isInteger(out.lineNumber) && Number.isInteger(maxLines)) {
+      out.lineNumber = Math.min(Math.max(out.lineNumber, 0), maxLines - 1);
+    }
+
+    // An unsourced object in a teaching-device scene is an unlabeled analogy — label it
+    // (grounding:"analogy") rather than dropping the scene. Never invents a citation.
+    if (!out.sourceRef && out.decorative !== true && out.grounding === undefined
+      && TEACHING_DEVICE_ROLES.has(brief?.pedagogicalRole)) {
+      out.grounding = 'analogy';
     }
 
     const content = out.content;

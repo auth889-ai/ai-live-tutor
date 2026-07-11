@@ -48,9 +48,13 @@ export function validateBoardObject(object, layout) {
   if (object.renderHint === 'callout') validateCalloutContent(object.content, context);
   if (object.renderHint === 'quiz') validateQuizContent(object.content, context);
   if (object.renderHint === 'algorithm') validateExecutionTrace(object.content, context);
-  if (object.decorative !== true) {
+  // Source proof is for FACTS. A teaching device the AI invents — an analogy, a hook, a
+  // motivational callout — has no source chunk by nature; it declares grounding:"analogy"
+  // instead of faking a citation (measured live: motivate/intuition scenes died for lacking
+  // sourceRefs on analogies). The Grounding Auditor still audits it against the source.
+  if (object.decorative !== true && object.grounding !== 'analogy') {
     if (!object.sourceRef) {
-      throw new Error(`${context} needs a sourceRef — every factual board object carries source proof`);
+      throw new Error(`${context} needs a sourceRef — every factual board object carries source proof (a teaching analogy may declare "grounding":"analogy" instead)`);
     }
     validateSourceRef(object.sourceRef, `${context}.sourceRef`);
   }

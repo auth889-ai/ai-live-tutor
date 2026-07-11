@@ -27,6 +27,27 @@ test('cell text stuffed under arbitrary keys is GATHERED into values, in order',
   assert.ok(!('naive' in o.content.rows[0]), 'stray keys are removed after gathering');
 });
 
+test('the recap killer: 1-indexed lineNumber is clamped into the region (10 -> 9 in a 10-line area)', () => {
+  const out = coerceBoardObjects([
+    { id: 'recap_note', renderHint: 'callout', region: 'notebook_area', lineNumber: 10, content: { variant: 'recap', body: 'x' } },
+    { id: 'title', renderHint: 'text', region: 'notebook_area', lineNumber: 3, content: 'fine as-is' },
+  ], { layout: 'teacher_notebook_code' });
+  assert.equal(out[0].lineNumber, 9, 'overflowing line clamped to the last slot');
+  assert.equal(out[1].lineNumber, 3, 'in-range line untouched');
+});
+
+test('the motivate/intuition killer: an unsourced object in a teaching-device scene becomes a LABELED analogy', () => {
+  const brief = { pedagogicalRole: 'motivate' };
+  const out = coerceBoardObjects([
+    { id: 'hook', renderHint: 'callout', content: { variant: 'analogy', body: 'lockers' } },
+    { id: 'fact', renderHint: 'text', content: 'real claim', sourceRef: { chunkId: 'ch_1' } },
+  ], { brief });
+  assert.equal(out[0].grounding, 'analogy', 'unlabeled analogy gets its honest label, scene survives');
+  assert.equal(out[1].grounding, undefined, 'sourced facts stay sourced');
+  const [strict] = coerceBoardObjects([{ id: 'claim', renderHint: 'text', content: 'x' }], { brief: { pedagogicalRole: 'explain' } });
+  assert.equal(strict.grounding, undefined, 'outside teaching-device roles a missing sourceRef still fails the contract');
+});
+
 test('renderHint synonyms map to the legal vocabulary; legal hints untouched', () => {
   const out = coerceBoardObjects([
     { id: 'a', renderHint: 'flowchart', content: {} },
