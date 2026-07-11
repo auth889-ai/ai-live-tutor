@@ -720,6 +720,47 @@ def last_stone(stones):
             heapq.heappush(heap, -(a - b))
     return -heap[0] if heap else 0`, 'last_stone([2, 7, 4, 1, 8, 1])'],
 
+  // ——— sorting (divide & conquer) ———
+  ['sorting', 'LC912 Merge Sort (exclusive-hi idiom)', `def merge_sort(arr, lo, hi):
+    if hi - lo <= 1:
+        return
+    mid = (lo + hi) // 2
+    merge_sort(arr, lo, mid)
+    merge_sort(arr, mid, hi)
+    tmp = []
+    i, j = lo, mid
+    while i < mid and j < hi:
+        if arr[i] <= arr[j]:
+            tmp.append(arr[i]); i += 1
+        else:
+            tmp.append(arr[j]); j += 1
+    tmp.extend(arr[i:mid]); tmp.extend(arr[j:hi])
+    arr[lo:hi] = tmp`, 'merge_sort([5, 2, 8, 1], 0, 4)'],
+  ['sorting', 'Quicksort in place (inclusive-hi idiom)', `def quicksort(arr, lo, hi):
+    if lo >= hi:
+        return
+    pivot = arr[hi]
+    i = lo
+    for j in range(lo, hi):
+        if arr[j] < pivot:
+            arr[i], arr[j] = arr[j], arr[i]
+            i += 1
+    arr[i], arr[hi] = arr[hi], arr[i]
+    quicksort(arr, lo, i - 1)
+    quicksort(arr, i + 1, hi)`, 'quicksort([4, 1, 7, 3], 0, 3)'],
+
+  // ——— intervals ———
+  ['intervals', 'LC56 Merge Intervals', `def merge(intervals):
+    intervals.sort()
+    merged = []
+    for iv in intervals:
+        if merged and iv[0] <= merged[-1][1]:
+            if iv[1] > merged[-1][1]:
+                merged[-1][1] = iv[1]
+        else:
+            merged.append(list(iv))
+    return merged`, 'merge([[1, 3], [8, 10], [2, 6], [15, 18]])'],
+
   // ——— design / composed structures ———
   ['design', 'LC146 LRU Cache (map + recency in sync)', `def lru_ops(cap, ops):
     cache = {}

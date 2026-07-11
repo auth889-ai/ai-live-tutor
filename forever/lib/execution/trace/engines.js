@@ -81,5 +81,7 @@ export { detectAdjacencyMatrix, compileAdjacencyMatrix } from './universal/lense
 export { detectHeap, compileHeap } from './universal/lenses/heap.js';
 export { detectExploredGraph, compileExploredGraph } from './universal/lenses/explored-graph.js';
 export { detectTrieDict, compileTrieDict } from './universal/lenses/trie-dict.js';
+export { detectDivideConquer, compileDivideConquerLens } from './universal/lenses/divide-conquer.js';
+export { detectIntervals, compileIntervalsLens } from './universal/lenses/intervals.js';
 export { traceUniversal } from './universal/trace.js';
 export { parseStepEvents, STEP_MARKER } from './parse-steps.js';

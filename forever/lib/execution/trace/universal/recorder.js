@@ -129,8 +129,12 @@ def _tracer(frame, event, arg):
                 _last_heap[0] = blob
         _push(ev)
     elif event == 'return':
+        # locals AT RETURN are the frame's FINAL state — a mutation on a frame's last line
+        # (arr[lo:hi] = tmp in merge sort) is visible nowhere else: line events fire BEFORE
+        # each line runs, and after the last line there is no next event in that frame.
         _push({'ev': 'return', 'fn': frame.f_code.co_name, 'line': frame.f_lineno,
-               'depth': _depth[0], 'value': _safe(arg)})
+               'depth': _depth[0], 'value': _safe(arg),
+               'locals': {k: _safe(v) for k, v in frame.f_locals.items() if not k.startswith('_')}})
         _depth[0] -= 1
     return _tracer
 `.trim();

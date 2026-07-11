@@ -14,6 +14,8 @@ import { detectCollectionLens, compileCollectionOps } from './lenses/collection-
 import { detectHeap, compileHeap } from './lenses/heap.js';
 import { detectExploredGraph, compileExploredGraph } from './lenses/explored-graph.js';
 import { detectTrieDict, compileTrieDict } from './lenses/trie-dict.js';
+import { detectDivideConquer, compileDivideConquerLens } from './lenses/divide-conquer.js';
+import { detectIntervals, compileIntervalsLens } from './lenses/intervals.js';
 import { detectDpTable, compileDpTableLens } from './lenses/dp-table.js';
 import { detectGraphAdjacency, compileGraphAdjacency } from './lenses/graph-adjacency.js';
 import { detectUnionFind, compileUnionFind } from './lenses/union-find.js';
@@ -29,6 +31,10 @@ export const LENS_DETECTORS = Object.freeze([
   // collection-ops (0.8) sits below all of those: Rotten Oranges keeps its board and Subsets
   // keeps its tree even though both also carry a clean queue/stack; it wins only where the
   // collection IS the story (Valid Parentheses, frequency counters).
+  // intervals BEFORE dp-table (both 0.9): a growing pair-list is also a 2-column table filling
+  // in sweep order, so dp-table co-fires on every merge-intervals run — but the intervals
+  // detector demanded s<=e pairs, a stable input AND a fusion; the more specific reading wins.
+  { key: 'intervals', detect: detectIntervals, compile: compileIntervalsLens },
   { key: 'dp-table', detect: detectDpTable, compile: compileDpTableLens },
   { key: 'grid-walk', detect: detectGridWalk, compile: compileGridWalk },
   // graph-adjacency (0.88) between the boards and the object lenses: a walked adjacency dict
@@ -39,6 +45,8 @@ export const LENS_DETECTORS = Object.freeze([
   // is unmistakable, and only a forest proves a bare pair-list is a graph.
   { key: 'adjacency-matrix', detect: detectAdjacencyMatrix, compile: compileAdjacencyMatrix },
   { key: 'union-find', detect: detectUnionFind, compile: compileUnionFind },
+  // divide-conquer (0.86): the splitter's nested-segments fingerprint outranks its own recursion tree.
+  { key: 'divide-conquer', detect: detectDivideConquer, compile: compileDivideConquerLens },
   { key: 'linked-list', detect: detectLinkedList, compile: compileLinkedListLens },
   { key: 'object-structure', detect: detectObjectStructure, compile: compileObjectStructure },
   { key: 'recursion-tree', detect: detectRecursionTree, compile: compileRecursionTree },
