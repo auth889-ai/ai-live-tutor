@@ -39,7 +39,7 @@ test('binary search: declared examine pointer rides the probed cell, eliminated 
   const midStep = trace.steps[2];
   assert.equal(midStep.array.current, 3, 'current cell rides the declared examine pointer');
   assert.deepEqual(midStep.array.pointers, { low: 0, mid: 3, high: 7 });
-  assert.match(midStep.explanation, /[Mm]id starts at index 3, where the value is 12/);
+  assert.match(midStep.explanation, /`mid` starts at index 3, where the value is 12/, 'pointer names verbatim in backticks, never capitalized into prose');
 
   const lowMove = trace.steps[3];
   assert.deepEqual(lowMove.array.eliminated, [0, 1, 2, 3], 'left half dimmed after low jumps to 4');

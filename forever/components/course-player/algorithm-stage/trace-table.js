@@ -22,11 +22,11 @@ export function TraceTable({ history = [], allSteps = null, nodeLabels = null })
     visited: source.some((s) => Array.isArray(s.graph?.visited) && s.graph.visited.length > 0),
   };
 
-  // Scalar variable columns — one key-space for the whole table (traceRow if any step has one,
-  // else variables), first-seen order. Mixing them per-row spanned disjoint key sets and read
-  // as misaligned; deciding once keeps every row in the same columns.
-  const useTraceRow = source.some((s) => s.traceRow && typeof s.traceRow === 'object');
-  const varsOf = (s) => (useTraceRow ? s.traceRow ?? {} : s.variables ?? {});
+  // Scalar variable columns — ONE merged key-space for the whole table: the step's variables
+  // AND its traceRow (the dist table, the seen map) together, first-seen order. The old
+  // traceRow-XOR-variables rule emptied the table for pointer walks: the seen map took over,
+  // its constant entries were dropped, and i/need/t never got columns at all.
+  const varsOf = (s) => ({ ...(s.variables ?? {}), ...(s.traceRow && typeof s.traceRow === 'object' ? s.traceRow : {}) });
   // A variable key is dropped when a dedicated column already tells its story, so the table
   // never shows both "Node" and "node" or "Queue" and "queue": the Step column covers
   // step/index; the structured columns cover the current node, the collections and the visited
@@ -43,10 +43,12 @@ export function TraceTable({ history = [], allSteps = null, nodeLabels = null })
   for (const s of source) for (const k of Object.keys(varsOf(s))) if (!covered(k) && !varCols.includes(k)) varCols.push(k);
   // A step-by-step table shows EVOLVING state. A column whose value never changes across the
   // whole trace is an input constant (the string "abcde", the array, the target) — it belongs
-  // in the Variables panel, not repeated on every row. Drop constant columns.
+  // in the Variables panel, not repeated on every row. Drop constant columns — but APPEARING
+  // is evolving: a map entry born mid-run (seen[2] = 0 at step 4, absent before) tells the
+  // story of the run even though its value never changes after birth.
   const evolving = varCols.filter((c) => {
     const vals = new Set();
-    for (const s of source) { const r = varsOf(s); if (c in r) vals.add(JSON.stringify(r[c])); }
+    for (const s of source) { const r = varsOf(s); vals.add(c in r ? JSON.stringify(r[c]) : '∅absent'); }
     return vals.size > 1;
   });
 

@@ -6,12 +6,14 @@
 
 // Pointer movements: which arrow moved, to which index, what value sits there.
 export function narrateMoves(moved, locals, prev, shown) {
+  // Pointer names stay verbatim in backticks — capitalizing turned the pointer i into the
+  // English pronoun ("I starts at index 0"), which reads as a typo, not a variable.
   const moves = moved.map((p) => {
     const at = locals[p];
     const verb = p in prev ? 'moves to' : 'starts at';
-    return `${p} ${verb} index ${at}, where the value is ${JSON.stringify(shown[at])}`;
+    return `\`${p}\` ${verb} index ${at}, where the value is ${JSON.stringify(shown[at])}`;
   }).join('; ');
-  return `${moves.charAt(0).toUpperCase()}${moves.slice(1)}. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.`;
+  return `${moves}. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.`;
 }
 
 // An in-place exchange of exactly two cells — the sorting beat.
