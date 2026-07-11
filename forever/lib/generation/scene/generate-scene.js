@@ -7,6 +7,7 @@
 import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
 import { runGroundingReview } from '../../orchestration/review/grounding-review-loop.js';
 import { writeVoice } from '../../orchestration/agents/authoring/voice-writer.js';
+import { warmNarration } from '../../orchestration/agents/authoring/narration-warmth.js';
 import { voiceLinesForTrace } from '../voice/algo-voice.js';
 import { generateExecutedCode } from '../../orchestration/agents/coding/code-runner.js';
 import { traceExecution } from '../../orchestration/agents/coding/execution-tracer.js';
@@ -41,12 +42,21 @@ export async function generateSceneFromSourcePack(
     if (!traced?.trace) {
       throw new Error(`Scene ${sceneId}: dry-run could not produce a REAL ExecutionTrace — refusing to ship a text-only trace`);
     }
+    // AI writes the words, the recording guarantees the facts: Qwen retells every step in a
+    // beloved teacher's voice; a deterministic validator rejects any step whose rewrite
+    // invents a number, and rejected steps keep their template sentence. Never wronger.
+    let finalTrace = traced.trace;
+    try {
+      const warm = agents.warmNarration ?? warmNarration;
+      const warmed = await warm({ trace: traced.trace, directive: brief.directive });
+      finalTrace = warmed.trace;
+    } catch { /* warmth is enrichment — the guaranteed template narration ships regardless */ }
     algorithmObject = {
       id: 'obj_algo_trace',
       objectType: 'algorithm_dry_run',
       renderHint: 'algorithm',
       region: 'code_panel',
-      content: traced.trace,
+      content: finalTrace,
       sourceRef: { chunkId: sourcePack.chunks[0].id },
     };
     // The dry run IS the scene: the Board Director's static diagram/step-list duplicates the
