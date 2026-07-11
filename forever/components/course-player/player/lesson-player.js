@@ -65,20 +65,26 @@ export function LessonPlayer({ lesson }) {
 
   return (
     <div style={{ minHeight: '100vh', color: V('--ink-body'), fontFamily: 'var(--font-inter), system-ui, sans-serif', position: 'relative', isolation: 'isolate' }}>
-      {/* Photo backdrop at whisper opacity — page-level texture only, never on cards (spec §C). */}
+      {/* Photo backdrop — VISIBLY present (the room the course lives in), kept classy by a
+          warm wash instead of heavy masking; content stays on opaque surfaces above it. */}
       <div aria-hidden style={{
         position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none',
-        backgroundImage: 'url(/premium-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center 30%',
-        opacity: 0.12, filter: 'saturate(0.7) blur(1.5px)',
-        maskImage: 'linear-gradient(180deg, black 0%, rgba(0,0,0,.55) 45%, transparent 90%)',
-        WebkitMaskImage: 'linear-gradient(180deg, black 0%, rgba(0,0,0,.55) 45%, transparent 90%)',
+        backgroundImage: 'url(/premium-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center 32%',
+        opacity: 0.34, filter: 'saturate(0.88) blur(2px)',
+        maskImage: 'linear-gradient(180deg, black 0%, rgba(0,0,0,.72) 55%, rgba(0,0,0,.28) 100%)',
+        WebkitMaskImage: 'linear-gradient(180deg, black 0%, rgba(0,0,0,.72) 55%, rgba(0,0,0,.28) 100%)',
+      }} />
+      {/* Warm wash over the photo so ink stays 12:1 and the field never turns busy. */}
+      <div aria-hidden style={{
+        position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none',
+        background: 'linear-gradient(180deg, rgba(251,241,238,.42) 0%, rgba(251,241,238,.66) 60%, rgba(251,241,238,.8) 100%)',
       }} />
 
       {/* ---- header: glass chrome (spec §C) ---- */}
       <header style={{
         position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 14, padding: '12px 24px',
-        background: 'rgba(255,252,250,.72)', backdropFilter: 'blur(14px) saturate(160%)', WebkitBackdropFilter: 'blur(14px) saturate(160%)',
-        borderBottom: '1px solid rgba(227,200,189,.5)',
+        background: 'rgba(255,250,246,.58)', backdropFilter: 'blur(16px) saturate(170%)', WebkitBackdropFilter: 'blur(16px) saturate(170%)',
+        borderBottom: '1px solid rgba(221,188,174,.55)', boxShadow: '0 1px 0 rgba(255,255,255,.5) inset',
       }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', color: V('--ink') }}>
           <span style={{
@@ -163,9 +169,10 @@ export function LessonPlayer({ lesson }) {
             <audio ref={player.audioRef} src={player.audioUrl} preload="auto" key={player.audioUrl} />
           )}
           <div style={{
-            background: `linear-gradient(180deg, ${V('--theater-surface')}, ${V('--theater-bg')})`,
+            background: `linear-gradient(180deg, ${V('--theater-surface')}, ${V('--theater-bg')} 70%)`,
             borderRadius: 24, padding: 16,
-            boxShadow: '0 2px 4px rgba(34,21,18,.18), 0 12px 28px rgba(34,21,18,.22), 0 32px 64px rgba(34,21,18,.18), inset 0 1px 0 rgba(255,255,255,.06)',
+            border: '1px solid rgba(184,127,36,.22)',
+            boxShadow: '0 2px 4px rgba(27,16,13,.22), 0 14px 32px rgba(27,16,13,.30), 0 40px 80px rgba(27,16,13,.26), inset 0 1px 0 rgba(247,233,227,.10), inset 0 0 0 1px rgba(27,16,13,.4)',
           }}>
             <div ref={stageRef} style={{ background: V('--surface'), borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(255,255,255,.08)' }}>
               <StagePresenter scene={scene} tMs={tMs} title={scene.title} setHold={player.setHold} />

@@ -36,11 +36,11 @@ export default function RootLayout({ children }) {
           :root {
             --caveat: ${caveat.style.fontFamily};
             /* PREMIUM_UI_SPEC §A — every neutral warm-tinted, coral as highlight never canvas */
-            --bg: #FBF1EE; --surface: #FFFDFB; --surface-sunken: #F6E9E4;
-            --border: #F1DED6; --border-strong: #E3C8BD;
-            --ink: #33201B; --ink-body: #4A342E; --ink-muted: #8A6F66;
-            --coral: #F47368; --coral-deep: #C2453A; --amber: #C98B2D;
-            --theater-bg: #221512; --theater-surface: #2E1E1A; --theater-ink: #F7E9E3;
+            --bg: #F7EBE5; --surface: #FFFDFB; --surface-sunken: #F1E2DA;
+            --border: #EBD6CB; --border-strong: #DDBCAE;
+            --ink: #2A1713; --ink-body: #45302A; --ink-muted: #84685E;
+            --coral: #F47368; --coral-deep: #BC3F34; --amber: #B87F24;
+            --theater-bg: #1B100D; --theater-surface: #291815; --theater-ink: #F7E9E3;
             /* §C depth recipe — blush-hue-matched layered shadows, top light inset */
             --shadow-hue: 14deg 45% 42%;
             --card-shadow:
