@@ -6,6 +6,7 @@
 
 import { callQwenJson } from '../../../qwen/client.js';
 import { validateBoardObjects } from '../../../board/objects/board-objects.js';
+import { coerceBoardObjects } from './board-coercion.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 import { structureViolation } from '../../../board/structures/structure-rules.js';
 
@@ -123,7 +124,9 @@ async function runBoardCall({ system, user, sourcePack, layout, brief = null }) 
     const repair = attempt === 0 ? '' : `\nYour previous output was rejected: ${lastError}. Fix exactly that and output the full JSON again.`;
     const { json, usage } = await callQwenJson({ agent: 'board_director', system: system + repair, user });
     try {
-      const objects = stripHandAuthoredAnimation(json.objects, brief);
+      // Deterministic shape coercion BEFORE validation — 62% of drops were mechanical shape
+      // slips on content that was otherwise fine (see board-coercion.js).
+      const objects = coerceBoardObjects(stripHandAuthoredAnimation(json.objects, brief));
       validateBoardObjects(objects, layout);
       for (const object of objects) {
         if (!sourcePack.chunks.some((chunk) => chunk.id === object.sourceRef?.chunkId)) {
