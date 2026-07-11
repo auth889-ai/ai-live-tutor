@@ -65,19 +65,17 @@ export function LessonPlayer({ lesson }) {
 
   return (
     <div style={{ minHeight: '100vh', color: V('--ink-body'), fontFamily: 'var(--font-inter), system-ui, sans-serif', position: 'relative', isolation: 'isolate' }}>
-      {/* Photo backdrop — VISIBLY present (the room the course lives in), kept classy by a
-          warm wash instead of heavy masking; content stays on opaque surfaces above it. */}
+      {/* FULL-BLEED photo background — the cafe IS the room the lesson lives in. Content sits
+          on opaque cards and the dark theater, so the photo carries atmosphere, never text. */}
       <div aria-hidden style={{
         position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none',
-        backgroundImage: 'url(/premium-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center 32%',
-        opacity: 0.34, filter: 'saturate(0.88) blur(2px)',
-        maskImage: 'linear-gradient(180deg, black 0%, rgba(0,0,0,.72) 55%, rgba(0,0,0,.28) 100%)',
-        WebkitMaskImage: 'linear-gradient(180deg, black 0%, rgba(0,0,0,.72) 55%, rgba(0,0,0,.28) 100%)',
+        backgroundImage: 'url(/premium-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center 40%',
+        filter: 'saturate(0.96)',
       }} />
-      {/* Warm wash over the photo so ink stays 12:1 and the field never turns busy. */}
+      {/* A light warm veil keeps the field cohesive and the glass header legible. */}
       <div aria-hidden style={{
         position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none',
-        background: 'linear-gradient(180deg, rgba(251,241,238,.42) 0%, rgba(251,241,238,.66) 60%, rgba(251,241,238,.8) 100%)',
+        background: 'linear-gradient(180deg, rgba(251,241,238,.20) 0%, rgba(251,241,238,.12) 40%, rgba(247,235,229,.34) 100%)',
       }} />
 
       {/* ---- header: glass chrome (spec §C) ---- */}
