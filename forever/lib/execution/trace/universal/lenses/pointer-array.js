@@ -148,9 +148,14 @@ export function detectPointerArray(recording, { code = '' } = {}) {
     if (changesCount >= 2 && gained) { mapVar = name; break; }
   }
 
+  // COMPOSITION OUTRANKS THE PART: an array walked with a companion stack/queue/map (LC84's
+  // bars + index stack, Daily Temperatures) teaches MORE than the collection's slot-row view
+  // alone — the bars, the pointer, the collection and the bookkeeping all move together. So a
+  // detected companion lifts confidence above collection-ops (0.8), still below structures.
+  const composed = Boolean(stackVar || queueVar || mapVar);
   return {
     lens: 'pointer-array',
-    confidence: role.eliminatedOutside || role.window ? 0.8 : 0.75,
+    confidence: composed ? 0.82 : role.eliminatedOutside || role.window ? 0.8 : 0.75,
     array: { name: hero.name, values: hero.first },
     pointers,
     arrayVar: hero.mutated ? hero.name : null,
