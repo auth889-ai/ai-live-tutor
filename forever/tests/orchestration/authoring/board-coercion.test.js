@@ -46,3 +46,13 @@ test('list items become strings; junk entries and null objects never crash the p
   assert.equal(out.length, 1);
   assert.deepEqual(out[0].content.items, ['1', 'two', 'three']);
 });
+
+test('values as an OBJECT of cells (second production slip) converts to an array in order', () => {
+  const [o] = coerceBoardObjects([{
+    id: 'x', renderHint: 'table',
+    content: { columns: ['Brute', 'Graph', 'Why'], rows: [
+      { label: 'Time', values: { brute: 'O(n!)', graph: 'O(E)', why: 'each edge once' } },
+    ] },
+  }]);
+  assert.deepEqual(o.content.rows[0].values, ['O(n!)', 'O(E)', 'each edge once']);
+});

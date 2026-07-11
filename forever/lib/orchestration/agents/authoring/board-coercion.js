@@ -52,10 +52,16 @@ export function coerceBoardObjects(objects) {
             if (isScalar(label)) r.label = String(label);
           }
           if (!Array.isArray(r.values)) {
-            const gathered = Object.entries(r)
-              .filter(([k, v]) => !['label', 'name', 'title'].includes(k) && isScalar(v))
-              .map(([, v]) => v);
-            if (gathered.length > 0) r.values = gathered;
+            // Seen in production AFTER the first coercion pass: values as an OBJECT of cells
+            // ({"brute": "...", "graph": "..."}) — same content, wrong container.
+            if (r.values && typeof r.values === 'object') {
+              r.values = Object.values(r.values).filter(isScalar);
+            } else {
+              const gathered = Object.entries(r)
+                .filter(([k, v]) => !['label', 'name', 'title'].includes(k) && isScalar(v))
+                .map(([, v]) => v);
+              if (gathered.length > 0) r.values = gathered;
+            }
           }
           if (Array.isArray(r.values) && r.values.length !== expected) {
             r.values = [...r.values.slice(0, expected), ...Array(Math.max(0, expected - r.values.length)).fill('')];
