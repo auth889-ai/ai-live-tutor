@@ -39,6 +39,8 @@ export function compileTrieDict({ recording, plan, code, entry = null, language 
   const lines = (recording?.events ?? []).filter((e) => e.ev === 'line');
 
   const events = [];
+  const known = new Set();
+  let cursor = null; // the growing TIP: the newest path is where the insertion pen stands
   for (const e of lines) {
     const root = e.locals[plan.rootVar];
     if (!isPlainObj(root)) continue;
@@ -53,9 +55,12 @@ export function compileTrieDict({ recording, plan, code, entry = null, language 
         else nodes[childPath] = { label: k === '$' ? '$ (word ends)' : k, refs: [] };
       }
     })(root, plan.rootVar, plan.rootVar);
+    for (const path of Object.keys(nodes)) {
+      if (!known.has(path)) { known.add(path); cursor = path; }
+    }
     events.push({
       line: e.line,
-      state: { kind: 'obj', nodes, pointers: {} },
+      state: { kind: 'obj', nodes, pointers: cursor ? { node: cursor } : {} },
       variables: Object.fromEntries(Object.entries(e.locals).filter(([, v]) => ['number', 'string', 'boolean'].includes(typeof v))),
     });
   }

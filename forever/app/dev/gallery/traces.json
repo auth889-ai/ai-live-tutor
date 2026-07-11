@@ -6346,7 +6346,7 @@
       "steps": [
         {
           "line": 2,
-          "explanation": "push(5): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now 1.",
+          "explanation": "push(5): the stack was empty, so 5 becomes both bottom AND top. Whatever lands after it will bury it — that is the whole contract: Last In, First Out. Size is now 1.",
           "array": {
             "values": [
               5,
@@ -6367,7 +6367,7 @@
         },
         {
           "line": 2,
-          "explanation": "push(8): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now 2.",
+          "explanation": "push(8): 8 lands on TOP, burying 5 beneath it — watch the top arrow jump up. 5 cannot leave until 8 does. Size is now 2.",
           "array": {
             "values": [
               5,
@@ -6389,7 +6389,7 @@
         },
         {
           "line": 2,
-          "explanation": "push(3): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now 3.",
+          "explanation": "push(3): the top arrow jumps onto 3 — everything below is now frozen in place, reachable only after it leaves. 2 items wait underneath. Size is now 3.",
           "array": {
             "values": [
               5,
@@ -6455,6 +6455,51 @@
           }
         },
         {
+          "line": 2,
+          "explanation": "push(9): the top arrow jumps onto 9 — everything below is now frozen in place, reachable only after it leaves. 2 items wait underneath. Size is now 3.",
+          "array": {
+            "values": [
+              5,
+              8,
+              9
+            ],
+            "pointers": {
+              "top": 2
+            },
+            "current": 2
+          },
+          "stack": [
+            5,
+            8,
+            9
+          ],
+          "variables": {
+            "size": 3
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "pop(): 9 comes off the TOP — it was the most recent arrival, and it leaves first. Its slot empties and the top arrow drops down one place; notice nothing below it moved — a stack only ever touches its top. Size is now 2.",
+          "array": {
+            "values": [
+              5,
+              8,
+              ""
+            ],
+            "pointers": {
+              "top": 1
+            },
+            "current": 2
+          },
+          "stack": [
+            5,
+            8
+          ],
+          "variables": {
+            "size": 2
+          }
+        },
+        {
           "line": 3,
           "explanation": "pop(): 8 comes off the TOP — it was the most recent arrival, and it leaves first. Its slot empties and the top arrow drops down one place; notice nothing below it moved — a stack only ever touches its top. Size is now 1.",
           "array": {
@@ -6473,6 +6518,39 @@
           ],
           "variables": {
             "size": 1
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "pop(): 5 comes off the top and the stack drains EMPTY — everything that went in came back out in exactly reverse order, and that reversal is what a stack is FOR.",
+          "array": {
+            "values": [
+              "",
+              "",
+              ""
+            ],
+            "pointers": {},
+            "current": 0
+          },
+          "stack": [],
+          "variables": {
+            "size": 0
+          }
+        },
+        {
+          "line": 3,
+          "explanation": "pop() on an EMPTY stack — this is the classic crash (stack underflow). Real code must guard with \"if not stack:\" before popping; watch how the state simply has nothing to give.",
+          "array": {
+            "values": [
+              "",
+              "",
+              ""
+            ],
+            "pointers": {}
+          },
+          "stack": [],
+          "variables": {
+            "size": 0
           }
         }
       ]
@@ -6495,7 +6573,7 @@
       "steps": [
         {
           "line": 3,
-          "explanation": "enqueue(\"A\"): the new item joins the BACK of the queue — the back arrow slides onto it — and must wait its turn behind 0 others. First In, First Out, like any fair line. Size is now 1.",
+          "explanation": "enqueue(\"A\"): the queue was empty, so \"A\" stands at the FRONT and the BACK at once — first in line, and by the queue's promise, first to be served. First In, First Out starts here. Size is now 1.",
           "array": {
             "values": [
               "A",
@@ -6517,7 +6595,7 @@
         },
         {
           "line": 3,
-          "explanation": "enqueue(\"B\"): the new item joins the BACK of the queue — the back arrow slides onto it — and must wait its turn behind 1 other. First In, First Out, like any fair line. Size is now 2.",
+          "explanation": "enqueue(\"B\"): \"B\" joins at the BACK, right behind \"A\" — the back arrow slides onto it. It cannot be served until everyone ahead has been. Size is now 2.",
           "array": {
             "values": [
               "A",
@@ -6540,7 +6618,7 @@
         },
         {
           "line": 3,
-          "explanation": "enqueue(\"C\"): the new item joins the BACK of the queue — the back arrow slides onto it — and must wait its turn behind 2 others. First In, First Out, like any fair line. Size is now 3.",
+          "explanation": "enqueue(\"C\"): \"C\" takes the back slot with 2 ahead of it — and notice the FRONT arrow never moved: arrivals only ever touch the back of a queue. Size is now 3.",
           "array": {
             "values": [
               "A",
@@ -6586,11 +6664,82 @@
           }
         },
         {
+          "line": 3,
+          "explanation": "enqueue(\"D\"): \"D\" takes the back slot with 2 ahead of it — and notice the FRONT arrow never moved: arrivals only ever touch the back of a queue. Size is now 3.",
+          "array": {
+            "values": [
+              "B",
+              "C",
+              "D"
+            ],
+            "pointers": {
+              "front": 0,
+              "back": 2
+            },
+            "current": 2
+          },
+          "queue": [
+            "B",
+            "C",
+            "D"
+          ],
+          "variables": {
+            "size": 3
+          }
+        },
+        {
+          "line": 1,
+          "explanation": "front(): we look at \"B\" WITHOUT removing it — the highlighted cell is only being read; reading costs nothing and changes nothing, and the size stays 3.",
+          "array": {
+            "values": [
+              "B",
+              "C",
+              "D"
+            ],
+            "pointers": {
+              "front": 0,
+              "back": 2
+            },
+            "current": 0
+          },
+          "queue": [
+            "B",
+            "C",
+            "D"
+          ],
+          "variables": {
+            "size": 3
+          }
+        },
+        {
           "line": 4,
-          "explanation": "dequeue(): \"B\" leaves from the FRONT — it waited longest, so it is served first. Everyone behind shifts one place closer to the front arrow. Size is now 1.",
+          "explanation": "dequeue(): \"B\" leaves from the FRONT — it waited longest, so it is served first. Everyone behind shifts one place closer to the front arrow. Size is now 2.",
           "array": {
             "values": [
               "C",
+              "D",
+              ""
+            ],
+            "pointers": {
+              "front": 0,
+              "back": 1
+            },
+            "current": 0
+          },
+          "queue": [
+            "C",
+            "D"
+          ],
+          "variables": {
+            "size": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dequeue(): \"C\" leaves from the FRONT — it waited longest, so it is served first. Everyone behind shifts one place closer to the front arrow. Size is now 1.",
+          "array": {
+            "values": [
+              "D",
               "",
               ""
             ],
@@ -6601,10 +6750,43 @@
             "current": 0
           },
           "queue": [
-            "C"
+            "D"
           ],
           "variables": {
             "size": 1
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dequeue(): \"D\" is served and the queue drains EMPTY — everyone left in exactly the order they arrived, and that fairness is the whole point of a queue.",
+          "array": {
+            "values": [
+              "",
+              "",
+              ""
+            ],
+            "pointers": {},
+            "current": 0
+          },
+          "queue": [],
+          "variables": {
+            "size": 0
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "dequeue() on an EMPTY queue — the classic underflow bug. Production code checks emptiness first; there is nothing at the front to hand back.",
+          "array": {
+            "values": [
+              "",
+              "",
+              ""
+            ],
+            "pointers": {}
+          },
+          "queue": [],
+          "variables": {
+            "size": 0
           }
         }
       ]
@@ -7354,7 +7536,7 @@
       "steps": [
         {
           "line": 4,
-          "explanation": "push(\"(\"): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now 1.",
+          "explanation": "push(\"(\"): the stack was empty, so \"(\" becomes both bottom AND top. Whatever lands after it will bury it — that is the whole contract: Last In, First Out. Size is now 1.",
           "array": {
             "values": [
               "(",
@@ -7375,7 +7557,7 @@
         },
         {
           "line": 4,
-          "explanation": "push(\"[\"): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now 2.",
+          "explanation": "push(\"[\"): \"[\" lands on TOP, burying \"(\" beneath it — watch the top arrow jump up. \"(\" cannot leave until \"[\" does. Size is now 2.",
           "array": {
             "values": [
               "(",
@@ -7397,7 +7579,7 @@
         },
         {
           "line": 4,
-          "explanation": "push(\"{\"): the new item lands on TOP of the stack — watch the top arrow jump onto it. It sits above everything that came before, and it will be the FIRST to leave. That is the whole contract: Last In, First Out. Size is now 3.",
+          "explanation": "push(\"{\"): the top arrow jumps onto \"{\" — everything below is now frozen in place, reachable only after it leaves. 2 items wait underneath. Size is now 3.",
           "array": {
             "values": [
               "(",
@@ -7463,7 +7645,7 @@
         },
         {
           "line": 4,
-          "explanation": "pop(): \"(\" comes off the TOP — it was the most recent arrival, and it leaves first. Its slot empties and the top arrow drops down one place; notice nothing below it moved — a stack only ever touches its top. Size is now 0.",
+          "explanation": "pop(): \"(\" comes off the top and the stack drains EMPTY — everything that went in came back out in exactly reverse order, and that reversal is what a stack is FOR.",
           "array": {
             "values": [
               "",
@@ -17676,7 +17858,9 @@
           "explanation": "Now 1 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
           "graph": {
             "current": "1",
-            "visited": [],
+            "visited": [
+              "0"
+            ],
             "pointers": {
               "curr": "1"
             }
@@ -17697,7 +17881,9 @@
           "explanation": "One incoming edge of 3 is satisfied; its indegree drops to 1. It still waits — a node may only be scheduled when NOTHING points at it anymore.",
           "graph": {
             "current": "1",
-            "visited": [],
+            "visited": [
+              "0"
+            ],
             "pointers": {
               "curr": "1"
             }
@@ -17718,7 +17904,10 @@
           "explanation": "Now 2 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 2's edges.",
           "graph": {
             "current": "2",
-            "visited": [],
+            "visited": [
+              "0",
+              "1"
+            ],
             "pointers": {
               "curr": "2"
             }
@@ -17737,7 +17926,10 @@
           "explanation": "3's indegree drops to 0 — every prerequisite it was waiting on is done, so 3 is now FREE and joins the frontier to be scheduled.",
           "graph": {
             "current": "2",
-            "visited": [],
+            "visited": [
+              "0",
+              "1"
+            ],
             "pointers": {
               "curr": "2"
             }
@@ -17756,7 +17948,10 @@
           "explanation": "The queue now holds 3 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
           "graph": {
             "current": "2",
-            "visited": [],
+            "visited": [
+              "0",
+              "1"
+            ],
             "pointers": {
               "curr": "2"
             }
@@ -17777,7 +17972,11 @@
           "explanation": "Now 3 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 3's edges.",
           "graph": {
             "current": "3",
-            "visited": [],
+            "visited": [
+              "0",
+              "1",
+              "2"
+            ],
             "pointers": {
               "curr": "3"
             }
@@ -17796,7 +17995,12 @@
           "explanation": "The walk is complete and the call returns true. Every number in the final table was earned by a relaxation you watched happen — that is the whole proof, performed in front of you.",
           "graph": {
             "current": "3",
-            "visited": [],
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3"
+            ],
             "pointers": {
               "curr": "3"
             }
@@ -20061,7 +20265,7 @@
       },
       "steps": [
         {
-          "line": 8,
+          "line": 3,
           "explanation": "We run build_trie(['ap', 'an']) and watch the structure itself: every circle is a real node object (or adjacency entry) extracted live from memory, every arrow a real reference. Nothing here was declared — the picture IS the program's own data, drawn as it exists at each step.",
           "graph": {
             "current": null,
@@ -20072,17 +20276,40 @@
           "variables": {}
         },
         {
-          "line": 8,
-          "explanation": "The structure grows: a node holding 'a' appears and is linked in — 2 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "line": 3,
+          "explanation": "node steps to the node holding 'root' — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
           "graph": {
-            "current": null,
+            "current": "root",
             "visited": [],
+            "revealed": [
+              "root"
+            ],
+            "pointers": {
+              "node": "root"
+            }
+          },
+          "variables": {}
+        },
+        {
+          "line": 8,
+          "explanation": "The structure grows: a node holding 'a' appears and is linked in — 2 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding 'a' leaving 'root' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+          "graph": {
+            "current": "root/a",
+            "visited": [
+              "root"
+            ],
             "revealed": [
               "root",
               "root/a"
             ],
-            "pointers": {}
+            "pointers": {
+              "node": "root/a"
+            }
           },
+          "activeEdge": [
+            "root",
+            "root/a"
+          ],
           "variables": {
             "w": "ap",
             "ch": "a"
@@ -20090,17 +20317,26 @@
         },
         {
           "line": 8,
-          "explanation": "The structure grows: a node holding 'p' appears and is linked in — 3 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "explanation": "The structure grows: a node holding 'p' appears and is linked in — 3 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding 'p' leaving 'a' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
           "graph": {
-            "current": null,
-            "visited": [],
+            "current": "root/a/p",
+            "visited": [
+              "root",
+              "root/a"
+            ],
             "revealed": [
               "root",
               "root/a",
               "root/a/p"
             ],
-            "pointers": {}
+            "pointers": {
+              "node": "root/a/p"
+            }
           },
+          "activeEdge": [
+            "root/a",
+            "root/a/p"
+          ],
           "variables": {
             "w": "ap",
             "ch": "p"
@@ -20108,18 +20344,28 @@
         },
         {
           "line": 3,
-          "explanation": "The structure grows: a node holding '$ (word ends)' appears and is linked in — 4 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "explanation": "The structure grows: a node holding '$ (word ends)' appears and is linked in — 4 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding '$ (word ends)' leaving 'p' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
           "graph": {
-            "current": null,
-            "visited": [],
+            "current": "root/a/p/$",
+            "visited": [
+              "root",
+              "root/a",
+              "root/a/p"
+            ],
             "revealed": [
               "root",
               "root/a",
               "root/a/p",
               "root/a/p/$"
             ],
-            "pointers": {}
+            "pointers": {
+              "node": "root/a/p/$"
+            }
           },
+          "activeEdge": [
+            "root/a/p",
+            "root/a/p/$"
+          ],
           "variables": {
             "w": "ap",
             "ch": "p"
@@ -20127,10 +20373,15 @@
         },
         {
           "line": 8,
-          "explanation": "The structure grows: a node holding 'n' appears and is linked in — 5 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "explanation": "The structure grows: a node holding 'n' appears and is linked in — 5 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding 'n' leaving '$ (word ends)' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
           "graph": {
-            "current": null,
-            "visited": [],
+            "current": "root/a/n",
+            "visited": [
+              "root",
+              "root/a",
+              "root/a/p",
+              "root/a/p/$"
+            ],
             "revealed": [
               "root",
               "root/a",
@@ -20138,7 +20389,9 @@
               "root/a/p/$",
               "root/a/n"
             ],
-            "pointers": {}
+            "pointers": {
+              "node": "root/a/n"
+            }
           },
           "variables": {
             "w": "an",
@@ -20147,10 +20400,16 @@
         },
         {
           "line": 3,
-          "explanation": "The structure grows: a node holding '$ (word ends)' appears and is linked in — 6 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan.",
+          "explanation": "The structure grows: a node holding '$ (word ends)' appears and is linked in — 6 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding '$ (word ends)' leaving 'n' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
           "graph": {
-            "current": null,
-            "visited": [],
+            "current": "root/a/n/$",
+            "visited": [
+              "root",
+              "root/a",
+              "root/a/p",
+              "root/a/p/$",
+              "root/a/n"
+            ],
             "revealed": [
               "root",
               "root/a",
@@ -20159,8 +20418,14 @@
               "root/a/n",
               "root/a/n/$"
             ],
-            "pointers": {}
+            "pointers": {
+              "node": "root/a/n/$"
+            }
           },
+          "activeEdge": [
+            "root/a/n",
+            "root/a/n/$"
+          ],
           "variables": {
             "w": "an",
             "ch": "n"
@@ -20171,7 +20436,13 @@
           "explanation": "The run is complete and the call returns {\"a\":{\"p\":{\"$\":true},\"n\":{\"$\":true}}}. The final structure holds 6 nodes and 5 links — every one extracted from the real objects the code created and walked. That picture is not an illustration of the algorithm; it IS the algorithm's memory.",
           "graph": {
             "current": null,
-            "visited": [],
+            "visited": [
+              "root",
+              "root/a",
+              "root/a/p",
+              "root/a/p/$",
+              "root/a/n"
+            ],
             "revealed": [
               "root",
               "root/a",
@@ -20273,7 +20544,9 @@
           "explanation": "Now 1 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
           "graph": {
             "current": "1",
-            "visited": [],
+            "visited": [
+              "0"
+            ],
             "pointers": {
               "curr": "1"
             }
@@ -20285,7 +20558,9 @@
           "explanation": "Union: 0's root becomes 1 — the two sets merge into one family, and any future find() on 0's side will now walk up to 1. Watch the forest get flatter as unions accumulate.",
           "graph": {
             "current": "1",
-            "visited": [],
+            "visited": [
+              "0"
+            ],
             "pointers": {
               "curr": "1"
             }
@@ -20305,7 +20580,10 @@
           "explanation": "Now 2 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 2's edges.",
           "graph": {
             "current": "2",
-            "visited": [],
+            "visited": [
+              "0",
+              "1"
+            ],
             "pointers": {
               "curr": "2"
             }
@@ -20317,7 +20595,10 @@
           "explanation": "Union: 1's root becomes 2 — the two sets merge into one family, and any future find() on 1's side will now walk up to 2. Watch the forest get flatter as unions accumulate.",
           "graph": {
             "current": "2",
-            "visited": [],
+            "visited": [
+              "0",
+              "1"
+            ],
             "pointers": {
               "curr": "2"
             }
@@ -20337,7 +20618,11 @@
           "explanation": "Now 3 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 3's edges.",
           "graph": {
             "current": "3",
-            "visited": [],
+            "visited": [
+              "0",
+              "1",
+              "2"
+            ],
             "pointers": {
               "curr": "3"
             }
@@ -20349,7 +20634,12 @@
           "explanation": "Now 4 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 4's edges.",
           "graph": {
             "current": "4",
-            "visited": [],
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3"
+            ],
             "pointers": {
               "curr": "4"
             }
@@ -20361,7 +20651,12 @@
           "explanation": "Union: 3's root becomes 4 — the two sets merge into one family, and any future find() on 3's side will now walk up to 4. Watch the forest get flatter as unions accumulate.",
           "graph": {
             "current": "4",
-            "visited": [],
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3"
+            ],
             "pointers": {
               "curr": "4"
             }
@@ -20381,7 +20676,13 @@
           "explanation": "The walk is complete and the call returns 2. Every number in the final table was earned by a relaxation you watched happen — that is the whole proof, performed in front of you.",
           "graph": {
             "current": "4",
-            "visited": [],
+            "visited": [
+              "0",
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
             "pointers": {
               "curr": "4"
             }

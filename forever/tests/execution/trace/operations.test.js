@@ -18,7 +18,8 @@ test('stack: one frame per op, LIFO narrated, underflow taught instead of crashi
   assert.equal(trace.steps.length, 6);
   assert.deepEqual(trace.steps[1].stack, [7, 3]);
   assert.equal(trace.steps[1].line, 2);
-  assert.match(trace.steps[1].explanation, /TOP.*Last In, First Out/s);
+  assert.match(trace.steps[0].explanation, /Last In, First Out/, 'the FIRST arrival teaches the contract');
+  assert.match(trace.steps[1].explanation, /TOP, burying 7/, 'the second names its neighbor — a tutor never repeats a sentence');
   assert.match(trace.steps[2].explanation, /WITHOUT removing/);
   assert.deepEqual(trace.steps[3].stack, [7], 'pop removes the most recent');
   assert.match(trace.steps[5].explanation, /EMPTY stack.*underflow/s, 'the classic bug becomes a lesson');

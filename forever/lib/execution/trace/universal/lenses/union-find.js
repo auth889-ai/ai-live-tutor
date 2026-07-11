@@ -12,6 +12,8 @@
 
 import { compileGraphWalk } from '../../graph-walk/compiler.js';
 
+import { synthesizeVisitedFromTakes } from './graph-adjacency.js';
+
 const isPlainObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 
 // Normalize a forest sighting (int list or dict) to [key, value] pairs, or null.
@@ -94,7 +96,7 @@ export function compileUnionFind({ recording, plan, code, entry = null, language
   if (!plan || plan.lens !== 'union-find') throw new Error('compileUnionFind needs a plan from detectUnionFind');
   const events = (recording?.events ?? []).filter((e) => e.ev === 'line').map((e) => ({ line: e.line, locals: e.locals }));
   if (recording?.events?.at(-1)?.truncated === true) events.push({ truncated: true });
-  return compileGraphWalk({
+  const trace = compileGraphWalk({
     events,
     result: recording.result,
     code,
@@ -103,4 +105,6 @@ export function compileUnionFind({ recording, plan, code, entry = null, language
     graph: plan.graph,
     lens: plan.roles,
   });
+  synthesizeVisitedFromTakes(trace); // union-find has no visited var — find's walk IS the progress
+  return trace;
 }

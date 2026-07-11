@@ -65,7 +65,7 @@ export function compileOperationsTrace({ structure, ops, code, lines = {}, bucke
       if (op === 'push' || op === 'enqueue') {
         items.push(value);
         touched = items.length - 1;
-        explanation = narrateAdd({ isStack, structure, value, size: items.length });
+        explanation = narrateAdd({ isStack, structure, value, size: items.length, neighbor: items[items.length - 2] });
       } else if (op === 'pop' || op === 'dequeue') {
         if (items.length === 0) {
           explanation = narrateUnderflow({ isStack });

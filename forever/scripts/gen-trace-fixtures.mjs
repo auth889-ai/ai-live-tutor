@@ -91,11 +91,21 @@ const add = (name, trace) => out.push({ name, trace });
 // --- operations: stack, queue, hash map (deterministic) ---
 add('Stack — push/pop (LIFO)', compileOperationsTrace({
   structure: 'stack', code: 's = []\ns.append(x)\ns.pop()\ns[-1]', lines: { push: 2, pop: 3, peek: 4 },
-  ops: [{ op: 'push', value: 5 }, { op: 'push', value: 8 }, { op: 'push', value: 3 }, { op: 'pop' }, { op: 'peek' }, { op: 'pop' }],
+  ops: [
+    { op: 'push', value: 5 }, { op: 'push', value: 8 }, { op: 'push', value: 3 },
+    { op: 'pop' }, { op: 'peek' }, { op: 'push', value: 9 },
+    { op: 'pop' }, { op: 'pop' }, { op: 'pop' }, { op: 'pop' },
+  ],
 }));
 add('Queue — enqueue/dequeue (FIFO)', compileOperationsTrace({
-  structure: 'queue', code: 'from collections import deque\nq = deque()\nq.append(x)\nq.popleft()', lines: { enqueue: 3, dequeue: 4 },
-  ops: [{ op: 'enqueue', value: 'A' }, { op: 'enqueue', value: 'B' }, { op: 'enqueue', value: 'C' }, { op: 'dequeue' }, { op: 'dequeue' }],
+  structure: 'queue', code: 'from collections import deque\nq = deque()\nq.append(x)\nq.popleft()', lines: { enqueue: 3, dequeue: 4, front: 1 },
+  // A full lesson arc: fill, serve, interleave an arrival mid-service, peek, drain, and the
+  // classic underflow mistake at the exact moment it would crash.
+  ops: [
+    { op: 'enqueue', value: 'A' }, { op: 'enqueue', value: 'B' }, { op: 'enqueue', value: 'C' },
+    { op: 'dequeue' }, { op: 'enqueue', value: 'D' }, { op: 'front' },
+    { op: 'dequeue' }, { op: 'dequeue' }, { op: 'dequeue' }, { op: 'dequeue' },
+  ],
 }));
 add('Hash map — put/get with collision', compileOperationsTrace({
   structure: 'hash_map', code: 'm = {}\nm[k] = v\nm.get(k)\ndel m[k]', buckets: 4, lines: { put: 2, get: 3, remove: 4 },
