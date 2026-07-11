@@ -20691,5 +20691,833 @@
         }
       ]
     }
+  },
+  {
+    "name": "LC84 HARD — Histogram: bars + monotonic stack (43 steps)",
+    "trace": {
+      "language": "python",
+      "code": "def largestRectangleArea(heights):\n    stack = []\n    best = 0\n    for i in range(len(heights) + 1):\n        h = heights[i] if i < len(heights) else 0\n        while stack and heights[stack[-1]] >= h:\n            height = heights[stack.pop()]\n            width = i if not stack else i - stack[-1] - 1\n            area = height * width\n            if area > best:\n                best = area\n        stack.append(i)\n    return best",
+      "views": {
+        "array": {
+          "values": [
+            2,
+            1,
+            5,
+            6,
+            2,
+            3
+          ]
+        }
+      },
+      "steps": [
+        {
+          "line": 3,
+          "explanation": " The stack is rewritten in place to [] (empty).",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [],
+          "variables": {}
+        },
+        {
+          "line": 4,
+          "explanation": "New state appears: best = 0 — keep your eye on this value; every pointer move below is decided by it.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [],
+          "variables": {
+            "best": 0
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "`i` starts at index 0, where the value is 2. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "current": 0,
+            "pointers": {
+              "i": 0
+            }
+          },
+          "stack": [],
+          "variables": {
+            "best": 0,
+            "i": 0
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "New state appears: h = 2 — keep your eye on this value; every pointer move below is decided by it.",
+          "array": {
+            "pointers": {
+              "i": 0
+            }
+          },
+          "stack": [],
+          "variables": {
+            "best": 0,
+            "i": 0,
+            "h": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": " 0 is PUSHED onto the stack — it now holds [0]; whatever sits on top decides what happens next.",
+          "array": {
+            "pointers": {
+              "i": 0
+            }
+          },
+          "stack": [
+            0
+          ],
+          "variables": {
+            "best": 0,
+            "i": 0,
+            "h": 2
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "`i` moves to index 1, where the value is 1. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "current": 1,
+            "pointers": {
+              "i": 1
+            }
+          },
+          "stack": [
+            0
+          ],
+          "variables": {
+            "best": 0,
+            "i": 1,
+            "h": 2
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "The bookkeeping updates: h becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 1
+            }
+          },
+          "stack": [
+            0
+          ],
+          "variables": {
+            "best": 0,
+            "i": 1,
+            "h": 1
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "New state appears: height = 2 — keep your eye on this value; every pointer move below is decided by it.  0 comes OFF the stack — [] (empty) remains; that departure is exactly what the algorithm was waiting for.",
+          "array": {
+            "pointers": {
+              "i": 1
+            }
+          },
+          "stack": [],
+          "variables": {
+            "best": 0,
+            "i": 1,
+            "h": 1,
+            "height": 2
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "New state appears: width = 1 — keep your eye on this value; every pointer move below is decided by it.",
+          "array": {
+            "pointers": {
+              "i": 1
+            }
+          },
+          "stack": [],
+          "variables": {
+            "best": 0,
+            "i": 1,
+            "h": 1,
+            "height": 2,
+            "width": 1
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "New state appears: area = 2 — keep your eye on this value; every pointer move below is decided by it.",
+          "array": {
+            "pointers": {
+              "i": 1
+            }
+          },
+          "stack": [],
+          "variables": {
+            "best": 0,
+            "i": 1,
+            "h": 1,
+            "height": 2,
+            "width": 1,
+            "area": 2
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "The bookkeeping updates: best becomes 2. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 1
+            }
+          },
+          "stack": [],
+          "variables": {
+            "best": 2,
+            "i": 1,
+            "h": 1,
+            "height": 2,
+            "width": 1,
+            "area": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": " 1 is PUSHED onto the stack — it now holds [1]; whatever sits on top decides what happens next.",
+          "array": {
+            "pointers": {
+              "i": 1
+            }
+          },
+          "stack": [
+            1
+          ],
+          "variables": {
+            "best": 2,
+            "i": 1,
+            "h": 1,
+            "height": 2,
+            "width": 1,
+            "area": 2
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "`i` moves to index 2, where the value is 5. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "current": 2,
+            "pointers": {
+              "i": 2
+            }
+          },
+          "stack": [
+            1
+          ],
+          "variables": {
+            "best": 2,
+            "i": 2,
+            "h": 1,
+            "height": 2,
+            "width": 1,
+            "area": 2
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "The bookkeeping updates: h becomes 5. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 2
+            }
+          },
+          "stack": [
+            1
+          ],
+          "variables": {
+            "best": 2,
+            "i": 2,
+            "h": 5,
+            "height": 2,
+            "width": 1,
+            "area": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": " 2 is PUSHED onto the stack — it now holds [1, 2]; whatever sits on top decides what happens next.",
+          "array": {
+            "pointers": {
+              "i": 2
+            }
+          },
+          "stack": [
+            1,
+            2
+          ],
+          "variables": {
+            "best": 2,
+            "i": 2,
+            "h": 5,
+            "height": 2,
+            "width": 1,
+            "area": 2
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "`i` moves to index 3, where the value is 6. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "current": 3,
+            "pointers": {
+              "i": 3
+            }
+          },
+          "stack": [
+            1,
+            2
+          ],
+          "variables": {
+            "best": 2,
+            "i": 3,
+            "h": 5,
+            "height": 2,
+            "width": 1,
+            "area": 2
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "The bookkeeping updates: h becomes 6. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 3
+            }
+          },
+          "stack": [
+            1,
+            2
+          ],
+          "variables": {
+            "best": 2,
+            "i": 3,
+            "h": 6,
+            "height": 2,
+            "width": 1,
+            "area": 2
+          }
+        },
+        {
+          "line": 4,
+          "explanation": " 3 is PUSHED onto the stack — it now holds [1, 2, 3]; whatever sits on top decides what happens next.",
+          "array": {
+            "pointers": {
+              "i": 3
+            }
+          },
+          "stack": [
+            1,
+            2,
+            3
+          ],
+          "variables": {
+            "best": 2,
+            "i": 3,
+            "h": 6,
+            "height": 2,
+            "width": 1,
+            "area": 2
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "`i` moves to index 4, where the value is 2. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "current": 4,
+            "pointers": {
+              "i": 4
+            }
+          },
+          "stack": [
+            1,
+            2,
+            3
+          ],
+          "variables": {
+            "best": 2,
+            "i": 4,
+            "h": 6,
+            "height": 2,
+            "width": 1,
+            "area": 2
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "The bookkeeping updates: h becomes 2. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 4
+            }
+          },
+          "stack": [
+            1,
+            2,
+            3
+          ],
+          "variables": {
+            "best": 2,
+            "i": 4,
+            "h": 2,
+            "height": 2,
+            "width": 1,
+            "area": 2
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "The bookkeeping updates: height becomes 6. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.  3 comes OFF the stack — [1, 2] remains; that departure is exactly what the algorithm was waiting for.",
+          "array": {
+            "pointers": {
+              "i": 4
+            }
+          },
+          "stack": [
+            1,
+            2
+          ],
+          "variables": {
+            "best": 2,
+            "i": 4,
+            "h": 2,
+            "height": 6,
+            "width": 1,
+            "area": 2
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "The bookkeeping updates: area becomes 6. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 4
+            }
+          },
+          "stack": [
+            1,
+            2
+          ],
+          "variables": {
+            "best": 2,
+            "i": 4,
+            "h": 2,
+            "height": 6,
+            "width": 1,
+            "area": 6
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "The bookkeeping updates: best becomes 6. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 4
+            }
+          },
+          "stack": [
+            1,
+            2
+          ],
+          "variables": {
+            "best": 6,
+            "i": 4,
+            "h": 2,
+            "height": 6,
+            "width": 1,
+            "area": 6
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "The bookkeeping updates: height becomes 5. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.  2 comes OFF the stack — [1] remains; that departure is exactly what the algorithm was waiting for.",
+          "array": {
+            "pointers": {
+              "i": 4
+            }
+          },
+          "stack": [
+            1
+          ],
+          "variables": {
+            "best": 6,
+            "i": 4,
+            "h": 2,
+            "height": 5,
+            "width": 1,
+            "area": 6
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "The bookkeeping updates: width becomes 2. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 4
+            }
+          },
+          "stack": [
+            1
+          ],
+          "variables": {
+            "best": 6,
+            "i": 4,
+            "h": 2,
+            "height": 5,
+            "width": 2,
+            "area": 6
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "The bookkeeping updates: area becomes 10. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 4
+            }
+          },
+          "stack": [
+            1
+          ],
+          "variables": {
+            "best": 6,
+            "i": 4,
+            "h": 2,
+            "height": 5,
+            "width": 2,
+            "area": 10
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "The bookkeeping updates: best becomes 10. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 4
+            }
+          },
+          "stack": [
+            1
+          ],
+          "variables": {
+            "best": 10,
+            "i": 4,
+            "h": 2,
+            "height": 5,
+            "width": 2,
+            "area": 10
+          }
+        },
+        {
+          "line": 4,
+          "explanation": " 4 is PUSHED onto the stack — it now holds [1, 4]; whatever sits on top decides what happens next.",
+          "array": {
+            "pointers": {
+              "i": 4
+            }
+          },
+          "stack": [
+            1,
+            4
+          ],
+          "variables": {
+            "best": 10,
+            "i": 4,
+            "h": 2,
+            "height": 5,
+            "width": 2,
+            "area": 10
+          }
+        },
+        {
+          "line": 5,
+          "explanation": "`i` moves to index 5, where the value is 3. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+          "array": {
+            "current": 5,
+            "pointers": {
+              "i": 5
+            }
+          },
+          "stack": [
+            1,
+            4
+          ],
+          "variables": {
+            "best": 10,
+            "i": 5,
+            "h": 2,
+            "height": 5,
+            "width": 2,
+            "area": 10
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "The bookkeeping updates: h becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {
+              "i": 5
+            }
+          },
+          "stack": [
+            1,
+            4
+          ],
+          "variables": {
+            "best": 10,
+            "i": 5,
+            "h": 3,
+            "height": 5,
+            "width": 2,
+            "area": 10
+          }
+        },
+        {
+          "line": 4,
+          "explanation": " 5 is PUSHED onto the stack — it now holds [1, 4, 5]; whatever sits on top decides what happens next.",
+          "array": {
+            "pointers": {
+              "i": 5
+            }
+          },
+          "stack": [
+            1,
+            4,
+            5
+          ],
+          "variables": {
+            "best": 10,
+            "i": 5,
+            "h": 3,
+            "height": 5,
+            "width": 2,
+            "area": 10
+          }
+        },
+        {
+          "line": 6,
+          "explanation": "The bookkeeping updates: h becomes 0. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [
+            1,
+            4,
+            5
+          ],
+          "variables": {
+            "best": 10,
+            "i": 6,
+            "h": 0,
+            "height": 5,
+            "width": 2,
+            "area": 10
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "The bookkeeping updates: height becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.  5 comes OFF the stack — [1, 4] remains; that departure is exactly what the algorithm was waiting for.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [
+            1,
+            4
+          ],
+          "variables": {
+            "best": 10,
+            "i": 6,
+            "h": 0,
+            "height": 3,
+            "width": 2,
+            "area": 10
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "The bookkeeping updates: width becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [
+            1,
+            4
+          ],
+          "variables": {
+            "best": 10,
+            "i": 6,
+            "h": 0,
+            "height": 3,
+            "width": 1,
+            "area": 10
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "The bookkeeping updates: area becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [
+            1,
+            4
+          ],
+          "variables": {
+            "best": 10,
+            "i": 6,
+            "h": 0,
+            "height": 3,
+            "width": 1,
+            "area": 3
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "The bookkeeping updates: height becomes 2. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.  4 comes OFF the stack — [1] remains; that departure is exactly what the algorithm was waiting for.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [
+            1
+          ],
+          "variables": {
+            "best": 10,
+            "i": 6,
+            "h": 0,
+            "height": 2,
+            "width": 1,
+            "area": 3
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "The bookkeeping updates: width becomes 4. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [
+            1
+          ],
+          "variables": {
+            "best": 10,
+            "i": 6,
+            "h": 0,
+            "height": 2,
+            "width": 4,
+            "area": 3
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "The bookkeeping updates: area becomes 8. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [
+            1
+          ],
+          "variables": {
+            "best": 10,
+            "i": 6,
+            "h": 0,
+            "height": 2,
+            "width": 4,
+            "area": 8
+          }
+        },
+        {
+          "line": 8,
+          "explanation": "The bookkeeping updates: height becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.  1 comes OFF the stack — [] (empty) remains; that departure is exactly what the algorithm was waiting for.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [],
+          "variables": {
+            "best": 10,
+            "i": 6,
+            "h": 0,
+            "height": 1,
+            "width": 4,
+            "area": 8
+          }
+        },
+        {
+          "line": 9,
+          "explanation": "The bookkeeping updates: width becomes 6. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [],
+          "variables": {
+            "best": 10,
+            "i": 6,
+            "h": 0,
+            "height": 1,
+            "width": 6,
+            "area": 8
+          }
+        },
+        {
+          "line": 10,
+          "explanation": "The bookkeeping updates: area becomes 6. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [],
+          "variables": {
+            "best": 10,
+            "i": 6,
+            "h": 0,
+            "height": 1,
+            "width": 6,
+            "area": 6
+          }
+        },
+        {
+          "line": 4,
+          "explanation": " 6 is PUSHED onto the stack — it now holds [6]; whatever sits on top decides what happens next.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [
+            6
+          ],
+          "variables": {
+            "best": 10,
+            "i": 6,
+            "h": 0,
+            "height": 1,
+            "width": 6,
+            "area": 6
+          }
+        },
+        {
+          "line": 4,
+          "explanation": "The walk is over and the call returns 10. Replay the arrows in your head: every move you watched was a decision the code made on real data — that decision pattern IS the algorithm.",
+          "array": {
+            "pointers": {}
+          },
+          "stack": [
+            6
+          ],
+          "variables": {
+            "best": 10,
+            "i": 6,
+            "h": 0,
+            "height": 1,
+            "width": 6,
+            "area": 6
+          }
+        }
+      ]
+    }
   }
 ]
