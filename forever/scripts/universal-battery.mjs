@@ -670,6 +670,21 @@ w = {('A', 'B'): 4, ('A', 'C'): 8, ('B', 'C'): 3}`, "dijkstra(g, w, 'A')"],
                     dist[i][j] = dist[i][k] + dist[k][j]
     return dist`, 'floyd([[0,4,9],[4,0,3],[9,3,0]])'],
 
+  ['graphs', 'LC127 Word Ladder (implicit graph)', `from collections import deque
+def ladder(begin, end, words):
+    seen = [begin]
+    q = deque([(begin, 1)])
+    while q:
+        word, steps = q.popleft()
+        if word == end:
+            return steps
+        for i in range(len(word)):
+            for ch in 'cdghiot':
+                nxt = word[:i] + ch + word[i+1:]
+                if nxt in words and nxt not in seen:
+                    seen.append(nxt)
+                    q.append((nxt, steps + 1))
+    return 0`, "ladder('hit', 'cog', ['hot','dot','dog','cog'])"],
   ['graphs', 'LC547 Provinces (REAL matrix input)', `def provinces(isConnected):
     n = len(isConnected)
     visited = []
@@ -716,21 +731,6 @@ def last_stone(stones):
 // from the headline elite % (they document the boundary, they don't inflate or deflate it);
 // when a frontier row goes structural, its lens just landed — promote it into PROBLEMS.
 const FRONTIER = [
-  ['LC127 Word Ladder (implicit graph)', `from collections import deque
-def ladder(begin, end, words):
-    seen = [begin]
-    q = deque([(begin, 1)])
-    while q:
-        word, steps = q.popleft()
-        if word == end:
-            return steps
-        for i in range(len(word)):
-            for ch in 'abcdefgh':
-                nxt = word[:i] + ch + word[i+1:]
-                if nxt in words and nxt not in seen:
-                    seen.append(nxt)
-                    q.append((nxt, steps + 1))
-    return 0`, "ladder('hit', 'cog', ['hot','dot','dog','cog'])"],
   ['LC146 LRU Cache (two structures in sync)', `def lru_ops(cap, ops):
     cache = {}
     order = []

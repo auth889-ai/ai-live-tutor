@@ -12,6 +12,7 @@ import { detectLinkedList, compileLinkedListLens } from './lenses/linked-list.js
 import { detectObjectStructure, compileObjectStructure } from './lenses/object-structure.js';
 import { detectCollectionLens, compileCollectionOps } from './lenses/collection-ops.js';
 import { detectHeap, compileHeap } from './lenses/heap.js';
+import { detectExploredGraph, compileExploredGraph } from './lenses/explored-graph.js';
 import { detectDpTable, compileDpTableLens } from './lenses/dp-table.js';
 import { detectGraphAdjacency, compileGraphAdjacency } from './lenses/graph-adjacency.js';
 import { detectUnionFind, compileUnionFind } from './lenses/union-find.js';
@@ -43,6 +44,9 @@ export const LENS_DETECTORS = Object.freeze([
   // heap (0.82) between recursion and collection-ops: when a heap is merely the FRONTIER of a
   // graph walk the graph lens (0.88) owns the run; when the heap IS the lesson, nothing outranks it.
   { key: 'heap', detect: detectHeap, compile: compileHeap },
+  // explored-graph (0.83) above collection-ops: on an implicit graph the discovery TREE is the
+  // lesson, not the queue that drives it; real-adjacency walks still route to graph-adjacency.
+  { key: 'explored-graph', detect: detectExploredGraph, compile: compileExploredGraph },
   { key: 'collection-ops', detect: detectCollectionLens, compile: compileCollectionOps },
   { key: 'pointer-array', detect: detectPointerArray, compile: compilePointerArray },
 ]);
