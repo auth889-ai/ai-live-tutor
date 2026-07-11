@@ -14,6 +14,7 @@ import { detectCollectionLens, compileCollectionOps } from './lenses/collection-
 import { detectDpTable, compileDpTableLens } from './lenses/dp-table.js';
 import { detectGraphAdjacency, compileGraphAdjacency } from './lenses/graph-adjacency.js';
 import { detectUnionFind, compileUnionFind } from './lenses/union-find.js';
+import { detectAdjacencyMatrix, compileAdjacencyMatrix } from './lenses/adjacency-matrix.js';
 
 export const LENS_DETECTORS = Object.freeze([
   // dp-table above grid-walk: both fire on a mutating 2D list, but the DP detector demands
@@ -30,8 +31,10 @@ export const LENS_DETECTORS = Object.freeze([
   // graph-adjacency (0.88) between the boards and the object lenses: a walked adjacency dict
   // beats its own queue/recursion (Course Schedule shows the GRAPH, not just Kahn's queue).
   { key: 'graph-adjacency', detect: detectGraphAdjacency, compile: compileGraphAdjacency },
-  // union-find (0.86) right behind it: the identity-map birthmark is unmistakable, and this is
-  // the lens that legitimately claims raw edge lists — only a forest proves a pair-list is a graph.
+  // adjacency-matrix (0.87) and union-find (0.86) right behind it: a SQUARE STATIC
+  // double-subscripted matrix with a walker is a graph in disguise; the identity-map birthmark
+  // is unmistakable, and only a forest proves a bare pair-list is a graph.
+  { key: 'adjacency-matrix', detect: detectAdjacencyMatrix, compile: compileAdjacencyMatrix },
   { key: 'union-find', detect: detectUnionFind, compile: compileUnionFind },
   { key: 'linked-list', detect: detectLinkedList, compile: compileLinkedListLens },
   { key: 'object-structure', detect: detectObjectStructure, compile: compileObjectStructure },

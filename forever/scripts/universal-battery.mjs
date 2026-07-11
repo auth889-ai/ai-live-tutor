@@ -670,11 +670,86 @@ w = {('A', 'B'): 4, ('A', 'C'): 8, ('B', 'C'): 3}`, "dijkstra(g, w, 'A')"],
                     dist[i][j] = dist[i][k] + dist[k][j]
     return dist`, 'floyd([[0,4,9],[4,0,3],[9,3,0]])'],
 
+  ['graphs', 'LC547 Provinces (REAL matrix input)', `def provinces(isConnected):
+    n = len(isConnected)
+    visited = []
+    def dfs(i):
+        visited.append(i)
+        for j in range(n):
+            if isConnected[i][j] == 1 and j not in visited:
+                dfs(j)
+    count = 0
+    for i in range(n):
+        if i not in visited:
+            count += 1
+            dfs(i)
+    return count`, 'provinces([[1,1,0],[1,1,0],[0,0,1]])'],
+
   // ——— the honest floor ———
   ['math', 'GCD (Euclid) — floor territory', `def gcd(a, b):
     while b:
         a, b = b, a % b
     return a`, 'gcd(48, 18)'],
+];
+
+// THE FRONTIER — every KNOWN-GAP shape, run and reported honestly. These rows are excluded
+// from the headline elite % (they document the boundary, they don't inflate or deflate it);
+// when a frontier row goes structural, its lens just landed — promote it into PROBLEMS.
+const FRONTIER = [
+  ['LC127 Word Ladder (implicit graph)', `from collections import deque
+def ladder(begin, end, words):
+    seen = [begin]
+    q = deque([(begin, 1)])
+    while q:
+        word, steps = q.popleft()
+        if word == end:
+            return steps
+        for i in range(len(word)):
+            for ch in 'abcdefgh':
+                nxt = word[:i] + ch + word[i+1:]
+                if nxt in words and nxt not in seen:
+                    seen.append(nxt)
+                    q.append((nxt, steps + 1))
+    return 0`, "ladder('hit', 'cog', ['hot','dot','dog','cog'])"],
+  ['LC146 LRU Cache (two structures in sync)', `def lru_ops(cap, ops):
+    cache = {}
+    order = []
+    out = []
+    for op, key in ops:
+        if op == 'get':
+            if key in cache:
+                order.remove(key)
+                order.append(key)
+                out.append(cache[key])
+            else:
+                out.append(-1)
+        else:
+            if key not in cache and len(cache) == cap:
+                old = order.pop(0)
+                del cache[old]
+            cache[key] = key * 10
+            if key in order:
+                order.remove(key)
+            order.append(key)
+    return out`, "lru_ops(2, [('put', 1), ('put', 2), ('get', 1), ('put', 3), ('get', 2)])"],
+  ['LC215 Kth Largest (heap as the lesson)', `import heapq
+def kth_largest(nums, k):
+    heap = []
+    for x in nums:
+        heapq.heappush(heap, x)
+        if len(heap) > k:
+            heapq.heappop(heap)
+    return heap[0]`, 'kth_largest([3, 2, 1, 5, 6, 4], 2)'],
+  ['LC208 Trie built inline (dict-of-dicts)', `def build_trie(words):
+    root = {}
+    for w in words:
+        node = root
+        for ch in w:
+            if ch not in node:
+                node[ch] = {}
+            node = node[ch]
+        node['$'] = True
+    return root`, "build_trie(['app', 'apple'])"],
 ];
 
 const rows = [];
@@ -708,3 +783,14 @@ console.log(`BATTERY: ${total} problems, zero per-problem code`);
 console.log(`  structural elite : ${structural}/${total} (${Math.round((structural / total) * 100)}%)`);
 console.log(`  line-table floor : ${floor}/${total}`);
 console.log(`  errors           : ${errors}/${total}`);
+
+console.log(`\n— frontier (known gaps, tracked honestly — excluded from the headline) —`);
+for (const [name, code, entry] of FRONTIER) {
+  try {
+    const { trace, lens } = await traceUniversal({ code, entry, exec });
+    const structuralRow = lens !== 'line-floor';
+    console.log(`  ${structuralRow ? '●' : '▫'} ${name.padEnd(42)} ${lens.padEnd(17)} ${String(trace.steps.length).padStart(3)} steps${structuralRow ? '  <- lens landed, promote this row' : ''}`);
+  } catch (err) {
+    console.log(`  ✖ ${name.padEnd(42)} ERROR ${String(err.message).slice(0, 50)}`);
+  }
+}
