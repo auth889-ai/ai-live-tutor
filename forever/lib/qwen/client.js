@@ -50,6 +50,10 @@ export async function callQwenJson({
   model = process.env.MODEL_SCENE || 'qwen3.7-plus',
   temperature = 0.4,
   maxTokens = 4000,
+  // Optional Zod schema: when set, the call uses LangChain withStructuredOutput in
+  // FUNCTION-CALLING mode (research-verified: the jsonSchema default 400s on DashScope;
+  // functionCalling steers generation with the schema AND validates client-side).
+  schema = null,
   // 300s: a heavy board (4000-token JSON) at DashScope's slow-window decode (~20 tok/s) takes
   // >150s — a shorter timeout deterministically kills exactly the richest scenes (dry runs,
   // worked examples) while light callout scenes survive. Measured live 2026-07-08.
@@ -91,33 +95,42 @@ export async function callQwenJson({
       maxTokens,
       apiKey,
       configuration: { baseURL: baseUrl },
-      modelKwargs: { response_format: { type: 'json_object' } },
+      ...(schema ? {} : { modelKwargs: { response_format: { type: 'json_object' } } }),
       maxRetries: 0,
     });
-    let message;
+    const messages = [{ role: 'system', content: system }, { role: 'user', content: user }];
+    let json;
+    let usage;
     try {
-      message = await llm.invoke(
-        [{ role: 'system', content: system }, { role: 'user', content: user }],
-        { signal: controller.signal },
-      );
+      if (schema) {
+        // includeRaw so validation failures surface as parsed:null (never a silent throw
+        // deep in LangChain) AND the raw message keeps usage for the ledger.
+        const structured = llm.withStructuredOutput(schema, { method: 'functionCalling', includeRaw: true, name: `${agent}_output` });
+        const out = await structured.invoke(messages, { signal: controller.signal });
+        if (!out.parsed) {
+          throw new Error(`Agent "${agent}" returned invalid JSON: output did not match the ${agent}_output schema`);
+        }
+        json = out.parsed;
+        usage = usageFrom(out.raw);
+      } else {
+        const message = await llm.invoke(messages, { signal: controller.signal });
+        const text = typeof message.content === 'string'
+          ? message.content
+          : (message.content ?? []).map((part) => part?.text ?? '').join('');
+        if (!text) throw new Error(`Qwen returned no content for agent "${agent}"`);
+        try {
+          json = JSON.parse(text);
+        } catch {
+          throw new Error(`Agent "${agent}" returned invalid JSON: ${text.slice(0, 300)}`);
+        }
+        usage = usageFrom(message);
+      }
     } catch (error) {
+      if (/returned invalid JSON|returned no content/.test(String(error?.message))) throw error;
       // Preserve the HTTP status in the message so isTransient() still classifies it.
       const status = error?.status ?? error?.response?.status;
       throw new Error(`Qwen call failed for agent "${agent}": ${status ? `HTTP ${status} — ` : ''}${String(error?.message ?? error).slice(0, 500)}`);
     }
-    const text = typeof message.content === 'string'
-      ? message.content
-      : (message.content ?? []).map((part) => part?.text ?? '').join('');
-    if (!text) throw new Error(`Qwen returned no content for agent "${agent}"`);
-    let json;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      throw new Error(`Agent "${agent}" returned invalid JSON: ${text.slice(0, 300)}`);
-    }
-    const tu = message.response_metadata?.tokenUsage;
-    const usage = message.response_metadata?.usage
-      ?? (tu ? { prompt_tokens: tu.promptTokens, completion_tokens: tu.completionTokens, total_tokens: tu.totalTokens } : null);
     recordUsage(agent, usage);
     return { json, usage, model };
   } finally {
@@ -139,4 +152,10 @@ export function isTransient(error) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function usageFrom(message) {
+  const tu = message?.response_metadata?.tokenUsage;
+  return message?.response_metadata?.usage
+    ?? (tu ? { prompt_tokens: tu.promptTokens, completion_tokens: tu.completionTokens, total_tokens: tu.totalTokens } : null);
 }

@@ -10,6 +10,7 @@ import { StateGraph, Annotation, START, END } from '@langchain/langgraph';
 import { designBoard, reviseBoard } from '../agents/authoring/board-director.js';
 import { auditGrounding } from '../agents/critics/grounding-auditor.js';
 import { auditPedagogy } from '../agents/critics/pedagogy-critic.js';
+import { ruleOnObjections } from '../agents/critics/arbiter.js';
 import { createSocietyMessage } from '../messages/society-messages.js';
 import { FOREVER_AGENT_ROLES } from '../roles/agent-roles.js';
 
@@ -37,7 +38,7 @@ export async function runGroundingReview({
   domain = 'general',
   maxRounds,
   // Agents are injectable so the state machine is unit-testable without spending tokens.
-  agents = { designBoard, reviseBoard, auditGrounding, auditPedagogy },
+  agents = { designBoard, reviseBoard, auditGrounding, auditPedagogy, ruleOnObjections },
   // THINKING ALOUD: each society step as a human sentence, streamed to the student's
   // progress UI (the wait becomes a window into the agents at work, not a spinner).
   onStep = () => {},
@@ -86,8 +87,43 @@ export async function runGroundingReview({
 
   const decide = (state) => {
     if (!state.mustRevise) return 'accept';
-    if (state.round === rounds) return state.groundingCount === 0 ? 'accept' : 'fail';
+    if (state.round === rounds) {
+      if (state.groundingCount === 0) return 'accept';
+      // ARBITRATION RUNG (research: single-judge precision ~62% — a lone critic may
+      // revise, but only corroborated judgment kills). No arbiter injected = old behavior.
+      return agents.ruleOnObjections ? 'arbitrate' : 'fail';
+    }
     return 'revise';
+  };
+
+  const arbitrate = async (state) => {
+    onStep('The Arbiter is reviewing the surviving objections');
+    const groundingObjections = state.lastObjections.filter((m) => m.fromRole === FOREVER_AGENT_ROLES.groundingAuditor);
+    const { sustained, usage } = await agents.ruleOnObjections({
+      sceneId, objections: groundingObjections, objects: state.board.objects, sourcePack,
+    });
+    const overruled = groundingObjections.length - sustained.size;
+    // Sustained objections remove THEIR objects (the auditor was right about those);
+    // overruled ones die here. The scene fails only if no teachable core remains.
+    const objects = state.board.objects.filter((object) => !sustained.has(object.id));
+    for (const id of sustained) console.error(`[review] Arbiter sustained the objection — object "${id}" removed`);
+    const verdictMsg = createSocietyMessage({
+      id: `msg_arbiter_${sceneId}_${state.round}`,
+      kind: 'verdict',
+      fromRole: FOREVER_AGENT_ROLES.arbiter,
+      sceneId,
+      body: `Arbiter ruling: ${overruled} objection(s) overruled, ${sustained.size} sustained${sustained.size ? ` (objects removed: ${[...sustained].join(', ')})` : ''}.`,
+      verdict: { decision: objects.some((o) => o.decorative !== true) ? 'accept' : 'reject', binding: true },
+    });
+    if (!objects.some((object) => object.decorative !== true)) {
+      return { failed: true, usages: [usage], transcript: [verdictMsg] };
+    }
+    return {
+      board: { ...state.board, objects },
+      acceptedRound: state.round,
+      usages: [usage],
+      transcript: [verdictMsg],
+    };
   };
 
   const accept = (state) => {
@@ -128,12 +164,14 @@ export async function runGroundingReview({
     .addNode('audit', audit)
     .addNode('accept', accept)
     .addNode('revise', revise)
+    .addNode('arbitrate', arbitrate)
     .addNode('fail', () => ({ failed: true }))
     .addEdge(START, 'design')
     .addEdge('design', 'audit')
-    .addConditionalEdges('audit', decide, { accept: 'accept', revise: 'revise', fail: 'fail' })
+    .addConditionalEdges('audit', decide, { accept: 'accept', revise: 'revise', arbitrate: 'arbitrate', fail: 'fail' })
     .addEdge('revise', 'audit')
     .addEdge('accept', END)
+    .addEdge('arbitrate', END)
     .addEdge('fail', END)
     .compile();
 

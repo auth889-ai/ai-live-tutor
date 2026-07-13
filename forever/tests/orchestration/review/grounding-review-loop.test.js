@@ -125,3 +125,34 @@ test('thinking aloud: every society step is narrated through onStep, in order', 
     'Approved after 1 repair round(s)',
   ]);
 });
+
+test('ARBITRATION: at the round cap, overruled objections ship the scene; sustained ones remove only their objects', async () => {
+  const board = { objects: [
+    { id: 'title', decorative: true, content: 'T' },
+    { id: 'good_analogy', grounding: 'analogy', content: 'ice cream stand' },
+    { id: 'bad_fact', sourceRef: { chunkId: 'c1' }, content: 'wrong number' },
+  ], usage: null };
+  const objectionTo = (objectId) => ({ ...objection('sc_arb', 0), fromRole: 'grounding_auditor', evidenceRefs: [{ objectId }] });
+  let audits = 0;
+  const result = await runGroundingReview({
+    sceneId: 'sc_arb',
+    sourcePack,
+    maxRounds: 1,
+    agents: {
+      designBoard: async () => board,
+      auditGrounding: async () => {
+        audits += 1;
+        return { objections: [objectionTo('good_analogy'), objectionTo('bad_fact')], usage: null };
+      },
+      auditPedagogy: async () => ({ objections: [], usage: null }),
+      reviseBoard: async () => board, // revision never satisfies the auditor
+      ruleOnObjections: async ({ objections }) => {
+        assert.equal(objections.length, 2); // both grounding objections reach the Arbiter
+        return { sustained: new Set(['bad_fact']), rulings: [], usage: null };
+      },
+    },
+  });
+  // The scene SHIPS (previously: SceneQualityError). Only the sustained object is gone.
+  assert.deepEqual(result.objects.map((o) => o.id), ['title', 'good_analogy']);
+  assert.ok(result.transcript.some((m) => /Arbiter ruling: 1 objection\(s\) overruled, 1 sustained/.test(m.body)));
+});
