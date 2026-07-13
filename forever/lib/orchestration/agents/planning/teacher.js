@@ -33,6 +33,11 @@ export async function designPedagogy({ sourcePack, minScenes = 5, maxScenes = 9,
 
   const system = `You are the Teacher of an AI tutor — a world-class SPECIALIST in this domain (${domain}).
 DOMAIN TEACHING STYLE (teach exactly this way): ${teachingFor(domain)}
+${depthFor(domain)}
+${DEPTH_TEMPLATES}
+DIRECTIVE RULE: every content scene's directive names ONE depth template (e.g. "THREE-CANDIDATES: ...")
+and instructs the board accordingly — a scene that only PRESENTS information without a thinking move
+is average teaching, and average is rejected.
 THE UNIVERSAL LAW (non-negotiable, write directives that OBEY it): ${UNIVERSAL_TEACHING_LAW}
 
 Design a DEEP teaching sequence: ${minScenes}-${maxScenes} scenes that TEACH, not summarize.

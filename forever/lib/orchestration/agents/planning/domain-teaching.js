@@ -80,6 +80,47 @@ export const UNIVERSAL_TEACHING_LAW = `Every spoken important idea must have a v
 SYN-ACK). Every lesson must include: a concrete example, at least one non-text visual carrying the core idea, a common
 mistake or misconception, a checkpoint (quiz or practice), and a recap.`;
 
+// DEPTH TEMPLATES (research 2026-07-13, effect sizes verified vs primary literature):
+// the moves that separate the world's best teachers from average ones — as GENERATABLE
+// scene-directive patterns. The Teacher must apply one BY NAME per content scene.
+export const DEPTH_TEMPLATES = `DEPTH TEMPLATES (apply ONE by name in each content scene's directive — these are what make
+teaching create THINKING instead of watching; effect sizes from verified meta-analyses):
+- PRETEST: pose the target question BEFORE teaching it; the board shows the bare scenario; demand a
+  committed guess (quiz object), then teach. (pretesting g=0.54 — only pretest what this lesson covers)
+- STAKED-PREDICTION: state a quantitative prediction with tolerance on the board, then run/derive the
+  real number; the payoff beat is the comparison. (Walter Lewin's move)
+- THREE-CANDIDATES: show 3 plausible approaches; walk each until two VISIBLY fail; NAME the bottleneck
+  that kills each before revealing the survivor. (Striver's brute->better->optimal, generalized)
+- DRY-RUN: hand-trace the method on one concrete input INCLUDING an edge case, before any general form.
+- FACT-TWEAK LADDER: once the rule works, change ONE fact per step until it breaks; ask "does the
+  conclusion survive?" at each rung. (law-school Socratic escalation)
+- WRONG-STUDENT VOICE: a named character states the most common misconception; the teacher diagnoses
+  WHY it is attractive and exactly where it fails. (retrieval g=0.61 when followed by a check)
+- FADED-EXAMPLE: full worked example -> same problem with one step blanked (student completes) ->
+  new problem unaided. (worked examples g=0.48, novices; fade as skill grows)
+- DOMAIN-SHIFT TRANSFER: "now YOU try" with identical structure but the surface domain swapped
+  (grid->string, pendulum->spring, wheat->labor market).
+- SELF-EXPLAIN CHECKPOINT: pause and require the REASON a step worked, not the answer. (g=0.55 —
+  never stack this onto a worked example)
+- INTERLEAVED CLOSER: the final practice mixes THIS pattern with its most confusable prior pattern;
+  the student must first say WHICH pattern applies. (interleaving g=0.42 for confusables)`;
+
 export function teachingFor(domain) {
   return DOMAIN_TEACHING[domain] ?? DOMAIN_TEACHING.general;
+}
+
+// Per-subject DEPTH MOVES (how the best escalate difficulty and force thinking) — appended
+// to the register so directives inherit the subject's own deep-teaching culture.
+const DEPTH_MOVES = Object.freeze({
+  dsa: 'DEPTH: never jump to optimal — NAME the brute force\'s bottleneck and derive the fix from it; demand an attempt-before-reveal beat; re-apply the same pattern in a shifted domain (array->string->grid) as transfer practice.',
+  ml_ai: 'DEPTH: no black boxes — open one (what backprop/a loss actually does on tiny numbers); include one failure-injection diagnostic (loss at init, overfit-one-batch); teach Ng\'s error-analysis habit (tally WHERE the model fails before choosing a fix).',
+  math: 'DEPTH: definitions are an ENDING point — build the example until the definition becomes obvious, then name it; gate advancement on the practice question (mastery, not exposure).',
+  science: 'DEPTH: predict->measure with tolerance BEFORE the derivation; script a wrong-intuition voice and diagnose why the intuition is attractive; end with the same phenomenon in a shifted setup.',
+  systems_swe: 'DEPTH: invariant-first (teach the layer that outlives tools); every component added must be FORCED by a stated bottleneck with back-of-envelope numbers; make the student sketch their design before revealing the reference one.',
+  history_humanities: 'DEPTH: tweak the facts to the breaking point ("when does it stop being reasonable?"); stage genuinely ambiguous cases where the reasoning process is the lesson; demand the counterargument before the verdict.',
+  business_finance: 'DEPTH: one model, wildly different markets (same curves on wheat, labor, housing); attach retrieval practice to every model; force a numeric tradeoff decision the student must defend.',
+});
+
+export function depthFor(domain) {
+  return DEPTH_MOVES[domain] ?? '';
 }
