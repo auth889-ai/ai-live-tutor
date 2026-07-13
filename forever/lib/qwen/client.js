@@ -96,7 +96,7 @@ export async function callQwenJson({
       maxTokens,
       apiKey,
       configuration: { baseURL: baseUrl },
-      ...(schema ? {} : { modelKwargs: { response_format: { type: 'json_object' } } }),
+      modelKwargs: { response_format: { type: 'json_object' } },
       maxRetries: 0,
     });
     // A real LCEL chain per call — ChatPromptTemplate piped into the model (and into the
@@ -110,30 +110,30 @@ export async function callQwenJson({
     let json;
     let usage;
     try {
-      if (schema) {
-        // includeRaw so validation failures surface as parsed:null (never a silent throw
-        // deep in LangChain) AND the raw message keeps usage for the ledger.
-        const chain = promptTemplate.pipe(llm.withStructuredOutput(schema, { method: 'functionCalling', includeRaw: true, name: `${agent}_output` }));
-        const out = await chain.invoke({ system, user }, { signal: controller.signal, runName: agent });
-        if (!out.parsed) {
-          throw new Error(`Agent "${agent}" returned invalid JSON: output did not match the ${agent}_output schema`);
-        }
-        json = out.parsed;
-        usage = usageFrom(out.raw);
-      } else {
-        const chain = promptTemplate.pipe(llm);
-        const message = await chain.invoke({ system, user }, { signal: controller.signal, runName: agent });
-        const text = typeof message.content === 'string'
-          ? message.content
-          : (message.content ?? []).map((part) => part?.text ?? '').join('');
-        if (!text) throw new Error(`Qwen returned no content for agent "${agent}"`);
-        try {
-          json = JSON.parse(text);
-        } catch {
-          throw new Error(`Agent "${agent}" returned invalid JSON: ${text.slice(0, 300)}`);
-        }
-        usage = usageFrom(message);
+      const chain = promptTemplate.pipe(llm);
+      const message = await chain.invoke({ system, user }, { signal: controller.signal, runName: agent });
+      const text = typeof message.content === 'string'
+        ? message.content
+        : (message.content ?? []).map((part) => part?.text ?? '').join('');
+      if (!text) throw new Error(`Qwen returned no content for agent "${agent}"`);
+      try {
+        json = JSON.parse(text);
+      } catch {
+        throw new Error(`Agent "${agent}" returned invalid JSON: ${text.slice(0, 300)}`);
       }
+      // Zod enforcement CLIENT-SIDE (live-caught: DashScope 400s on LangChain's forced
+      // tool_choice, so functionCalling-mode structured output is off the table for this
+      // provider — json_object + schema.safeParse gives the same guarantee, and a
+      // violation feeds the SAME retry loop with the exact failing paths named).
+      if (schema) {
+        const parsed = schema.safeParse(json);
+        if (!parsed.success) {
+          const issues = parsed.error.issues.slice(0, 3).map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(' ; ');
+          throw new Error(`Agent "${agent}" returned invalid JSON: schema violations — ${issues}`);
+        }
+        json = parsed.data;
+      }
+      usage = usageFrom(message);
     } catch (error) {
       if (/returned invalid JSON|returned no content/.test(String(error?.message))) throw error;
       // Preserve the HTTP status in the message so isTransient() still classifies it.
