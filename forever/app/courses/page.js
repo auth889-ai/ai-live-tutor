@@ -17,11 +17,12 @@ export default async function CoursesPage() {
   const session = token ? verifySessionToken(token) : null;
   if (!session) redirect('/login');
 
+  // FOLDER CONCEPT: courses are the folders; their lessons live inside (the syllabus).
+  // The shelf below shows ONLY standalone lessons — never a course's 16 files loose.
   const [lessons, courses] = await Promise.all([
     listLessons({ forUser: session.userId }),
     listCourses({ forUser: session.userId }),
   ]);
-  const linked = new Set(); // hide lessons that belong to a course card
 
   return (
     <div style={{ display: 'flex', gap: 18, maxWidth: 1280, margin: '0 auto', padding: 16, alignItems: 'flex-start', color: UI.text }}>
@@ -30,7 +31,9 @@ export default async function CoursesPage() {
         <header style={{ margin: '10px 0 22px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
           <div>
             <h1 style={{ fontSize: 28, margin: 0 }}>My Courses</h1>
-            <p style={{ color: UI.muted, margin: '6px 0 0' }}>{lessons.length} course{lessons.length === 1 ? '' : 's'} in your library.</p>
+            <p style={{ color: UI.muted, margin: '6px 0 0' }}>
+              {courses.length} course{courses.length === 1 ? '' : 's'}{lessons.length ? ` · ${lessons.length} standalone lesson${lessons.length === 1 ? '' : 's'}` : ''} in your library.
+            </p>
           </div>
           <a href="/studio" style={{ color: UI.accent, fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>+ New course</a>
         </header>
@@ -56,6 +59,9 @@ export default async function CoursesPage() {
               ))}
             </div>
           </section>
+        )}
+        {lessons.length > 0 && (
+          <h2 style={{ fontSize: 17, margin: '4px 0 12px', color: UI.text }}>Standalone lessons</h2>
         )}
         <CourseGrid lessons={lessons} />
       </main>

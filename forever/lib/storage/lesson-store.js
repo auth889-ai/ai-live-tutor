@@ -60,14 +60,19 @@ export async function listLessonIds({ forUser = null, collection = lessonsCollec
 }
 
 // Library cards for the dashboard: id + display facts, never full lesson payloads.
-export async function listLessons({ forUser = null, collection = lessonsCollection } = {}) {
+// FOLDER CONCEPT (user design): a lesson that belongs to a course lives INSIDE its course
+// folder (the syllabus page) — the library lists only standalone lessons by default, so
+// a 16-lesson course is ONE course card, never 16 loose files flooding the shelf.
+export async function listLessons({ forUser = null, includeCourseLessons = false, collection = lessonsCollection } = {}) {
   if (dbEnabled()) {
     const lessons = await collection();
     const docs = await lessons
-      .find({ $or: [{ ownerId: null }, { ownerId: forUser }] }, { projection: { title: 1, scenes: 1, durationMs: 1, voiced: 1, coverImage: 1, updatedAt: 1 } })
+      .find({ $or: [{ ownerId: null }, { ownerId: forUser }] }, { projection: { title: 1, scenes: 1, durationMs: 1, voiced: 1, coverImage: 1, updatedAt: 1, 'payload.courseRef.courseId': 1 } })
       .sort({ updatedAt: -1 })
       .toArray();
-    return docs.map((doc) => ({ id: doc._id, title: doc.title, scenes: doc.scenes, voiced: doc.voiced === true, durationMs: doc.durationMs ?? 0, coverImage: doc.coverImage ?? null }));
+    return docs
+      .map((doc) => ({ id: doc._id, title: doc.title, scenes: doc.scenes, voiced: doc.voiced === true, durationMs: doc.durationMs ?? 0, coverImage: doc.coverImage ?? null, courseId: doc.payload?.courseRef?.courseId ?? null }))
+      .filter((lesson) => includeCourseLessons || !lesson.courseId);
   }
   try {
     const ids = (await readdir(ROOT)).filter((name) => name.endsWith('.json')).map((name) => name.replace(/\.json$/, ''));
@@ -75,7 +80,9 @@ export async function listLessons({ forUser = null, collection = lessonsCollecti
     for (const id of ids) {
       const lesson = await loadLesson(id, { forUser });
       if (!lesson) continue;
-      visible.push({ id, ...lessonFacts(lesson) });
+      const courseId = lesson.courseRef?.courseId ?? null;
+      if (!includeCourseLessons && courseId) continue;
+      visible.push({ id, ...lessonFacts(lesson), courseId });
     }
     return visible;
   } catch {
