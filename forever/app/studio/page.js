@@ -41,8 +41,49 @@ export default function StudioPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then(setUser)
       .catch(() => setUser(null));
+    // REATTACH (the Sankofa 409 lesson): a refresh mid-generation used to orphan the
+    // build — the job kept running, the student stared at an empty studio. The active
+    // jobId persists locally; if it is still live on mount, the progress stream resumes.
+    try {
+      const jobId = localStorage.getItem('forever:studio:activeJob');
+      if (jobId) {
+        fetch(`/api/jobs/${jobId}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((job) => {
+            if (job && job.state !== 'completed' && job.state !== 'failed') {
+              setProgress(job.progress ?? { phase: 'queued', percent: 0, message: 'Reattached to your running build…' });
+              watch(jobId);
+            } else {
+              localStorage.removeItem('forever:studio:activeJob');
+            }
+          })
+          .catch(() => {});
+      }
+    } catch { /* private mode */ }
     return () => sourceRef.current?.close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function watch(jobId) {
+    try { localStorage.setItem('forever:studio:activeJob', jobId); } catch { /* private mode */ }
+    const es = new EventSource(`/api/jobs/${jobId}/events`);
+    sourceRef.current = es;
+    es.addEventListener('progress', (e) => setProgress(JSON.parse(e.data)));
+    es.addEventListener('done', (e) => {
+      setDone(JSON.parse(e.data));
+      setProgress(null);
+      try { localStorage.removeItem('forever:studio:activeJob'); } catch { /* private mode */ }
+      es.close();
+    });
+    es.addEventListener('error', (e) => {
+      let message = 'The job failed';
+      try { message = JSON.parse(e.data).error || message; } catch { /* connection-level */ }
+      setError(message);
+      setProgress(null);
+      try { localStorage.removeItem('forever:studio:activeJob'); } catch { /* private mode */ }
+      es.close();
+    });
+  }
 
   async function startJob() {
     setError(null);
@@ -74,22 +115,7 @@ export default function StudioPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not start the job');
-
-      const es = new EventSource(`/api/jobs/${data.jobId}/events`);
-      sourceRef.current = es;
-      es.addEventListener('progress', (e) => setProgress(JSON.parse(e.data)));
-      es.addEventListener('done', (e) => {
-        setDone(JSON.parse(e.data));
-        setProgress(null);
-        es.close();
-      });
-      es.addEventListener('error', (e) => {
-        let message = 'The job failed';
-        try { message = JSON.parse(e.data).error || message; } catch { /* connection-level */ }
-        setError(message);
-        setProgress(null);
-        es.close();
-      });
+      watch(data.jobId);
     } catch (err) {
       setError(err.message);
       setProgress(null);
