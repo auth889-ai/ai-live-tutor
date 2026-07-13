@@ -41,6 +41,13 @@ export function validateDiagramContent(content, context = 'diagram') {
   if (type === 'array') return validateArrayContent(content, context);
   if (type === 'comparison' || type === 'trace') {
     if (!Array.isArray(content.columns) || !Array.isArray(content.rows)) throw new Error(`${context} ${type} needs columns[] and rows[]`);
+    // Column HEADERS must be plain strings (live-caught: object headers crashed the
+    // player page with duplicate React keys — coercion unwraps {name}/{label} first).
+    content.columns.forEach((col, i) => {
+      if (typeof col !== 'string' || !col.trim()) {
+        throw new Error(`${context} ${type} column ${i} must be a non-empty STRING header (got ${JSON.stringify(col)?.slice(0, 60)})`);
+      }
+    });
     // Every row must FILL the table: label + one value per remaining column. A malformed
     // row (values stuffed under an arbitrary key) rendered as EMPTY CELLS in production —
     // reject it with a repairable message instead.

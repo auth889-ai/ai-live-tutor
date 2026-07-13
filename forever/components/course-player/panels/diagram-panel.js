@@ -144,6 +144,15 @@ function MermaidDiagram({ content, progress = 1 }) {
   return <div ref={ref} style={{ display: 'flex', justifyContent: 'center', padding: 12, background: '#fffcfa', borderRadius: 12, border: '1px solid #f0dcd5' }} />;
 }
 
+// A cell/heading that might not be a string (older stored lessons predate the string
+// contract) still renders as text and NEVER crashes the page (live-caught: object columns
+// -> duplicate "[object Object]" React keys -> whole lesson page failed to load).
+const asText = (value) => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object') return String(value.label ?? value.name ?? value.title ?? value.text ?? JSON.stringify(value));
+  return String(value);
+};
+
 function ComparisonTable({ content }) {
   const columns = content.columns ?? [];
   const rows = content.rows ?? [];
@@ -153,19 +162,19 @@ function ComparisonTable({ content }) {
         <thead>
           <tr>
             <th style={cell(true)} />
-            {columns.map((col) => (
-              <th key={col} style={cell(true)}>{col}</th>
+            {columns.map((col, index) => (
+              <th key={index} style={cell(true)}>{asText(col)}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.label}>
-              <td style={{ ...cell(false), fontWeight: 600 }}>{row.label}</td>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              <td style={{ ...cell(false), fontWeight: 600 }}>{asText(row.label)}</td>
               {/* Clamp/pad to the header width — a mis-authored extra or missing cell must
                   never shift every column after it. */}
               {Array.from({ length: columns.length }, (_, i) => (
-                <td key={i} style={cell(false)}>{(row.values ?? [])[i] ?? ''}</td>
+                <td key={i} style={cell(false)}>{asText((row.values ?? [])[i])}</td>
               ))}
             </tr>
           ))}

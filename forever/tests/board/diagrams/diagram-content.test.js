@@ -137,3 +137,10 @@ test('xychart: series values outside the declared y-axis range are rejected (off
     code: 'xychart-beta\n  title "OK"\n  x-axis [0, 10]\n  y-axis "P" [0, 6]\n  line "D" [6, 5, 4]\n  bar "Q" [1, 2, 3]',
   });
 });
+
+test('non-string column headers are rejected with the offending value named', () => {
+  assert.throws(
+    () => validateDiagramContent({ diagramType: 'comparison', columns: [{ name: 'Star' }], rows: [{ label: 'r', values: ['x'] }] }),
+    /column 0 must be a non-empty STRING header/,
+  );
+});

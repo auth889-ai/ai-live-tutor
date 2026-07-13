@@ -146,6 +146,11 @@ export function coerceBoardObjects(objects, { layout = null, brief = null, chunk
       const expected = content.columns.length;
       out.content = {
         ...content,
+        // Object headers ({name}/{label}) are the string mislabeled — unwrap them
+        // (live-caught: they crashed the player page as duplicate React keys).
+        columns: content.columns.map((col) => (col && typeof col === 'object'
+          ? String(col.label ?? col.name ?? col.title ?? col.text ?? JSON.stringify(col))
+          : String(col ?? ''))),
         rows: content.rows.filter((r) => r && typeof r === 'object').map((row) => {
           const r = { ...row };
           if (typeof r.label !== 'string') {

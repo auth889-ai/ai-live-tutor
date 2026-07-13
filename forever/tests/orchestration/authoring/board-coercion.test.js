@@ -139,3 +139,11 @@ test('v8 mechanical slips: string sourceRef wraps to {chunkId}; a diagram carryi
   assert.deepEqual(cited.sourceRef, { chunkId: 'chunk_0001' });
   assert.equal(curve.renderHint, 'chart');
 });
+
+test('object column headers unwrap to strings (live: crashed the player page as duplicate React keys)', () => {
+  const [table] = coerceBoardObjects([
+    { id: 't1', objectType: 'comparison', renderHint: 'table', region: 'notebook_area', sourceRef: { chunkId: 'chunk_0001' },
+      content: { columns: [{ name: 'Star' }, { label: 'Snowflake' }, 'Galaxy'], rows: [{ label: 'Joins', values: ['few', 'many', 'varies'] }] } },
+  ]);
+  assert.deepEqual(table.content.columns, ['Star', 'Snowflake', 'Galaxy']);
+});
