@@ -46,10 +46,20 @@ function extendAxis(axis, values) {
   };
 }
 
-export function coerceBoardObjects(objects, { layout = null, brief = null } = {}) {
+export function coerceBoardObjects(objects, { layout = null, brief = null, chunkIds = [] } = {}) {
   if (!Array.isArray(objects)) return objects;
+  const knownChunks = new Set(chunkIds);
   return objects.filter((o) => o && typeof o === 'object').map((object) => {
     const out = { ...object };
+
+    // The model INVENTS descriptive chunk ids ("ice_cream_demand_supply_example") instead
+    // of copying the given ones (live v9: killed 4 objects). With exactly ONE chunk in
+    // scope the citation intent is unambiguous — repoint it. Multi-chunk packs keep the
+    // loud failure (guessing a citation would fabricate provenance).
+    if (out.sourceRef && typeof out.sourceRef === 'object' && knownChunks.size === 1
+      && !knownChunks.has(out.sourceRef.chunkId)) {
+      out.sourceRef = { ...out.sourceRef, chunkId: [...knownChunks][0] };
+    }
 
     // renderHint synonyms -> legal hints (only when the original is NOT already legal).
     if (typeof out.renderHint === 'string' && !RENDER_HINTS.includes(out.renderHint)) {

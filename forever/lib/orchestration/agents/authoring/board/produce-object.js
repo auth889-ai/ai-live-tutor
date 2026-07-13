@@ -13,8 +13,9 @@ export async function produceObject({ stub, sourcePack, layout, brief, imageInde
   const system = `You produce ONE board object of an AI tutor's teaching scene (other agents make the rest).
 Output ONLY JSON: {"object":{"id":"${stub.id}","objectType":<short descriptive string>,"renderHint":"${stub.renderHint}","region":"${stub.region}","content":...}}
 CONTRACT for renderHint "${stub.renderHint}": ${HINT_GUIDES[stub.renderHint]}
-GROUNDING LAW: facts from the source carry "sourceRef":{"chunkId":<a given chunkId>}; a teaching
-device YOU invent (hook, analogy, practice question, scenario) carries "grounding":"analogy" instead.
+GROUNDING LAW: facts from the source carry "sourceRef":{"chunkId":<a given chunkId, copied EXACTLY
+— e.g. "chunk_0001"; NEVER invent a descriptive id>}; a teaching device YOU invent (hook, analogy,
+practice question, scenario) carries "grounding":"analogy" instead.
 Never raw x/y coordinates. Be concrete: real values, never placeholders.${brief ? `\nSCENE GOAL: ${brief.directive}` : ''}
 THIS OBJECT'S JOB: ${stub.purpose}`;
   const user = JSON.stringify({
@@ -25,7 +26,7 @@ THIS OBJECT'S JOB: ${stub.purpose}`;
   const finalize = (raw) => {
     const { objects: resolved, dropped } = resolveImageIds([raw], imageIndex);
     if (dropped.length > 0) throw new Error(`image object cites unknown imageId "${raw?.content?.url}"`);
-    const [object] = coerceBoardObjects(stripHandAuthoredAnimation(resolved, brief), { layout, brief });
+    const [object] = coerceBoardObjects(stripHandAuthoredAnimation(resolved, brief), { layout, brief, chunkIds: sourcePack.chunks.map((chunk) => chunk.id) });
     validateBoardObject(object, layout);
     if (object.decorative !== true && object.grounding !== 'analogy'
       && !sourcePack.chunks.some((chunk) => chunk.id === object.sourceRef?.chunkId)) {

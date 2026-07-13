@@ -20,6 +20,9 @@
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
+    "@langchain/core": "^1.2.2",
+    "@langchain/langgraph": "^1.4.7",
+    "@langchain/openai": "^1.5.5",
     "@xyflow/react": "^12.11.2",
     "bullmq": "^5.79.2",
     "d3-hierarchy": "^3.1.2",

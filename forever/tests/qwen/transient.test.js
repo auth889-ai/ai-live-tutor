@@ -4,10 +4,11 @@ import test from 'node:test';
 import { callQwenJson, isTransient } from '../../lib/qwen/client.js';
 
 const ENV = { DASHSCOPE_API_KEY: 'test-key', DASHSCOPE_BASE_URL: 'http://qwen.test' };
-const reply = (content) => ({
-  ok: true,
-  json: async () => ({ choices: [{ message: { content } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }),
-});
+// A REAL Response object: the LangChain/OpenAI transport reads status/headers, not a bare {ok, json}.
+const reply = (content) => new Response(
+  JSON.stringify({ id: 'x', object: 'chat.completion', choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } }),
+  { status: 200, headers: { 'Content-Type': 'application/json' } },
+);
 
 test('isTransient: provider flakiness yes, real rejections no', () => {
   assert.equal(isTransient(new Error('Qwen call failed for agent "x": HTTP 503 — busy')), true);

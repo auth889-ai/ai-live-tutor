@@ -1,6 +1,9 @@
 // The ONLY door to Qwen Cloud. Every model call in Forever goes through here:
 // one focused job per call, JSON output, usage returned for the cost ledger,
-// honest failure (no fallbacks). OpenAI-compatible DashScope endpoint.
+// honest failure (no fallbacks). Transport: LangChain ChatOpenAI over the
+// OpenAI-compatible DashScope endpoint (user decision 2026-07-13).
+
+import { ChatOpenAI } from '@langchain/openai';
 
 const DEFAULT_BASE_URL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
 
@@ -74,31 +77,37 @@ export async function callQwenJson({
   }
   throw lastError;
 
+  // TRANSPORT: LangChain ChatOpenAI over DashScope compatible-mode (user decision
+  // 2026-07-13: every agent call runs through LangChain, not a bare fetch). The single-door
+  // principle is unchanged — this function remains the only way Forever talks to Qwen —
+  // and OUR loop still owns retries/JSON contracts (maxRetries: 0 disables LangChain's).
   async function callOnce() {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model,
-        temperature,
-        max_tokens: maxTokens,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-      }),
+    const llm = new ChatOpenAI({
+      model,
+      temperature,
+      maxTokens,
+      apiKey,
+      configuration: { baseURL: baseUrl },
+      modelKwargs: { response_format: { type: 'json_object' } },
+      maxRetries: 0,
     });
-    if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`Qwen call failed for agent "${agent}": HTTP ${response.status} — ${detail.slice(0, 500)}`);
+    let message;
+    try {
+      message = await llm.invoke(
+        [{ role: 'system', content: system }, { role: 'user', content: user }],
+        { signal: controller.signal },
+      );
+    } catch (error) {
+      // Preserve the HTTP status in the message so isTransient() still classifies it.
+      const status = error?.status ?? error?.response?.status;
+      throw new Error(`Qwen call failed for agent "${agent}": ${status ? `HTTP ${status} — ` : ''}${String(error?.message ?? error).slice(0, 500)}`);
     }
-    const payload = await response.json();
-    const text = payload.choices?.[0]?.message?.content;
+    const text = typeof message.content === 'string'
+      ? message.content
+      : (message.content ?? []).map((part) => part?.text ?? '').join('');
     if (!text) throw new Error(`Qwen returned no content for agent "${agent}"`);
     let json;
     try {
@@ -106,8 +115,11 @@ export async function callQwenJson({
     } catch {
       throw new Error(`Agent "${agent}" returned invalid JSON: ${text.slice(0, 300)}`);
     }
-    recordUsage(agent, payload.usage);
-    return { json, usage: payload.usage ?? null, model };
+    const tu = message.response_metadata?.tokenUsage;
+    const usage = message.response_metadata?.usage
+      ?? (tu ? { prompt_tokens: tu.promptTokens, completion_tokens: tu.completionTokens, total_tokens: tu.totalTokens } : null);
+    recordUsage(agent, usage);
+    return { json, usage, model };
   } finally {
     clearTimeout(timer);
   }
