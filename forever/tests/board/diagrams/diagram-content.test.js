@@ -89,3 +89,51 @@ test('comparison/trace rows must FILL the table — the empty-cells production b
     rows: [{ label: '(0, 0)', values: ['G=G then stop', '5'] }],
   });
 });
+
+test('comparison cells must carry real text — ""-padding (the header-mismatch smell) is rejected', () => {
+  // the exact live failure (Supply & Demand): label already held the price, the model
+  // repeated Price as a column and padded every "Quantity Supplied" cell with ""
+  assert.throws(
+    () => validateDiagramContent({
+      diagramType: 'comparison',
+      columns: ['Price ($/scoop)', 'Quantity Demanded', 'Quantity Supplied'],
+      rows: [{ label: '$2', values: ['200 scoops', '80 scoops', ''] }],
+    }),
+    /column "Quantity Supplied" is empty.*REMOVE that column/s,
+  );
+  // whitespace-only is just as empty
+  assert.throws(
+    () => validateDiagramContent({
+      diagramType: 'comparison',
+      columns: ['A'],
+      rows: [{ label: 'r', values: ['  '] }],
+    }),
+    /is empty/,
+  );
+});
+
+test('xychart: only its real grammar is allowed — "point" annotations are rejected with guidance', () => {
+  assert.throws(
+    () => validateDiagramContent({
+      diagramType: 'mermaid',
+      code: 'xychart-beta\n  title "T"\n  x-axis "Q" [0, 100]\n  y-axis "P" [0, 6]\n  line "D" [6, 0]\n  point "Equilibrium" [150, 3]',
+    }),
+    /"point" is not xychart syntax/,
+  );
+});
+
+test('xychart: series values outside the declared y-axis range are rejected (off-scale lines lie)', () => {
+  assert.throws(
+    () => validateDiagramContent({
+      diagramType: 'mermaid',
+      // the live bug: supply line reached 7 on a y-axis capped at 6
+      code: 'xychart-beta\n  y-axis "Price" [0, 1, 2, 3, 4, 5, 6]\n  line "Supply" [1, 2, 3, 4, 5, 6, 7]',
+    }),
+    /value 7 lies outside the declared y-axis range 0–6/,
+  );
+  // in-range chart passes untouched
+  validateDiagramContent({
+    diagramType: 'mermaid',
+    code: 'xychart-beta\n  title "OK"\n  x-axis [0, 10]\n  y-axis "P" [0, 6]\n  line "D" [6, 5, 4]\n  bar "Q" [1, 2, 3]',
+  });
+});

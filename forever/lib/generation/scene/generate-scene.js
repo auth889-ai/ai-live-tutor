@@ -11,6 +11,7 @@ import { warmNarration, directVisualRun } from '../../orchestration/agents/autho
 import { voiceLinesForTrace } from '../voice/algo-voice.js';
 import { generateExecutedCode } from '../../orchestration/agents/coding/code-runner.js';
 import { traceExecution } from '../../orchestration/agents/coding/execution-tracer.js';
+import { isCodingDomain } from '../../orchestration/agents/planning/coding-instructor.js';
 import { compileProvisionalTimeline } from '../timeline/timeline-compiler.js';
 
 const CODE_ROLES = new Set(['worked_example', 'dry_run']);
@@ -76,7 +77,9 @@ export async function generateSceneFromSourcePack(
 
   // For code-teaching scenes with no elite trace, the Code Runner writes a runnable program,
   // EXECUTES it, and the real output goes on the board. Honest: if it can't run, skip the demo.
-  if (!algorithmObject && brief && CODE_ROLES.has(brief.pedagogicalRole) && layout === 'teacher_notebook_code') {
+  // CODING DOMAINS ONLY (universal gate: "wrong primitive chosen") — live-caught: a Supply &
+  // Demand worked_example shipped with a Python print() demo bolted onto an economics board.
+  if (!algorithmObject && brief && CODE_ROLES.has(brief.pedagogicalRole) && layout === 'teacher_notebook_code' && isCodingDomain(domain)) {
     try {
       const demo = await runCodeAgent({ directive: brief.directive, sourceText });
       objects.push({

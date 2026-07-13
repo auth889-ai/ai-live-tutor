@@ -27,6 +27,7 @@ export function validateDiagramContent(content, context = 'diagram') {
     if (!MERMAID_KEYWORDS.includes(firstToken)) {
       throw new Error(`${context} mermaid code must declare a known diagram type (got "${firstToken}")`);
     }
+    if (firstToken === 'xychart' || firstToken === 'xychart-beta') validateXyChartRanges(content.code, context);
     return content;
   }
   if (type === 'flowchart' || type === 'cycle') {
@@ -53,6 +54,17 @@ export function validateDiagramContent(content, context = 'diagram') {
           `${context} ${type} row ${i} ("${row.label}") must have "values" as an array of exactly ${expected} entr${expected === 1 ? 'y' : 'ies'} — one per column (the label column is implicit; put cell text INSIDE values, never as extra keys)`,
         );
       }
+      // EMPTY CELLS are how header mismatches ship: a model that repeats the label as a
+      // column pads the last cell with "" to satisfy the count. Live-caught (Supply&Demand
+      // lesson: "Quantity Supplied" column rendered blank in every row). Reject with a
+      // restructure instruction, not just a refill instruction.
+      row.values.forEach((cell, j) => {
+        if (typeof cell !== 'string' || !cell.trim()) {
+          throw new Error(
+            `${context} ${type} row ${i} ("${row.label}") column "${content.columns[j] ?? j}" is empty — every cell needs real text. If a column has no data, REMOVE that column; if the row label already carries a column's value (e.g. label "$2" under a "Price" column), drop that column instead of padding cells`,
+          );
+        }
+      });
     });
     return content;
   }
@@ -102,4 +114,37 @@ export function validateDiagramContent(content, context = 'diagram') {
     return content;
   }
   throw new Error(`${context} has unknown diagramType: ${type}`);
+}
+
+// xychart is a LIMITED grammar (title / x-axis / y-axis / line / bar only) and silently
+// renders garbage outside it. Live-caught (Supply&Demand lesson): unsupported "point"
+// annotations, and a line whose values ran past the declared y-axis top. Both reject with
+// instructions a repair pass can act on.
+function validateXyChartRanges(code, context) {
+  const nums = (text) => (text.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+  let yMin = null;
+  let yMax = null;
+  for (const raw of code.split('\n').slice(1)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const keyword = line.split(/[\s"]/)[0];
+    if (!['title', 'x-axis', 'y-axis', 'line', 'bar'].includes(keyword)) {
+      throw new Error(
+        `${context} xychart supports ONLY title/x-axis/y-axis/line/bar — "${keyword}" is not xychart syntax. Mark key points with a callout object or a labeled series instead`,
+      );
+    }
+    if (keyword === 'y-axis') {
+      const range = nums(line.includes('[') ? line.slice(line.indexOf('[')) : line);
+      if (range.length >= 2) { yMin = Math.min(...range); yMax = Math.max(...range); }
+    }
+    if ((keyword === 'line' || keyword === 'bar') && yMin !== null && line.includes('[')) {
+      const values = nums(line.slice(line.indexOf('[')));
+      const outlier = values.find((v) => v < yMin || v > yMax);
+      if (outlier !== undefined) {
+        throw new Error(
+          `${context} xychart ${keyword} value ${outlier} lies outside the declared y-axis range ${yMin}–${yMax} — extend the y-axis or fix the series data (an off-scale line renders as a lie)`,
+        );
+      }
+    }
+  }
 }
