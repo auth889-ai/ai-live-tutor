@@ -8,6 +8,7 @@
 
 import { RENDER_HINTS } from '../../../board/objects/board-objects.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
+import { MERMAID_KEYWORDS } from '../../../board/diagrams/diagram-content.js';
 
 // Scene roles whose whole point is invented teaching devices (hooks, analogies, recaps) —
 // an unsourced object here is an analogy the model forgot to label, not a fact to fabricate
@@ -53,8 +54,25 @@ export function coerceBoardObjects(objects, { layout = null, brief = null } = {}
       out.grounding = 'analogy';
     }
 
+    // A scene TITLE/heading is structure, not a factual claim — an unsourced one is
+    // decorative, not a dropped scene (live-caught: coder-plus omits sourceRef on titles;
+    // 2 of 9 scenes died on it). The Grounding Auditor still reviews every object.
+    if (!out.sourceRef && out.decorative !== true && out.grounding === undefined
+      && out.objectType === 'text' && /^(scene_|obj_)?(title|heading)/i.test(String(out.id ?? ''))) {
+      out.decorative = true;
+    }
+
     const content = out.content;
     if (!content || typeof content !== 'object') return out;
+
+    // Mermaid grammar written with its KEYWORD as the diagramType ({diagramType:"xychart",
+    // code:"xychart-beta…"}) is the mermaid shape mislabeled — same content, wrong tag
+    // (live-caught: killed 5 of 9 scenes in one build). Only when real code is present;
+    // a structured chart without code still goes to LLM repair.
+    if (typeof content.diagramType === 'string' && MERMAID_KEYWORDS.includes(content.diagramType)
+      && typeof content.code === 'string' && content.code.trim()) {
+      out.content = { ...content, diagramType: 'mermaid' };
+    }
 
     // Tabular rows (comparison/trace/table): the label column is implicit and every row must
     // carry exactly one value per column. Fix the two measured slips:

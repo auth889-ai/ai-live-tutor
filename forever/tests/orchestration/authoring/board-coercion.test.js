@@ -77,3 +77,25 @@ test('values as an OBJECT of cells (second production slip) converts to an array
   }]);
   assert.deepEqual(o.content.rows[0].values, ['O(n!)', 'O(E)', 'each edge once']);
 });
+
+test('mermaid keyword written AS the diagramType is relabeled to the mermaid shape (live: killed 5/9 scenes)', () => {
+  const [chart, structured] = coerceBoardObjects([
+    { id: 'c1', objectType: 'diagram', renderHint: 'diagram', region: 'notebook', sourceRef: { chunkId: 'chunk_0001' },
+      content: { diagramType: 'xychart', code: 'xychart-beta\n  y-axis "P" [0, 6]\n  line "D" [6, 0]' } },
+    // no code -> NOT coerced (nothing safe to relabel); goes to LLM repair instead
+    { id: 'c2', objectType: 'diagram', renderHint: 'diagram', region: 'notebook', sourceRef: { chunkId: 'chunk_0001' },
+      content: { diagramType: 'xychart', axes: { x: 'Q', y: 'P' } } },
+  ]);
+  assert.equal(chart.content.diagramType, 'mermaid');
+  assert.match(chart.content.code, /^xychart-beta/);
+  assert.equal(structured.content.diagramType, 'xychart');
+});
+
+test('an unsourced TITLE text object becomes decorative instead of dropping the scene (live: killed 2/9)', () => {
+  const [title, fact] = coerceBoardObjects([
+    { id: 'title', objectType: 'text', renderHint: 'text', region: 'notebook', content: 'Heat Wave Hits' },
+    { id: 'claim_1', objectType: 'text', renderHint: 'text', region: 'notebook', content: 'Demand rose 40%' },
+  ], { brief: { pedagogicalRole: 'worked_example' } });
+  assert.equal(title.decorative, true);
+  assert.equal(fact.decorative, undefined); // real claims still need source proof
+});

@@ -113,7 +113,9 @@ export function validateDiagramContent(content, context = 'diagram') {
     }
     return content;
   }
-  throw new Error(`${context} has unknown diagramType: ${type}`);
+  throw new Error(
+    `${context} has unknown diagramType: ${type} — use one of ${STRUCTURED_TYPES.join('/')}/graph/array, or diagramType "mermaid" with the diagram source in content.code (first line declaring its Mermaid type, e.g. "xychart-beta" or "sequenceDiagram")`,
+  );
 }
 
 // xychart is a LIMITED grammar (title / x-axis / y-axis / line / bar only) and silently
