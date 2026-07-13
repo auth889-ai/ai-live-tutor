@@ -6,14 +6,14 @@
 
 import { callQwenJson } from '../../../qwen/client.js';
 
-export async function repairBoardObject({ object, error, brief = null, call = callQwenJson }) {
+export async function repairBoardObject({ object, error, brief = null, hintGuide = null, call = callQwenJson }) {
   const system = `You repair ONE board object of an AI tutor's teaching scene. It failed its contract.
 Output ONLY the corrected object as JSON: {"object": {...}}
 Rules:
 - Fix EXACTLY the reported problem; keep the object's id, intent and teaching content.
 - Keep every field that was already valid. Do not add unrelated fields.
-- If the object cites source material, keep its "sourceRef"; an invented teaching device
-  carries "grounding":"analogy" instead.${brief?.directive ? `\n- The scene's teaching goal: ${brief.directive}` : ''}`;
+- If the object cites source material, keep its "sourceRef":{"chunkId":"..."}; an invented
+  teaching device carries "grounding":"analogy" instead.${hintGuide ? `\n- THE OBJECT'S CONTRACT: ${hintGuide}` : ''}${brief?.directive ? `\n- The scene's teaching goal: ${brief.directive}` : ''}`;
   const user = JSON.stringify({ failedObject: object, contractError: error });
   const { json, usage } = await call({ agent: 'board_director', system, user, maxTokens: 4000 });
   const fixed = json.object ?? json; // some models return the object bare

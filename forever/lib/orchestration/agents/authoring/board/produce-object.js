@@ -43,7 +43,7 @@ THIS OBJECT'S JOB: ${stub.purpose}`;
       return { object: finalize({ ...raw, id: stub.id, renderHint: raw?.renderHint ?? stub.renderHint, region: raw?.region ?? stub.region }), usages };
     } catch (error) {
       // ELEMENT REPAIR (smallest scope): hand THIS object + THIS error back to Qwen.
-      const repaired = await repairBoardObject({ object: raw, error: error.message, brief, call });
+      const repaired = await repairBoardObject({ object: raw, error: error.message, brief, hintGuide: HINT_GUIDES[stub.renderHint], call });
       usages.push(repaired.usage);
       return { object: finalize({ ...repaired.object, id: stub.id, renderHint: stub.renderHint, region: stub.region }), usages };
     }

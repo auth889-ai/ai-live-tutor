@@ -57,6 +57,19 @@ export function coerceBoardObjects(objects, { layout = null, brief = null } = {}
       if (alias) out.renderHint = alias;
     }
 
+    // sourceRef written as a bare chunk id string is the object shape mislabeled —
+    // same citation, wrong wrapper (live v8: killed 3 objects across 2 scenes).
+    if (typeof out.sourceRef === 'string' && out.sourceRef.trim()) {
+      out.sourceRef = { chunkId: out.sourceRef.trim() };
+    }
+
+    // A "diagram" whose content is axes+series IS a chart the model mislabeled (live v8:
+    // a supply-curve shift died as diagramType undefined) — route it to the chart contract.
+    if (out.renderHint === 'diagram' && out.content && typeof out.content === 'object'
+      && Array.isArray(out.content.series) && out.content.xAxis && out.content.yAxis) {
+      out.renderHint = 'chart';
+    }
+
     // lineNumber is 0-indexed; models think 1-indexed and write lineNumber 10 into a 10-line
     // region (measured: killed a recap scene). Clamping into range moves nothing but the slot.
     const maxLines = layout ? LAYOUT_REGIONS[layout]?.[out.region]?.maxLines : undefined;
@@ -114,10 +127,11 @@ export function coerceBoardObjects(objects, { layout = null, brief = null } = {}
     }
 
     // Tabular rows (comparison/trace/table): the label column is implicit and every row must
-    // carry exactly one value per column. Fix the two measured slips:
+    // carry exactly one value per column. Fix the measured slips:
     //   1. cell text stuffed under arbitrary keys instead of "values" -> gather them in order
-    //   2. arity off by a little -> pad with '' / trim extras (never invent, never silently
-    //      merge — an empty cell is visibly empty and the critics can still object to it)
+    //   2. EXTRA values -> trim. Short rows are LEFT SHORT: padding with "" fed the
+    //      empty-cell gate and deterministically killed the object (live v8 death loop);
+    //      the arity error message is actionable, so element repair fills real content.
     if (Array.isArray(content.columns) && Array.isArray(content.rows)) {
       const expected = content.columns.length;
       out.content = {
@@ -140,8 +154,8 @@ export function coerceBoardObjects(objects, { layout = null, brief = null } = {}
               if (gathered.length > 0) r.values = gathered;
             }
           }
-          if (Array.isArray(r.values) && r.values.length !== expected) {
-            r.values = [...r.values.slice(0, expected), ...Array(Math.max(0, expected - r.values.length)).fill('')];
+          if (Array.isArray(r.values) && r.values.length > expected) {
+            r.values = r.values.slice(0, expected);
           }
           if (Array.isArray(r.values)) r.values = r.values.map(cellText);
           for (const k of Object.keys(r)) if (!['label', 'values'].includes(k)) delete r[k];

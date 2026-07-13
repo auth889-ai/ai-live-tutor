@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { coerceBoardObjects } from '../../../lib/orchestration/agents/authoring/board-coercion.js';
 
-test('the measured killer: comparison row arity is padded/trimmed, never dropped', () => {
+test('the measured killer: comparison row extras are trimmed; SHORT rows stay short for element repair (padding fed the empty-cell gate)', () => {
   // The exact production failure: columns demand 3 values, the model wrote 2.
   const [o] = coerceBoardObjects([{
     id: 'complexity_comparison', renderHint: 'diagram',
@@ -12,7 +12,7 @@ test('the measured killer: comparison row arity is padded/trimmed, never dropped
       { label: 'Space', values: ['O(1)', 'O(k^n)', 'visited set', 'EXTRA CELL'] },
     ] },
   }]);
-  assert.deepEqual(o.content.rows[0].values, ['O(k^n * n * k^n)', 'O(k^n)', ''], 'short row padded with a visibly empty cell');
+  assert.deepEqual(o.content.rows[0].values, ['O(k^n * n * k^n)', 'O(k^n)'], 'short row left short — the arity error routes it to element repair with real content');
   assert.equal(o.content.rows[1].values.length, 3, 'long row trimmed to the columns');
 });
 
@@ -125,4 +125,17 @@ test('title coercion matches objectType-declared titles too (live: objectType "s
     { id: 'obj_1', objectType: 'scene_title', renderHint: 'text', region: 'notebook', content: 'Practice time' },
   ], { brief: { pedagogicalRole: 'practice' } });
   assert.ok(inPractice.grounding === 'analogy' || inPractice.decorative === true);
+});
+
+
+test('v8 mechanical slips: string sourceRef wraps to {chunkId}; a diagram carrying axes+series becomes a chart', () => {
+  const [cited, curve] = coerceBoardObjects([
+    { id: 's1', objectType: 'callout', renderHint: 'callout', region: 'notebook_area', sourceRef: 'chunk_0001',
+      content: { variant: 'insight', body: 'Shortage = Qd - Qs' } },
+    { id: 'c1', objectType: 'shift', renderHint: 'diagram', region: 'notebook_area', sourceRef: { chunkId: 'chunk_0001' },
+      content: { xAxis: { label: 'Q', min: 0, max: 10 }, yAxis: { label: 'P', min: 0, max: 6 },
+        series: [{ id: 's', label: 'Supply', points: [[0, 1], [10, 6]] }] } },
+  ]);
+  assert.deepEqual(cited.sourceRef, { chunkId: 'chunk_0001' });
+  assert.equal(curve.renderHint, 'chart');
 });
