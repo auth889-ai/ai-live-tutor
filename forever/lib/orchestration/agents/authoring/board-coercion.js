@@ -10,10 +10,13 @@ import { RENDER_HINTS } from '../../../board/objects/board-objects.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 import { MERMAID_KEYWORDS } from '../../../board/diagrams/diagram-content.js';
 
-// Scene roles whose whole point is invented teaching devices (hooks, analogies, recaps) —
-// an unsourced object here is an analogy the model forgot to label, not a fact to fabricate
-// proof for. Everywhere else a missing sourceRef still fails loudly.
-const TEACHING_DEVICE_ROLES = new Set(['motivate', 'intuition', 'hook', 'recap']);
+// Scene roles whose whole point is invented teaching devices (hooks, analogies, recaps,
+// practice questions, conceptual visualizations) — an unsourced object here is a teaching
+// device the model forgot to label, not a fact to fabricate proof for. Everywhere else
+// (worked_example, dry_run, concept scenes teaching source facts) a missing sourceRef
+// still fails loudly. Live-extended 2026-07-13: practice/edge_cases/visualize scenes died
+// for unsourced INVENTED devices ("tradeoff_question", "queue_visualization").
+const TEACHING_DEVICE_ROLES = new Set(['motivate', 'intuition', 'hook', 'recap', 'practice', 'edge_cases', 'visualize']);
 
 // Common renderHint synonyms the model reaches for — mapped to the legal vocabulary.
 const HINT_ALIASES = Object.freeze({

@@ -69,8 +69,13 @@ Rules you must never break:
   Rules: every point INSIDE the axis ranges · every series labeled (the legend shows them) ·
   a SHIFT keeps the old curve as style "ghost" with the same id stem ("demand_old"/"demand" share
   a color) plus an arrow annotation — the student must SEE the curve move · name equilibria with
-  "point" annotations. 2-6 series maximum. A chart is a FACTUAL object: it carries "sourceRef"
-  citing the chunk its numbers/relationships come from, like every other object.
+  "point" annotations. Annotation types are EXACTLY point/vline/hline/arrow/region — nothing else.
+  2-6 series maximum. NEVER an empty/blank chart template: always draw the real curves and let the
+  narration reveal the answer. A chart is a FACTUAL object: it carries "sourceRef" citing the chunk
+  its numbers/relationships come from, like every other object.
+- GROUNDING LABEL (never skip): EVERY object carries either "sourceRef":{"chunkId":"..."} (its
+  facts come from the source) or "grounding":"analogy" (a teaching device YOU invented: a hook,
+  a practice question, a scenario, a conceptual drawing). An object with neither is REJECTED.
 - Use "math" for equations/formulas (KaTeX LaTeX). content is {"latex":"E = mc^2"} for one equation,
   or {"steps":[{"latex":"x + 2 = 5","note":"start"},{"latex":"x = 3","note":"subtract 2"}]} for a step-by-step derivation.
 - IMAGES: if availableImages below is non-empty and any of them is relevant to THIS scene, you MUST place it
