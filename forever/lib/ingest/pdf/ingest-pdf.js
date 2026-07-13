@@ -11,6 +11,7 @@ import { renderPageImages } from './page-images.js';
 import { cleanMarkdown } from './clean-markdown.js';
 import { describeImage } from '../../orchestration/agents/vision/describe-image.js';
 import { buildMultimodalSourcePack } from '../../source-pack/build/multimodal-source-pack.js';
+import { mapWithConcurrency } from '../../util/concurrency.js';
 
 // MinerU bboxes are [x1, y1, x2, y2] normalized 0-1000 (page coordinates); forever's bbox
 // convention everywhere is fractional {x, y, w, h} in 0-1 (image-content.js validates it).
@@ -42,13 +43,13 @@ export async function ingestPdf(pdfPath, { workDir = '.data/ingest', env = proce
   const text = cleanMarkdown(markdown);
   if (text.length < 40) throw new Error('PDF produced too little text to teach from');
 
-  // Vision pass: SEE each figure so the tutor can teach FROM it (bounded to avoid runaway
-  // cost). The document's OWN caption (content_list, the OpenMAIC harvest) wins when
-  // present — a real author caption beats a vision guess AND keeps the figure teachable
-  // even when vision is unavailable. Vision still adds whatItShows depth where it runs.
+  // Vision pass: SEE each figure so the tutor can teach FROM it. IN PARALLEL (live-caught:
+  // 24 figures described one-by-one crawled for ~20 minutes; figures are independent).
+  // The document's OWN caption (content_list, the OpenMAIC harvest) wins when present —
+  // a real author caption beats a vision guess AND keeps the figure teachable even when
+  // vision is unavailable. Vision still adds whatItShows depth where it runs.
   const maxFigures = Number(env.PDF_MAX_VISION_FIGURES || 8);
-  const describedFigures = [];
-  for (const img of images.slice(0, maxFigures)) {
+  const describedFigures = await mapWithConcurrency(images.slice(0, maxFigures), 4, async (img) => {
     let caption = img.sourceCaption ?? '';
     let whatItShows = '';
     try {
@@ -58,8 +59,8 @@ export async function ingestPdf(pdfPath, { workDir = '.data/ingest', env = proce
     } catch {
       // vision unavailable — the content_list caption (if any) still carries the figure
     }
-    describedFigures.push({ id: img.id, kind: 'figure', url: img.path, caption, whatItShows, ...(img.page ? { page: img.page } : {}), ...(img.bbox ? { bbox: normalizeBbox(img.bbox) } : {}) });
-  }
+    return { id: img.id, kind: 'figure', url: img.path, caption, whatItShows, ...(img.page ? { page: img.page } : {}), ...(img.bbox ? { bbox: normalizeBbox(img.bbox) } : {}) };
+  }).then((settled) => settled.map((r, i) => (r.status === 'fulfilled' ? r.value : { id: images[i].id, kind: 'figure', url: images[i].path, caption: images[i].sourceCaption ?? '' })));
 
   return buildMultimodalSourcePack({
     title: path.basename(pdfPath, path.extname(pdfPath)),

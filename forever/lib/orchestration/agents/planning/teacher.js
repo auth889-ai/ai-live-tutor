@@ -22,6 +22,15 @@ export async function designPedagogy({ sourcePack, minScenes = 5, maxScenes = 9,
   const chunkIds = new Set(sourcePack.chunks.map((chunk) => chunk.id));
   const { teachingFor, UNIVERSAL_TEACHING_LAW } = await import('./domain-teaching.js');
 
+  // The document's own figures, offered to the Teacher BY ID so it can assign each scene
+  // the figure it should teach FROM (like focusChunkIds, but for pictures — the lever
+  // that makes PDF lessons visual instead of self-drawn; live-caught: 24 figures offered
+  // at board level, only 1 ever placed — assignment must happen at LESSON level).
+  const figures = (sourcePack.assets ?? [])
+    .filter((asset) => asset.kind === 'figure' && asset.caption?.trim())
+    .map((asset) => ({ figureId: asset.id, caption: asset.caption, ...(asset.page ? { page: asset.page } : {}) }));
+  const figureIds = new Set(figures.map((figure) => figure.figureId));
+
   const system = `You are the Teacher of an AI tutor — a world-class SPECIALIST in this domain (${domain}).
 DOMAIN TEACHING STYLE (teach exactly this way): ${teachingFor(domain)}
 THE UNIVERSAL LAW (non-negotiable, write directives that OBEY it): ${UNIVERSAL_TEACHING_LAW}
@@ -40,15 +49,23 @@ Output ONLY JSON:
  "scenes": [{"title": string,
              "pedagogicalRole": one of ${JSON.stringify(PEDAGOGICAL_ROLES)},
              "directive": "2-3 sentences telling the Board Director the concrete example to open with, the exact idea to teach, and what to show (trace/diagram/code) — specific, not vague",
-             "focusChunkIds": [chunkId, ...]}]}
+             "focusChunkIds": [chunkId, ...],
+             "focusFigureIds": [figureId, ...] (OPTIONAL — the source figures this scene teaches FROM)}]}
 Rules:
 - Order as a real lesson flows: concrete hook → intuition → worked example (brute→better→optimal for code) → misconception → recap → practice.
 - Every focusChunkId MUST be a provided chunk id; each scene needs at least one.
+- SOURCE FIGURES (when availableFigures is non-empty): the document's own diagrams are the
+  strongest teaching material you have. Assign each RELEVANT figure to the scene that should
+  teach from it via focusFigureIds — a scene about an idea a figure shows MUST get that
+  figure. Only invented visuals may cover ideas no figure shows.
+- The final scenes MUST include a recap AND a practice scene whose directive demands a QUIZ
+  with concrete questions (a lesson without a checkpoint is rejected).
 - Each scene teaches ONE idea well. The directive must name a CONCRETE example with real values — never "explain X in general".`;
 
   const user = JSON.stringify({
     task: 'Design the deep teaching sequence for this lesson.',
     chunks: sourcePack.chunks.map((chunk) => ({ chunkId: chunk.id, text: chunk.text })),
+    ...(figures.length ? { availableFigures: figures } : {}),
   });
 
   const { json, usage } = await callQwenJson({
@@ -66,9 +83,32 @@ Rules:
       pedagogicalRole: PEDAGOGICAL_ROLES.includes(scene.pedagogicalRole) ? scene.pedagogicalRole : 'intuition',
       directive: String(scene.directive || '').trim(),
       focusChunkIds: (scene.focusChunkIds || []).filter((id) => chunkIds.has(id)),
+      focusFigureIds: (scene.focusFigureIds || []).filter((id) => figureIds.has(id)),
     }))
     .filter((scene) => scene.title && scene.directive && scene.focusChunkIds.length > 0);
 
   if (scenes.length === 0) throw new Error('Teacher produced no valid scenes');
+
+  // STRUCTURE GUARANTEES (the universal gate's "no checkpoint/no recap -> reject", enforced
+  // deterministically — live-caught: a 7-scene lesson shipped with ZERO quizzes). The plan
+  // is repaired structurally: content stays AI-written, the BEATS are non-negotiable.
+  if (!scenes.some((scene) => scene.pedagogicalRole === 'recap')) {
+    scenes.push({
+      title: 'Recap — What You Now Know',
+      pedagogicalRole: 'recap',
+      directive: 'Summarize the lesson\'s 3-4 core ideas as a compact board (list or table), each tied to the concrete examples taught earlier. End by naming the one misconception to avoid.',
+      focusChunkIds: [...chunkIds],
+      focusFigureIds: [],
+    });
+  }
+  if (!scenes.some((scene) => scene.pedagogicalRole === 'practice')) {
+    scenes.push({
+      title: 'Practice — Check Your Understanding',
+      pedagogicalRole: 'practice',
+      directive: 'Create a QUIZ checkpoint: 2-3 concrete questions with real values from this material, plausible wrong choices, and explanations that teach why the right answer is right.',
+      focusChunkIds: [...chunkIds],
+      focusFigureIds: [],
+    });
+  }
   return { lessonTitle: String(json.lessonTitle || sourcePack.title).trim(), scenes, usage };
 }

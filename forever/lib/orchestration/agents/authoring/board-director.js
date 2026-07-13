@@ -195,6 +195,40 @@ export async function designBoard({ sourcePack, layout = 'teacher_notebook_code'
   if (!objects.some((o) => o.decorative !== true)) {
     throw new Error(`Board Director failed contract validation after repair: no teachable object survived (${plan.stubs.length} planned)`);
   }
+
+  // STRUCTURE GUARANTEES (deterministic, content stays AI-written):
+  // 1. The Teacher assigned this scene source FIGURES to teach from -> every one of them
+  //    lands on the board (live-caught: 24 figures offered at board level, 1 placed —
+  //    encouragement loses to habit; guarantees don't).
+  for (const figureId of brief?.focusFigureIds ?? []) {
+    const asset = imageIndex.mapping.get(figureId);
+    if (!asset || objects.some((o) => o.renderHint === 'image' && o.content?.url === asset.url)) continue;
+    const result = await produceObject({
+      stub: {
+        id: `figure_${figureId}`,
+        renderHint: 'image',
+        region: fallbackRegion,
+        purpose: `Teach FROM the source figure "${asset.caption}"${asset.page ? ` (page ${asset.page})` : ''}: place it with 2-5 teaching annotations (encircle/arrow/label) tied to this scene's goal, ordered to match the narration.`,
+      },
+      sourcePack, layout, brief, imageIndex, call,
+    });
+    if (result.object) objects.push(result.object);
+  }
+  // 2. A practice scene without a QUIZ is a checkpoint that cannot check (the universal
+  //    gate rule, enforced live-caught: a 7-scene lesson shipped zero quizzes).
+  if (brief?.pedagogicalRole === 'practice' && !objects.some((o) => o.renderHint === 'quiz')) {
+    const result = await produceObject({
+      stub: {
+        id: 'checkpoint_quiz',
+        renderHint: 'quiz',
+        region: fallbackRegion,
+        purpose: `A quiz checkpoint for this scene's goal: ${brief.directive} — concrete values, plausible wrong choices, an explanation that teaches.`,
+      },
+      sourcePack, layout, brief, imageIndex, call,
+    });
+    if (result.object) objects.push(result.object);
+  }
+
   // Structure-true rule names its offending object — element-repair it (live v10: a whole
   // edge_cases scene died because ONE decision tree was drawn as a flowchart).
   const structured = await repairStructureViolation(objects, { sourcePack, layout, brief, imageIndex, call });

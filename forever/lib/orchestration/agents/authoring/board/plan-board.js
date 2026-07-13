@@ -28,7 +28,10 @@ Output ONLY JSON: {"objects":[{"id","renderHint","region","purpose"}]}
 - SOURCE FIGURES FIRST (non-negotiable when availableImages is non-empty): if a source
   figure/page covers this scene's idea, plan an "image" stub teaching FROM it — the
   document's REAL diagram always beats one you would draw. Draw your own diagram/chart
-  ONLY for ideas no available figure shows.
+  ONLY for ideas no available figure shows.${brief?.focusFigureIds?.length ? `
+- THIS SCENE'S ASSIGNED FIGURES (the Teacher requires them on the board — plan an "image"
+  stub for EACH): ${brief.focusFigureIds.join(', ')}` : ''}${brief?.pedagogicalRole === 'practice' ? `
+- This is a PRACTICE scene: it MUST include a "quiz" stub.` : ''}
 - regions: ${Object.entries(regions).map(([name, region]) => `${name} (${region.role})`).join(' · ')}
 - "purpose": ONE sentence saying exactly what this object must show, with the concrete example/values to use.${brief ? `\nTHIS SCENE (${brief.pedagogicalRole ?? 'scene'}): ${brief.title} — ${brief.directive}` : ''}`;
   const user = JSON.stringify({
