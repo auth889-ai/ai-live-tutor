@@ -110,5 +110,17 @@ Rules:
       focusFigureIds: [],
     });
   }
+  // "No common mistake -> reject" (universal gate): every lesson names and refutes the
+  // misconception (g≈0.41, the highest evidence-per-token rubric item in the research).
+  if (!scenes.some((scene) => scene.pedagogicalRole === 'edge_cases' || /mistake|misconception|wrong/i.test(scene.title + scene.directive))) {
+    const beforeRecap = scenes.findIndex((scene) => scene.pedagogicalRole === 'recap');
+    scenes.splice(beforeRecap === -1 ? scenes.length : beforeRecap, 0, {
+      title: 'The Common Mistake — And Why It Fails',
+      pedagogicalRole: 'edge_cases',
+      directive: 'Name the single most common misconception about this material, show a concrete case where following it produces a WRONG result (real values), then show the correct approach on the same case.',
+      focusChunkIds: [...chunkIds],
+      focusFigureIds: [],
+    });
+  }
   return { lessonTitle: String(json.lessonTitle || sourcePack.title).trim(), scenes, usage };
 }
