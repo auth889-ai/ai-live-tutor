@@ -6,6 +6,7 @@
 
 import { callQwenJson } from '../../../qwen/client.js';
 import { validateBoardObjects } from '../../../board/objects/board-objects.js';
+import { buildImageIndex, resolveImageIds } from './image-id-mapping.js';
 import { coerceBoardObjects } from './board-coercion.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 import { structureViolation } from '../../../board/structures/structure-rules.js';
@@ -80,7 +81,8 @@ Rules you must never break:
   or {"steps":[{"latex":"x + 2 = 5","note":"start"},{"latex":"x = 3","note":"subtract 2"}]} for a step-by-step derivation.
 - IMAGES: if availableImages below is non-empty and any of them is relevant to THIS scene, you MUST place it
   with an "image" object and teach FROM it (this is a source-grounded document — show its real diagrams and
-  pages, don't just describe them). content is {"url": <exact url from availableImages>, "alt": <what it shows>,
+  pages, don't just describe them). content is {"url": <the imageId from availableImages, e.g. "fig_003" —
+  write the ID exactly; the system resolves it to the real file, and an unknown id is DELETED>, "alt": <what it shows>,
   "caption": <short caption>, "page": <its source page number, copy from availableImages when present>,
   "bbox": {"x","y","w","h"} (OPTIONAL, all normalized 0-1) to highlight the exact part you are teaching —
   the full image always stays visible (never cropped), the highlight draws ON TOP.
@@ -103,17 +105,10 @@ Rules you must never break:
 }
 
 function boardUser(sourcePack, regions) {
-  // Offer described figures (vision-read) AND full-page renders — a page render is how the
-  // tutor shows a diagram in its real context when a source page mixes pictures with text.
-  const availableImages = (sourcePack.assets ?? [])
-    .filter((asset) => (asset.kind === 'figure' && asset.caption?.trim()) || asset.kind === 'page')
-    .map((asset) => ({
-      kind: asset.kind,
-      url: asset.url,
-      caption: asset.kind === 'page' ? `Full render of source page ${asset.page}` : asset.caption,
-      ...(asset.whatItShows ? { whatItShows: asset.whatItShows } : {}),
-      ...(asset.page ? { page: asset.page } : {}),
-    }));
+  // Offer described figures (vision-read or content_list-captioned) AND full-page renders
+  // BY ID ONLY — the model places "fig_003", never a path it could misremember; the
+  // deterministic post-pass (resolveImageIds) substitutes the real url.
+  const availableImages = buildImageIndex(sourcePack).available;
   return JSON.stringify({
     task: 'Design the board for one teaching scene from this source material.',
     layoutRegions: Object.fromEntries(
@@ -142,6 +137,7 @@ function stripHandAuthoredAnimation(objects, brief) {
 }
 
 async function runBoardCall({ system, user, sourcePack, layout, brief = null }) {
+  const imageIndex = buildImageIndex(sourcePack);
   let lastError;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const repair = attempt === 0 ? '' : `\nYour previous output was rejected: ${lastError}. Fix exactly that and output the full JSON again.`;
@@ -155,9 +151,13 @@ async function runBoardCall({ system, user, sourcePack, layout, brief = null }) 
       continue;
     }
     try {
+      // Image ids -> real urls; an image object citing an UNKNOWN id is a hallucinated
+      // source and is deleted before it can reach a student (the OpenMAIC contract).
+      const { objects: resolved, dropped } = resolveImageIds(json.objects, imageIndex);
+      for (const id of dropped) console.error(`[board] image object "${id}" cited an unknown imageId — deleted (hallucinated source)`);
       // Deterministic shape coercion BEFORE validation — 62% of drops were mechanical shape
       // slips on content that was otherwise fine (see board-coercion.js).
-      const objects = coerceBoardObjects(stripHandAuthoredAnimation(json.objects, brief), { layout, brief });
+      const objects = coerceBoardObjects(stripHandAuthoredAnimation(resolved, brief), { layout, brief });
       validateBoardObjects(objects, layout);
       for (const object of objects) {
         if (object.decorative === true || object.grounding === 'analogy') continue; // cites nothing by design
