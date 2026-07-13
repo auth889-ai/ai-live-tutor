@@ -13,7 +13,8 @@ import { FOREVER_AGENT_ROLES } from '../../roles/agent-roles.js';
 // paste never mentions it (the dry run PROVES the algorithm by running it). Humanities/law
 // stay strict: there, interpretation must trace to the source (the 14-course spec's
 // source-proof rule is about exactly those fields).
-const KNOWLEDGE_DOMAINS = new Set(['dsa', 'programming', 'ml_ai', 'math', 'science', 'systems_swe', 'business_finance']);
+const KNOWLEDGE_DOMAINS = new Set(['dsa', 'programming', 'ml_ai', 'math', 'science', 'systems_swe', 'business_finance',
+  'architecture', 'networking', 'srs', 'sqa', 'os_arch', 'physics', 'chemistry', 'biology', 'agents_rag', 'economics']);
 
 const OBJECTIONS_SCHEMA = z.object({
   objections: z.array(z.object({

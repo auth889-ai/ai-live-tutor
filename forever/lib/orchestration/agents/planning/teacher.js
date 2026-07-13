@@ -31,7 +31,7 @@ const PLAN_SCHEMA = z.object({
   })).min(1),
 });
 
-export async function designPedagogy({ sourcePack, minScenes = 5, maxScenes = 9, domain = 'general' }) {
+export async function designPedagogy({ sourcePack, minScenes = 5, maxScenes = 9, domain = 'general', register = null }) {
   const chunkIds = new Set(sourcePack.chunks.map((chunk) => chunk.id));
   const { teachingFor, UNIVERSAL_TEACHING_LAW, depthFor, DEPTH_TEMPLATES } = await import('./domain-teaching.js');
 
@@ -45,7 +45,7 @@ export async function designPedagogy({ sourcePack, minScenes = 5, maxScenes = 9,
   const figureIds = new Set(figures.map((figure) => figure.figureId));
 
   const system = `You are the Teacher of an AI tutor — a world-class SPECIALIST in this domain (${domain}).
-DOMAIN TEACHING STYLE (teach exactly this way): ${teachingFor(domain)}
+DOMAIN TEACHING STYLE (teach exactly this way): ${register ?? teachingFor(domain)}
 ${depthFor(domain)}
 ${DEPTH_TEMPLATES}
 DIRECTIVE RULE: every content scene's directive names ONE depth template (e.g. "THREE-CANDIDATES: ...")

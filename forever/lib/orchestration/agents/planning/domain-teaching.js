@@ -10,7 +10,11 @@
 // UNIVERSAL LAW at the bottom of this file.
 
 export const DOMAINS = Object.freeze([
-  'dsa', 'programming', 'ml_ai', 'math', 'science', 'systems_swe', 'history_humanities', 'business_finance', 'general',
+  // the 14 course domains (one specialist teacher agent each — teachers/registry.js)
+  'architecture', 'networking', 'srs', 'sqa', 'os_arch', 'math', 'physics', 'chemistry',
+  'biology', 'ml_ai', 'agents_rag', 'history', 'law', 'economics',
+  // coding (the Coding Instructor + trace engines) and legacy/general buckets
+  'dsa', 'programming', 'science', 'systems_swe', 'history_humanities', 'business_finance', 'general',
 ]);
 
 export const DOMAIN_TEACHING = Object.freeze({
@@ -66,6 +70,54 @@ then force a tradeoff decision. End with a short case study.
 LESSON FLOW: real business scenario -> core model -> chart/table with the numbers -> formula calculation step by step ->
 scenario comparison -> tradeoff decision -> common mistake -> quiz/practice.
 PRIMITIVES: chart (supply-demand / xychart), financial table, decision tree, SWOT/comparison table, KaTeX, quiz.`,
+  architecture: `Teach like CMU/SEI case studies + ByteByteGo: CASE-FIRST and FAILURE-DRIVEN — open with a real system that broke or must scale, never a definition.
+LESSON FLOW: real system problem -> current naive design -> architecture diagram (mermaid architecture-beta/C4) -> request sequence (sequenceDiagram, each hop a beat) -> data flow -> TRADEOFF MATRIX (comparison table with real numbers) -> failure scenario (what breaks, what the user sees, how the design responds) -> deployment diagram -> quiz -> recap.
+DEPTH: every component added must be FORCED by a stated bottleneck with back-of-envelope numbers; make the student sketch their design before revealing the reference one.
+PRIMITIVES: architecture/C4 diagram, sequence diagram, state diagram, tradeoff table, deployment diagram, quiz.`,
+  networking: `Teach the packet as protagonist ("what happens when you type google.com") — animated, never text-only.
+LESSON FLOW: real internet action -> packet path overview -> OSI/TCP-IP layer stack (block diagram) -> DNS resolution -> TCP handshake (sequenceDiagram; the exact segment SYN/SYN-ACK/ACK highlighted AS spoken) -> HTTP request/response -> TLS if relevant -> routing table -> failure case (packet loss/timeout) -> quiz.
+DEPTH: STAKED-PREDICTION on latencies; FACT-TWEAK LADDER (what if DNS is down? what if the SYN is lost?).
+PRIMITIVES: sequence diagram, layer block diagram, packet/routing tables, state diagram, quiz.`,
+  srs: `Teach like a professional requirements analyst: ONE real product idea carried through EVERY artifact (continuity is the lesson).
+LESSON FLOW: real product idea -> stakeholder map -> actor/use-case diagram -> functional requirements -> non-functional requirements -> user stories -> acceptance criteria -> MoSCoW priority table -> risk matrix -> traceability matrix -> quiz.
+DEPTH: AMBIGUITY HUNT — show a vague requirement, let the student find the 3 ambiguities, rewrite it testably.
+PRIMITIVES: use-case diagram, stakeholder map, MoSCoW/risk/traceability tables, quiz.`,
+  sqa: `Teach requirement->test derivation LIVE: boundary thinking out loud, every test traced to a requirement.
+LESSON FLOW: requirement -> test scenario -> boundary value analysis (the numbers AT and AROUND each edge) -> equivalence partitioning -> decision table -> state transition test -> concrete test cases table -> bug report card -> coverage check -> quiz.
+DEPTH: WRONG-STUDENT VOICE proposes testing only happy paths; show the bug that slips through.
+PRIMITIVES: decision table, state diagram, test-case table, bug-report callout, quiz.`,
+  os_arch: `Make INVISIBLE machine state VISIBLE: every abstract claim gets a state picture.
+LESSON FLOW: real machine problem -> process/state diagram -> scheduling example (Gantt, tick by tick, ready-queue reordering shown) -> memory allocation / page table walk -> CPU instruction trace -> register/flag updates (only CHANGED cells flash) -> common mistake -> quiz.
+DEPTH: DRY-RUN a context switch or a page fault on concrete addresses; 8086 segment:offset arithmetic computed step by step (KaTeX).
+PRIMITIVES: state diagram, Gantt, memory/page/register tables, KaTeX, quiz.`,
+  physics: `Teach like Walter Lewin: PREDICT -> DERIVE -> COMPARE. Stake a quantitative prediction with tolerance BEFORE the derivation.
+LESSON FLOW: real physical scenario -> diagram/free-body picture -> known/unknown values table -> formula derivation (KaTeX) -> step-by-step substitution with units carried -> graph (trajectory/velocity chart) -> unit sanity check -> common wrong intuition (scripted and diagnosed) -> quiz.
+DEPTH: WRONG-STUDENT VOICE states the intuitive-but-wrong answer (heavier falls faster); diagnose WHY it is attractive.
+PRIMITIVES: diagram, KaTeX, chart, unit table, quiz.`,
+  chemistry: `Teach image-first (NO molecule engine): the source figure or a clean equation carries the scene.
+LESSON FLOW: real reaction or molecule -> source image/diagram with labeled parts -> formula/equation (KaTeX) -> balancing or mechanism ONE step per beat (atom counts shown, verifiable) -> table of quantities (stoichiometry with real grams/moles) -> common mistake (unbalanced/wrong ratio on a real case) -> practice question.
+DEPTH: DRY-RUN the mole calculation on concrete numbers; FACT-TWEAK (double the reactant — what changes?).
+PRIMITIVES: image with labels, KaTeX, quantity table, diagram, quiz.`,
+  biology: `Teach image/process-first: the organism/cell/process IS the material.
+LESSON FLOW: real biological process -> source image with the important parts LABELED (each label lands as it is spoken) -> process cycle diagram step by step -> comparison table of confusable concepts (mitosis vs meiosis) -> common misconception -> quiz.
+DEPTH: INTERLEAVED CLOSER on the confusable pair; DOMAIN-SHIFT (same cycle logic in a different organism/system).
+PRIMITIVES: labeled image, cycle diagram, comparison table, timeline, quiz.`,
+  agents_rag: `Teach the system that is teaching them (meta-demo): documents -> chunks -> retrieval -> grounded answer -> evaluation.
+LESSON FLOW: why plain LLMs hallucinate (a concrete wrong answer) -> RAG pipeline diagram -> chunk viewer (REAL chunks of this very material) -> embedding/retrieval intuition -> retriever comparison table -> agent/tool-call trace timeline -> evaluation table -> quiz.
+DEPTH: THREE-CANDIDATES on retrieval strategies; show a real failure (irrelevant chunk retrieved) and the fix.
+PRIMITIVES: pipeline diagram, chunk table, sequence/timeline diagram, comparison table, quiz.`,
+  history: `Teach causation over dates: WHY it happened, argued from evidence, with viewpoints in tension.
+LESSON FLOW: hook question -> timeline -> main actors map -> cause-effect map -> primary source panel (quoted on screen, cited) -> multiple viewpoints -> debate/counterargument -> essay outline -> quiz.
+DEPTH: FACT-TWEAK LADDER (would it still happen if X?); source-vs-source contradiction staged and adjudicated.
+PRIMITIVES: timeline, cause-effect diagram, actor map, source-quote callout, comparison table, quiz.`,
+  law: `Teach REASONING like a law-school Socratic classroom, never memorization. IRAC is the skeleton.
+LESSON FLOW: case facts -> legal issue -> rule/statute -> application (each rule element mapped to a fact) -> holding/conclusion -> counterargument (mandatory) -> evidence matrix -> quiz.
+DEPTH: FACT-TWEAK to the breaking point ("10 days' notice is reasonable — when does it stop being?"); deliberately ambiguous edge where PROCESS is the lesson.
+PRIMITIVES: IRAC table (row-by-row reveal), case-brief callout, timeline, argument map, evidence matrix, quiz.`,
+  economics: `Teach like MRU: models on concrete scenarios with REAL numbers; the curve SHIFT must be seen (ghost pre-shift curve + arrow).
+LESSON FLOW: real business scenario -> core model -> chart/table with the numbers -> formula calculation step by step -> scenario comparison -> tradeoff decision the student must defend -> common mistake (movement-along vs shift-of) -> quiz/practice.
+DEPTH: one model, wildly different markets (wheat -> labor -> housing); retrieval attached to every model.
+PRIMITIVES: chart (ghost-shift), financial table, decision tree, comparison/SWOT table, KaTeX, quiz.`,
   general: `Teach concrete-before-abstract with a vivid analogy, build bottom-up one idea at a time, use a diagram when a
 visual helps, and always flag the common misconception. End with a recap and a practice question.
 LESSON FLOW: hook -> concrete example -> the idea -> visual -> misconception -> practice -> recap.`,
@@ -121,6 +173,13 @@ const DEPTH_MOVES = Object.freeze({
   business_finance: 'DEPTH: one model, wildly different markets (same curves on wheat, labor, housing); attach retrieval practice to every model; force a numeric tradeoff decision the student must defend.',
 });
 
+// New course domains inherit the nearest researched depth culture until each gets its own.
+const DEPTH_ALIAS = Object.freeze({
+  architecture: 'systems_swe', networking: 'systems_swe', srs: 'systems_swe', sqa: 'systems_swe',
+  os_arch: 'systems_swe', physics: 'science', chemistry: 'science', biology: 'science',
+  agents_rag: 'ml_ai', history: 'history_humanities', law: 'history_humanities', economics: 'business_finance',
+});
+
 export function depthFor(domain) {
-  return DEPTH_MOVES[domain] ?? '';
+  return DEPTH_MOVES[domain] ?? DEPTH_MOVES[DEPTH_ALIAS[domain]] ?? '';
 }

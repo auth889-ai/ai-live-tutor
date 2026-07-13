@@ -8,6 +8,7 @@ import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
 import { focusSourcePack } from '../../source-pack/build/focus-source-pack.js';
 import { mapWithConcurrency } from '../../util/concurrency.js';
 import { designPedagogy as designPedagogyAgent } from '../../orchestration/agents/planning/teacher.js';
+import { teacherFor } from '../../orchestration/agents/planning/teachers/registry.js';
 import { designCodingLesson as designCodingLessonAgent, isCodingDomain } from '../../orchestration/agents/planning/coding-instructor.js';
 import { routeDomain as routeDomainAgent } from '../../orchestration/agents/planning/domain-router.js';
 import { generateSceneFromSourcePack as generateScene } from '../scene/generate-scene.js';
@@ -35,8 +36,13 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
   // dry-run traces); everything else to the general Teacher. Same brief contract out.
   onProgress({ phase: 'routing', message: 'Identifying the subject domain' });
   const { domain } = await routeDomain({ sourcePack });
+  // ONE SPECIALIST TEACHER PER COURSE (user design): coding -> the Coding Instructor;
+  // the 14 course domains -> their own named teacher agent; anything else -> the
+  // Universal Teacher. Injected stubs keep overriding everything for tests.
   const planLesson = agents.designPedagogy
-    ?? (isCodingDomain(domain) ? (agents.designCodingLesson ?? designCodingLessonAgent) : designPedagogy);
+    ?? (isCodingDomain(domain)
+      ? (agents.designCodingLesson ?? designCodingLessonAgent)
+      : ({ sourcePack: pack, domain: d }) => teacherFor(d).designLesson({ sourcePack: pack, domain: d }));
   onProgress({ phase: 'planning', message: isCodingDomain(domain) ? 'The Coding Instructor is architecting the lesson' : 'Designing the teaching sequence' });
   const { lessonTitle, scenes: briefs } = await planLesson({ sourcePack, domain });
   if (onPlan) await onPlan({ lessonTitle, briefs });
