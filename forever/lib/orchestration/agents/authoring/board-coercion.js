@@ -17,7 +17,7 @@ const TEACHING_DEVICE_ROLES = new Set(['motivate', 'intuition', 'hook', 'recap']
 
 // Common renderHint synonyms the model reaches for — mapped to the legal vocabulary.
 const HINT_ALIASES = Object.freeze({
-  flowchart: 'diagram', graph: 'diagram', chart: 'diagram', sequence: 'diagram', mermaid: 'diagram',
+  flowchart: 'diagram', graph: 'diagram', xychart: 'chart', sequence: 'diagram', mermaid: 'diagram',
   bullets: 'list', bullet_list: 'list', bulletpoints: 'list',
   formula: 'math', equation: 'math', katex: 'math', latex: 'math',
   note: 'callout', tip: 'callout', warning: 'callout', insight: 'callout',

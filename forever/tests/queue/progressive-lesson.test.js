@@ -41,8 +41,8 @@ test('partial saves are ordered building docs; a failing save never breaks the b
   // Scenes always stored sorted by index, each carrying its sceneIndex.
   assert.deepEqual(saves.at(-1).lesson.scenes.map((s) => s.sceneIndex), [0, 1]);
   assert.deepEqual(saves.at(-1).lesson.plannedScenes, [
-    { title: 'a', pedagogicalRole: 'hook' },
-    { title: 'b', pedagogicalRole: 'recap' },
+    { title: 'a', pedagogicalRole: 'hook', directive: null },
+    { title: 'b', pedagogicalRole: 'recap', directive: null },
   ]);
 
   // A store hiccup is logged, not thrown — the next scene's save catches playback up.

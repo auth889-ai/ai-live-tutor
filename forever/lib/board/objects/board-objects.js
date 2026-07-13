@@ -1,6 +1,7 @@
 import { getRegion, validateRegionLine } from '../layout/layout-regions.js';
 import { validateSourceRef } from '../../source-pack/refs/source-refs.js';
 import { validateDiagramContent } from '../diagrams/diagram-content.js';
+import { validateChartContent } from '../charts/chart-content.js';
 import { validateMathContent } from '../math/render-math.js';
 import { validateImageContent } from '../image/image-content.js';
 import { validateCalloutContent } from '../callout/callout-content.js';
@@ -23,6 +24,7 @@ export const RENDER_HINTS = Object.freeze([
   'timeline',
   'annotation',
   'algorithm', // a full ExecutionTrace rendered by the clock-driven AlgorithmStage (DSA/ML dry run)
+  'chart', // hand-rolled steppable curve chart (supply/demand shifts, loss curves, function plots) — NOT mermaid xychart
 ]);
 
 export function validateBoardObject(object, layout) {
@@ -34,7 +36,8 @@ export function validateBoardObject(object, layout) {
   if (!object.objectType?.trim()) throw new Error(`${context}.objectType is required`);
   // Unambiguous synonyms are normalized instead of rejected (measured live: a practice scene
   // died because the model wrote renderHint "graph" for a tree picture — it meant "diagram").
-  const HINT_ALIASES = { graph: 'diagram', tree: 'diagram', flowchart: 'diagram', chart: 'diagram', note: 'callout', bullet_list: 'list' };
+  // 'chart' is a REAL hint now (the curve primitive) — no longer aliased away to diagram.
+  const HINT_ALIASES = { graph: 'diagram', tree: 'diagram', flowchart: 'diagram', xychart: 'chart', note: 'callout', bullet_list: 'list' };
   if (HINT_ALIASES[object.renderHint]) object.renderHint = HINT_ALIASES[object.renderHint];
   if (!RENDER_HINTS.includes(object.renderHint)) {
     throw new Error(`${context}.renderHint must be one of ${RENDER_HINTS.join(', ')}`);
@@ -43,6 +46,7 @@ export function validateBoardObject(object, layout) {
   if (object.lineNumber !== undefined) validateRegionLine(layout, object.region, object.lineNumber);
   if (!hasContent(object.content)) throw new Error(`${context}.content is required and must be non-empty`);
   if (object.renderHint === 'diagram') validateDiagramContent(object.content, context);
+  if (object.renderHint === 'chart') validateChartContent(object.content, context);
   if (object.renderHint === 'math') validateMathContent(object.content, context);
   if (object.renderHint === 'image') validateImageContent(object.content, context);
   if (object.renderHint === 'callout') validateCalloutContent(object.content, context);

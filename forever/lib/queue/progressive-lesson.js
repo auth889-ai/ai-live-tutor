@@ -18,7 +18,13 @@ export function createProgressiveLessonWriter({ lessonId, sourcePackId, ownerId,
           status: 'building',
           lessonTitle: state.lessonTitle ?? 'Lesson in progress',
           sourcePackId,
-          plannedScenes: state.briefs.map((brief) => ({ title: brief.title, pedagogicalRole: brief.pedagogicalRole })),
+          plannedScenes: state.briefs.map((brief) => ({
+            title: brief.title,
+            pedagogicalRole: brief.pedagogicalRole,
+            // The Teacher's own brief — the waiting screen shows it as a scene teaser
+            // (AI-written, material-specific; never canned filler).
+            directive: brief.directive ?? null,
+          })),
           scenes: orderedScenes,
           voiced: orderedScenes.some((s) => Boolean(s.audioUrl)),
           ...(outlineLesson ? { courseRef: { courseId, episodeId: episode?.id ?? null, outlineLessonId: outlineLesson.id, episodeTitle: episode?.title ?? null } } : {}),

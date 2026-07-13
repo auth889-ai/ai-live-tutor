@@ -10,7 +10,7 @@ import { coerceBoardObjects } from './board-coercion.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 import { structureViolation } from '../../../board/structures/structure-rules.js';
 
-const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram', 'math', 'image', 'callout', 'quiz']; // grows as the renderer grows
+const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram', 'chart', 'math', 'image', 'callout', 'quiz']; // grows as the renderer grows
 
 function boardSystemPrompt(regions, brief) {
   const teachingFocus = brief
@@ -54,8 +54,22 @@ Rules you must never break:
     {"diagramType":"mermaid","code":"sequenceDiagram\\n  Client->>Server: SYN\\n  Server->>Client: SYN-ACK\\n  Client->>Server: ACK"}
     classDiagram (OOP: classes, inheritance) · stateDiagram-v2 (state machines, lifecycles) ·
     erDiagram (databases) · architecture-beta (system design) · mindmap · timeline (history) ·
-    quadrantChart (SWOT/risk) · xychart-beta (graphs) · gitGraph. Use whichever fits.
+    quadrantChart (SWOT/risk) · gitGraph. Use whichever fits.
   Prefer a diagram for any process, structure, interaction, hierarchy, or comparison — it teaches far better than text.
+- CURVES AND GRAPHS OF QUANTITIES (supply/demand, cost curves, loss curves, function plots,
+  trajectories): use renderHint "chart" — NEVER mermaid xychart (it cannot draw legends, marked
+  points, or shifted-curve ghosts and will be REJECTED). content shape:
+  {"xAxis":{"label":"Quantity (scoops)","min":0,"max":300},"yAxis":{"label":"Price ($)","min":0,"max":6},
+   "series":[{"id":"demand_old","label":"Demand (before)","style":"ghost","points":[[0,6],[300,0]]},
+             {"id":"demand","label":"Demand (after heat wave)","points":[[50,6],[300,1]]},
+             {"id":"supply","label":"Supply","points":[[0,1],[300,6]]}],
+   "annotations":[{"type":"point","x":150,"y":3,"label":"E1"},{"type":"point","x":200,"y":4,"label":"E2"},
+                  {"type":"arrow","from":[120,3.5],"to":[190,3.5],"label":"demand shifts right"},
+                  {"type":"vline","x":150},{"type":"region","x1":150,"x2":250,"label":"shortage"}]}
+  Rules: every point INSIDE the axis ranges · every series labeled (the legend shows them) ·
+  a SHIFT keeps the old curve as style "ghost" with the same id stem ("demand_old"/"demand" share
+  a color) plus an arrow annotation — the student must SEE the curve move · name equilibria with
+  "point" annotations. 2-6 series maximum.
 - Use "math" for equations/formulas (KaTeX LaTeX). content is {"latex":"E = mc^2"} for one equation,
   or {"steps":[{"latex":"x + 2 = 5","note":"start"},{"latex":"x = 3","note":"subtract 2"}]} for a step-by-step derivation.
 - IMAGES: if availableImages below is non-empty and any of them is relevant to THIS scene, you MUST place it

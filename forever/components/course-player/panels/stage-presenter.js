@@ -15,6 +15,7 @@ import { DiagramPanel } from './diagram-panel.js';
 import { MathView } from './math-view.js';
 import { ImageView } from './image-view.js';
 import { CalloutView } from './callout-view.js';
+import { ChartView } from './chart-view.js';
 import { QuizView } from './quiz-view.js';
 import { TryItPanel } from './try-it-panel.js';
 import { AlgorithmStage } from '../algorithm-stage/algorithm-stage.js';
@@ -129,6 +130,11 @@ function Focus({ object, state, focusRef, activeStep, setHold, onQuizAnswered })
     // traceStep drives the step (voice-synced); write-progress is the fallback before audio
     // timing. setHold lets the student EXPLORE steps while playback waits.
     return <AlgorithmStage trace={object.content} stepIndex={activeStep} progress={state.writing.get(object.id)?.progress ?? 1} setHold={setHold} />;
+  }
+  if (object.renderHint === 'chart') {
+    // The curve primitive: legend, ghost curves, shift arrows, marked equilibria — the
+    // things Mermaid xychart cannot draw (why it is banned for curve teaching).
+    return <ChartView content={object.content} />;
   }
   if (object.renderHint === 'math') {
     return <MathView content={object.content} />;
