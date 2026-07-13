@@ -18,7 +18,7 @@ const CODE_ROLES = new Set(['worked_example', 'dry_run']);
 
 export async function generateSceneFromSourcePack(
   sourcePack,
-  { layout = 'teacher_notebook_code', sceneId, brief = null, domain = 'general', agents = {} } = {},
+  { layout = 'teacher_notebook_code', sceneId, brief = null, domain = 'general', agents = {}, onStep = () => {} } = {},
 ) {
   const id = sceneId ?? `gen_${sourcePack.id.slice(3)}`;
   const runCodeAgent = agents.generateExecutedCode ?? generateExecutedCode;
@@ -29,7 +29,7 @@ export async function generateSceneFromSourcePack(
 
   // Board goes through the society's grounding review cycle (generate -> audit -> revise)
   // before it is allowed to be narrated. Ungrounded boards never reach the student.
-  const review = await reviewAgent({ sceneId: id, sourcePack, layout, brief, domain });
+  const review = await reviewAgent({ sceneId: id, sourcePack, layout, brief, domain, onStep });
   const objects = [...review.objects];
 
   // DRY-RUN scenes get the ELITE path: the Execution Tracer runs the real algorithm and
@@ -39,6 +39,7 @@ export async function generateSceneFromSourcePack(
   // The scene fails honestly (the lesson keeps its other scenes and reports the skip).
   let algorithmObject = null;
   if (brief?.pedagogicalRole === 'dry_run' && layout === 'teacher_notebook_code') {
+    onStep('The Execution Tracer is running the real algorithm in the sandbox');
     const traced = await traceAgent({ directive: brief.directive, sourceText });
     if (!traced?.trace) {
       throw new Error(`Scene ${sceneId}: dry-run could not produce a REAL ExecutionTrace — refusing to ship a text-only trace`);
@@ -81,6 +82,7 @@ export async function generateSceneFromSourcePack(
   // Demand worked_example shipped with a Python print() demo bolted onto an economics board.
   if (!algorithmObject && brief && CODE_ROLES.has(brief.pedagogicalRole) && layout === 'teacher_notebook_code' && isCodingDomain(domain)) {
     try {
+      onStep('The Code Runner is writing and executing a real demo');
       const demo = await runCodeAgent({ directive: brief.directive, sourceText });
       objects.push({
         id: 'obj_code_demo',
@@ -100,6 +102,7 @@ export async function generateSceneFromSourcePack(
   // generated DIRECTLY from its trace steps (one line per step, tagged with traceStep) so the words
   // are guaranteed to match the animated state — single source of truth, no drift.
   const narratable = objects.filter((o) => o.renderHint !== 'algorithm');
+  if (narratable.length) onStep('The Voice Writer is narrating the board');
   const voice = narratable.length ? await voiceAgent({ objects: narratable, sourcePack }) : { voiceLines: [], usage: null };
   const algoLines = algorithmObject ? voiceLinesForTrace(algorithmObject) : [];
   const voiceLines = [...voice.voiceLines, ...algoLines];

@@ -59,6 +59,14 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
         sceneId: `sc_${String(index + 1).padStart(2, '0')}`,
         brief,
         domain,
+        // THINKING ALOUD: society steps stream to the student as narrated progress
+        // ("Scene 3 · Heat Wave: the Grounding Auditor is reviewing").
+        onStep: (msg) => onProgress({
+          phase: 'generating',
+          message: `Scene ${index + 1} · ${brief.title}: ${msg}`,
+          sceneDone: done,
+          sceneTotal,
+        }),
       })
         .then((result) => {
           // Flatten HERE (not at return time) so onScene sees the scene exactly as it will

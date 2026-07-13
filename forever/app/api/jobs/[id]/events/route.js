@@ -22,6 +22,7 @@ export async function GET(_request, { params }) {
       let started = Date.now();
       let lastPhase = null;
       let lastPercent = -1;
+      let lastMessage = null;
       let warnedNoWorker = false;
       const NO_WORKER_MS = 8000; // if still queued after this, no worker is consuming
 
@@ -35,9 +36,12 @@ export async function GET(_request, { params }) {
           }
           const p = job.progress;
           // Only push when something actually changed — keeps the stream quiet and cheap.
-          if (p && (p.phase !== lastPhase || p.percent !== lastPercent)) {
+          // The MESSAGE counts as a change: thinking-aloud lines ("the Grounding Auditor is
+          // reviewing…") narrate the society between percent moves.
+          if (p && (p.phase !== lastPhase || p.percent !== lastPercent || p.message !== lastMessage)) {
             lastPhase = p.phase;
             lastPercent = p.percent;
+            lastMessage = p.message;
             send('progress', p);
           }
           // Guard against the silent "0% forever" hang — but tell the TRUTH: a live worker

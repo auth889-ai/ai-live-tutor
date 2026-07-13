@@ -20,11 +20,15 @@ export async function runGroundingReview({
   maxRounds,
   // Agents are injectable so the state machine is unit-testable without spending tokens.
   agents = { designBoard, reviseBoard, auditGrounding, auditPedagogy },
+  // THINKING ALOUD: each society step as a human sentence, streamed to the student's
+  // progress UI (the wait becomes a window into the agents at work, not a spinner).
+  onStep = () => {},
 }) {
   const rounds = maxRounds ?? Number(process.env.MAX_DEBATE_ROUNDS || 3);
   const transcript = [];
   const usages = [];
 
+  onStep('The Board Director is designing the board');
   let board = await agents.designBoard({ sourcePack, layout, brief });
   usages.push(board.usage);
   transcript.push(
@@ -38,6 +42,7 @@ export async function runGroundingReview({
   );
 
   for (let round = 0; round <= rounds; round += 1) {
+    onStep(round === 0 ? 'The Grounding Auditor and Pedagogy Critic are reviewing' : `The critics are re-reviewing (round ${round + 1})`);
     // Two independent critics. GROUNDING is the HARD gate (facts must be right, else the
     // scene cannot ship). PEDAGOGY is ADVISORY — it drives revision to improve teaching, but
     // a well-grounded scene is never dropped just because the critic wants it richer.
@@ -55,6 +60,7 @@ export async function runGroundingReview({
     // quality); after that, grounded-and-shippable beats endless pedagogy nitpicks.
     const mustRevise = grounding.objections.length > 0 || (round === 0 && pedagogy.objections.length > 0);
     if (!mustRevise) {
+      onStep(round === 0 ? 'Approved by both critics on the first review' : `Approved after ${round} repair round(s)`);
       transcript.push(
         createSocietyMessage({
           id: `msg_verdict_${sceneId}_${round}`,
@@ -74,6 +80,7 @@ export async function runGroundingReview({
       break;
     }
 
+    onStep(`The Board Director is repairing ${allObjections.length} objection(s) from the critics`);
     board = await agents.reviseBoard({ sourcePack, layout, previousObjects: board.objects, objections: allObjections, brief });
     usages.push(board.usage);
     transcript.push(

@@ -99,3 +99,29 @@ test('a pedagogy objection also triggers a revision (two critics)', async () => 
   assert.equal(revised, 1, 'pedagogy objection caused a revision');
   assert.ok(result.transcript.some((m) => m.kind === 'objection'));
 });
+
+test('thinking aloud: every society step is narrated through onStep, in order', async () => {
+  const steps = [];
+  let audits = 0;
+  await runGroundingReview({
+    sceneId: 'sc_talk',
+    sourcePack,
+    onStep: (msg) => steps.push(msg),
+    agents: {
+      designBoard: async () => goodBoard,
+      auditGrounding: async () => {
+        audits += 1;
+        return { objections: audits === 1 ? [objection('sc_talk', 0)] : [], usage: null };
+      },
+      auditPedagogy: async () => ({ objections: [], usage: null }),
+      reviseBoard: async () => goodBoard,
+    },
+  });
+  assert.deepEqual(steps, [
+    'The Board Director is designing the board',
+    'The Grounding Auditor and Pedagogy Critic are reviewing',
+    'The Board Director is repairing 1 objection(s) from the critics',
+    'The critics are re-reviewing (round 2)',
+    'Approved after 1 repair round(s)',
+  ]);
+});
