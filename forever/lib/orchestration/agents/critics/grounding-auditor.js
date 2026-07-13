@@ -46,12 +46,25 @@ the scene, never quote long passages — output tokens are latency.`;
 
   const user = JSON.stringify({
     task: 'Audit each board object against its cited source chunk.',
-    objects: objects.map((object) => ({
-      objectId: object.id,
-      content: object.content,
-      citedChunkId: object.sourceRef?.chunkId,
-      citedChunkText: chunkText.get(object.sourceRef?.chunkId) ?? '(cited chunk does not exist)',
-    })),
+    objects: objects.map((object) => {
+      // A declared teaching device cites nothing BY DESIGN — the payload must say so,
+      // not dangle "(cited chunk does not exist)" as an invitation to object (live-caught:
+      // motivate/practice scenes, all devices, died in consensus exactly this way).
+      if (object.grounding === 'analogy' || object.decorative === true) {
+        return {
+          objectId: object.id,
+          content: object.content,
+          citedChunkId: '(none — declared teaching device)',
+          citedChunkText: '(teaching device: no citation required — object ONLY if it CONTRADICTS the source material)',
+        };
+      }
+      return {
+        objectId: object.id,
+        content: object.content,
+        citedChunkId: object.sourceRef?.chunkId,
+        citedChunkText: chunkText.get(object.sourceRef?.chunkId) ?? '(cited chunk does not exist)',
+      };
+    }),
   });
 
   const { json, usage } = await (deps.callQwenJson ?? callQwenJson)({

@@ -25,3 +25,22 @@ test('default domain (unrouted callers) behaves exactly as before — strict', a
   await auditGrounding({ sceneId: 's1', objects: OBJECTS, sourcePack: PACK, deps: capturing(seen) });
   assert.ok(!seen.system.includes('KNOWLEDGE IS THE TEACHER'), 'general stays strict');
 });
+
+test('declared teaching devices reach the auditor labeled as devices — never as "(cited chunk does not exist)"', async () => {
+  let sentUser = null;
+  await auditGrounding({
+    sceneId: 'sc_dev',
+    objects: [
+      { id: 'hook', content: 'Imagine an ice-cream stand on a hot day', grounding: 'analogy' },
+      { id: 'title', content: 'The Market Engine', decorative: true },
+      { id: 'fact', content: 'Equilibrium is $3', sourceRef: { chunkId: 'chunk_0001' } },
+    ],
+    sourcePack: { chunks: [{ id: 'chunk_0001', text: 'They cross at the equilibrium price of $3.' }] },
+    domain: 'general',
+    deps: { callQwenJson: async ({ user }) => { sentUser = JSON.parse(user); return { json: { objections: [] }, usage: null }; } },
+  });
+  const [hook, title, fact] = sentUser.objects;
+  assert.match(hook.citedChunkText, /teaching device: no citation required/);
+  assert.match(title.citedChunkText, /teaching device: no citation required/);
+  assert.match(fact.citedChunkText, /equilibrium price of \$3/); // real claims still audited against the real chunk
+});
