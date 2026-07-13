@@ -10,8 +10,10 @@ import { validateBoardObjects } from '../../../board/objects/board-objects.js';
 import { buildImageIndex, resolveImageIds } from './image-id-mapping.js';
 import { coerceBoardObjects } from './board-coercion.js';
 import { planBoard } from './board/plan-board.js';
-import { produceObject } from './board/produce-object.js';
+import { produceObject, finalizeBoardObject } from './board/produce-object.js';
 import { stripHandAuthoredAnimation } from './board/strip-animation.js';
+import { HINT_GUIDES } from './board/hint-guides.js';
+import { repairBoardObject } from './element-repair.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 import { structureViolation } from '../../../board/structures/structure-rules.js';
 
@@ -193,25 +195,72 @@ export async function designBoard({ sourcePack, layout = 'teacher_notebook_code'
   if (!objects.some((o) => o.decorative !== true)) {
     throw new Error(`Board Director failed contract validation after repair: no teachable object survived (${plan.stubs.length} planned)`);
   }
-  const violation = structureViolation(objects, brief);
-  if (violation) throw new Error(violation);
-  return { objects, usage: [plan.usage, ...produced.flatMap((r) => r.usages)].filter(Boolean)[0] ?? null };
+  // Structure-true rule names its offending object — element-repair it (live v10: a whole
+  // edge_cases scene died because ONE decision tree was drawn as a flowchart).
+  const structured = await repairStructureViolation(objects, { sourcePack, layout, brief, imageIndex, call });
+  return { objects: structured, usage: [plan.usage, ...produced.flatMap((r) => r.usages)].filter(Boolean)[0] ?? null };
 }
 
-// Revise the board to answer specific Grounding Auditor objections.
-export async function reviseBoard({ sourcePack, layout, previousObjects, objections, brief = null }) {
+async function repairStructureViolation(objects, { sourcePack, layout, brief, imageIndex, call }) {
+  let violation = structureViolation(objects, brief);
+  if (!violation) return objects;
+  const id = violation.match(/^object (\S+):/)?.[1];
+  const index = objects.findIndex((object) => object.id === id);
+  if (index >= 0) {
+    const offender = objects[index];
+    const next = [...objects];
+    try {
+      const repaired = await repairBoardObject({ object: offender, error: violation, brief, hintGuide: HINT_GUIDES[offender.renderHint], call });
+      next[index] = finalizeBoardObject({ ...repaired.object, id: offender.id, region: offender.region }, { sourcePack, layout, brief, imageIndex });
+    } catch (error) {
+      console.error(`[board] structure repair failed for "${offender.id}" — dropping the object: ${String(error?.message).slice(0, 160)}`);
+      next.splice(index, 1);
+    }
+    if (next.some((object) => object.decorative !== true)) {
+      violation = structureViolation(next, brief);
+      if (!violation) return next;
+    }
+  }
+  throw new Error(violation);
+}
+
+// Revise the board to answer critic objections — DECOMPOSED like first production (live
+// v10: the whole-board revise mega-call was the top scene killer, re-rolling every healthy
+// object and reintroducing random contract errors). Only OBJECTED objects are re-produced;
+// an objected object that cannot be repaired leaves alone (the auditor wanted it changed
+// anyway); healthy objects are never touched.
+export async function reviseBoard({ sourcePack, layout, previousObjects, objections, brief = null, call = callQwenJson }) {
   const regions = LAYOUT_REGIONS[layout];
   if (!regions) throw new Error(`Unknown layout: ${layout}`);
-  const complaints = objections
-    .map((message) => {
-      const objectId = message.evidenceRefs.find((ref) => ref.objectId)?.objectId;
-      return `- object "${objectId}": ${message.body}`;
-    })
-    .join('\n');
-  const system = `${boardSystemPrompt(regions, brief)}
-The Grounding Auditor rejected your previous board. Fix EXACTLY these grounding problems —
-rewrite or remove the offending objects so every claim is supported by its cited chunk:
-${complaints}`;
-  const user = `${boardUser(sourcePack, regions)}\n\nYour previous (rejected) board was:\n${JSON.stringify(previousObjects)}`;
-  return runBoardCall({ system, user, sourcePack, layout, brief });
+  const imageIndex = buildImageIndex(sourcePack);
+
+  const byObject = new Map();
+  const unattributed = [];
+  for (const message of objections) {
+    const objectId = message.evidenceRefs?.find((ref) => ref.objectId)?.objectId;
+    if (objectId && previousObjects.some((object) => object.id === objectId)) {
+      byObject.set(objectId, [...(byObject.get(objectId) ?? []), message.body]);
+    } else {
+      unattributed.push(message.body);
+    }
+  }
+
+  const revised = await Promise.all(previousObjects.map(async (object) => {
+    const complaints = byObject.get(object.id);
+    if (!complaints) return object; // healthy objects are NEVER re-rolled
+    const error = `Critic objections to this object: ${[...complaints, ...unattributed].join(' ; ')}`;
+    try {
+      const repaired = await repairBoardObject({ object, error, brief, hintGuide: HINT_GUIDES[object.renderHint], call });
+      return finalizeBoardObject({ ...repaired.object, id: object.id, renderHint: object.renderHint, region: object.region }, { sourcePack, layout, brief, imageIndex });
+    } catch (revisionError) {
+      console.error(`[board] revision dropped object "${object.id}" (objected + unrepairable): ${String(revisionError?.message).slice(0, 160)}`);
+      return null;
+    }
+  }));
+
+  const objects = revised.filter(Boolean);
+  if (!objects.some((object) => object.decorative !== true)) {
+    throw new Error('Board Director failed contract validation after repair: revision left no teachable object');
+  }
+  return { objects, usage: null };
 }

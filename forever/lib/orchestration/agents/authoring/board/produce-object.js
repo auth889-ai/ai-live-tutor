@@ -9,6 +9,23 @@ import { repairBoardObject } from '../element-repair.js';
 import { stripHandAuthoredAnimation } from './strip-animation.js';
 import { HINT_GUIDES } from './hint-guides.js';
 
+// The one true door from "raw model object" to "contract-valid board object": image ids
+// resolved, shapes coerced, contract + citation validated. Shared by first production,
+// element repair, and per-object revision — one pipeline, three callers.
+export function finalizeBoardObject(raw, { sourcePack, layout, brief, imageIndex }) {
+  const { objects: resolved, dropped } = resolveImageIds([raw], imageIndex);
+  if (dropped.length > 0) throw new Error(`image object cites unknown imageId "${raw?.content?.url}"`);
+  const [object] = coerceBoardObjects(stripHandAuthoredAnimation(resolved, brief), {
+    layout, brief, chunkIds: sourcePack.chunks.map((chunk) => chunk.id),
+  });
+  validateBoardObject(object, layout);
+  if (object.decorative !== true && object.grounding !== 'analogy'
+    && !sourcePack.chunks.some((chunk) => chunk.id === object.sourceRef?.chunkId)) {
+    throw new Error(`object ${object.id} cites unknown chunk ${object.sourceRef?.chunkId}`);
+  }
+  return object;
+}
+
 export async function produceObject({ stub, sourcePack, layout, brief, imageIndex, call }) {
   const system = `You produce ONE board object of an AI tutor's teaching scene (other agents make the rest).
 Output ONLY JSON: {"object":{"id":"${stub.id}","objectType":<short descriptive string>,"renderHint":"${stub.renderHint}","region":"${stub.region}","content":...}}
@@ -23,17 +40,7 @@ THIS OBJECT'S JOB: ${stub.purpose}`;
     ...(stub.renderHint === 'image' ? { availableImages: imageIndex.available } : {}),
   });
 
-  const finalize = (raw) => {
-    const { objects: resolved, dropped } = resolveImageIds([raw], imageIndex);
-    if (dropped.length > 0) throw new Error(`image object cites unknown imageId "${raw?.content?.url}"`);
-    const [object] = coerceBoardObjects(stripHandAuthoredAnimation(resolved, brief), { layout, brief, chunkIds: sourcePack.chunks.map((chunk) => chunk.id) });
-    validateBoardObject(object, layout);
-    if (object.decorative !== true && object.grounding !== 'analogy'
-      && !sourcePack.chunks.some((chunk) => chunk.id === object.sourceRef?.chunkId)) {
-      throw new Error(`object ${object.id} cites unknown chunk ${object.sourceRef?.chunkId}`);
-    }
-    return object;
-  };
+  const finalize = (raw) => finalizeBoardObject(raw, { sourcePack, layout, brief, imageIndex });
 
   const usages = [];
   try {
