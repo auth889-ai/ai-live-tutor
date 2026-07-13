@@ -208,6 +208,13 @@ export default function StudioPage() {
             <div style={{ width: `${progress.percent}%`, height: '100%', borderRadius: 4, background: UI.accent, transition: 'width 0.4s' }} />
           </div>
           <div style={{ fontSize: 13, color: UI.muted, marginTop: 8 }}>{progress.message}</div>
+          {/* PROGRESSIVE PLAYBACK: first scene saved -> start learning while the rest builds. */}
+          {(progress.scenesReady ?? 0) > 0 && progress.lessonId && (
+            <a href={`/course/${progress.lessonId}`} className="forever-glow"
+              style={{ display: 'inline-block', marginTop: 12, background: UI.accent, color: '#fff', padding: '9px 20px', borderRadius: 10, textDecoration: 'none', fontWeight: 800, fontSize: 13.5 }}>
+              ▶ Watch now — {progress.scenesReady} scene{progress.scenesReady === 1 ? '' : 's'} ready, the rest keep building
+            </a>
+          )}
         </div>
       )}
       {error && (

@@ -31,47 +31,54 @@ async function synthesizeWithRetry(synth, text, { attempts = 3 } = {}) {
   throw new Error(`TTS failed after ${attempts} attempts: ${lastError?.message}`);
 }
 
+export function lessonAudioKey(sourcePackId) {
+  return String(sourcePackId).replace(/[^a-z0-9]/gi, '').slice(0, 16);
+}
+
+// Voice ONE scene (the progressive-playback unit): synthesize its lines, write the scene
+// track, reconcile the timeline to the real audio. A scene with nothing to say — or one
+// already voiced (idempotency) — passes through untouched.
+export async function voiceScene(
+  scene,
+  { lessonKey, publicDir = 'public', urlBase = '/audio', synth, attempts = 3 } = {},
+) {
+  if (!scene.voiceLines?.length || scene.audioUrl) return scene;
+  const doSynth = synth ?? pickSynth();
+  const outDir = path.join(publicDir, 'audio', lessonKey);
+
+  const buffers = [];
+  const clips = [];
+  for (const line of scene.voiceLines) {
+    const clip = await synthesizeWithRetry(doSynth, line.text, { attempts });
+    buffers.push(clip.bytes);
+    clips.push({ voiceLineId: line.id, durationMs: clip.durationMs, wordTimings: clip.wordTimings ?? null });
+  }
+
+  const { bytes, extension } = concatAudioClips(buffers);
+  const audioUrl = `${urlBase}/${lessonKey}/${scene.sceneId}.${extension}`;
+  await mkdir(outDir, { recursive: true });
+  await writeFile(path.join(outDir, `${scene.sceneId}.${extension}`), bytes);
+
+  const { timeline, durationMs, voiceLines } = reconcileTimeline({
+    sceneId: scene.sceneId,
+    objects: scene.objects,
+    voiceLines: scene.voiceLines,
+    clips,
+    audioUrl,
+  });
+  return { ...scene, voiceLines, timeline, durationMs, audioUrl };
+}
+
 export async function voiceLesson(
   lesson,
   { publicDir = 'public', urlBase = '/audio', synth, attempts = 3, onProgress = () => {} } = {},
 ) {
-  const doSynth = synth ?? pickSynth();
-  const lessonId = lesson.sourcePackId.replace(/[^a-z0-9]/gi, '').slice(0, 16);
-  const outDir = path.join(publicDir, 'audio', lessonId);
-
+  const lessonKey = lessonAudioKey(lesson.sourcePackId);
   const sceneTotal = lesson.scenes.length;
   const scenes = [];
   let done = 0;
   for (const scene of lesson.scenes) {
-    // A scene with nothing to say keeps its manual clock — we never invent audio.
-    if (!scene.voiceLines?.length) {
-      scenes.push(scene);
-      done += 1;
-      onProgress({ sceneDone: done, sceneTotal });
-      continue;
-    }
-
-    const buffers = [];
-    const clips = [];
-    for (const line of scene.voiceLines) {
-      const clip = await synthesizeWithRetry(doSynth, line.text, { attempts });
-      buffers.push(clip.bytes);
-      clips.push({ voiceLineId: line.id, durationMs: clip.durationMs, wordTimings: clip.wordTimings ?? null });
-    }
-
-    const { bytes, extension } = concatAudioClips(buffers);
-    const audioUrl = `${urlBase}/${lessonId}/${scene.sceneId}.${extension}`;
-    await mkdir(outDir, { recursive: true });
-    await writeFile(path.join(outDir, `${scene.sceneId}.${extension}`), bytes);
-
-    const { timeline, durationMs, voiceLines } = reconcileTimeline({
-      sceneId: scene.sceneId,
-      objects: scene.objects,
-      voiceLines: scene.voiceLines,
-      clips,
-      audioUrl,
-    });
-    scenes.push({ ...scene, voiceLines, timeline, durationMs, audioUrl });
+    scenes.push(await voiceScene(scene, { lessonKey, publicDir, urlBase, synth, attempts }));
     done += 1;
     onProgress({ sceneDone: done, sceneTotal });
   }

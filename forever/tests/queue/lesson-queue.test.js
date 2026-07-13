@@ -4,6 +4,7 @@ import test from 'node:test';
 import { validateJobInput, makeProgress, isTerminal, PHASES } from '../../lib/queue/job-contract.js';
 import { processLessonJob, lessonIdFor } from '../../lib/queue/lesson-processor.js';
 import { createInProcessQueue } from '../../lib/queue/backends/in-process.js';
+import { buildTextSourcePack } from '../../lib/source-pack/build/source-pack.js';
 
 // --- job contract ---
 
@@ -85,10 +86,13 @@ test('processLessonJob generates, VOICES, and saves the voiced lesson (not the s
     },
   );
 
-  assert.equal(result.lessonId, lessonIdFor('sp_ABC123'));
+  // PROGRESSIVE PLAYBACK: the lesson id derives from the SOURCE PACK (known before
+  // generation starts) so partial scene saves can begin immediately — not from whatever
+  // sourcePackId the generator echoes back at the end.
+  assert.equal(result.lessonId, lessonIdFor(buildTextSourcePack('x'.repeat(80)).id));
   assert.equal(result.scenes, 2);
   assert.equal(result.voiced, true);
-  assert.equal(saved[result.lessonId], fakeVoiced); // the VOICED lesson is what persists
+  assert.deepEqual(saved[result.lessonId], { ...fakeVoiced, status: 'ready' }); // the VOICED lesson persists, marked ready
   assert.equal(progress.at(-1).phase, 'done');
   assert.ok(progress.some((p) => p.phase === 'generating' && p.percent === 70));
   assert.ok(progress.some((p) => p.phase === 'voicing' && p.percent === 81)); // real per-scene voicing progress
@@ -111,7 +115,50 @@ test('processLessonJob honours the explicit DISABLE_TTS=1 dev opt-out (never a s
     },
   );
   assert.equal(result.voiced, false);
-  assert.equal(saved[result.lessonId], fakeLesson);
+  assert.deepEqual(saved[result.lessonId], { ...fakeLesson, status: 'ready' });
+});
+
+test('progressive playback: scenes persist AS THEY FINISH, in order, and the first playable scene links early', async () => {
+  const saves = [];
+  const progress = [];
+  const sceneA = { sceneId: 'sc_01', title: 'A', durationMs: 1000 };
+  const sceneB = { sceneId: 'sc_02', title: 'B', durationMs: 1000 };
+  const result = await processLessonJob(
+    { text: 'x'.repeat(80) },
+    {
+      report: (p) => progress.push(p),
+      deps: {
+        generate: async (pack, { onPlan, onScene }) => {
+          await onPlan({ lessonTitle: 'Live', briefs: [{ title: 'A', pedagogicalRole: 'hook' }, { title: 'B', pedagogicalRole: 'concept' }] });
+          // Scene 2 finishes FIRST (parallel generation) — it must not become playable
+          // before scene 1: playback is sequential.
+          await onScene(sceneB, 1);
+          await onScene(sceneA, 0);
+          return { sourcePackId: pack.id, lessonTitle: 'Live', scenes: [sceneA, sceneB], skippedScenes: 0 };
+        },
+        publishAssets: async (lesson) => lesson,
+        save: async (id, lesson) => saves.push({ id, lesson: structuredClone(lesson) }),
+        env: { DISABLE_TTS: '1' },
+      },
+    },
+  );
+
+  // Save 1: the building SHELL (plan known, no scenes) -> the player can already open.
+  assert.equal(saves[0].lesson.status, 'building');
+  assert.deepEqual(saves[0].lesson.plannedScenes.map((s) => s.title), ['A', 'B']);
+  assert.equal(saves[0].lesson.scenes.length, 0);
+  // Save 2: sc_02 landed out of order — stored (with its index), but NOT playable yet.
+  assert.deepEqual(saves[1].lesson.scenes.map((s) => s.sceneIndex), [1]);
+  const outOfOrder = progress.find((p) => p.phase === 'generating' && p.sceneDone === 1);
+  assert.equal(outOfOrder.scenesReady, 0); // honest: nothing watchable in order yet
+  // Save 3: sc_01 landed -> the full prefix is playable.
+  assert.deepEqual(saves[2].lesson.scenes.map((s) => s.sceneIndex), [0, 1]);
+  assert.ok(progress.some((p) => p.scenesReady === 2));
+  // Final save replaces the shell with the canonical ready lesson.
+  const final = saves.at(-1).lesson;
+  assert.equal(final.status, 'ready');
+  assert.equal(final.plannedScenes, undefined);
+  assert.equal(result.scenes, 2);
 });
 
 test('course mode is FAN-OUT: Dean outline -> course saved -> every lesson enqueued as its own job', async () => {

@@ -18,7 +18,14 @@ export async function generateLessonFromText(text, options = {}) {
 
 // Accepts a prebuilt SourcePack (text OR multimodal from a PDF/URL/YouTube) so every input
 // type flows through the same society pipeline.
-export async function generateLessonFromSourcePack(sourcePack, { agents = {}, onProgress = () => {} } = {}) {
+// PROGRESSIVE PLAYBACK hooks (both optional, both awaited):
+//   onPlan({ lessonTitle, briefs })  — fires the moment the teaching sequence exists, so the
+//     caller can persist a "building" lesson shell the player can already open.
+//   onScene(record, index) -> record — fires as EACH scene finishes, with the scene in its
+//     FINAL stored shape; whatever it returns replaces the scene (so the caller can voice/
+//     publish per scene). A throw here fails that scene only — same loud-drop semantics as
+//     a generation failure, never a silent skip.
+export async function generateLessonFromSourcePack(sourcePack, { agents = {}, onProgress = () => {}, onPlan = null, onScene = null } = {}) {
   const designPedagogy = agents.designPedagogy ?? designPedagogyAgent;
   const routeDomain = agents.routeDomain ?? routeDomainAgent;
   const genScene = agents.generateScene ?? generateScene;
@@ -32,6 +39,7 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
     ?? (isCodingDomain(domain) ? (agents.designCodingLesson ?? designCodingLessonAgent) : designPedagogy);
   onProgress({ phase: 'planning', message: isCodingDomain(domain) ? 'The Coding Instructor is architecting the lesson' : 'Designing the teaching sequence' });
   const { lessonTitle, scenes: briefs } = await planLesson({ sourcePack, domain });
+  if (onPlan) await onPlan({ lessonTitle, briefs });
 
   // Scenes are independent -> generate in parallel, but BOUNDED (SCENE_CONCURRENCY, default
   // 3): each scene is several LLM calls, lesson jobs themselves run on parallel workers,
@@ -52,7 +60,22 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
         brief,
         domain,
       })
-        .then((result) => ({ title: brief.title, pedagogicalRole: brief.pedagogicalRole, ...result }))
+        .then((result) => {
+          // Flatten HERE (not at return time) so onScene sees the scene exactly as it will
+          // be stored — and can hand back a voiced/published version of the same shape.
+          const record = {
+            sceneId: result.scene.sceneId,
+            title: brief.title,
+            pedagogicalRole: brief.pedagogicalRole,
+            layout: result.scene.layout,
+            objects: result.scene.objects,
+            voiceLines: result.scene.voiceLines,
+            timeline: result.timeline,
+            durationMs: result.durationMs,
+            reviewRounds: result.reviewRounds,
+          };
+          return onScene ? Promise.resolve(onScene(record, index)).then((r) => r ?? record) : record;
+        })
         .finally(() => {
           done = Math.min(done + 1, sceneTotal);
           // Real progress: fires as EACH scene finishes (success or failure), so the bar
@@ -101,16 +124,6 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
     sourcePackId: sourcePack.id,
     skippedScenes: skipped,
     skippedSceneReasons: skippedScenes,
-    scenes: scenes.map((scene) => ({
-      sceneId: scene.scene.sceneId,
-      title: scene.title,
-      pedagogicalRole: scene.pedagogicalRole,
-      layout: scene.scene.layout,
-      objects: scene.scene.objects,
-      voiceLines: scene.scene.voiceLines,
-      timeline: scene.timeline,
-      durationMs: scene.durationMs,
-      reviewRounds: scene.reviewRounds,
-    })),
+    scenes, // already in final stored shape (flattened per scene, possibly voiced/published by onScene)
   };
 }

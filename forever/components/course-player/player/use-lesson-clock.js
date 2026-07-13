@@ -9,10 +9,14 @@ import { useEffect, useRef, useState } from 'react';
 import { createManualClock } from '../../../lib/playback/clock/manual-clock.js';
 import { createAudioClock } from '../../../lib/playback/clock/audio-clock.js';
 
-export function useLessonClock(scenes) {
+// awaitingMore (progressive playback): the lesson is still BUILDING and more scenes will
+// arrive. Reaching the end of the last ready scene then means "stall and wait" — playback
+// auto-resumes the moment the next scene lands — instead of "lesson over".
+export function useLessonClock(scenes, { awaitingMore = false } = {}) {
   const [sceneIndex, setSceneIndex] = useState(0);
   const [tMs, setTMs] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [stalled, setStalled] = useState(false);
   const [rate, setRateState] = useState(1);
   const audioRef = useRef(null);
   const manualRef = useRef(null);
@@ -41,13 +45,24 @@ export function useLessonClock(scenes) {
       if (next >= durationMs - 20 && clock.isPlaying()) {
         clock.pause();
         if (sceneIndex < scenes.length - 1) setSceneIndex((index) => index + 1);
+        else if (awaitingMore) { setStalled(true); setPlaying(false); } // the next scene is still being written
         else setPlaying(false);
       }
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [sceneIndex, durationMs, scenes.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sceneIndex, durationMs, scenes.length, awaitingMore]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // STALL-RESUME: a freshly arrived scene un-stalls playback automatically (the student
+  // pressed nothing — the pause was ours, so the resume is ours too).
+  useEffect(() => {
+    if (stalled && sceneIndex < scenes.length - 1) {
+      setStalled(false);
+      setPlaying(true);
+      setSceneIndex((index) => index + 1);
+    }
+  }, [scenes.length, stalled, sceneIndex]);
 
   useEffect(() => {
     const clock = getClock();
@@ -63,12 +78,14 @@ export function useLessonClock(scenes) {
     tMs,
     durationMs,
     playing,
+    stalled,
     audioRef,
     audioUrl: scene.audioUrl || null,
     setHold(held) {
       holdRef.current = held;
     },
     togglePlay() {
+      setStalled(false); // a manual action always takes back control
       const clock = getClock();
       if (clock.isPlaying()) {
         clock.pause();
@@ -95,6 +112,7 @@ export function useLessonClock(scenes) {
       setRateState(nextRate);
     },
     goToScene(index) {
+      setStalled(false);
       setSceneIndex(index);
       getClock().seek(0);
       setTMs(0);

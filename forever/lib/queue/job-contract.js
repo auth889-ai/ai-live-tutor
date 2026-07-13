@@ -68,14 +68,16 @@ export function validateJobInput(raw) {
 
 // Build a normalized progress object. During "generating" and "voicing" the percent
 // interpolates across scenes so the bar advances as each scene finishes (real progress).
-export function makeProgress({ phase, message = '', sceneDone = 0, sceneTotal = 0, lessonId = null }) {
+// scenesReady = scenes already SAVED and playable (progressive playback): the browser can
+// offer "▶ Watch now" long before the job completes.
+export function makeProgress({ phase, message = '', sceneDone = 0, sceneTotal = 0, lessonId = null, scenesReady = 0 }) {
   if (!PHASES.includes(phase)) throw new Error(`unknown job phase: ${phase}`);
   let percent = PHASE_FLOOR[phase];
   if (PHASE_SPAN_END[phase] && sceneTotal > 0) {
     const span = PHASE_FLOOR[PHASE_SPAN_END[phase]] - PHASE_FLOOR[phase];
     percent = PHASE_FLOOR[phase] + Math.round((Math.min(sceneDone, sceneTotal) / sceneTotal) * span);
   }
-  return { phase, percent, message, sceneDone, sceneTotal, lessonId };
+  return { phase, percent, message, sceneDone, sceneTotal, lessonId, scenesReady };
 }
 
 export function isTerminal(phase) {

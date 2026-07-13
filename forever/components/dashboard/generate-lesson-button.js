@@ -52,9 +52,18 @@ export function GenerateLessonButton({ courseId, outlineLessonId, initialJobId =
 
   if (progress) {
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 800, color: '#a06b1f', whiteSpace: 'nowrap', background: '#fef3e2', borderRadius: 999, padding: '5px 13px' }}>
-        <span className="forever-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: '#f47368' }} />
-        {progress.phase} · {progress.percent ?? 0}%
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        {/* PROGRESSIVE PLAYBACK: the first scene is saved — watching can start NOW. */}
+        {(progress.scenesReady ?? 0) > 0 && progress.lessonId && (
+          <a href={`/course/${progress.lessonId}`}
+            style={{ background: '#f47368', color: '#fff', borderRadius: 999, padding: '6px 15px', fontSize: 12, fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            ▶ Watch now
+          </a>
+        )}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12, fontWeight: 800, color: '#a06b1f', whiteSpace: 'nowrap', background: '#fef3e2', borderRadius: 999, padding: '5px 13px' }}>
+          <span className="forever-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: '#f47368' }} />
+          {progress.phase} · {progress.percent ?? 0}%
+        </span>
       </span>
     );
   }
