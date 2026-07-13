@@ -12,5 +12,5 @@ export function LiveLesson({ lessonId, initial }) {
   const { lesson, readyScenes, pending } = useBuildingLesson(lessonId, initial);
 
   if (readyScenes.length === 0) return <WaitingScreen lesson={lesson} />;
-  return <LessonPlayer lesson={{ ...lesson, scenes: readyScenes }} pending={pending} />;
+  return <LessonPlayer lesson={{ ...lesson, scenes: readyScenes }} pending={pending} lessonId={lessonId} />;
 }

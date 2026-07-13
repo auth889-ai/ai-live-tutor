@@ -19,5 +19,5 @@ export default async function CoursePage({ params }) {
   // PROGRESSIVE PLAYBACK: a lesson still being written opens through the live shell —
   // waiting theater until scene 1 lands, then the player follows the build.
   if (lesson.status === 'building') return <LiveLesson lessonId={id} initial={lesson} />;
-  return <LessonPlayer lesson={lesson} />;
+  return <LessonPlayer lesson={lesson} lessonId={id} />;
 }

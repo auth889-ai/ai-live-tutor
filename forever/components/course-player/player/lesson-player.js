@@ -18,6 +18,7 @@ import { useLessonClock } from './use-lesson-clock.js';
 import { StagePresenter } from '../panels/stage-presenter.js';
 import { StallOverlay } from './live/stall-overlay.js';
 import { PendingSceneRows, PendingSceneChips } from './live/pending-scenes.js';
+import { AskTutor } from './ask/ask-tutor.js';
 
 const fmt = (ms) => {
   const s = Math.max(0, Math.round(ms / 1000));
@@ -29,7 +30,8 @@ const V = (name) => `var(${name})`;
 
 // pending: scene briefs still being WRITTEN (progressive playback) — shown as quiet
 // "writing…" rows so the student sees the course assembling itself live.
-export function LessonPlayer({ lesson, pending = [] }) {
+// lessonId: the lesson's URL id — powers Ask-the-Tutor's API calls.
+export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
   const live = pending.length > 0;
   const player = useLessonClock(lesson.scenes, { awaitingMore: live });
   const { scene, sceneIndex, tMs, durationMs, playing } = player;
@@ -224,6 +226,9 @@ export function LessonPlayer({ lesson, pending = [] }) {
               </button>
             </div>
           </div>
+
+          {/* Ask-the-Tutor: the student's hand-raise — playback holds while typing. */}
+          {lessonId && <AskTutor lessonId={lessonId} sceneId={scene.sceneId} sceneTitle={scene.title} setHold={player.setHold} />}
 
           {/* scene timeline strip */}
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '16px 2px 6px' }}>

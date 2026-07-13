@@ -136,6 +136,7 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
   return {
     lessonTitle,
     sourcePackId: sourcePack.id,
+    domain, // persists so Ask-the-Tutor answers in the lesson's own specialist register
     skippedScenes: skipped,
     skippedSceneReasons: skippedScenes,
     scenes, // already in final stored shape (flattened per scene, possibly voiced/published by onScene)
