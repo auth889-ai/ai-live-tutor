@@ -2,6 +2,8 @@
 // One job — check every board object's content is actually supported by its cited chunk.
 // Emits objections as evidence-carrying society messages. Never grades its own writing.
 
+import { z } from 'zod';
+
 import { callQwenJson } from '../../../qwen/client.js';
 import { createSocietyMessage } from '../../messages/society-messages.js';
 import { FOREVER_AGENT_ROLES } from '../../roles/agent-roles.js';
@@ -12,6 +14,14 @@ import { FOREVER_AGENT_ROLES } from '../../roles/agent-roles.js';
 // stay strict: there, interpretation must trace to the source (the 14-course spec's
 // source-proof rule is about exactly those fields).
 const KNOWLEDGE_DOMAINS = new Set(['dsa', 'programming', 'ml_ai', 'math', 'science', 'systems_swe', 'business_finance']);
+
+const OBJECTIONS_SCHEMA = z.object({
+  objections: z.array(z.object({
+    objectId: z.string(),
+    reason: z.string(),
+    citedChunkId: z.string().optional(),
+  })),
+});
 
 export async function auditGrounding({ sceneId, objects, sourcePack, domain = 'general', deps = {} }) {
   const chunkText = new Map(sourcePack.chunks.map((chunk) => [chunk.id, chunk.text]));
@@ -71,6 +81,7 @@ the scene, never quote long passages — output tokens are latency.`;
     agent: 'grounding_auditor',
     system,
     user,
+    schema: OBJECTIONS_SCHEMA,
     model: process.env.MODEL_FAST || 'qwen3.6-flash',
     temperature: 0.1,
     maxTokens: 700, // verdicts, not essays — decode time dominates wall time

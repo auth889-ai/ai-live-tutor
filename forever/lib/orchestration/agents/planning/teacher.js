@@ -4,6 +4,8 @@
 // practice. Output is an ordered list of scene briefs (role + directive + focus chunks).
 // This is what makes lessons deep and long instead of a short summary.
 
+import { z } from 'zod';
+
 import { callQwenJson } from '../../../qwen/client.js';
 
 export const PEDAGOGICAL_ROLES = [
@@ -18,9 +20,20 @@ export const PEDAGOGICAL_ROLES = [
   'practice',
 ];
 
+const PLAN_SCHEMA = z.object({
+  lessonTitle: z.string(),
+  scenes: z.array(z.object({
+    title: z.string(),
+    pedagogicalRole: z.string(),
+    directive: z.string(),
+    focusChunkIds: z.array(z.string()),
+    focusFigureIds: z.array(z.string()).optional(),
+  })).min(1),
+});
+
 export async function designPedagogy({ sourcePack, minScenes = 5, maxScenes = 9, domain = 'general' }) {
   const chunkIds = new Set(sourcePack.chunks.map((chunk) => chunk.id));
-  const { teachingFor, UNIVERSAL_TEACHING_LAW } = await import('./domain-teaching.js');
+  const { teachingFor, UNIVERSAL_TEACHING_LAW, depthFor, DEPTH_TEMPLATES } = await import('./domain-teaching.js');
 
   // The document's own figures, offered to the Teacher BY ID so it can assign each scene
   // the figure it should teach FROM (like focusChunkIds, but for pictures — the lever
@@ -77,6 +90,7 @@ Rules:
     agent: 'teacher',
     system,
     user,
+    schema: PLAN_SCHEMA,
     model: process.env.MODEL_PLANNER || 'qwen3.7-max',
     temperature: 0.4,
     maxTokens: 3000,

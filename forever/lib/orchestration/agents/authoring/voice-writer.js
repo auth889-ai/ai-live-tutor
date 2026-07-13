@@ -2,8 +2,20 @@
 // teacher. Every line is bound to the board object it explains. Contract-validated,
 // one repair round, honest failure.
 
+import { z } from 'zod';
+
 import { callQwenJson } from '../../../qwen/client.js';
 import { validateVoiceLines, normalizeVoiceTargets, normalizeFocusRefs } from '../../../generation/voice/voice-lines.js';
+
+const VOICE_SCHEMA = z.object({
+  voiceLines: z.array(z.object({
+    id: z.string(),
+    text: z.string(),
+    targetObjectId: z.string(),
+    focusRef: z.union([z.string(), z.number()]).optional(),
+    traceStep: z.number().int().optional(),
+  })).min(1),
+});
 
 export async function writeVoice({ objects, sourcePack }) {
   const system = `You are the Voice Writer of an AI tutor: what the teacher SAYS while the board is written.
@@ -38,7 +50,7 @@ Explain like the BEST human teacher (Striver for code, Andrew Ng for concepts) â
   let lastError;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const repair = attempt === 0 ? '' : `\nYour previous output was rejected: ${lastError}. Fix exactly that and output the full JSON again.`;
-    const { json, usage } = await callQwenJson({ agent: 'voice_writer', system: system + repair, user, temperature: 0.6 });
+    const { json, usage } = await callQwenJson({ agent: 'voice_writer', system: system + repair, user, temperature: 0.6, schema: VOICE_SCHEMA });
     try {
       // Unambiguous slips (targeting a node id instead of its object) are repaired
       // structurally before validation â€” no model round-trip for a mechanical fix.

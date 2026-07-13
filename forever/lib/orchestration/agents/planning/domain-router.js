@@ -1,6 +1,8 @@
 // Domain Router — classifies the subject so the Teacher can teach it as a SPECIALIST.
 // Fast (qwen3.6-flash), one focused job. Falls back to 'general' on any doubt.
 
+import { z } from 'zod';
+
 import { callQwenJson } from '../../../qwen/client.js';
 import { DOMAINS } from './domain-teaching.js';
 
@@ -20,6 +22,7 @@ Domains: ${DOMAINS.join(', ')}.
 Output ONLY JSON: {"domain": "<one domain>"}`;
 
   const { json, usage } = await callQwenJson({
+    schema: z.object({ domain: z.string() }),
     agent: 'domain_router',
     system,
     user: sample,
