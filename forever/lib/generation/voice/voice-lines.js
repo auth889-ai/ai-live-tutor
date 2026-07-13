@@ -55,3 +55,21 @@ export function normalizeVoiceTargets(lines, objects) {
     return { ...line, targetObjectId: owner.id, focusRef: line.focusRef ?? line.targetObjectId };
   });
 }
+
+// Deterministic shape repair for focusRef (measured live 2026-07-13: a heat-wave scene died
+// because a line pointed at TWO annotations — focusRef ["E1","E2"]). An array of refs means
+// the FIRST one is spoken first; an object/empty shape carries no usable pointer and is
+// dropped (focusRef is optional). Never invents a pointer, only unwraps or removes.
+export function normalizeFocusRefs(lines) {
+  return (lines ?? []).map((line) => {
+    if (!line || line.focusRef === undefined) return line;
+    const ref = line.focusRef;
+    if (typeof ref === 'string' || typeof ref === 'number') return line;
+    if (Array.isArray(ref)) {
+      const first = ref.find((v) => typeof v === 'string' || typeof v === 'number');
+      if (first !== undefined) return { ...line, focusRef: first };
+    }
+    const { focusRef, ...rest } = line;
+    return rest;
+  });
+}

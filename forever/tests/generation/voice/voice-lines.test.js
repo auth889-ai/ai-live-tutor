@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { validateVoiceLines, normalizeVoiceTargets } from '../../../lib/generation/voice/voice-lines.js';
+import { validateVoiceLines, normalizeVoiceTargets, normalizeFocusRefs } from '../../../lib/generation/voice/voice-lines.js';
 
 const objects = [{ id: 'obj_rules' }, { id: 'obj_code' }];
 
@@ -95,4 +95,15 @@ test('normalizeVoiceTargets: a line targeting a NODE id is retargeted to the obj
   ];
   const left = normalizeVoiceTargets([{ id: 'vl', text: 'ambiguous target here.', targetObjectId: 'x' }], two);
   assert.equal(left[0].targetObjectId, 'x');
+});
+
+test('normalizeFocusRefs: an array focusRef unwraps to its first ref; junk shapes drop the field (live: ["E1","E2"] killed a scene)', () => {
+  const [arr, junk, fine] = normalizeFocusRefs([
+    { id: 'v1', text: 't', targetObjectId: 'o1', focusRef: ['E1', 'E2'] },
+    { id: 'v2', text: 't', targetObjectId: 'o1', focusRef: { ids: ['E1'] } },
+    { id: 'v3', text: 't', targetObjectId: 'o1', focusRef: 5 },
+  ]);
+  assert.equal(arr.focusRef, 'E1');
+  assert.equal('focusRef' in junk, false);
+  assert.equal(fine.focusRef, 5);
 });

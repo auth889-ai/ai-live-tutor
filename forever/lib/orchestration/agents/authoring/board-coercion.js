@@ -29,6 +29,20 @@ const HINT_ALIASES = Object.freeze({
 const isScalar = (v) => v === null || ['number', 'string', 'boolean'].includes(typeof v);
 const cellText = (v) => (v === null || v === undefined ? '' : isScalar(v) ? String(v) : JSON.stringify(v));
 
+// Widen a chart axis just enough to cover its own series data (modest overshoot only).
+function extendAxis(axis, values) {
+  if (!axis || !Number.isFinite(axis.min) || !Number.isFinite(axis.max) || axis.min >= axis.max || values.length === 0) return axis;
+  const span = axis.max - axis.min;
+  const dataMin = Math.min(...values);
+  const dataMax = Math.max(...values);
+  if (dataMin < axis.min - 2 * span || dataMax > axis.max + 2 * span) return axis; // wrong data -> repair
+  return {
+    ...axis,
+    min: Math.min(axis.min, dataMin),
+    max: Math.max(axis.max, dataMax),
+  };
+}
+
 export function coerceBoardObjects(objects, { layout = null, brief = null } = {}) {
   if (!Array.isArray(objects)) return objects;
   return objects.filter((o) => o && typeof o === 'object').map((object) => {
@@ -55,10 +69,13 @@ export function coerceBoardObjects(objects, { layout = null, brief = null } = {}
     }
 
     // A scene TITLE/heading is structure, not a factual claim — an unsourced one is
-    // decorative, not a dropped scene (live-caught: coder-plus omits sourceRef on titles;
-    // 2 of 9 scenes died on it). The Grounding Auditor still reviews every object.
+    // decorative, not a dropped scene (live-caught twice: coder-plus omits sourceRef on
+    // titles, and writes objectType "scene_title"/"title" as freely as "text"). Matched by
+    // id OR objectType naming itself a title. The Grounding Auditor still reviews every object.
+    const titleish = /(^|_)(title|heading)($|_)/i;
     if (!out.sourceRef && out.decorative !== true && out.grounding === undefined
-      && out.objectType === 'text' && /^(scene_|obj_)?(title|heading)/i.test(String(out.id ?? ''))) {
+      && (titleish.test(String(out.id ?? '')) || titleish.test(String(out.objectType ?? '')))
+      && (out.renderHint === 'text' || out.renderHint === undefined || String(out.objectType ?? '').includes('title'))) {
       out.decorative = true;
     }
 
@@ -72,6 +89,25 @@ export function coerceBoardObjects(objects, { layout = null, brief = null } = {}
     if (typeof content.diagramType === 'string' && MERMAID_KEYWORDS.includes(content.diagramType)
       && typeof content.code === 'string' && content.code.trim()) {
       out.content = { ...content, diagramType: 'mermaid' };
+    }
+
+    // CHART AXES AUTO-EXTEND: a curve point just past the declared axis (live: [350, 0] on a
+    // 0–300 x-axis) is an axis mis-sized for the model's own data — widening the WINDOW is
+    // presentation, not data invention. Only for modest overshoot (≤2x the declared span);
+    // a wildly out-of-range point means wrong DATA, which must go to repair, not be hidden.
+    if (out.renderHint === 'chart' && Array.isArray(content.series)) {
+      const xs = [];
+      const ys = [];
+      for (const s of content.series) {
+        for (const p of Array.isArray(s?.points) ? s.points : []) {
+          if (Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])) { xs.push(p[0]); ys.push(p[1]); }
+        }
+      }
+      out.content = {
+        ...out.content,
+        xAxis: extendAxis(content.xAxis, xs),
+        yAxis: extendAxis(content.yAxis, ys),
+      };
     }
 
     // Tabular rows (comparison/trace/table): the label column is implicit and every row must

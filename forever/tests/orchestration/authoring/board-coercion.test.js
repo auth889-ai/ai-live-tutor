@@ -99,3 +99,24 @@ test('an unsourced TITLE text object becomes decorative instead of dropping the 
   assert.equal(title.decorative, true);
   assert.equal(fact.decorative, undefined); // real claims still need source proof
 });
+
+test('chart axes auto-extend to cover the model_s own data — modest overshoot only (live: [350,0] on a 0-300 axis)', () => {
+  const [chart, absurd] = coerceBoardObjects([
+    { id: 'ch1', objectType: 'chart', renderHint: 'chart', region: 'notebook', sourceRef: { chunkId: 'chunk_0001' },
+      content: { xAxis: { label: 'Q', min: 0, max: 300 }, yAxis: { label: 'P', min: 0, max: 6 },
+        series: [{ id: 'd', label: 'Demand', points: [[0, 6], [350, 0]] }] } },
+    { id: 'ch2', objectType: 'chart', renderHint: 'chart', region: 'notebook', sourceRef: { chunkId: 'chunk_0001' },
+      content: { xAxis: { label: 'Q', min: 0, max: 300 }, yAxis: { label: 'P', min: 0, max: 6 },
+        series: [{ id: 'd', label: 'Demand', points: [[0, 6], [90000, 0]] }] } },
+  ]);
+  assert.equal(chart.content.xAxis.max, 350); // window widened to fit the curve
+  assert.equal(chart.content.yAxis.max, 6);   // untouched axis stays
+  assert.equal(absurd.content.xAxis.max, 300); // wildly wrong data -> left for repair
+});
+
+test('title coercion matches objectType-declared titles too (live: objectType "scene_title" died for a sourceRef)', () => {
+  const [byType] = coerceBoardObjects([
+    { id: 'obj_1', objectType: 'scene_title', renderHint: 'text', region: 'notebook', content: 'Practice — The Food Truck Challenge' },
+  ], { brief: { pedagogicalRole: 'practice' } });
+  assert.equal(byType.decorative, true);
+});

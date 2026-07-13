@@ -3,7 +3,7 @@
 // one repair round, honest failure.
 
 import { callQwenJson } from '../../../qwen/client.js';
-import { validateVoiceLines, normalizeVoiceTargets } from '../../../generation/voice/voice-lines.js';
+import { validateVoiceLines, normalizeVoiceTargets, normalizeFocusRefs } from '../../../generation/voice/voice-lines.js';
 
 export async function writeVoice({ objects, sourcePack }) {
   const system = `You are the Voice Writer of an AI tutor: what the teacher SAYS while the board is written.
@@ -42,7 +42,7 @@ Explain like the BEST human teacher (Striver for code, Andrew Ng for concepts) â
     try {
       // Unambiguous slips (targeting a node id instead of its object) are repaired
       // structurally before validation â€” no model round-trip for a mechanical fix.
-      const voiceLines = normalizeVoiceTargets(json.voiceLines, objects);
+      const voiceLines = normalizeFocusRefs(normalizeVoiceTargets(json.voiceLines, objects));
       validateVoiceLines(voiceLines, objects);
       return { voiceLines, usage };
     } catch (error) {
