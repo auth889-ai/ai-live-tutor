@@ -52,15 +52,24 @@ export async function ingestPdf(pdfPath, { workDir = '.data/ingest', env = proce
   const describedFigures = await mapWithConcurrency(images.slice(0, maxFigures), 4, async (img) => {
     let caption = img.sourceCaption ?? '';
     let whatItShows = '';
-    try {
-      const seen = await describeImage({ imagePath: img.path });
-      caption = caption || seen.caption;
-      whatItShows = seen.whatItShows;
-    } catch {
-      // vision unavailable — the content_list caption (if any) still carries the figure
+    // ONE retry, then a page-anchored fallback caption: a silently-failed description used
+    // to ERASE the figure from the whole pipeline (live-caught: the snowflake-schema
+    // diagram never reached the Teacher while its star-schema sibling did — the comparison
+    // scene shipped half-blind).
+    for (let attempt = 0; attempt < 2 && !whatItShows; attempt += 1) {
+      try {
+        const seen = await describeImage({ imagePath: img.path });
+        caption = caption || seen.caption;
+        whatItShows = seen.whatItShows;
+      } catch {
+        // vision unavailable this attempt
+      }
     }
+    if (!caption.trim()) caption = `Source figure on page ${img.page ?? '?'} (undescribed — teach it from the surrounding source text)`;
     return { id: img.id, kind: 'figure', url: img.path, caption, whatItShows, ...(img.page ? { page: img.page } : {}), ...(img.bbox ? { bbox: normalizeBbox(img.bbox) } : {}) };
-  }).then((settled) => settled.map((r, i) => (r.status === 'fulfilled' ? r.value : { id: images[i].id, kind: 'figure', url: images[i].path, caption: images[i].sourceCaption ?? '' })));
+  }).then((settled) => settled.map((r, i) => (r.status === 'fulfilled'
+    ? r.value
+    : { id: images[i].id, kind: 'figure', url: images[i].path, caption: images[i].sourceCaption || `Source figure on page ${images[i].page ?? '?'}`, ...(images[i].page ? { page: images[i].page } : {}) })));
 
   return buildMultimodalSourcePack({
     title: path.basename(pdfPath, path.extname(pdfPath)),

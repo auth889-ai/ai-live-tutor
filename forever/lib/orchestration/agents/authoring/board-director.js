@@ -14,6 +14,7 @@ import { produceObject, finalizeBoardObject } from './board/produce-object.js';
 import { stripHandAuthoredAnimation } from './board/strip-animation.js';
 import { HINT_GUIDES } from './board/hint-guides.js';
 import { repairBoardObject } from './element-repair.js';
+import { groundAnnotations } from '../vision/ground-annotations.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 import { structureViolation } from '../../../board/structures/structure-rules.js';
 
@@ -227,6 +228,27 @@ export async function designBoard({ sourcePack, layout = 'teacher_notebook_code'
       sourcePack, layout, brief, imageIndex, call,
     });
     if (result.object) objects.push(result.object);
+  }
+
+  // 3. VISION-GROUNDED annotations: the Board Director is a TEXT model — its annotation
+  //    bboxes are guesses (live user report: marks landed on the wrong parts). Real boxes
+  //    come from the Vision Grounding agent looking at the pixels; a mark it cannot locate
+  //    is dropped, and if vision is unavailable the annotations go entirely — a wrong
+  //    pointer teaches worse than no pointer.
+  for (const object of objects) {
+    if (object.renderHint !== 'image' || !object.content?.annotations?.length) continue;
+    const url = String(object.content.url ?? '');
+    if (/^https?:\/\//.test(url)) continue; // no local pixels to read
+    try {
+      const mime = /\.png$/i.test(url) ? 'image/png' : 'image/jpeg';
+      const { annotations, dropped } = await groundAnnotations({ imagePath: url, mime, annotations: object.content.annotations });
+      if (dropped?.length) console.error(`[board] ${object.id}: ${dropped.length} annotation(s) not visually locatable — dropped (${dropped.slice(0, 3).join(' | ')})`);
+      object.content = { ...object.content, annotations };
+    } catch (error) {
+      console.error(`[board] ${object.id}: vision grounding unavailable (${String(error?.message).slice(0, 80)}) — annotations removed rather than mis-pointed`);
+      const { annotations: removed, ...content } = object.content;
+      object.content = content;
+    }
   }
 
   // Structure-true rule names its offending object — element-repair it (live v10: a whole

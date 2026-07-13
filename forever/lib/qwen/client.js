@@ -4,6 +4,7 @@
 // OpenAI-compatible DashScope endpoint (user decision 2026-07-13).
 
 import { ChatOpenAI } from '@langchain/openai';
+import { ChatPromptTemplate } from '@langchain/core/prompts';
 
 const DEFAULT_BASE_URL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
 
@@ -98,22 +99,30 @@ export async function callQwenJson({
       ...(schema ? {} : { modelKwargs: { response_format: { type: 'json_object' } } }),
       maxRetries: 0,
     });
-    const messages = [{ role: 'system', content: system }, { role: 'user', content: user }];
+    // A real LCEL chain per call — ChatPromptTemplate piped into the model (and into the
+    // structured-output parser when a schema is given). Mustache format so the JSON braces
+    // that fill our prompts are never mistaken for template variables. runName = the agent,
+    // so LangSmith traces read as the society's roles, not anonymous invokes.
+    const promptTemplate = ChatPromptTemplate.fromMessages(
+      [['system', '{{system}}'], ['human', '{{user}}']],
+      { templateFormat: 'mustache' },
+    );
     let json;
     let usage;
     try {
       if (schema) {
         // includeRaw so validation failures surface as parsed:null (never a silent throw
         // deep in LangChain) AND the raw message keeps usage for the ledger.
-        const structured = llm.withStructuredOutput(schema, { method: 'functionCalling', includeRaw: true, name: `${agent}_output` });
-        const out = await structured.invoke(messages, { signal: controller.signal });
+        const chain = promptTemplate.pipe(llm.withStructuredOutput(schema, { method: 'functionCalling', includeRaw: true, name: `${agent}_output` }));
+        const out = await chain.invoke({ system, user }, { signal: controller.signal, runName: agent });
         if (!out.parsed) {
           throw new Error(`Agent "${agent}" returned invalid JSON: output did not match the ${agent}_output schema`);
         }
         json = out.parsed;
         usage = usageFrom(out.raw);
       } else {
-        const message = await llm.invoke(messages, { signal: controller.signal });
+        const chain = promptTemplate.pipe(llm);
+        const message = await chain.invoke({ system, user }, { signal: controller.signal, runName: agent });
         const text = typeof message.content === 'string'
           ? message.content
           : (message.content ?? []).map((part) => part?.text ?? '').join('');
