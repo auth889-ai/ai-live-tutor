@@ -1,13 +1,17 @@
-// Board Director agent: ONE job — turn a SourcePack into region-addressed board
-// objects for one scene. Free objectType (invents subject-appropriate names),
-// closed renderHints, every object cites a REAL chunk. Validated against the
-// board-object contract; one repair round; then honest failure.
-// Can also REVISE an existing board given Grounding Auditor objections.
+// Board Director agent: ONE job — turn a SourcePack into region-addressed board objects
+// for one scene, DECOMPOSED (user design 2026-07-13 + research: composite JSON is the
+// documented failure mode, board success ≈ p^n): plan stubs -> one focused call per
+// object in parallel (board/produce-object.js) -> element repair -> object salvage.
+// Can also REVISE an existing board given Grounding Auditor objections (whole-board,
+// since objections are cross-object).
 
 import { callQwenJson } from '../../../qwen/client.js';
 import { validateBoardObjects } from '../../../board/objects/board-objects.js';
 import { buildImageIndex, resolveImageIds } from './image-id-mapping.js';
 import { coerceBoardObjects } from './board-coercion.js';
+import { planBoard } from './board/plan-board.js';
+import { produceObject } from './board/produce-object.js';
+import { stripHandAuthoredAnimation } from './board/strip-animation.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 import { structureViolation } from '../../../board/structures/structure-rules.js';
 
@@ -119,23 +123,6 @@ function boardUser(sourcePack, regions) {
   });
 }
 
-// STRUCTURAL division of labour (never trust prompt obedience alone): algorithm state over
-// time comes ONLY from the Execution Tracer, which ran the real code. A hand-authored
-// "trace" is an IMAGINED animation — stripped from every scene, deterministically, before
-// validation (this was the top scene-killer: invented traces failing the contract).
-// highlightSequence (a simple visit order) stays allowed, except in dry_run scenes where
-// the tracer owns all animation.
-function stripHandAuthoredAnimation(objects, brief) {
-  if (!Array.isArray(objects)) return objects;
-  const dryRun = brief?.pedagogicalRole === 'dry_run';
-  return objects.map((object) => {
-    if (object?.renderHint !== 'diagram' || !object.content || typeof object.content !== 'object') return object;
-    const { trace, highlightSequence, ...content } = object.content;
-    if (!dryRun && highlightSequence !== undefined) content.highlightSequence = highlightSequence;
-    return { ...object, content };
-  });
-}
-
 async function runBoardCall({ system, user, sourcePack, layout, brief = null }) {
   const imageIndex = buildImageIndex(sourcePack);
   let lastError;
@@ -177,10 +164,38 @@ async function runBoardCall({ system, user, sourcePack, layout, brief = null }) 
   throw new Error(`Board Director failed contract validation after repair: ${lastError}`);
 }
 
-export async function designBoard({ sourcePack, layout = 'teacher_notebook_code', brief = null }) {
+export async function designBoard({ sourcePack, layout = 'teacher_notebook_code', brief = null, call = callQwenJson }) {
   const regions = LAYOUT_REGIONS[layout];
   if (!regions) throw new Error(`Unknown layout: ${layout}`);
-  return runBoardCall({ system: boardSystemPrompt(regions, brief), user: boardUser(sourcePack, regions), sourcePack, layout, brief });
+  const imageIndex = buildImageIndex(sourcePack);
+
+  const plan = await planBoard({ sourcePack, regions, brief, imageIndex, call });
+  const fallbackRegion = Object.keys(regions)[0];
+  const produced = await Promise.all(plan.stubs.map((stub, index) => produceObject({
+    stub: {
+      ...stub,
+      id: stub.id?.trim() || `obj_${index + 1}`,
+      // A misremembered region name is a mechanical slip, not a reason to lose an object.
+      region: regions[stub.region] ? stub.region : fallbackRegion,
+    },
+    sourcePack, layout, brief, imageIndex, call,
+  })));
+
+  const objects = [];
+  const seen = new Set();
+  for (const result of produced) {
+    if (result.object && !seen.has(result.object.id)) {
+      objects.push(result.object);
+      seen.add(result.object.id);
+    }
+  }
+  // A board must still have a teachable core: at least one non-decorative content object.
+  if (!objects.some((o) => o.decorative !== true)) {
+    throw new Error(`Board Director failed contract validation after repair: no teachable object survived (${plan.stubs.length} planned)`);
+  }
+  const violation = structureViolation(objects, brief);
+  if (violation) throw new Error(violation);
+  return { objects, usage: [plan.usage, ...produced.flatMap((r) => r.usages)].filter(Boolean)[0] ?? null };
 }
 
 // Revise the board to answer specific Grounding Auditor objections.

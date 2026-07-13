@@ -131,6 +131,11 @@ function Focus({ object, state, focusRef, activeStep, setHold, onQuizAnswered })
     // timing. setHold lets the student EXPLORE steps while playback waits.
     return <AlgorithmStage trace={object.content} stepIndex={activeStep} progress={state.writing.get(object.id)?.progress ?? 1} setHold={setHold} />;
   }
+  if (object.renderHint === 'table') {
+    // Tables render through the comparison diagram (same contract, same visual).
+    const progress = state.writing.get(object.id)?.progress ?? 1;
+    return <div style={{ maxWidth: 720, margin: '0 auto' }}><DiagramPanel content={{ ...object.content, diagramType: 'comparison' }} progress={progress} /></div>;
+  }
   if (object.renderHint === 'chart') {
     // The curve primitive: legend, ghost curves, shift arrows, marked equilibria — the
     // things Mermaid xychart cannot draw (why it is banned for curve teaching).

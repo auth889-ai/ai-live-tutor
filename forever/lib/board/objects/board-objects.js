@@ -46,6 +46,11 @@ export function validateBoardObject(object, layout) {
   if (object.lineNumber !== undefined) validateRegionLine(layout, object.region, object.lineNumber);
   if (!hasContent(object.content)) throw new Error(`${context}.content is required and must be non-empty`);
   if (object.renderHint === 'diagram') validateDiagramContent(object.content, context);
+  // A 'table' is the comparison contract by another name — same rules (label column
+  // implicit, every cell real text). Live-caught: unvalidated tables shipped empty cells.
+  if (object.renderHint === 'table' && object.content && typeof object.content === 'object') {
+    validateDiagramContent({ ...object.content, diagramType: 'comparison' }, context);
+  }
   if (object.renderHint === 'chart') validateChartContent(object.content, context);
   if (object.renderHint === 'math') validateMathContent(object.content, context);
   if (object.renderHint === 'image') validateImageContent(object.content, context);
