@@ -42,3 +42,17 @@ test('a coding worked_example still gets its executed demo', async () => {
   assert.deepEqual(calls, ['code-runner']);
   assert.ok(result.scene.objects.some((o) => o.renderHint === 'code'));
 });
+
+test('a non-coding dry_run becomes a normal board scene — never routed to the Execution Tracer', async () => {
+  const calls = [];
+  const agents = stubAgents(calls);
+  agents.traceExecution = async () => { calls.push('tracer'); return { trace: null }; };
+  const result = await generateSceneFromSourcePack(pack(), {
+    sceneId: 'sc_council',
+    brief: { title: 'You are the City Council', pedagogicalRole: 'dry_run', directive: 'decide the ceiling' },
+    domain: 'economics',
+    agents,
+  });
+  assert.ok(!calls.includes('tracer'), 'tracer must not run for non-coding subjects');
+  assert.ok(result.scene.objects.length > 0); // the scene ships as a board scene instead of dropping
+});

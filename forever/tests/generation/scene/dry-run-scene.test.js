@@ -36,6 +36,7 @@ test('a dry_run scene attaches an ExecutionTrace as an "algorithm" object', asyn
   const scene = await generateSceneFromSourcePack(sourcePack, {
     sceneId: 'sc_1',
     brief: { title: 'Dry Run', pedagogicalRole: 'dry_run', directive: 'dry run binary search' },
+    domain: 'dsa', // dry-run tracing is a coding-domain path
     agents: { runGroundingReview: fakeReview, writeVoice: fakeVoice, traceExecution: fakeTrace },
   });
   const algo = scene.scene.objects.find((o) => o.renderHint === 'algorithm');
@@ -47,6 +48,7 @@ test('narration is generated FROM the trace steps — words guaranteed to match 
   const scene = await generateSceneFromSourcePack(sourcePack, {
     sceneId: 'sc_1',
     brief: { title: 'Dry Run', pedagogicalRole: 'dry_run', directive: 'dry run binary search' },
+    domain: 'dsa', // dry-run tracing is a coding-domain path
     agents: { runGroundingReview: fakeReview, writeVoice: fakeVoice, traceExecution: fakeTrace },
   });
   const algo = scene.scene.objects.find((o) => o.renderHint === 'algorithm');
@@ -62,6 +64,7 @@ test('a non-dry_run scene attaches no algorithm object (tracer not called)', asy
   const scene = await generateSceneFromSourcePack(sourcePack, {
     sceneId: 'sc_1',
     brief: { title: 'Intuition', pedagogicalRole: 'intuition', directive: 'explain' },
+    domain: 'dsa', // dry-run tracing is a coding-domain path
     agents: { runGroundingReview: fakeReview, writeVoice: fakeVoice, traceExecution: async () => { traced = true; return null; } },
   });
   assert.ok(!scene.scene.objects.some((o) => o.renderHint === 'algorithm'));
@@ -80,6 +83,7 @@ test('a real trace REPLACES the static imitations (diagram/list/code), never sit
   const scene = await generateSceneFromSourcePack(sourcePack, {
     sceneId: 'sc_dedup', layout: 'teacher_notebook_code',
     brief: { pedagogicalRole: 'dry_run', directive: 'trace it' },
+    domain: 'dsa', // dry-run tracing is a coding-domain path
     agents: { runGroundingReview: withDupes, traceExecution: fakeTrace, writeVoice: fakeVoice },
   });
   const hints = scene.scene.objects.map((o) => o.renderHint);

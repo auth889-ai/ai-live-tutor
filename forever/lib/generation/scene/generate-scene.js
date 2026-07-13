@@ -37,8 +37,11 @@ export async function generateSceneFromSourcePack(
   // pointers + stack/queue + trace table, all synced). HARD RULE: a dry-run without a real
   // trace never ships — a text-only "trace" is exactly the mediocrity Forever exists to beat.
   // The scene fails honestly (the lesson keeps its other scenes and reports the skip).
+  // CODING DOMAINS ONLY: for a non-coding subject a "dry_run" brief means an interactive
+  // walkthrough on the BOARD, not a sandboxed trace — routing it to the tracer guaranteed a
+  // dropped scene (live-caught: an economics "You are the City Council" dry run).
   let algorithmObject = null;
-  if (brief?.pedagogicalRole === 'dry_run' && layout === 'teacher_notebook_code') {
+  if (brief?.pedagogicalRole === 'dry_run' && layout === 'teacher_notebook_code' && isCodingDomain(domain)) {
     onStep('The Execution Tracer is running the real algorithm in the sandbox');
     const traced = await traceAgent({ directive: brief.directive, sourceText });
     if (!traced?.trace) {
