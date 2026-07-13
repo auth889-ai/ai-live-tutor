@@ -23,8 +23,12 @@ Output ONLY JSON: {"objects":[{"id","renderHint","region","purpose"}]}
 - renderHint ∈ ${Object.keys(HINT_GUIDES).join('/')}: pick the RIGHT form for the idea —
   "chart" for curves/quantities · "diagram" for processes/structures/interactions ·
   "table" for comparisons · "math" for formulas/derivations · "image" to teach FROM an
-  available source figure (if any fits, USE it) · "quiz" for a checkpoint · "callout" for
-  a mistake/insight · "text"/"list" sparingly.
+  available source figure · "quiz" for a checkpoint · "callout" for a mistake/insight ·
+  "text"/"list" sparingly.
+- SOURCE FIGURES FIRST (non-negotiable when availableImages is non-empty): if a source
+  figure/page covers this scene's idea, plan an "image" stub teaching FROM it — the
+  document's REAL diagram always beats one you would draw. Draw your own diagram/chart
+  ONLY for ideas no available figure shows.
 - regions: ${Object.entries(regions).map(([name, region]) => `${name} (${region.role})`).join(' · ')}
 - "purpose": ONE sentence saying exactly what this object must show, with the concrete example/values to use.${brief ? `\nTHIS SCENE (${brief.pedagogicalRole ?? 'scene'}): ${brief.title} — ${brief.directive}` : ''}`;
   const user = JSON.stringify({
