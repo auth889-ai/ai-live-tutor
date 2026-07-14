@@ -18,6 +18,7 @@ import { CalloutView } from './callout-view.js';
 import { ChartView } from './chart-view.js';
 import { QuizView } from './quiz-view.js';
 import { TryItPanel } from './try-it-panel.js';
+import { AuditTrailView } from './audit-trail-view.js';
 import { AlgorithmStage } from '../algorithm-stage/algorithm-stage.js';
 
 export function StagePresenter({ scene, tMs, title, setHold }) {
@@ -108,6 +109,9 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
           language={focusObj.renderHint === 'algorithm' ? focusObj.content?.language ?? 'python' : 'python'}
         />
       )}
+      {/* The society's real debate on THIS scene (Track 3: how agents resolve conflict), made
+          visible and inspectable. Renders scene.transcript; absent when the society left no trail. */}
+      <AuditTrailView transcript={scene.transcript} />
     </div>
   );
 }
