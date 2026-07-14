@@ -39,6 +39,35 @@ test('a lesson decomposes into ordered scenes, each generated from its focused c
   assert.deepEqual(lesson.scenes.map((s) => s.sceneId), ['sc_01', 'sc_02']);
 });
 
+test('the society debate transcript survives assembly onto each stored scene (the Audit Trail a judge can see)', async () => {
+  const lesson = await generateLessonFromText(TEXT, {
+    agents: {
+      routeDomain: async () => ({ domain: 'general', usage: null }),
+      designPedagogy: async ({ sourcePack }) => ({
+        lessonTitle: 'Grounded',
+        scenes: [{ title: 'Only', pedagogicalRole: 'intuition', directive: 'x', focusChunkIds: [sourcePack.chunks[0].id] }],
+        usage: null,
+      }),
+      generateScene: async (focused, { sceneId }) => ({
+        scene: { sceneId, layout: 'teacher_notebook_code', objects: [{ id: 'o1', objectType: 't', renderHint: 'text', region: 'notebook_area', content: 'x', sourceRef: { chunkId: focused.chunks[0].id } }], voiceLines: [] },
+        timeline: { sceneId, timingSource: 'provisional', actions: [] },
+        durationMs: 5000,
+        reviewRounds: 1,
+        // What the real review loop returns: proposal -> objection -> verdict.
+        transcript: [
+          { id: `msg_propose_${sceneId}`, kind: 'proposal', fromRole: 'board_director', sceneId, body: 'Proposed a board of 3 objects.' },
+          { id: `msg_verdict_${sceneId}`, kind: 'verdict', fromRole: 'arbiter', sceneId, body: 'Arbiter ruling: 1 objection overruled.', verdict: { decision: 'accept', binding: true } },
+        ],
+      }),
+    },
+  });
+
+  const [scene] = lesson.scenes;
+  assert.equal(scene.transcript.length, 2, 'the debate transcript is carried onto the stored scene');
+  assert.deepEqual(scene.transcript.map((m) => m.kind), ['proposal', 'verdict']);
+  assert.equal(scene.transcript.at(-1).fromRole, 'arbiter', 'the binding verdict is preserved for the audit trail');
+});
+
 test('second chance: scenes lost to a flaky provider window are retried and recovered IN ORDER; real contract failures stay dropped', async () => {
   const attempts = {};
   const lesson = await generateLessonFromText(TEXT, {
