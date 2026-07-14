@@ -16,6 +16,25 @@ test('teachingFor falls back to general for an unknown domain', () => {
   assert.equal(teachingFor('dsa'), DOMAIN_TEACHING.dsa);
 });
 
+test('domainRejectRules extracts THIS subject\'s non-negotiable rules for the Pedagogy Critic to ENFORCE', async () => {
+  const { domainRejectRules } = await import('../../../lib/orchestration/agents/planning/domain-teaching.js');
+  // The rules a world-class teacher of each subject never breaks — pulled from the register so
+  // the critic can reject a lesson that violates them (a prompt is a hope; a rejecting critic is
+  // a guarantee). Each domain's rules genuinely DIFFER — that is what makes the 14 specialists real.
+  const math = domainRejectRules('math');
+  assert.match(math, /NEVER: formula-first/, 'math forbids formula-first');
+  assert.match(math, /REJECT THIS LESSON WHEN/, 'math carries reject rules');
+  const physics = domainRejectRules('physics');
+  assert.match(physics, /staked prediction/, 'physics demands a staked prediction');
+  const law = domainRejectRules('law');
+  assert.match(law, /conclusion appears before adversarial application/, 'law forbids conclusion-before-application');
+  // The rules are subject-SPECIFIC, not one generic block reused everywhere.
+  assert.notEqual(math, physics);
+  assert.notEqual(physics, law);
+  // Only the enforceable lines are extracted (LEARNER ACTIONS / REJECT / NEVER), not the whole register.
+  assert.ok(!math.includes('LESSON FLOW:'), 'the extractor keeps only the enforceable rules, not the flow');
+});
+
 test('BLUEPRINTS: every domain carries a required LESSON FLOW (the 14-course spec, enforced)', () => {
   for (const d of DOMAINS) {
     assert.ok(DOMAIN_TEACHING[d].includes('LESSON FLOW:'), `${d} declares its lesson flow`);

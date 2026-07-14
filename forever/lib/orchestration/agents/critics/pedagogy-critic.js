@@ -7,8 +7,14 @@
 import { runAgentChain } from '../../../qwen/client.js';
 import { createSocietyMessage } from '../../messages/society-messages.js';
 import { FOREVER_AGENT_ROLES } from '../../roles/agent-roles.js';
+import { domainRejectRules } from '../planning/domain-teaching.js';
 
-export async function auditPedagogy({ sceneId, objects, brief = null }) {
+export async function auditPedagogy({ sceneId, objects, brief = null, domain = 'general' }) {
+  // The rules THIS subject's world-class teachers never break (math: never formula-first;
+  // physics: a misconception must be CHALLENGED with evidence; law: never conclusion-before-
+  // application). Encoded in the register, ENFORCED here — the mechanism that makes teaching
+  // actually beat a human, not just aspire to. Generic rubric + domain reject rules together.
+  const rejectRules = domainRejectRules(domain);
   const system = `You are the Pedagogy Critic of an AI tutor — an INDEPENDENT reviewer of TEACHING QUALITY.
 Judge this scene's board against the RUBRIC below (distilled from what makes Abdul Bari, Striver,
 Andrew Ng and the multimedia-learning literature effective). Object with the objectId and the
@@ -23,6 +29,7 @@ SPECIFIC rubric item violated:
 5. ONE IDEA, RIGHT DEVICE — one clear idea, taught with the right device (diagram for structure,
    code for mechanics, table for comparison, trace for behaviour) — a wall of prose is a violation.
 6. STRUCTURED, SCREENSHOT-ABLE NOTES — numbered/short lines a student would photograph, not essay text.
+${rejectRules ? `\nTHIS SUBJECT'S NON-NEGOTIABLE RULES (a world-class ${domain} teacher NEVER breaks these — object when the board violates one):\n${rejectRules}\n` : ''}
 Output ONLY JSON: {"objections":[{"objectId","reason"}]}. Empty array means the teaching is strong.
 Be a fair but demanding reviewer — do NOT object to good, concise teaching.
 VERDICTS ONLY: each reason is ONE short sentence naming the rubric item + what to change.

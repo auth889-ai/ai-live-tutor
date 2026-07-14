@@ -208,6 +208,20 @@ teaching create THINKING instead of watching; effect sizes from verified meta-an
 - INTERLEAVED CLOSER: the final practice mixes THIS pattern with its most confusable prior pattern;
   the student must first say WHICH pattern applies. (interleaving g=0.42 for confusables)`;
 
+// The per-subject rules a world-class teacher of THIS domain never breaks — the LEARNER ACTIONS,
+// REJECT, and NEVER lines only, extracted so the Pedagogy Critic can ENFORCE them. A prompt that
+// tells the Teacher "never formula-first" is a hope; a critic that REJECTS formula-first is a
+// guarantee — and consistency is exactly what separates a human master from an average teacher.
+// This is what turns "we told it to be elite" into "the society enforces elite".
+export function domainRejectRules(domain) {
+  const register = DOMAIN_TEACHING[domain] ?? DOMAIN_TEACHING.general;
+  return register
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^(LEARNER ACTIONS|REJECT THIS LESSON WHEN|NEVER:)/.test(line))
+    .join('\n');
+}
+
 export function teachingFor(domain) {
   return DOMAIN_TEACHING[domain] ?? DOMAIN_TEACHING.general;
 }

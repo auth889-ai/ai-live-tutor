@@ -70,7 +70,7 @@ export async function runGroundingReview({
     const [grounding, pedagogy] = await Promise.all([
       agents.auditGrounding({ sceneId, objects: state.board.objects, sourcePack, domain }),
       agents.auditPedagogy
-        ? agents.auditPedagogy({ sceneId, objects: state.board.objects, brief })
+        ? agents.auditPedagogy({ sceneId, objects: state.board.objects, brief, domain })
         : Promise.resolve({ objections: [], usage: null }),
     ]);
     const allObjections = [...grounding.objections, ...pedagogy.objections];
