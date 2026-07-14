@@ -6,7 +6,7 @@
 // disagreements at the round cap.
 
 import { z } from 'zod';
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 
 const RULINGS = z.object({
   rulings: z.array(z.object({
@@ -16,7 +16,7 @@ const RULINGS = z.object({
   })),
 });
 
-export async function ruleOnObjections({ sceneId, objections, objects, sourcePack, call = callQwenJson }) {
+export async function ruleOnObjections({ sceneId, objections, objects, sourcePack, call = runAgentChain }) {
   const chunkText = new Map(sourcePack.chunks.map((chunk) => [chunk.id, chunk.text]));
   const byId = new Map(objects.map((object) => [object.id, object]));
 

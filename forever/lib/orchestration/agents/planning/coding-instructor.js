@@ -7,7 +7,7 @@
 // their own jobs. Output is the same scene-brief contract the general Teacher emits, so
 // everything downstream is untouched.
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 import { PEDAGOGICAL_ROLES } from './teacher.js';
 
 export const CODING_DOMAINS = Object.freeze(['dsa', 'programming']);
@@ -112,7 +112,7 @@ CROSS-CUTTING RULES (what makes ALL beloved teachers beloved — apply to every 
 - notes on screen are numbered, dense, screenshot-able.`;
 
 export async function designCodingLesson({ sourcePack, domain = 'dsa', minScenes = 8, maxScenes = 12, deps = {} } = {}) {
-  const call = deps.callQwenJson ?? callQwenJson;
+  const call = deps.runAgentChain ?? runAgentChain;
   const chunkIds = new Set(sourcePack.chunks.map((chunk) => chunk.id));
 
   const system = `You are the Coding Instructor of an AI tutor faculty — the lesson ARCHITECT for programming and DSA (${domain}).

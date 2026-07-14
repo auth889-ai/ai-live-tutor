@@ -9,7 +9,7 @@
 // mode or moves to a RICHER representation — never a weaker one. Every mode's output passes the
 // same dryRunQualityIssue() gate.
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 import { runCode } from '../../../execution/run-code.js';
 import { TRACER_MODES } from './tracer-modes/index.js';
 
@@ -33,7 +33,7 @@ for real and emitting its state at each step. Output ONLY JSON with FOUR fields:
 
 // Runs the tracker for real and compiles a validated ExecutionTrace, or null on honest failure.
 export async function traceExecution({ directive, sourceText = '', language = 'python', maxFixes = 3, deps = {} } = {}) {
-  const call = deps.callQwenJson ?? callQwenJson;
+  const call = deps.runAgentChain ?? runAgentChain;
   const exec = deps.runCode ?? runCode;
   const lang = RUNNABLE_LANGUAGES.includes(language) ? language : 'python';
 

@@ -7,7 +7,7 @@
 
 import { z } from 'zod';
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 import { teachingFor, depthFor } from '../planning/domain-teaching.js';
 
 const ANSWER_SCHEMA = z.object({
@@ -16,7 +16,7 @@ const ANSWER_SCHEMA = z.object({
   followUp: z.string().optional(), // one Socratic question back to the student
 });
 
-export async function answerQuestion({ lesson, sceneId, question, chunks = [], call = callQwenJson }) {
+export async function answerQuestion({ lesson, sceneId, question, chunks = [], call = runAgentChain }) {
   const scene = lesson.scenes.find((s) => s.sceneId === sceneId) ?? lesson.scenes[0];
   const domain = lesson.domain ?? 'general';
 

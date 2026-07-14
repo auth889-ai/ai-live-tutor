@@ -4,18 +4,40 @@
 // Forever's coding lessons trustworthy (and beats a static course: the code demonstrably
 // runs). Honest failure if it cannot get the code to run.
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { z } from 'zod';
+
+import { runAgentChain } from '../../../qwen/client.js';
 import { runCode } from '../../../execution/run-code.js';
 import { parseTrace } from '../../../execution/trace/parse-trace.js';
 
-const RUNNABLE_LANGUAGES = ['python', 'javascript'];
+const RUNNABLE_LANGUAGES = ['python', 'javascript', 'sql'];
 
-export async function generateExecutedCode({ directive, sourceText, language = 'python', maxFixes = 2 }) {
-  const lang = RUNNABLE_LANGUAGES.includes(language) ? language : 'python';
+const CODE_SCHEMA = z.object({
+  language: z.string(),
+  code: z.string(),
+  explanation: z.string().optional(),
+});
 
+// A DATABASE lesson demands SQL on screen, not a Python re-telling (user-caught gap).
+// Detection is conservative: only unmistakable SQL vocabulary flips the language.
+export function detectLanguage(text) {
+  return /\b(SELECT\s+[\s\S]+?\s+FROM|CREATE\s+TABLE|INSERT\s+INTO|GROUP\s+BY|LEFT\s+JOIN|INNER\s+JOIN)\b/i.test(String(text ?? ''))
+    ? 'sql'
+    : null;
+}
+
+export async function generateExecutedCode({ directive, sourceText, language, maxFixes = 2 }) {
+  const requested = language ?? detectLanguage(`${directive}\n${sourceText}`) ?? 'python';
+  const lang = RUNNABLE_LANGUAGES.includes(requested) ? requested : 'python';
+
+  const sqlRules = lang === 'sql'
+    ? `\nSQL RULES: statements execute IN ORDER on an empty in-memory SQLite database — so CREATE TABLE
+and INSERT the small demo dataset FIRST, then the teaching queries; every SELECT's result set is
+printed as a table. Standard SQLite syntax only; end every statement with ';'.`
+    : '';
   const system = `You are the Code Runner of an AI tutor. Write a SHORT, self-contained ${lang} program that
 demonstrates the concept and PRINTS its result so a learner can see the output. It must run with no
-external packages beyond the standard library and no file/network access. Output ONLY JSON:
+external packages beyond the standard library and no file/network access.${sqlRules} Output ONLY JSON:
 {"language":"${lang}","code": "<runnable source>","explanation":"<one line: what the output shows>"}`;
 
   let source = null;
@@ -26,8 +48,9 @@ external packages beyond the standard library and no file/network access. Output
     const fix = attempt === 0
       ? ''
       : `\nThe previous code FAILED when executed. Fix it. Real error:\n${lastError}\nPrevious code:\n${source}`;
-    const { json } = await callQwenJson({
+    const { json } = await runAgentChain({
       agent: 'code_runner',
+      schema: CODE_SCHEMA,
       system: system + fix,
       user: `Concept to demonstrate: ${directive}\n\nGrounding source:\n${sourceText}`,
       model: process.env.MODEL_CODER || 'qwen3-coder-plus',
@@ -65,7 +88,7 @@ library only, no input. Output ONLY JSON: {"language":"${lang}","code":"<runnabl
   let lastError = '';
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const fix = attempt === 0 ? '' : `\nThe previous code failed or printed no TRACE lines. Fix it. Error: ${lastError}\nPrevious:\n${source}`;
-    const { json } = await callQwenJson({
+    const { json } = await runAgentChain({
       agent: 'code_runner_trace',
       system: system + fix,
       user: `Trace this concept step by step: ${directive}\n\nSource:\n${sourceText}`,

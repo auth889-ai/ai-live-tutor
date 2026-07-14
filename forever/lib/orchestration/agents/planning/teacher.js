@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 
 export const PEDAGOGICAL_ROLES = [
   'motivate',
@@ -86,7 +86,7 @@ Rules:
     ...(figures.length ? { availableFigures: figures } : {}),
   });
 
-  const { json, usage } = await callQwenJson({
+  const { json, usage } = await runAgentChain({
     agent: 'teacher',
     system,
     user,

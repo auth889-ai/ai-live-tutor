@@ -7,7 +7,7 @@
 // or template (nothing numeric can be invented), the step count must match exactly, and any
 // step that fails keeps its template sentence. AI can only make it warmer, never wronger.
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 
 // The numeric guard: extract every number token (ints, decimals, negatives).
 const numbersIn = (text) => (String(text).match(/-?\d+(?:\.\d+)?/g) ?? []);
@@ -33,7 +33,7 @@ but you may NOT introduce any number or value that is not in that step's given f
 and may not merge or drop steps. One rewritten narration per step, 1-3 sentences, same teaching content, warmer voice.
 Output ONLY JSON: {"narrations": ["...", ...]} with EXACTLY ${steps.length} entries, in order.`;
 
-  const { json, usage } = await (deps.callQwenJson ?? callQwenJson)({
+  const { json, usage } = await (deps.runAgentChain ?? runAgentChain)({
     agent: 'narration_warmth',
     system,
     user: JSON.stringify({ lesson: directive.slice(0, 300), steps: facts }),
@@ -98,7 +98,7 @@ const stepFacts = (s, i) => ({
 export async function directVisualRun({ trace, directive = '', deps = {} }) {
   const steps = trace?.steps ?? [];
   if (steps.length === 0) return { trace, rewritten: 0, usage: null };
-  const call = deps.callQwenJson ?? callQwenJson;
+  const call = deps.runAgentChain ?? runAgentChain;
 
   // The structure on screen (array cells, 2d table, node values) is recorded truth the AI may
   // speak about — "temps[1] is 74" must pass when 74 sits in the traced array. One shared set.

@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 import { DOMAINS } from './domain-teaching.js';
 
 export async function routeDomain({ sourcePack }) {
@@ -21,7 +21,7 @@ Domains: ${DOMAINS.join(', ')}.
 - general: anything else
 Output ONLY JSON: {"domain": "<one domain>"}`;
 
-  const { json, usage } = await callQwenJson({
+  const { json, usage } = await runAgentChain({
     schema: z.object({ domain: z.string() }),
     agent: 'domain_router',
     system,

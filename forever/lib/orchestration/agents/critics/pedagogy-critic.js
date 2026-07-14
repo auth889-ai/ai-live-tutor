@@ -4,7 +4,7 @@
 // shallow/unclear so the Board Director revises — this is what makes quality CONSISTENT
 // (Coursera's edge), not lucky, and adds a real second critic to the Track-3 debate.
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 import { createSocietyMessage } from '../../messages/society-messages.js';
 import { FOREVER_AGENT_ROLES } from '../../roles/agent-roles.js';
 
@@ -33,7 +33,7 @@ Never restate the scene — output tokens are latency.`;
     objects: objects.map((o) => ({ objectId: o.id, objectType: o.objectType, renderHint: o.renderHint, content: o.content })),
   });
 
-  const { json, usage } = await callQwenJson({
+  const { json, usage } = await runAgentChain({
     agent: 'pedagogy_critic',
     system,
     user,

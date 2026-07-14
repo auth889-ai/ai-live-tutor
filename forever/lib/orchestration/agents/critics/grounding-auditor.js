@@ -4,7 +4,7 @@
 
 import { z } from 'zod';
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 import { createSocietyMessage } from '../../messages/society-messages.js';
 import { FOREVER_AGENT_ROLES } from '../../roles/agent-roles.js';
 
@@ -78,7 +78,7 @@ the scene, never quote long passages — output tokens are latency.`;
     }),
   });
 
-  const { json, usage } = await (deps.callQwenJson ?? callQwenJson)({
+  const { json, usage } = await (deps.runAgentChain ?? runAgentChain)({
     agent: 'grounding_auditor',
     system,
     user,

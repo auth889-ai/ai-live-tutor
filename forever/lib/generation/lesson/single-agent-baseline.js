@@ -4,7 +4,7 @@
 // This is the apples-to-apples comparison that proves the multi-agent gain with numbers.
 
 import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
-import { callQwenJson } from '../../qwen/client.js';
+import { runAgentChain } from '../../qwen/client.js';
 import { validateBoardObjects } from '../../board/objects/board-objects.js';
 import { validateVoiceLines } from '../voice/voice-lines.js';
 
@@ -18,7 +18,7 @@ Every object must cite a real chunkId. Aim for 5-8 scenes.`;
   const user = JSON.stringify({ chunks: sourcePack.chunks.map((c) => ({ chunkId: c.id, text: c.text })) });
 
   const started = Date.now();
-  const { json, usage } = await callQwenJson({ agent: 'single_agent_baseline', system, user, model: process.env.MODEL_PLANNER || 'qwen3.7-max', maxTokens: 8000 });
+  const { json, usage } = await runAgentChain({ agent: 'single_agent_baseline', system, user, model: process.env.MODEL_PLANNER || 'qwen3.7-max', maxTokens: 8000 });
   const scenes = Array.isArray(json.scenes) ? json.scenes : [];
 
   // Measure contract validity: how many scenes the one-shot output actually gets right.

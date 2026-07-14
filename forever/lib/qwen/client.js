@@ -44,7 +44,7 @@ export function qwenConfig(env = process.env) {
   return { apiKey, baseUrl };
 }
 
-export async function callQwenJson({
+export async function runAgentChain({
   agent,
   system,
   user,
@@ -168,3 +168,9 @@ function usageFrom(message) {
   return message?.response_metadata?.usage
     ?? (tu ? { prompt_tokens: tu.promptTokens, completion_tokens: tu.completionTokens, total_tokens: tu.totalTokens } : null);
 }
+
+
+// Compatibility alias: the door was renamed to say what it IS — every agent call runs a
+// LangChain LCEL chain (ChatPromptTemplate -> ChatOpenAI -> zod-validated output), never
+// a bare HTTP call. Old name kept so external callers/tests keep working.
+export const callQwenJson = runAgentChain;

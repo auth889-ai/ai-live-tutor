@@ -4,9 +4,9 @@
 // measured live: whole-board repair rolled the dice on every GOOD object each round,
 // which is why scene survival oscillated 25-60% across builds v3-v7).
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 
-export async function repairBoardObject({ object, error, brief = null, hintGuide = null, call = callQwenJson }) {
+export async function repairBoardObject({ object, error, brief = null, hintGuide = null, call = runAgentChain }) {
   const system = `You repair ONE board object of an AI tutor's teaching scene. It failed its contract.
 Output ONLY the corrected object as JSON: {"object": {...}}
 Rules:

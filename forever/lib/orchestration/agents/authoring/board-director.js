@@ -5,7 +5,7 @@
 // Can also REVISE an existing board given Grounding Auditor objections (whole-board,
 // since objections are cross-object).
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 import { validateBoardObjects } from '../../../board/objects/board-objects.js';
 import { buildImageIndex, resolveImageIds } from './image-id-mapping.js';
 import { coerceBoardObjects } from './board-coercion.js';
@@ -135,7 +135,7 @@ async function runBoardCall({ system, user, sourcePack, layout, brief = null }) 
     // 1,621 reasoning tokens on a trivial prompt), and a rich 4-object board is 2-3k more.
     // At the old 4k cap the model ran dry and closed with "{}" — which parses, validates as
     // "At least one board object is required", and silently killed the richest scenes.
-    const { json, usage } = await callQwenJson({ agent: 'board_director', system: system + repair, user, maxTokens: 10_000 });
+    const { json, usage } = await runAgentChain({ agent: 'board_director', system: system + repair, user, maxTokens: 10_000 });
     if (!Array.isArray(json.objects) || json.objects.length === 0) {
       lastError = 'output had no "objects" array — return the full board JSON';
       continue;
@@ -167,7 +167,7 @@ async function runBoardCall({ system, user, sourcePack, layout, brief = null }) 
   throw new Error(`Board Director failed contract validation after repair: ${lastError}`);
 }
 
-export async function designBoard({ sourcePack, layout = 'teacher_notebook_code', brief = null, call = callQwenJson }) {
+export async function designBoard({ sourcePack, layout = 'teacher_notebook_code', brief = null, call = runAgentChain }) {
   const regions = LAYOUT_REGIONS[layout];
   if (!regions) throw new Error(`Unknown layout: ${layout}`);
   const imageIndex = buildImageIndex(sourcePack);
@@ -285,7 +285,7 @@ async function repairStructureViolation(objects, { sourcePack, layout, brief, im
 // object and reintroducing random contract errors). Only OBJECTED objects are re-produced;
 // an objected object that cannot be repaired leaves alone (the auditor wanted it changed
 // anyway); healthy objects are never touched.
-export async function reviseBoard({ sourcePack, layout, previousObjects, objections, brief = null, call = callQwenJson }) {
+export async function reviseBoard({ sourcePack, layout, previousObjects, objections, brief = null, call = runAgentChain }) {
   const regions = LAYOUT_REGIONS[layout];
   if (!regions) throw new Error(`Unknown layout: ${layout}`);
   const imageIndex = buildImageIndex(sourcePack);

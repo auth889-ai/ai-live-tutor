@@ -4,7 +4,7 @@
 
 import { z } from 'zod';
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 import { validateVoiceLines, normalizeVoiceTargets, normalizeFocusRefs } from '../../../generation/voice/voice-lines.js';
 
 const VOICE_SCHEMA = z.object({
@@ -50,7 +50,7 @@ Explain like the BEST human teacher (Striver for code, Andrew Ng for concepts) â
   let lastError;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const repair = attempt === 0 ? '' : `\nYour previous output was rejected: ${lastError}. Fix exactly that and output the full JSON again.`;
-    const { json, usage } = await callQwenJson({ agent: 'voice_writer', system: system + repair, user, temperature: 0.6, schema: VOICE_SCHEMA });
+    const { json, usage } = await runAgentChain({ agent: 'voice_writer', system: system + repair, user, temperature: 0.6, schema: VOICE_SCHEMA });
     try {
       // Unambiguous slips (targeting a node id instead of its object) are repaired
       // structurally before validation â€” no model round-trip for a mechanical fix.

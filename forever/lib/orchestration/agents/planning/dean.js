@@ -5,11 +5,11 @@
 // repair pattern as every planner: contract violations go back once with the exact
 // problem; a second failure raises.
 
-import { callQwenJson } from '../../../qwen/client.js';
+import { runAgentChain } from '../../../qwen/client.js';
 import { validateCourseOutline, LESSON_TYPES } from '../../../course-series/outline/course-outline.js';
 
 export async function designCourseOutline({ sourcePack, deps = {} } = {}) {
-  const call = deps.callQwenJson ?? callQwenJson;
+  const call = deps.runAgentChain ?? runAgentChain;
   const chunkIds = new Set(sourcePack.chunks.map((chunk) => chunk.id));
 
   const system = `You are the Dean of an AI tutor faculty — the COURSE architect. You turn source material into
