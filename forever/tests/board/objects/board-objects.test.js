@@ -70,3 +70,21 @@ test('line overflow beyond the region is rejected', () => {
 test('duplicate board object ids are rejected', () => {
   assert.throws(() => validateBoardObjects([validObject(), validObject()], 'teacher_notebook'), /Duplicate board object id/);
 });
+
+test('manipulable objects validate through the board contract (the "manipulate it" spine step)', () => {
+  const manipulable = {
+    id: 'm1', objectType: 'threshold_explorer', renderHint: 'manipulable', region: 'notebook_body',
+    grounding: 'analogy', // the interaction itself is a teaching device; its FORMULA is engine-owned
+    content: {
+      param: { id: 'k', label: 'Steepness (k)', min: 0.2, max: 4, step: 0.2, default: 1 },
+      xAxis: { label: 'score', min: -6, max: 6 },
+      yAxis: { label: 'P(spam)', min: 0, max: 1 },
+      curves: [{ id: 'sig', label: 'Decision curve', formula: 'sigmoid', coeffs: { k: '@param', x0: 0 } }],
+      predict: { prompt: 'As k increases, the curve becomes…', choices: ['flatter', 'steeper'], answerIndex: 1 },
+    },
+  };
+  validateBoardObject(manipulable, 'teacher_notebook');
+  // A non-whitelisted formula is rejected at the board gate — the engine only computes its own math.
+  const evil = { ...manipulable, content: { ...manipulable.content, curves: [{ id: 'e', label: 'E', formula: 'eval_me', coeffs: { k: '@param' } }] } };
+  assert.throws(() => validateBoardObject(evil, 'teacher_notebook'), /formula must be one of/);
+});

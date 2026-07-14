@@ -18,7 +18,7 @@ import { groundAnnotations } from '../vision/ground-annotations.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 import { structureViolation } from '../../../board/structures/structure-rules.js';
 
-const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram', 'chart', 'math', 'image', 'callout', 'quiz']; // grows as the renderer grows
+const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram', 'chart', 'math', 'image', 'callout', 'quiz', 'manipulable']; // grows as the renderer grows
 
 function boardSystemPrompt(regions, brief) {
   const teachingFocus = brief

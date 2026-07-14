@@ -21,7 +21,9 @@ export async function planBoard({ sourcePack, regions, brief, imageIndex, call }
 Output ONLY JSON: {"objects":[{"id","renderHint","region","purpose"}]}
 - 2 to 5 stubs: a short title first, then the teaching content objects.
 - renderHint ∈ ${Object.keys(HINT_GUIDES).join('/')}: pick the RIGHT form for the idea —
-  "chart" for curves/quantities · "diagram" for processes/structures/interactions ·
+  "chart" for curves/quantities · "manipulable" when the core idea IS "what happens when X
+  changes" (the student drags the parameter and the curve recomputes — one per lesson, on the
+  scene where the cause-effect lives) · "diagram" for processes/structures/interactions ·
   "table" for comparisons · "math" for formulas/derivations · "image" to teach FROM an
   available source figure · "quiz" for a checkpoint · "callout" for a mistake/insight ·
   "text"/"list" sparingly.

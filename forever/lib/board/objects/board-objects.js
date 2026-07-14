@@ -7,6 +7,7 @@ import { validateImageContent } from '../image/image-content.js';
 import { validateCalloutContent } from '../callout/callout-content.js';
 import { validateQuizContent } from '../quiz/quiz-content.js';
 import { validateExecutionTrace } from '../execution/execution-trace.js';
+import { validateManipulableContent } from '../manipulable/manipulable-content.js';
 
 // Rendering hints are a closed set the renderer understands. objectType stays a FREE
 // string so agents can invent subject-appropriate objects (reaction_mechanism,
@@ -25,6 +26,7 @@ export const RENDER_HINTS = Object.freeze([
   'annotation',
   'algorithm', // a full ExecutionTrace rendered by the clock-driven AlgorithmStage (DSA/ML dry run)
   'chart', // hand-rolled steppable curve chart (supply/demand shifts, loss curves, function plots) — NOT mermaid xychart
+  'manipulable', // predict -> drag ONE parameter -> curve/readout recompute from an ENGINE-owned whitelisted formula (the "manipulate it" spine step)
 ]);
 
 export function validateBoardObject(object, layout) {
@@ -57,6 +59,7 @@ export function validateBoardObject(object, layout) {
   if (object.renderHint === 'callout') validateCalloutContent(object.content, context);
   if (object.renderHint === 'quiz') validateQuizContent(object.content, context);
   if (object.renderHint === 'algorithm') validateExecutionTrace(object.content, context);
+  if (object.renderHint === 'manipulable') validateManipulableContent(object.content, context);
   // Source proof is for FACTS. A teaching device the AI invents — an analogy, a hook, a
   // motivational callout — has no source chunk by nature; it declares grounding:"analogy"
   // instead of faking a citation (measured live: motivate/intuition scenes died for lacking
