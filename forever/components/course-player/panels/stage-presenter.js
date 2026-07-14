@@ -19,6 +19,7 @@ import { ChartView } from './chart-view.js';
 import { QuizView } from './quiz-view.js';
 import { TryItPanel } from './try-it-panel.js';
 import { AuditTrailView } from './audit-trail-view.js';
+import { ManipulableView } from './manipulable-view.js';
 import { AlgorithmStage } from '../algorithm-stage/algorithm-stage.js';
 
 export function StagePresenter({ scene, tMs, title, setHold }) {
@@ -144,6 +145,11 @@ function Focus({ object, state, focusRef, activeStep, setHold, onQuizAnswered })
     // The curve primitive: legend, ghost curves, shift arrows, marked equilibria — the
     // things Mermaid xychart cannot draw (why it is banned for curve teaching).
     return <ChartView content={object.content} />;
+  }
+  if (object.renderHint === 'manipulable') {
+    // The "manipulate it" spine step: predict -> drag ONE parameter -> the curve recomputes
+    // live from an engine-owned formula. Playback holds while the student explores.
+    return <ManipulableView content={object.content} />;
   }
   if (object.renderHint === 'math') {
     return <MathView content={object.content} />;
