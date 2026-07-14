@@ -127,10 +127,14 @@ LESSON FLOW: hook -> concrete example -> the idea -> visual -> misconception -> 
 // important idea must have a VISIBLE REFERENT on screen at the moment it is spoken. If the
 // teacher says "demand shifts", the chart shows the shift; if "SYN-ACK", the sequence diagram
 // highlights SYN-ACK; if "mitochondria", the cell image labels mitochondria.
-export const UNIVERSAL_TEACHING_LAW = `Every spoken important idea must have a visible referent on screen at that moment
-(saying "demand shifts" REQUIRES the chart to show the shift; saying "SYN-ACK" REQUIRES the sequence diagram to highlight
-SYN-ACK). Every lesson must include: a concrete example, at least one non-text visual carrying the core idea, a common
-mistake or misconception, a checkpoint (quiz or practice), and a recap.`;
+export const UNIVERSAL_TEACHING_LAW = `Every important SPATIAL, QUANTITATIVE, PROCEDURAL, or EVIDENCE-BASED claim must have a
+SYNCHRONIZED visible or inspectable referent (saying "demand shifts" REQUIRES the chart to show the shift; "SYN-ACK"
+REQUIRES the sequence diagram to highlight SYN-ACK; a number REQUIRES the table/chart cell it lives in). Warmth,
+transitions and motivation sentences do NOT need their own visual. THE SPINE every lesson walks:
+see it -> reason about it -> ACT on it -> explain it -> retrieve it — so every lesson includes: a concrete anchor,
+a learner PREDICTION or action, at least one non-text visual carrying the core idea, a named misconception,
+a TRANSFER example (same idea, changed surface), a checkpoint (including one DESCRIPTIVE scenario question the
+student answers in their own words), and a recap.`;
 
 // DEPTH TEMPLATES (research 2026-07-13, effect sizes verified vs primary literature):
 // the moves that separate the world's best teachers from average ones — as GENERATABLE

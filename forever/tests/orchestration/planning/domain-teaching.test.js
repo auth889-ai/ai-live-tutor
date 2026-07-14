@@ -28,9 +28,12 @@ test('BLUEPRINTS: every domain carries a required LESSON FLOW (the 14-course spe
   assert.ok(DOMAIN_TEACHING.science.includes('label'), 'science labels the source figure');
 });
 
-test('THE UNIVERSAL LAW exists and demands visible referents + the checkpoint anatomy', async () => {
+test('THE UNIVERSAL LAW (refined): synchronized referents for spatial/quantitative/procedural/evidence claims + the full spine', async () => {
   const { UNIVERSAL_TEACHING_LAW } = await import('../../../lib/orchestration/agents/planning/domain-teaching.js');
-  for (const phrase of ['visible referent', 'concrete example', 'mistake', 'quiz or practice', 'recap']) {
+  // Refined per the world-class-teaching research: warmth/transition sentences are exempt;
+  // SPATIAL/QUANTITATIVE/PROCEDURAL/EVIDENCE claims require a synchronized referent, and the
+  // spine adds learner action, transfer, and a DESCRIPTIVE checkpoint.
+  for (const phrase of ['QUANTITATIVE', 'SYNCHRONIZED visible or inspectable referent', 'concrete anchor', 'misconception', 'TRANSFER', 'DESCRIPTIVE scenario question', 'recap', 'PREDICTION or action']) {
     assert.ok(UNIVERSAL_TEACHING_LAW.includes(phrase), `the law demands: ${phrase}`);
   }
 });
