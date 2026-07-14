@@ -33,7 +33,7 @@ for real and emitting its state at each step. Output ONLY JSON with FOUR fields:
 
 // Runs the tracker for real and compiles a validated ExecutionTrace, or null on honest failure.
 export async function traceExecution({ directive, sourceText = '', language = 'python', maxFixes = 3, deps = {} } = {}) {
-  const call = deps.runAgentChain ?? runAgentChain;
+  const call = deps.runAgentChain ?? deps.callQwenJson ?? runAgentChain;
   const exec = deps.runCode ?? runCode;
   const lang = RUNNABLE_LANGUAGES.includes(language) ? language : 'python';
 

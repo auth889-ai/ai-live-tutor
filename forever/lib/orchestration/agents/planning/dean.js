@@ -9,7 +9,7 @@ import { runAgentChain } from '../../../qwen/client.js';
 import { validateCourseOutline, LESSON_TYPES } from '../../../course-series/outline/course-outline.js';
 
 export async function designCourseOutline({ sourcePack, deps = {} } = {}) {
-  const call = deps.runAgentChain ?? runAgentChain;
+  const call = deps.runAgentChain ?? deps.callQwenJson ?? runAgentChain;
   const chunkIds = new Set(sourcePack.chunks.map((chunk) => chunk.id));
 
   const system = `You are the Dean of an AI tutor faculty — the COURSE architect. You turn source material into

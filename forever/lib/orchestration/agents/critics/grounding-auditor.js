@@ -78,7 +78,7 @@ the scene, never quote long passages — output tokens are latency.`;
     }),
   });
 
-  const { json, usage } = await (deps.runAgentChain ?? runAgentChain)({
+  const { json, usage } = await (deps.runAgentChain ?? deps.callQwenJson ?? runAgentChain)({
     agent: 'grounding_auditor',
     system,
     user,

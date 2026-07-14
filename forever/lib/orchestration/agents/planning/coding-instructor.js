@@ -112,7 +112,7 @@ CROSS-CUTTING RULES (what makes ALL beloved teachers beloved — apply to every 
 - notes on screen are numbered, dense, screenshot-able.`;
 
 export async function designCodingLesson({ sourcePack, domain = 'dsa', minScenes = 8, maxScenes = 12, deps = {} } = {}) {
-  const call = deps.runAgentChain ?? runAgentChain;
+  const call = deps.runAgentChain ?? deps.callQwenJson ?? runAgentChain;
   const chunkIds = new Set(sourcePack.chunks.map((chunk) => chunk.id));
 
   const system = `You are the Coding Instructor of an AI tutor faculty — the lesson ARCHITECT for programming and DSA (${domain}).
