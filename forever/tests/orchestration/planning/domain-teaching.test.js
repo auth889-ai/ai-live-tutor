@@ -36,4 +36,10 @@ test('THE UNIVERSAL LAW (refined): synchronized referents for spatial/quantitati
   for (const phrase of ['QUANTITATIVE', 'SYNCHRONIZED visible or inspectable referent', 'concrete anchor', 'misconception', 'TRANSFER', 'DESCRIPTIVE scenario question', 'recap', 'PREDICTION or action']) {
     assert.ok(UNIVERSAL_TEACHING_LAW.includes(phrase), `the law demands: ${phrase}`);
   }
+  // The canonical spine (specialist-teachers-spec.md): See it -> predict it -> MANIPULATE it ->
+  // explain it -> transfer it -> retrieve it later. The MANIPULATE beat (change one condition,
+  // show the changed result) and CHALLENGED-with-evidence misconception are non-negotiable.
+  assert.ok(UNIVERSAL_TEACHING_LAW.includes('MANIPULATE IT'), 'the spine includes the manipulate beat');
+  assert.ok(UNIVERSAL_TEACHING_LAW.includes('RETRIEVE IT LATER'), 'the spine ends in later retrieval');
+  assert.ok(/CHALLENGED with evidence/.test(UNIVERSAL_TEACHING_LAW), 'a misconception must be challenged, not merely stated');
 });
