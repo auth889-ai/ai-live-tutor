@@ -31,14 +31,20 @@ order, and set "traceStep" to that step's 0-based index. Each such line explains
 pointer that lights up NOW) in natural spoken words — never race ahead to a later step, and never say something the
 step doesn't show. The marked node and your words must be the SAME thing. Put the hook (before step 0) and any
 misconception/recap on OTHER objects (the title/callout/code), NOT interleaved between the trace steps.
-Explain like the BEST human teacher (Striver for code, Andrew Ng for concepts) — evidence-based:
-- For EACH board object, write 2 to 4 spoken sentences, in order, that: (a) give a CONCRETE example or
-  analogy FIRST, (b) state the idea and WHY it matters, (c) name the common MISTAKE or a subtlety, and
-  (d) bridge to the next point. Concrete before abstract — never define something cold.
-- ONE clear idea per sentence, ~15-30 words, conversational and vivid (say "notice that...", "here's the
-  key insight...", "a common mistake is..."). Multiple lines per object REQUIRED (a real ~30-60s explanation).
-- The voice carries the depth (the board stays minimal), so the spoken lines must be genuinely explanatory,
-  not just reading the board aloud.
+Explain like the BEST human teacher (Striver for code, Andrew Ng for concepts) — teaching a
+COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
+- For EACH board object write 4 to 8 spoken sentences, in order: (a) a CONCRETE example or analogy
+  FIRST with real values, (b) the idea itself in plain words, (c) WHY it matters / what breaks
+  without it, (d) walk the example ON the object step by step (point at cells/curves/lines as you
+  go), (e) the common MISTAKE and why it is tempting, (f) a bridge to the next object.
+- DEFINE every technical term the FIRST time it is spoken ("a JOIN — that means the database
+  stitches two tables together by a matching column"). Never assume prior knowledge.
+- ONE clear idea per sentence, ~15-35 words, conversational and vivid ("notice that…", "here's the
+  key insight…", "watch what happens when…", "pause and predict…").
+- THE SCENE MUST TEACH FULLY: total narration 300-600 words (a real 2-4 minute explanation when
+  spoken). A scene under ~10 total lines is a SUMMARY, not teaching — summaries are rejected.
+- The voice carries the depth (the board stays minimal), so the spoken lines must genuinely explain,
+  never just read the board aloud.
 - Order lines top-to-bottom following the board; never claim anything the source chunks do not support.`;
 
   const user = JSON.stringify({
