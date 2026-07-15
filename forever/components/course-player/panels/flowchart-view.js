@@ -10,7 +10,7 @@ import { useMemo } from 'react';
 import { ReactFlow, ReactFlowProvider, Background, MarkerType } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { layoutFlow } from '../../../lib/board/diagrams/flow-layout.js';
+import { layoutFlow, layoutFlowGraph } from '../../../lib/board/diagrams/flow-layout.js';
 
 const NODE_STYLE = {
   width: 240,
@@ -27,7 +27,7 @@ const NODE_STYLE = {
 };
 
 export function FlowchartView({ content, progress = 1 }) {
-  const laid = useMemo(() => layoutFlow(content), [content]);
+  const laid = useMemo(() => (Array.isArray(content.nodes) ? layoutFlowGraph(content) : layoutFlow(content)), [content]);
   const visible = Math.max(1, Math.ceil(laid.nodes.length * progress));
 
   const nodes = laid.nodes.slice(0, visible).map((node, i) => ({
@@ -40,6 +40,9 @@ export function FlowchartView({ content, progress = 1 }) {
   const edges = laid.edges.filter((e) => shown.has(e.source) && shown.has(e.target)).map((e) => ({
     ...e,
     animated: false,
+    label: e.label,
+    labelStyle: { fontSize: 12, fill: '#8a6021', fontWeight: 700 },
+    labelBgStyle: { fill: '#fffdfb', opacity: 0.9 },
     style: { stroke: '#B87F24', strokeWidth: 2.2 },
     markerEnd: { type: MarkerType.ArrowClosed, color: '#B87F24', width: 18, height: 18 },
   }));

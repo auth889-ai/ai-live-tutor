@@ -23,6 +23,56 @@ export function estimateNodeHeight(label) {
   return PAD_V + lines * LINE_H;
 }
 
+// CONCEPT GRAPHS with real sentences in the nodes (decision trees, analogy maps) — the
+// live-screenshot failure: GraphView's 56px circles overflowed and edges crossed the boxes.
+// Same wrapping-rect treatment as flowcharts, but honoring EXPLICIT nodes/edges. Text-heavy
+// node-edge content belongs here; single-value data structures stay with GraphView circles.
+export function layoutFlowGraph(content) {
+  const rawNodes = Array.isArray(content.nodes) ? content.nodes : [];
+  const rawEdges = Array.isArray(content.edges) ? content.edges : [];
+  const graph = new dagre.graphlib.Graph();
+  graph.setGraph({ rankdir: 'TB', nodesep: 42, ranksep: 60, marginx: 12, marginy: 12 });
+  graph.setDefaultEdgeLabel(() => ({}));
+
+  const nodes = rawNodes.map((n, i) => {
+    const id = String(n.id ?? `n_${i + 1}`);
+    const label = String(n.label ?? n.id ?? '');
+    return { id, label, height: estimateNodeHeight(label) };
+  });
+  for (const node of nodes) graph.setNode(node.id, { width: NODE_W, height: node.height });
+
+  const known = new Set(nodes.map((n) => n.id));
+  const edges = rawEdges
+    .filter((e) => known.has(String(e.from)) && known.has(String(e.to)))
+    .map((e, i) => ({ id: `e_${i}_${e.from}_${e.to}`, source: String(e.from), target: String(e.to), label: e.label ? String(e.label) : undefined }));
+  for (const e of edges) graph.setEdge(e.source, e.target);
+
+  dagre.layout(graph);
+
+  return {
+    nodes: nodes.map((node) => {
+      const pos = graph.node(node.id);
+      return {
+        id: node.id,
+        position: { x: pos.x - NODE_W / 2, y: pos.y - node.height / 2 },
+        data: { label: node.label },
+        width: NODE_W,
+        height: node.height,
+      };
+    }),
+    edges,
+  };
+}
+
+// A node-edge diagram whose labels are SENTENCES (not data values) reads as a concept graph:
+// route it to wrapping rects. Data structures ("8", "3/left", "A") keep GraphView's circles.
+export function isConceptGraph(content) {
+  const nodes = Array.isArray(content?.nodes) ? content.nodes : [];
+  if (!nodes.length) return false;
+  const longLabels = nodes.filter((n) => String(n.label ?? '').trim().length > 14).length;
+  return longLabels >= Math.max(1, Math.ceil(nodes.length / 3));
+}
+
 export function layoutFlow(content) {
   const steps = Array.isArray(content.steps) ? content.steps : [];
   const cycle = content.diagramType === 'cycle';

@@ -120,7 +120,32 @@ export function layoutForce({ nodes = [], edges = [] } = {}, { iterations = 320 
 
 // A rooted structure with no cycles and single parents reads best as a tidy tree; anything
 // with cross-edges, multiple parents, cycles or undirectedness reads best organically.
+// Connected-components check: FR force repulsion FLINGS disconnected fragments apart (live
+// screenshot: three two-node islands scattered across an empty canvas, auto-zoomed to
+// confetti). A disconnected graph always goes to dagre, which stacks components compactly.
+function isConnected({ nodes = [], edges = [] }) {
+  if (nodes.length <= 1) return true;
+  const adjacency = new Map(nodes.map((n) => [String(n.id), []]));
+  for (const e of edges) {
+    const a = String(e.from);
+    const b = String(e.to);
+    if (adjacency.has(a) && adjacency.has(b)) {
+      adjacency.get(a).push(b);
+      adjacency.get(b).push(a);
+    }
+  }
+  const stack = [String(nodes[0].id)];
+  const seen = new Set(stack);
+  while (stack.length) {
+    for (const next of adjacency.get(stack.pop()) ?? []) {
+      if (!seen.has(next)) { seen.add(next); stack.push(next); }
+    }
+  }
+  return seen.size === nodes.length;
+}
+
 export function wantsForceLayout({ nodes = [], edges = [] } = {}, directed = true) {
+  if (!isConnected({ nodes, edges })) return false;
   if (directed === false) return true;
   const parents = new Map();
   const seen = new Set(nodes.map((n) => String(n.id)));

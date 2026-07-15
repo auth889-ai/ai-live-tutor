@@ -38,3 +38,30 @@ test('string steps and object steps both work; height estimator wraps long singl
   assert.equal(nodes.length, 2);
   assert.ok(estimateNodeHeight('x'.repeat(100)) > estimateNodeHeight('Short'), 'a 100-char line wraps to more height');
 });
+
+test('concept graphs (sentence labels) are detected and laid out with wrapping rects + edge labels', () => {
+  const decisionTree = {
+    diagramType: 'graph',
+    nodes: [
+      { id: 'q', label: 'Grid problem? Count groups or islands of connected cells' },
+      { id: 'ff', label: 'Flood fill with DFS or BFS' },
+      { id: 'sp', label: 'Shortest path in unweighted grid? Use BFS level by level' },
+    ],
+    edges: [{ from: 'q', to: 'ff', label: 'counting' }, { from: 'q', to: 'sp', label: 'distance' }],
+  };
+  assert.equal(isConceptGraph(decisionTree), true, 'sentence labels => concept graph');
+  const laid = layoutFlowGraph(decisionTree);
+  assert.equal(laid.nodes.length, 3);
+  assert.equal(laid.edges.length, 2);
+  assert.equal(laid.edges[0].label, 'counting', 'edge labels survive');
+  const q = laid.nodes.find((n) => n.id === 'q');
+  const ff = laid.nodes.find((n) => n.id === 'ff');
+  assert.ok(ff.position.y >= q.position.y + q.height, 'children rank below the question, no overlap');
+  // Data-structure graphs stay OUT of the concept path (circles + trace sync belong to GraphView).
+  assert.equal(isConceptGraph({ nodes: [{ id: '1', label: '8' }, { id: '2', label: '3' }] }), false);
+});
+
+test('edges referencing unknown nodes are dropped, never crash the layout', () => {
+  const laid = layoutFlowGraph({ nodes: [{ id: 'a', label: 'A concept node with a long sentence label' }], edges: [{ from: 'a', to: 'ghost' }] });
+  assert.equal(laid.edges.length, 0);
+});
