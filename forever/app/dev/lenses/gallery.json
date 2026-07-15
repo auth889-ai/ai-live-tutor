@@ -1,0 +1,7932 @@
+[
+ {
+  "name": "binary-search (pointer-array)",
+  "lens": "pointer-array",
+  "trace": {
+   "language": "python",
+   "code": "def bsearch(a, t):\n    lo, hi = 0, len(a) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if a[mid] == t: return mid\n        if a[mid] < t: lo = mid + 1\n        else: hi = mid - 1\n    return -1",
+   "views": {
+    "array": {
+     "values": [
+      2,
+      5,
+      8,
+      12,
+      16,
+      23,
+      38,
+      56,
+      72
+     ]
+    }
+   },
+   "steps": [
+    {
+     "line": 2,
+     "explanation": "New state appears: t = 23 — keep your eye on this value; every pointer move below is decided by it.",
+     "array": {
+      "pointers": {}
+     },
+     "variables": {
+      "t": 23
+     }
+    },
+    {
+     "line": 3,
+     "explanation": "`lo` starts at index 0, where the value is 2; `hi` starts at index 8, where the value is 72. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "pointers": {
+       "lo": 0,
+       "hi": 8
+      }
+     },
+     "variables": {
+      "t": 23,
+      "lo": 0,
+      "hi": 8
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "`mid` starts at index 4, where the value is 16. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "current": 4,
+      "pointers": {
+       "mid": 4,
+       "lo": 0,
+       "hi": 8
+      }
+     },
+     "variables": {
+      "t": 23,
+      "lo": 0,
+      "hi": 8,
+      "mid": 4
+     }
+    },
+    {
+     "line": 3,
+     "explanation": "`lo` moves to index 5, where the value is 23. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. Everything outside 5..8 is now ELIMINATED — 5 of 9 cells dimmed, the search space keeps shrinking, and that shrinking is the whole reason this runs in logarithmic time.",
+     "array": {
+      "current": 5,
+      "pointers": {
+       "mid": 4,
+       "lo": 5,
+       "hi": 8
+      },
+      "eliminated": [
+       0,
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "variables": {
+      "t": 23,
+      "lo": 5,
+      "hi": 8,
+      "mid": 4
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "`mid` moves to index 6, where the value is 38. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. Everything outside 5..8 is now ELIMINATED — 5 of 9 cells dimmed, the search space keeps shrinking, and that shrinking is the whole reason this runs in logarithmic time.",
+     "array": {
+      "current": 6,
+      "pointers": {
+       "mid": 6,
+       "lo": 5,
+       "hi": 8
+      },
+      "eliminated": [
+       0,
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "variables": {
+      "t": 23,
+      "lo": 5,
+      "hi": 8,
+      "mid": 6
+     }
+    },
+    {
+     "line": 3,
+     "explanation": "`hi` moves to index 5, where the value is 23. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. Everything outside 5..5 is now ELIMINATED — 8 of 9 cells dimmed, the search space keeps shrinking, and that shrinking is the whole reason this runs in logarithmic time.",
+     "array": {
+      "current": 5,
+      "pointers": {
+       "mid": 6,
+       "lo": 5,
+       "hi": 5
+      },
+      "eliminated": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       6,
+       7,
+       8
+      ]
+     },
+     "variables": {
+      "t": 23,
+      "lo": 5,
+      "hi": 5,
+      "mid": 6
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "`mid` moves to index 5, where the value is 23. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. Everything outside 5..5 is now ELIMINATED — 8 of 9 cells dimmed, the search space keeps shrinking, and that shrinking is the whole reason this runs in logarithmic time.",
+     "array": {
+      "current": 5,
+      "pointers": {
+       "mid": 5,
+       "lo": 5,
+       "hi": 5
+      },
+      "eliminated": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       6,
+       7,
+       8
+      ]
+     },
+     "variables": {
+      "t": 23,
+      "lo": 5,
+      "hi": 5,
+      "mid": 5
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "The walk is over and the call returns 5. Replay the arrows in your head: every move you watched was a decision the code made on real data — that decision pattern IS the algorithm.",
+     "array": {
+      "current": 5,
+      "pointers": {
+       "mid": 5,
+       "lo": 5,
+       "hi": 5
+      },
+      "eliminated": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       6,
+       7,
+       8
+      ]
+     },
+     "variables": {
+      "t": 23,
+      "lo": 5,
+      "hi": 5,
+      "mid": 5
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "climbing-stairs (dp-table)",
+  "lens": "pointer-array",
+  "trace": {
+   "language": "python",
+   "code": "def climb(n):\n    dp = [0] * (n + 1)\n    dp[0] = 1\n    dp[1] = 1\n    for i in range(2, n + 1):\n        dp[i] = dp[i - 1] + dp[i - 2]\n    return dp[n]",
+   "views": {
+    "array": {
+     "values": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    }
+   },
+   "steps": [
+    {
+     "line": 3,
+     "explanation": "New state appears: n = 8 — keep your eye on this value; every pointer move below is decided by it.",
+     "array": {
+      "pointers": {},
+      "values": [
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "The array itself changes at index 0, which now holds 1 — a real in-place write recorded from the run, not an animation guess.",
+     "array": {
+      "pointers": {},
+      "comparing": [
+       0
+      ],
+      "values": [
+       1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "The array itself changes at index 1, which now holds 1 — a real in-place write recorded from the run, not an animation guess.",
+     "array": {
+      "pointers": {},
+      "comparing": [
+       1
+      ],
+      "values": [
+       1,
+       1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8
+     }
+    },
+    {
+     "line": 6,
+     "explanation": "`i` starts at index 2, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "current": 2,
+      "pointers": {
+       "i": 2
+      },
+      "values": [
+       1,
+       1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 2
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "The array itself changes at index 2, which now holds 2 — a real in-place write recorded from the run, not an animation guess.",
+     "array": {
+      "pointers": {
+       "i": 2
+      },
+      "comparing": [
+       2
+      ],
+      "values": [
+       1,
+       1,
+       2,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 2
+     }
+    },
+    {
+     "line": 6,
+     "explanation": "`i` moves to index 3, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "current": 3,
+      "pointers": {
+       "i": 3
+      },
+      "values": [
+       1,
+       1,
+       2,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 3
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "The array itself changes at index 3, which now holds 3 — a real in-place write recorded from the run, not an animation guess.",
+     "array": {
+      "pointers": {
+       "i": 3
+      },
+      "comparing": [
+       3
+      ],
+      "values": [
+       1,
+       1,
+       2,
+       3,
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 3
+     }
+    },
+    {
+     "line": 6,
+     "explanation": "`i` moves to index 4, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "current": 4,
+      "pointers": {
+       "i": 4
+      },
+      "values": [
+       1,
+       1,
+       2,
+       3,
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 4
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "The array itself changes at index 4, which now holds 5 — a real in-place write recorded from the run, not an animation guess.",
+     "array": {
+      "pointers": {
+       "i": 4
+      },
+      "comparing": [
+       4
+      ],
+      "values": [
+       1,
+       1,
+       2,
+       3,
+       5,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 4
+     }
+    },
+    {
+     "line": 6,
+     "explanation": "`i` moves to index 5, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "current": 5,
+      "pointers": {
+       "i": 5
+      },
+      "values": [
+       1,
+       1,
+       2,
+       3,
+       5,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 5
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "The array itself changes at index 5, which now holds 8 — a real in-place write recorded from the run, not an animation guess.",
+     "array": {
+      "pointers": {
+       "i": 5
+      },
+      "comparing": [
+       5
+      ],
+      "values": [
+       1,
+       1,
+       2,
+       3,
+       5,
+       8,
+       0,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 5
+     }
+    },
+    {
+     "line": 6,
+     "explanation": "`i` moves to index 6, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "current": 6,
+      "pointers": {
+       "i": 6
+      },
+      "values": [
+       1,
+       1,
+       2,
+       3,
+       5,
+       8,
+       0,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 6
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "The array itself changes at index 6, which now holds 13 — a real in-place write recorded from the run, not an animation guess.",
+     "array": {
+      "pointers": {
+       "i": 6
+      },
+      "comparing": [
+       6
+      ],
+      "values": [
+       1,
+       1,
+       2,
+       3,
+       5,
+       8,
+       13,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 6
+     }
+    },
+    {
+     "line": 6,
+     "explanation": "`i` moves to index 7, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "current": 7,
+      "pointers": {
+       "i": 7
+      },
+      "values": [
+       1,
+       1,
+       2,
+       3,
+       5,
+       8,
+       13,
+       0,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 7
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "The array itself changes at index 7, which now holds 21 — a real in-place write recorded from the run, not an animation guess.",
+     "array": {
+      "pointers": {
+       "i": 7
+      },
+      "comparing": [
+       7
+      ],
+      "values": [
+       1,
+       1,
+       2,
+       3,
+       5,
+       8,
+       13,
+       21,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 7
+     }
+    },
+    {
+     "line": 6,
+     "explanation": "`i` moves to index 8, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "current": 8,
+      "pointers": {
+       "i": 8
+      },
+      "values": [
+       1,
+       1,
+       2,
+       3,
+       5,
+       8,
+       13,
+       21,
+       0
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 8
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "The array itself changes at index 8, which now holds 34 — a real in-place write recorded from the run, not an animation guess.",
+     "array": {
+      "pointers": {
+       "i": 8
+      },
+      "comparing": [
+       8
+      ],
+      "values": [
+       1,
+       1,
+       2,
+       3,
+       5,
+       8,
+       13,
+       21,
+       34
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 8
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "The walk is over and the call returns 34. The array ends as [1, 1, 2, 3, 5, 8, 13, 21, 34] — compare it with where it started and every difference is a step you just watched. Replay the arrows in your head: every move you watched was a decision the code made on real data — that decision pattern IS the algorithm.",
+     "array": {
+      "pointers": {
+       "i": 8
+      },
+      "comparing": [
+       8
+      ],
+      "values": [
+       1,
+       1,
+       2,
+       3,
+       5,
+       8,
+       13,
+       21,
+       34
+      ]
+     },
+     "variables": {
+      "n": 8,
+      "i": 8
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "kth-largest (heap)",
+  "lens": "heap",
+  "trace": {
+   "language": "python",
+   "code": "import heapq\ndef kth_largest(nums, k):\n    heap = []\n    for x in nums:\n        heapq.heappush(heap, x)\n        if len(heap) > k:\n            heapq.heappop(heap)\n    return heap[0]",
+   "views": {
+    "array": {
+     "values": [
+      "5",
+      "6",
+      ""
+     ]
+    }
+   },
+   "steps": [
+    {
+     "line": 4,
+     "explanation": "We run `kth_largest([3, 2, 1, 5, 6, 4], 2)` and record the real execution. The row of 3 slots you see IS a binary tree in disguise — the children of slot i live at slots 2i+1 and 2i+2, and the rule of the heap is simply: every parent stays ≤ its children. Watch slot 0: whatever sifts its way there is always the minimum.",
+     "array": {
+      "values": [
+       "",
+       "",
+       ""
+      ],
+      "pointers": {
+       "top": 0
+      }
+     },
+     "variables": {
+      "k": 2
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "Line 5 runs `heapq.heappush(heap, x)`. 3 enters at the end and SIFTS UP, settling at slot 0. It sifted all the way to slot 0 — a new minimum.",
+     "array": {
+      "values": [
+       "3",
+       "",
+       ""
+      ],
+      "pointers": {
+       "top": 0
+      },
+      "current": 0
+     },
+     "variables": {
+      "k": 2,
+      "x": 3
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "Line 5 runs `heapq.heappush(heap, x)`. 2 enters at the end and SIFTS UP, settling at slot 0 (2 slots shifted on its way). It sifted all the way to slot 0 — a new minimum.",
+     "array": {
+      "values": [
+       "2",
+       "3",
+       ""
+      ],
+      "pointers": {
+       "top": 0
+      },
+      "current": 0,
+      "swapped": [
+       0,
+       1
+      ]
+     },
+     "variables": {
+      "k": 2,
+      "x": 2
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "Line 5 runs `heapq.heappush(heap, x)`. 1 enters at the end and SIFTS UP, settling at slot 0 (2 slots shifted on its way). It sifted all the way to slot 0 — a new minimum.",
+     "array": {
+      "values": [
+       "1",
+       "3",
+       "2"
+      ],
+      "pointers": {
+       "top": 0
+      },
+      "current": 0,
+      "swapped": [
+       0,
+       2
+      ]
+     },
+     "variables": {
+      "k": 2,
+      "x": 1
+     }
+    },
+    {
+     "line": 7,
+     "explanation": "Line 7 runs `heapq.heappop(heap)`. The root 1 is REMOVED — the root is always the minimum, that is the heap's whole promise. The last element 2 takes slot 0 and sifts DOWN, settling at slot 0; the new root is 2.",
+     "array": {
+      "values": [
+       "2",
+       "3",
+       ""
+      ],
+      "pointers": {
+       "top": 0
+      },
+      "current": 0
+     },
+     "variables": {
+      "k": 2,
+      "x": 1
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "Line 5 runs `heapq.heappush(heap, x)`. 5 enters at the end and SIFTS UP, settling at slot 2. Its parent, slot 0 holding 2, is ≤ it — so the sift stops here and the heap property holds.",
+     "array": {
+      "values": [
+       "2",
+       "3",
+       "5"
+      ],
+      "pointers": {
+       "top": 0,
+       "parent": 0
+      },
+      "current": 2
+     },
+     "variables": {
+      "k": 2,
+      "x": 5
+     }
+    },
+    {
+     "line": 7,
+     "explanation": "Line 7 runs `heapq.heappop(heap)`. The root 2 is REMOVED — the root is always the minimum, that is the heap's whole promise. The last element 5 takes slot 0 and sifts DOWN, settling at slot 1; the new root is 3.",
+     "array": {
+      "values": [
+       "3",
+       "5",
+       ""
+      ],
+      "pointers": {
+       "top": 0
+      },
+      "current": 1
+     },
+     "variables": {
+      "k": 2,
+      "x": 5
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "Line 5 runs `heapq.heappush(heap, x)`. 6 enters at the end and SIFTS UP, settling at slot 2. Its parent, slot 0 holding 3, is ≤ it — so the sift stops here and the heap property holds.",
+     "array": {
+      "values": [
+       "3",
+       "5",
+       "6"
+      ],
+      "pointers": {
+       "top": 0,
+       "parent": 0
+      },
+      "current": 2
+     },
+     "variables": {
+      "k": 2,
+      "x": 6
+     }
+    },
+    {
+     "line": 7,
+     "explanation": "Line 7 runs `heapq.heappop(heap)`. The root 3 is REMOVED — the root is always the minimum, that is the heap's whole promise. The last element 6 takes slot 0 and sifts DOWN, settling at slot 1; the new root is 5.",
+     "array": {
+      "values": [
+       "5",
+       "6",
+       ""
+      ],
+      "pointers": {
+       "top": 0
+      },
+      "current": 1
+     },
+     "variables": {
+      "k": 2,
+      "x": 6
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "Line 5 runs `heapq.heappush(heap, x)`. 4 enters at the end and SIFTS UP, settling at slot 0 (2 slots shifted on its way). It sifted all the way to slot 0 — a new minimum.",
+     "array": {
+      "values": [
+       "4",
+       "6",
+       "5"
+      ],
+      "pointers": {
+       "top": 0
+      },
+      "current": 0,
+      "swapped": [
+       0,
+       2
+      ]
+     },
+     "variables": {
+      "k": 2,
+      "x": 4
+     }
+    },
+    {
+     "line": 7,
+     "explanation": "Line 7 runs `heapq.heappop(heap)`. The root 4 is REMOVED — the root is always the minimum, that is the heap's whole promise. The last element 5 takes slot 0 and sifts DOWN, settling at slot 0; the new root is 5.",
+     "array": {
+      "values": [
+       "5",
+       "6",
+       ""
+      ],
+      "pointers": {
+       "top": 0
+      },
+      "current": 0
+     },
+     "variables": {
+      "k": 2,
+      "x": 4
+     }
+    },
+    {
+     "line": 7,
+     "explanation": "Execution finishes and the call returns 5. Read the final row as a tree one last time — slot 0 over slots 1 and 2, and so on down — and notice the promise held at every step: the parent never exceeded its children, so the minimum was always one glance away.",
+     "array": {
+      "values": [
+       "5",
+       "6",
+       ""
+      ],
+      "pointers": {
+       "top": 0
+      }
+     },
+     "variables": {
+      "k": 2,
+      "x": 4
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "reverse-list (linked-list)",
+  "lens": "linked-list",
+  "trace": {
+   "language": "python",
+   "code": "class ListNode:\n    def __init__(self, val):\n        self.val = val\n        self.next = None\n\ndef build(vals):\n    head = None\n    for v in reversed(vals):\n        node = ListNode(v)\n        node.next = head\n        head = node\n    return head\n\ndef reverse(head):\n    prev = None\n    curr = head\n    while curr:\n        nxt = curr.next\n        curr.next = prev\n        prev = curr\n        curr = nxt\n    return prev\n\nlst = build([1, 2, 3, 4, 5])",
+   "views": {
+    "list": {
+     "nodes": [
+      {
+       "id": "4351939712"
+      },
+      {
+       "id": "4351938800"
+      },
+      {
+       "id": "4351594640"
+      },
+      {
+       "id": "4351605520"
+      },
+      {
+       "id": "4352117120"
+      }
+     ]
+    }
+   },
+   "steps": [
+    {
+     "line": 15,
+     "explanation": "We run reverse(lst) and watch the chain itself: every box is a real node object from the run, every arrow is its live next-reference. Boxes never move — only the arrows and the named pointers do, and that is exactly where your eyes should be.",
+     "list": {
+      "nodes": [],
+      "pointers": {}
+     },
+     "variables": {}
+    },
+    {
+     "line": 15,
+     "explanation": "head starts on the node holding 1 — remember which box it stands on; every decision below is made from where the named pointers stand.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351594640"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351605520"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 16,
+     "explanation": "prev is now None — it has walked off the end of the chain. Reading prev.next here would crash: this exact moment is where null-checks earn their keep.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351594640"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351605520"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "prev": null
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 17,
+     "explanation": "curr starts on the node holding 1 — remember which box it stands on; every decision below is made from where the named pointers stand.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351594640"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351605520"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351939712",
+       "prev": null
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 19,
+     "explanation": "nxt starts on the node holding 2 — remember which box it stands on; every decision below is made from where the named pointers stand.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351594640"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351605520"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351939712",
+       "nxt": "4351938800",
+       "prev": null
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 20,
+     "explanation": "The arrow out of the node holding 1 is CUT: it pointed at the node holding 2, and now it points at None — this node just became the tail of its chain.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null,
+        "rewired": true
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351594640"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351605520"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351939712",
+       "nxt": "4351938800",
+       "prev": null
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 21,
+     "explanation": "prev advances to the node holding 1. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351594640"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351605520"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351939712",
+       "nxt": "4351938800",
+       "prev": "4351939712"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 17,
+     "explanation": "curr advances to the node holding 2. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351594640"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351605520"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351938800",
+       "nxt": "4351938800",
+       "prev": "4351939712"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 19,
+     "explanation": "nxt advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351594640"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351605520"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351938800",
+       "nxt": "4351594640",
+       "prev": "4351939712"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 20,
+     "explanation": "REWIRE: the arrow out of the node holding 2 flips from the node holding 3 to the node holding 1. This single reassignment is the heart of the operation — everything else is just walking pointers into position.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712",
+        "rewired": true
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351605520"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351938800",
+       "nxt": "4351594640",
+       "prev": "4351939712"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 21,
+     "explanation": "prev advances to the node holding 2. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351605520"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351938800",
+       "nxt": "4351594640",
+       "prev": "4351938800"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 17,
+     "explanation": "curr advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351605520"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351594640",
+       "nxt": "4351594640",
+       "prev": "4351938800"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 19,
+     "explanation": "nxt advances to the node holding 4. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351605520"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351594640",
+       "nxt": "4351605520",
+       "prev": "4351938800"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 20,
+     "explanation": "REWIRE: the arrow out of the node holding 3 flips from the node holding 4 to the node holding 2. This single reassignment is the heart of the operation — everything else is just walking pointers into position.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351938800",
+        "rewired": true
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351594640",
+       "nxt": "4351605520",
+       "prev": "4351938800"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 21,
+     "explanation": "prev advances to the node holding 3. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351594640",
+       "nxt": "4351605520",
+       "prev": "4351594640"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 17,
+     "explanation": "curr advances to the node holding 4. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351605520",
+       "nxt": "4351605520",
+       "prev": "4351594640"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 19,
+     "explanation": "nxt advances to the node holding 5. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4352117120"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351605520",
+       "nxt": "4352117120",
+       "prev": "4351594640"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 20,
+     "explanation": "REWIRE: the arrow out of the node holding 4 flips from the node holding 5 to the node holding 3. This single reassignment is the heart of the operation — everything else is just walking pointers into position.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4351594640",
+        "rewired": true
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351605520",
+       "nxt": "4352117120",
+       "prev": "4351594640"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 21,
+     "explanation": "prev advances to the node holding 4. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4351594640"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4351605520",
+       "nxt": "4352117120",
+       "prev": "4351605520"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 17,
+     "explanation": "curr advances to the node holding 5. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4351594640"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4352117120",
+       "nxt": "4352117120",
+       "prev": "4351605520"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 19,
+     "explanation": "nxt is now None — it has walked off the end of the chain. Reading nxt.next here would crash: this exact moment is where null-checks earn their keep.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4351594640"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": null
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4352117120",
+       "nxt": null,
+       "prev": "4351605520"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 20,
+     "explanation": "The node holding 5 gets its arrow: it now points at the node holding 4. A link exists where there was none — the chain just grew by one connection.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4351594640"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": "4351605520",
+        "rewired": true
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4352117120",
+       "nxt": null,
+       "prev": "4351605520"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 21,
+     "explanation": "prev advances to the node holding 5. The pointer moved — the nodes did not; walking a list never touches the boxes, only where we are looking.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4351594640"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": "4351605520"
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": "4352117120",
+       "nxt": null,
+       "prev": "4352117120"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 17,
+     "explanation": "curr is now None — it has walked off the end of the chain. Reading curr.next here would crash: this exact moment is where null-checks earn their keep.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4351594640"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": "4351605520"
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": null,
+       "nxt": null,
+       "prev": "4352117120"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 17,
+     "explanation": "The operation is complete and the call returns \"ListNode(5)\". Read the final chain off the arrows: 5 → 4 → 3 → 2 → 1. Every arrow in the final picture was rewired in front of you — replay the flips and you have re-derived the algorithm.",
+     "list": {
+      "nodes": [
+       {
+        "id": "4351939712",
+        "value": 1,
+        "next": null
+       },
+       {
+        "id": "4351938800",
+        "value": 2,
+        "next": "4351939712"
+       },
+       {
+        "id": "4351594640",
+        "value": 3,
+        "next": "4351938800"
+       },
+       {
+        "id": "4351605520",
+        "value": 4,
+        "next": "4351594640"
+       },
+       {
+        "id": "4352117120",
+        "value": 5,
+        "next": "4351605520"
+       }
+      ],
+      "pointers": {
+       "head": "4351939712",
+       "curr": null,
+       "nxt": null,
+       "prev": "4352117120"
+      }
+     },
+     "variables": {}
+    }
+   ]
+  }
+ },
+ {
+  "name": "trie-insert (trie-dict)",
+  "lens": "trie-dict",
+  "trace": {
+   "language": "python",
+   "code": "def build_trie(words):\n    root = {}\n    for word in words:\n        node = root\n        for ch in word:\n            if ch not in node:\n                node[ch] = {}\n            node = node[ch]\n        node['$'] = True\n    return root",
+   "views": {
+    "graph": {
+     "nodes": [
+      {
+       "id": "root",
+       "label": "root"
+      },
+      {
+       "id": "root/c",
+       "label": "c"
+      },
+      {
+       "id": "root/c/a",
+       "label": "a"
+      },
+      {
+       "id": "root/c/a/t",
+       "label": "t"
+      },
+      {
+       "id": "root/c/a/t/$",
+       "label": "$ (word ends)"
+      },
+      {
+       "id": "root/c/a/r",
+       "label": "r"
+      },
+      {
+       "id": "root/c/a/r/$",
+       "label": "$ (word ends)"
+      },
+      {
+       "id": "root/d",
+       "label": "d"
+      },
+      {
+       "id": "root/d/o",
+       "label": "o"
+      },
+      {
+       "id": "root/d/o/g",
+       "label": "g"
+      },
+      {
+       "id": "root/d/o/g/$",
+       "label": "$ (word ends)"
+      }
+     ],
+     "edges": [
+      {
+       "from": "root",
+       "to": "root/c"
+      },
+      {
+       "from": "root",
+       "to": "root/d"
+      },
+      {
+       "from": "root/c",
+       "to": "root/c/a"
+      },
+      {
+       "from": "root/c/a",
+       "to": "root/c/a/t"
+      },
+      {
+       "from": "root/c/a",
+       "to": "root/c/a/r"
+      },
+      {
+       "from": "root/c/a/t",
+       "to": "root/c/a/t/$"
+      },
+      {
+       "from": "root/c/a/r",
+       "to": "root/c/a/r/$"
+      },
+      {
+       "from": "root/d",
+       "to": "root/d/o"
+      },
+      {
+       "from": "root/d/o",
+       "to": "root/d/o/g"
+      },
+      {
+       "from": "root/d/o/g",
+       "to": "root/d/o/g/$"
+      }
+     ],
+     "directed": true
+    }
+   },
+   "steps": [
+    {
+     "line": 3,
+     "explanation": "We run build_trie(['cat', 'car', 'dog']) and watch the structure itself: every circle is a real node object (or adjacency entry) extracted live from memory, every arrow a real reference. Nothing here was declared — the picture IS the program's own data, drawn as it exists at each step.",
+     "graph": {
+      "current": null,
+      "visited": [],
+      "revealed": [],
+      "pointers": {}
+     },
+     "variables": {}
+    },
+    {
+     "line": 3,
+     "explanation": "node steps to the node holding 'root' — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+     "graph": {
+      "current": "root",
+      "visited": [],
+      "revealed": [
+       "root"
+      ],
+      "pointers": {
+       "node": "root"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "The structure grows: a node holding 'c' appears and is linked in — 2 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding 'c' leaving 'root' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+     "graph": {
+      "current": "root/c",
+      "visited": [
+       "root"
+      ],
+      "revealed": [
+       "root",
+       "root/c"
+      ],
+      "pointers": {
+       "node": "root/c"
+      }
+     },
+     "activeEdge": [
+      "root",
+      "root/c"
+     ],
+     "variables": {
+      "word": "cat",
+      "ch": "c"
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "The structure grows: a node holding 'a' appears and is linked in — 3 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding 'a' leaving 'c' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+     "graph": {
+      "current": "root/c/a",
+      "visited": [
+       "root",
+       "root/c"
+      ],
+      "revealed": [
+       "root",
+       "root/c",
+       "root/c/a"
+      ],
+      "pointers": {
+       "node": "root/c/a"
+      }
+     },
+     "activeEdge": [
+      "root/c",
+      "root/c/a"
+     ],
+     "variables": {
+      "word": "cat",
+      "ch": "a"
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "The structure grows: a node holding 't' appears and is linked in — 4 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding 't' leaving 'a' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+     "graph": {
+      "current": "root/c/a/t",
+      "visited": [
+       "root",
+       "root/c",
+       "root/c/a"
+      ],
+      "revealed": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t"
+      ],
+      "pointers": {
+       "node": "root/c/a/t"
+      }
+     },
+     "activeEdge": [
+      "root/c/a",
+      "root/c/a/t"
+     ],
+     "variables": {
+      "word": "cat",
+      "ch": "t"
+     }
+    },
+    {
+     "line": 3,
+     "explanation": "The structure grows: a node holding '$ (word ends)' appears and is linked in — 5 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding '$ (word ends)' leaving 't' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+     "graph": {
+      "current": "root/c/a/t/$",
+      "visited": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t"
+      ],
+      "revealed": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$"
+      ],
+      "pointers": {
+       "node": "root/c/a/t/$"
+      }
+     },
+     "activeEdge": [
+      "root/c/a/t",
+      "root/c/a/t/$"
+     ],
+     "variables": {
+      "word": "cat",
+      "ch": "t"
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "The structure grows: a node holding 'r' appears and is linked in — 6 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding 'r' leaving '$ (word ends)' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+     "graph": {
+      "current": "root/c/a/r",
+      "visited": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$"
+      ],
+      "revealed": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r"
+      ],
+      "pointers": {
+       "node": "root/c/a/r"
+      }
+     },
+     "variables": {
+      "word": "car",
+      "ch": "r"
+     }
+    },
+    {
+     "line": 3,
+     "explanation": "The structure grows: a node holding '$ (word ends)' appears and is linked in — 7 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding '$ (word ends)' leaving 'r' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+     "graph": {
+      "current": "root/c/a/r/$",
+      "visited": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r"
+      ],
+      "revealed": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r",
+       "root/c/a/r/$"
+      ],
+      "pointers": {
+       "node": "root/c/a/r/$"
+      }
+     },
+     "activeEdge": [
+      "root/c/a/r",
+      "root/c/a/r/$"
+     ],
+     "variables": {
+      "word": "car",
+      "ch": "r"
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "The structure grows: a node holding 'd' appears and is linked in — 8 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding 'd' leaving '$ (word ends)' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+     "graph": {
+      "current": "root/d",
+      "visited": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r",
+       "root/c/a/r/$"
+      ],
+      "revealed": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r",
+       "root/c/a/r/$",
+       "root/d"
+      ],
+      "pointers": {
+       "node": "root/d"
+      }
+     },
+     "variables": {
+      "word": "dog",
+      "ch": "d"
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "The structure grows: a node holding 'o' appears and is linked in — 9 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding 'o' leaving 'd' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+     "graph": {
+      "current": "root/d/o",
+      "visited": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r",
+       "root/c/a/r/$",
+       "root/d"
+      ],
+      "revealed": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r",
+       "root/c/a/r/$",
+       "root/d",
+       "root/d/o"
+      ],
+      "pointers": {
+       "node": "root/d/o"
+      }
+     },
+     "activeEdge": [
+      "root/d",
+      "root/d/o"
+     ],
+     "variables": {
+      "word": "dog",
+      "ch": "o"
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "The structure grows: a node holding 'g' appears and is linked in — 10 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding 'g' leaving 'o' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+     "graph": {
+      "current": "root/d/o/g",
+      "visited": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r",
+       "root/c/a/r/$",
+       "root/d",
+       "root/d/o"
+      ],
+      "revealed": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r",
+       "root/c/a/r/$",
+       "root/d",
+       "root/d/o",
+       "root/d/o/g"
+      ],
+      "pointers": {
+       "node": "root/d/o/g"
+      }
+     },
+     "activeEdge": [
+      "root/d/o",
+      "root/d/o/g"
+     ],
+     "variables": {
+      "word": "dog",
+      "ch": "g"
+     }
+    },
+    {
+     "line": 3,
+     "explanation": "The structure grows: a node holding '$ (word ends)' appears and is linked in — 11 nodes now live in memory. Watch WHERE it attaches: the shape being built is the algorithm's whole plan. node steps to the node holding '$ (word ends)' leaving 'g' behind — the pointer moved, the nodes did not. Every decision the code makes next is made from where node now stands.",
+     "graph": {
+      "current": "root/d/o/g/$",
+      "visited": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r",
+       "root/c/a/r/$",
+       "root/d",
+       "root/d/o",
+       "root/d/o/g"
+      ],
+      "revealed": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r",
+       "root/c/a/r/$",
+       "root/d",
+       "root/d/o",
+       "root/d/o/g",
+       "root/d/o/g/$"
+      ],
+      "pointers": {
+       "node": "root/d/o/g/$"
+      }
+     },
+     "activeEdge": [
+      "root/d/o/g",
+      "root/d/o/g/$"
+     ],
+     "variables": {
+      "word": "dog",
+      "ch": "g"
+     }
+    },
+    {
+     "line": 3,
+     "explanation": "The run is complete and the call returns {\"c\":{\"a\":{\"t\":{\"$\":true},\"r\":{\"$\":true}}},\"d\":{\"o\":{\"g\":{\"$\":true}}}}. The final structure holds 11 nodes and 10 links — every one extracted from the real objects the code created and walked. That picture is not an illustration of the algorithm; it IS the algorithm's memory.",
+     "graph": {
+      "current": null,
+      "visited": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r",
+       "root/c/a/r/$",
+       "root/d",
+       "root/d/o",
+       "root/d/o/g"
+      ],
+      "revealed": [
+       "root",
+       "root/c",
+       "root/c/a",
+       "root/c/a/t",
+       "root/c/a/t/$",
+       "root/c/a/r",
+       "root/c/a/r/$",
+       "root/d",
+       "root/d/o",
+       "root/d/o/g",
+       "root/d/o/g/$"
+      ],
+      "pointers": {}
+     },
+     "variables": {}
+    }
+   ]
+  }
+ },
+ {
+  "name": "merge-intervals (intervals)",
+  "lens": "intervals",
+  "trace": {
+   "language": "python",
+   "code": "def merge(intervals):\n    intervals.sort()\n    out = [intervals[0]]\n    for lo, hi in intervals[1:]:\n        if lo <= out[-1][1]:\n            out[-1][1] = max(out[-1][1], hi)\n        else:\n            out.append([lo, hi])\n    return out",
+   "views": {
+    "intervals": {
+     "intervals": [
+      [
+       1,
+       3
+      ],
+      [
+       2,
+       6
+      ],
+      [
+       8,
+       10
+      ],
+      [
+       15,
+       18
+      ]
+     ]
+    }
+   },
+   "steps": [
+    {
+     "line": 2,
+     "explanation": "We sort the 4 intervals by start: [1,3] [2,6] [8,10] [15,18]. Sorting is the whole trick — once sorted, any interval that overlaps something can only overlap the island RIGHT BEFORE it, so one left-to-right pass decides everything.",
+     "intervals": {
+      "merged": []
+     },
+     "variables": {
+      "merged": 0
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "[1,3] opens the first island — nothing exists yet to overlap with, so it goes straight into the answer.",
+     "intervals": {
+      "merged": [
+       [
+        1,
+        3
+       ]
+      ],
+      "current": 0
+     },
+     "variables": {
+      "merged": 1
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "Does [2,6] overlap the current island [1,3]? Its start 2 is ≤ the island's end 3 — YES, they touch. The island absorbs it and now reaches [1,6] (end = max(3, 6) = 6).",
+     "intervals": {
+      "merged": [
+       [
+        1,
+        6
+       ]
+      ],
+      "current": 1
+     },
+     "variables": {
+      "merged": 1
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "Does [8,10] overlap the current island [1,6]? Its start 8 is > the island's end 6 — NO, there is a gap. The island is sealed and [8,10] opens a NEW one.",
+     "intervals": {
+      "merged": [
+       [
+        1,
+        6
+       ],
+       [
+        8,
+        10
+       ]
+      ],
+      "current": 2
+     },
+     "variables": {
+      "merged": 2
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "Does [15,18] overlap the current island [8,10]? Its start 15 is > the island's end 10 — NO, there is a gap. The island is sealed and [15,18] opens a NEW one.",
+     "intervals": {
+      "merged": [
+       [
+        1,
+        6
+       ],
+       [
+        8,
+        10
+       ],
+       [
+        15,
+        18
+       ]
+      ],
+      "current": 3
+     },
+     "variables": {
+      "merged": 3
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "Every interval has been consumed: 3 islands remain — [1,6] [8,10] [15,18]. That is the answer the real run returned: [[1,6],[8,10],[15,18]].",
+     "intervals": {
+      "merged": [
+       [
+        1,
+        6
+       ],
+       [
+        8,
+        10
+       ],
+       [
+        15,
+        18
+       ]
+      ]
+     },
+     "variables": {
+      "merged": 3
+     }
+    }
+   ]
+  }
+ },
+ {
+  "name": "merge-sort (divide-conquer)",
+  "lens": "divide-conquer",
+  "trace": {
+   "language": "python",
+   "code": "def msort(a, lo, hi):\n    if hi - lo <= 1: return\n    mid = (lo + hi) // 2\n    msort(a, lo, mid)\n    msort(a, mid, hi)\n    merged = []\n    i, j = lo, mid\n    while i < mid and j < hi:\n        if a[i] <= a[j]: merged.append(a[i]); i += 1\n        else: merged.append(a[j]); j += 1\n    merged.extend(a[i:mid]); merged.extend(a[j:hi])\n    a[lo:hi] = merged\n\narr = [38, 27, 43, 3, 9, 82, 10]",
+   "views": {
+    "array": {
+     "values": [
+      38,
+      27,
+      43,
+      3,
+      9,
+      82,
+      10
+     ]
+    },
+    "graph": {
+     "nodes": [
+      {
+       "id": "c0",
+       "label": "msort(0..6)"
+      },
+      {
+       "id": "c1",
+       "label": "msort(0..2)"
+      },
+      {
+       "id": "c2",
+       "label": "msort(0..0)"
+      },
+      {
+       "id": "c3",
+       "label": "msort(1..2)"
+      },
+      {
+       "id": "c4",
+       "label": "msort(1..1)"
+      },
+      {
+       "id": "c5",
+       "label": "msort(2..2)"
+      },
+      {
+       "id": "c6",
+       "label": "msort(3..6)"
+      },
+      {
+       "id": "c7",
+       "label": "msort(3..4)"
+      },
+      {
+       "id": "c8",
+       "label": "msort(3..3)"
+      },
+      {
+       "id": "c9",
+       "label": "msort(4..4)"
+      },
+      {
+       "id": "c10",
+       "label": "msort(5..6)"
+      },
+      {
+       "id": "c11",
+       "label": "msort(5..5)"
+      },
+      {
+       "id": "c12",
+       "label": "msort(6..6)"
+      }
+     ],
+     "edges": [
+      {
+       "from": "c0",
+       "to": "c1"
+      },
+      {
+       "from": "c1",
+       "to": "c2"
+      },
+      {
+       "from": "c1",
+       "to": "c3"
+      },
+      {
+       "from": "c3",
+       "to": "c4"
+      },
+      {
+       "from": "c3",
+       "to": "c5"
+      },
+      {
+       "from": "c0",
+       "to": "c6"
+      },
+      {
+       "from": "c6",
+       "to": "c7"
+      },
+      {
+       "from": "c7",
+       "to": "c8"
+      },
+      {
+       "from": "c7",
+       "to": "c9"
+      },
+      {
+       "from": "c6",
+       "to": "c10"
+      },
+      {
+       "from": "c10",
+       "to": "c11"
+      },
+      {
+       "from": "c10",
+       "to": "c12"
+      }
+     ],
+     "directed": true
+    }
+   },
+   "steps": [
+    {
+     "line": 1,
+     "explanation": "We run msort(arr, 0, 7) and watch two pictures at once: the array with the ACTIVE BAND lit (everything dimmed is another call's job), and the recursion tree growing as the problem splits. Divide and conquer means never thinking about more than one band at a time.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [],
+      "revealed": [
+       "c0"
+      ],
+      "returned": {},
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 1,
+     "explanation": "We enter msort(0..6): the problem is now JUST these 7 cells — watch the focus band shrink onto them. Nothing outside the band can be touched by this call; that discipline is the whole design.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [],
+      "revealed": [
+       "c0"
+      ],
+      "returned": {},
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "New state appears: lo = 0, hi = 7 — keep your eye on these values; every pointer move below is decided by them.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [],
+      "revealed": [
+       "c0"
+      ],
+      "returned": {},
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {
+      "lo": 0,
+      "hi": 7
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "`mid` starts at index 3, where the value is 3. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "pointers": {
+       "mid": 3
+      }
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [],
+      "revealed": [
+       "c0"
+      ],
+      "returned": {},
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 1,
+     "explanation": "We enter msort(0..2): msort(0..6) hands down the band 0..2 and the problem is now JUST these 3 cells — watch the focus band shrink onto them. Nothing outside the band can be touched by this call; that discipline is the whole design.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c1",
+      "visited": [],
+      "revealed": [
+       "c0",
+       "c1"
+      ],
+      "returned": {},
+      "pointers": {
+       "call": "c1"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)"
+     ],
+     "activeEdge": [
+      "c0",
+      "c1"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "The bookkeeping updates: hi becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c1",
+      "visited": [],
+      "revealed": [
+       "c0",
+       "c1"
+      ],
+      "returned": {},
+      "pointers": {
+       "call": "c1"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)"
+     ],
+     "variables": {
+      "hi": 3
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "`mid` moves to index 1, where the value is 27. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 1
+      }
+     },
+     "graph": {
+      "current": "c1",
+      "visited": [],
+      "revealed": [
+       "c0",
+       "c1"
+      ],
+      "returned": {},
+      "pointers": {
+       "call": "c1"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 1,
+     "explanation": "msort(0..0) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       1,
+       2,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c2",
+      "visited": [],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2"
+      ],
+      "returned": {},
+      "pointers": {
+       "call": "c2"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(0..0)"
+     ],
+     "activeEdge": [
+      "c1",
+      "c2"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "The bookkeeping updates: hi becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       1,
+       2,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c2",
+      "visited": [],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2"
+      ],
+      "returned": {},
+      "pointers": {
+       "call": "c2"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(0..0)"
+     ],
+     "variables": {
+      "hi": 1
+     }
+    },
+    {
+     "line": 2,
+     "explanation": "msort(0..0) RETURNS: its band comes back as [38] — sorted within itself, guaranteed. msort(0..2) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c1",
+      "visited": [
+       "c2"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2"
+      ],
+      "returned": {
+       "c2": "[38]"
+      },
+      "pointers": {
+       "call": "c1"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)"
+     ],
+     "activeEdge": [
+      "c2",
+      "c1"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 5,
+     "explanation": "The bookkeeping updates: hi becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 1
+      }
+     },
+     "graph": {
+      "current": "c1",
+      "visited": [
+       "c2"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2"
+      ],
+      "returned": {
+       "c2": "[38]"
+      },
+      "pointers": {
+       "call": "c1"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)"
+     ],
+     "variables": {
+      "hi": 3
+     }
+    },
+    {
+     "line": 1,
+     "explanation": "We enter msort(1..2): msort(0..2) hands down the band 1..2 and the problem is now JUST these 2 cells — watch the focus band shrink onto them. Nothing outside the band can be touched by this call; that discipline is the whole design.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c3",
+      "visited": [
+       "c2"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3"
+      ],
+      "returned": {
+       "c2": "[38]"
+      },
+      "pointers": {
+       "call": "c3"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)"
+     ],
+     "activeEdge": [
+      "c1",
+      "c3"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "The bookkeeping updates: lo becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c3",
+      "visited": [
+       "c2"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3"
+      ],
+      "returned": {
+       "c2": "[38]"
+      },
+      "pointers": {
+       "call": "c3"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)"
+     ],
+     "variables": {
+      "lo": 1
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "`mid` moves to index 2, where the value is 43. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 2
+      }
+     },
+     "graph": {
+      "current": "c3",
+      "visited": [
+       "c2"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3"
+      ],
+      "returned": {
+       "c2": "[38]"
+      },
+      "pointers": {
+       "call": "c3"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 1,
+     "explanation": "msort(1..1) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       2,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c4",
+      "visited": [
+       "c2"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4"
+      ],
+      "returned": {
+       "c2": "[38]"
+      },
+      "pointers": {
+       "call": "c4"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)",
+      "msort(1..1)"
+     ],
+     "activeEdge": [
+      "c3",
+      "c4"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "The bookkeeping updates: hi becomes 2. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       2,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c4",
+      "visited": [
+       "c2"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4"
+      ],
+      "returned": {
+       "c2": "[38]"
+      },
+      "pointers": {
+       "call": "c4"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)",
+      "msort(1..1)"
+     ],
+     "variables": {
+      "hi": 2
+     }
+    },
+    {
+     "line": 2,
+     "explanation": "msort(1..1) RETURNS: its band comes back as [27] — sorted within itself, guaranteed. msort(1..2) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c3",
+      "visited": [
+       "c2",
+       "c4"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]"
+      },
+      "pointers": {
+       "call": "c3"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)"
+     ],
+     "activeEdge": [
+      "c4",
+      "c3"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 5,
+     "explanation": "The bookkeeping updates: hi becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 2
+      }
+     },
+     "graph": {
+      "current": "c3",
+      "visited": [
+       "c2",
+       "c4"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]"
+      },
+      "pointers": {
+       "call": "c3"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)"
+     ],
+     "variables": {
+      "hi": 3
+     }
+    },
+    {
+     "line": 1,
+     "explanation": "msort(2..2) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c5",
+      "visited": [
+       "c2",
+       "c4"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]"
+      },
+      "pointers": {
+       "call": "c5"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)",
+      "msort(2..2)"
+     ],
+     "activeEdge": [
+      "c3",
+      "c5"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "The bookkeeping updates: lo becomes 2. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c5",
+      "visited": [
+       "c2",
+       "c4"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]"
+      },
+      "pointers": {
+       "call": "c5"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)",
+      "msort(2..2)"
+     ],
+     "variables": {
+      "lo": 2
+     }
+    },
+    {
+     "line": 2,
+     "explanation": "msort(2..2) RETURNS: its band comes back as [43] — sorted within itself, guaranteed. msort(1..2) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c3",
+      "visited": [
+       "c2",
+       "c4",
+       "c5"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]"
+      },
+      "pointers": {
+       "call": "c3"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)"
+     ],
+     "activeEdge": [
+      "c5",
+      "c3"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 6,
+     "explanation": "The bookkeeping updates: lo becomes 1. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 2
+      }
+     },
+     "graph": {
+      "current": "c3",
+      "visited": [
+       "c2",
+       "c4",
+       "c5"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]"
+      },
+      "pointers": {
+       "call": "c3"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)"
+     ],
+     "variables": {
+      "lo": 1
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "`i` starts at index 1, where the value is 27; `j` starts at index 2, where the value is 43. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 2,
+       "i": 1,
+       "j": 2
+      }
+     },
+     "graph": {
+      "current": "c3",
+      "visited": [
+       "c2",
+       "c4",
+       "c5"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]"
+      },
+      "pointers": {
+       "call": "c3"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 2, where the value is 43. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 2,
+       "i": 2,
+       "j": 2
+      }
+     },
+     "graph": {
+      "current": "c3",
+      "visited": [
+       "c2",
+       "c4",
+       "c5"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]"
+      },
+      "pointers": {
+       "call": "c3"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)",
+      "msort(1..2)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 12,
+     "explanation": "msort(1..2) RETURNS: its band comes back as [27, 43] — sorted within itself, guaranteed. msort(0..2) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c1",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]"
+      },
+      "pointers": {
+       "call": "c1"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)"
+     ],
+     "activeEdge": [
+      "c3",
+      "c1"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 6,
+     "explanation": "`mid` moves to index 1, where the value is 27. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The bookkeeping updates: lo becomes 0. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 1
+      }
+     },
+     "graph": {
+      "current": "c1",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]"
+      },
+      "pointers": {
+       "call": "c1"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)"
+     ],
+     "variables": {
+      "lo": 0
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 0, where the value is 38; `j` moves to index 1, where the value is 27. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 1,
+       "i": 0,
+       "j": 1
+      }
+     },
+     "graph": {
+      "current": "c1",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]"
+      },
+      "pointers": {
+       "call": "c1"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "`j` moves to index 2, where the value is 43. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 1,
+       "i": 0,
+       "j": 2
+      }
+     },
+     "graph": {
+      "current": "c1",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]"
+      },
+      "pointers": {
+       "call": "c1"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 1, where the value is 27. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       38,
+       27,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 1,
+       "i": 1,
+       "j": 2
+      }
+     },
+     "graph": {
+      "current": "c1",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]"
+      },
+      "pointers": {
+       "call": "c1"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 12,
+     "explanation": "Cells 0 and 1 trade contents: 27 now sits at index 0 and 38 at index 1. Watch the swap flash — in-place rearrangement is the whole trick: no second array, just disciplined exchanges.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "pointers": {},
+      "swapped": [
+       0,
+       1
+      ]
+     },
+     "graph": {
+      "current": "c1",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]"
+      },
+      "pointers": {
+       "call": "c1"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(0..2)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 12,
+     "explanation": "msort(0..2) RETURNS: its band comes back as [27, 38, 43] — sorted within itself, guaranteed. msort(0..6) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]"
+      },
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "activeEdge": [
+      "c1",
+      "c0"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 5,
+     "explanation": "`mid` moves to index 3, where the value is 3. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The bookkeeping updates: hi becomes 7. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "pointers": {
+       "mid": 3
+      }
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]"
+      },
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {
+      "hi": 7
+     }
+    },
+    {
+     "line": 1,
+     "explanation": "We enter msort(3..6): msort(0..6) hands down the band 3..6 and the problem is now JUST these 4 cells — watch the focus band shrink onto them. Nothing outside the band can be touched by this call; that discipline is the whole design.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c6",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]"
+      },
+      "pointers": {
+       "call": "c6"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)"
+     ],
+     "activeEdge": [
+      "c0",
+      "c6"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "The bookkeeping updates: lo becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c6",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]"
+      },
+      "pointers": {
+       "call": "c6"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)"
+     ],
+     "variables": {
+      "lo": 3
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "`mid` moves to index 5, where the value is 82. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2
+      ],
+      "pointers": {
+       "mid": 5
+      }
+     },
+     "graph": {
+      "current": "c6",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]"
+      },
+      "pointers": {
+       "call": "c6"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 1,
+     "explanation": "We enter msort(3..4): msort(3..6) hands down the band 3..4 and the problem is now JUST these 2 cells — watch the focus band shrink onto them. Nothing outside the band can be touched by this call; that discipline is the whole design.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c7",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]"
+      },
+      "pointers": {
+       "call": "c7"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)"
+     ],
+     "activeEdge": [
+      "c6",
+      "c7"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "The bookkeeping updates: hi becomes 5. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c7",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]"
+      },
+      "pointers": {
+       "call": "c7"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)"
+     ],
+     "variables": {
+      "hi": 5
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "`mid` moves to index 4, where the value is 9. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 4
+      }
+     },
+     "graph": {
+      "current": "c7",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]"
+      },
+      "pointers": {
+       "call": "c7"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 1,
+     "explanation": "msort(3..3) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c8",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]"
+      },
+      "pointers": {
+       "call": "c8"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)",
+      "msort(3..3)"
+     ],
+     "activeEdge": [
+      "c7",
+      "c8"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "The bookkeeping updates: hi becomes 4. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       4,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c8",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]"
+      },
+      "pointers": {
+       "call": "c8"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)",
+      "msort(3..3)"
+     ],
+     "variables": {
+      "hi": 4
+     }
+    },
+    {
+     "line": 2,
+     "explanation": "msort(3..3) RETURNS: its band comes back as [3] — sorted within itself, guaranteed. msort(3..4) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c7",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]"
+      },
+      "pointers": {
+       "call": "c7"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)"
+     ],
+     "activeEdge": [
+      "c8",
+      "c7"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 5,
+     "explanation": "The bookkeeping updates: hi becomes 5. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 4
+      }
+     },
+     "graph": {
+      "current": "c7",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]"
+      },
+      "pointers": {
+       "call": "c7"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)"
+     ],
+     "variables": {
+      "hi": 5
+     }
+    },
+    {
+     "line": 1,
+     "explanation": "msort(4..4) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c9",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]"
+      },
+      "pointers": {
+       "call": "c9"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)",
+      "msort(4..4)"
+     ],
+     "activeEdge": [
+      "c7",
+      "c9"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "The bookkeeping updates: lo becomes 4. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c9",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]"
+      },
+      "pointers": {
+       "call": "c9"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)",
+      "msort(4..4)"
+     ],
+     "variables": {
+      "lo": 4
+     }
+    },
+    {
+     "line": 2,
+     "explanation": "msort(4..4) RETURNS: its band comes back as [9] — sorted within itself, guaranteed. msort(3..4) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       5,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c7",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]"
+      },
+      "pointers": {
+       "call": "c7"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)"
+     ],
+     "activeEdge": [
+      "c9",
+      "c7"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 6,
+     "explanation": "The bookkeeping updates: lo becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 4
+      }
+     },
+     "graph": {
+      "current": "c7",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]"
+      },
+      "pointers": {
+       "call": "c7"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)"
+     ],
+     "variables": {
+      "lo": 3
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 3, where the value is 3; `j` moves to index 4, where the value is 9. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 4,
+       "i": 3,
+       "j": 4
+      }
+     },
+     "graph": {
+      "current": "c7",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]"
+      },
+      "pointers": {
+       "call": "c7"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 4, where the value is 9. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       5,
+       6
+      ],
+      "pointers": {
+       "mid": 4,
+       "i": 4,
+       "j": 4
+      }
+     },
+     "graph": {
+      "current": "c7",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]"
+      },
+      "pointers": {
+       "call": "c7"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(3..4)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 12,
+     "explanation": "msort(3..4) RETURNS: its band comes back as [3, 9] — sorted within itself, guaranteed. msort(3..6) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c6",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]"
+      },
+      "pointers": {
+       "call": "c6"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)"
+     ],
+     "activeEdge": [
+      "c7",
+      "c6"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 5,
+     "explanation": "`mid` moves to index 5, where the value is 82. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The bookkeeping updates: hi becomes 7. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2
+      ],
+      "pointers": {
+       "mid": 5
+      }
+     },
+     "graph": {
+      "current": "c6",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]"
+      },
+      "pointers": {
+       "call": "c6"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)"
+     ],
+     "variables": {
+      "hi": 7
+     }
+    },
+    {
+     "line": 1,
+     "explanation": "We enter msort(5..6): msort(3..6) hands down the band 5..6 and the problem is now JUST these 2 cells — watch the focus band shrink onto them. Nothing outside the band can be touched by this call; that discipline is the whole design.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c10",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]"
+      },
+      "pointers": {
+       "call": "c10"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)"
+     ],
+     "activeEdge": [
+      "c6",
+      "c10"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "The bookkeeping updates: lo becomes 5. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c10",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]"
+      },
+      "pointers": {
+       "call": "c10"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)"
+     ],
+     "variables": {
+      "lo": 5
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "`mid` moves to index 6, where the value is 10. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4
+      ],
+      "pointers": {
+       "mid": 6
+      }
+     },
+     "graph": {
+      "current": "c10",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]"
+      },
+      "pointers": {
+       "call": "c10"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 1,
+     "explanation": "msort(5..5) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c11",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]"
+      },
+      "pointers": {
+       "call": "c11"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)",
+      "msort(5..5)"
+     ],
+     "activeEdge": [
+      "c10",
+      "c11"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "The bookkeeping updates: hi becomes 6. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       6
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c11",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]"
+      },
+      "pointers": {
+       "call": "c11"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)",
+      "msort(5..5)"
+     ],
+     "variables": {
+      "hi": 6
+     }
+    },
+    {
+     "line": 2,
+     "explanation": "msort(5..5) RETURNS: its band comes back as [82] — sorted within itself, guaranteed. msort(5..6) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c10",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]"
+      },
+      "pointers": {
+       "call": "c10"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)"
+     ],
+     "activeEdge": [
+      "c11",
+      "c10"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 5,
+     "explanation": "The bookkeeping updates: hi becomes 7. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4
+      ],
+      "pointers": {
+       "mid": 6
+      }
+     },
+     "graph": {
+      "current": "c10",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]"
+      },
+      "pointers": {
+       "call": "c10"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)"
+     ],
+     "variables": {
+      "hi": 7
+     }
+    },
+    {
+     "line": 1,
+     "explanation": "msort(6..6) is the BASE CASE: a band of one cell is already sorted by definition — the splitting stops here, and this tiny certainty is what every bigger answer will be built from.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       5
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c12",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]"
+      },
+      "pointers": {
+       "call": "c12"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)",
+      "msort(6..6)"
+     ],
+     "activeEdge": [
+      "c10",
+      "c12"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "The bookkeeping updates: lo becomes 6. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       5
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c12",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]"
+      },
+      "pointers": {
+       "call": "c12"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)",
+      "msort(6..6)"
+     ],
+     "variables": {
+      "lo": 6
+     }
+    },
+    {
+     "line": 2,
+     "explanation": "msort(6..6) RETURNS: its band comes back as [10] — sorted within itself, guaranteed. msort(5..6) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c10",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]"
+      },
+      "pointers": {
+       "call": "c10"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)"
+     ],
+     "activeEdge": [
+      "c12",
+      "c10"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 6,
+     "explanation": "The bookkeeping updates: lo becomes 5. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4
+      ],
+      "pointers": {
+       "mid": 6
+      }
+     },
+     "graph": {
+      "current": "c10",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]"
+      },
+      "pointers": {
+       "call": "c10"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)"
+     ],
+     "variables": {
+      "lo": 5
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 5, where the value is 82; `j` moves to index 6, where the value is 10. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       82,
+       10
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4
+      ],
+      "pointers": {
+       "mid": 6,
+       "i": 5,
+       "j": 6
+      }
+     },
+     "graph": {
+      "current": "c10",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]"
+      },
+      "pointers": {
+       "call": "c10"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 12,
+     "explanation": "Cells 5 and 6 trade contents: 10 now sits at index 5 and 82 at index 6. Watch the swap flash — in-place rearrangement is the whole trick: no second array, just disciplined exchanges.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "dimmed": [
+       0,
+       1,
+       2,
+       3,
+       4
+      ],
+      "pointers": {},
+      "swapped": [
+       5,
+       6
+      ]
+     },
+     "graph": {
+      "current": "c10",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]"
+      },
+      "pointers": {
+       "call": "c10"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)",
+      "msort(5..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 12,
+     "explanation": "msort(5..6) RETURNS: its band comes back as [10, 82] — sorted within itself, guaranteed. msort(3..6) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "dimmed": [
+       0,
+       1,
+       2
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c6",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]"
+      },
+      "pointers": {
+       "call": "c6"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)"
+     ],
+     "activeEdge": [
+      "c10",
+      "c6"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 6,
+     "explanation": "`mid` moves to index 5, where the value is 10. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The bookkeeping updates: lo becomes 3. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "dimmed": [
+       0,
+       1,
+       2
+      ],
+      "pointers": {
+       "mid": 5
+      }
+     },
+     "graph": {
+      "current": "c6",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]"
+      },
+      "pointers": {
+       "call": "c6"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)"
+     ],
+     "variables": {
+      "lo": 3
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 3, where the value is 3; `j` moves to index 5, where the value is 10. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "dimmed": [
+       0,
+       1,
+       2
+      ],
+      "pointers": {
+       "mid": 5,
+       "i": 3,
+       "j": 5
+      }
+     },
+     "graph": {
+      "current": "c6",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]"
+      },
+      "pointers": {
+       "call": "c6"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 4, where the value is 9. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "dimmed": [
+       0,
+       1,
+       2
+      ],
+      "pointers": {
+       "mid": 5,
+       "i": 4,
+       "j": 5
+      }
+     },
+     "graph": {
+      "current": "c6",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]"
+      },
+      "pointers": {
+       "call": "c6"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 5, where the value is 10. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "dimmed": [
+       0,
+       1,
+       2
+      ],
+      "pointers": {
+       "mid": 5,
+       "i": 5,
+       "j": 5
+      }
+     },
+     "graph": {
+      "current": "c6",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]"
+      },
+      "pointers": {
+       "call": "c6"
+      }
+     },
+     "stack": [
+      "msort(0..6)",
+      "msort(3..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 12,
+     "explanation": "msort(3..6) RETURNS: its band comes back as [3, 9, 10, 82] — sorted within itself, guaranteed. msort(0..6) now holds one more solved half, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10",
+       "c6"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]",
+       "c6": "[3, 9, 10, 82]"
+      },
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "activeEdge": [
+      "c6",
+      "c0"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 6,
+     "explanation": "`mid` moves to index 3, where the value is 3. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment. The bookkeeping updates: lo becomes 0. This is the decision the comparison just produced — the pointers only move BECAUSE values like these said so.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "pointers": {
+       "mid": 3
+      }
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10",
+       "c6"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]",
+       "c6": "[3, 9, 10, 82]"
+      },
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {
+      "lo": 0
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 0, where the value is 27; `j` moves to index 3, where the value is 3. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "pointers": {
+       "mid": 3,
+       "i": 0,
+       "j": 3
+      }
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10",
+       "c6"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]",
+       "c6": "[3, 9, 10, 82]"
+      },
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "`j` moves to index 4, where the value is 9. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "pointers": {
+       "mid": 3,
+       "i": 0,
+       "j": 4
+      }
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10",
+       "c6"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]",
+       "c6": "[3, 9, 10, 82]"
+      },
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "`j` moves to index 5, where the value is 10. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "pointers": {
+       "mid": 3,
+       "i": 0,
+       "j": 5
+      }
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10",
+       "c6"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]",
+       "c6": "[3, 9, 10, 82]"
+      },
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "`j` moves to index 6, where the value is 82. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "pointers": {
+       "mid": 3,
+       "i": 0,
+       "j": 6
+      }
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10",
+       "c6"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]",
+       "c6": "[3, 9, 10, 82]"
+      },
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 1, where the value is 38. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "pointers": {
+       "mid": 3,
+       "i": 1,
+       "j": 6
+      }
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10",
+       "c6"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]",
+       "c6": "[3, 9, 10, 82]"
+      },
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 2, where the value is 43. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "pointers": {
+       "mid": 3,
+       "i": 2,
+       "j": 6
+      }
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10",
+       "c6"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]",
+       "c6": "[3, 9, 10, 82]"
+      },
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "`i` moves to index 3, where the value is 3. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
+     "array": {
+      "values": [
+       27,
+       38,
+       43,
+       3,
+       9,
+       10,
+       82
+      ],
+      "pointers": {
+       "mid": 3,
+       "i": 3,
+       "j": 6
+      }
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10",
+       "c6"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]",
+       "c6": "[3, 9, 10, 82]"
+      },
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 12,
+     "explanation": "The array itself changes at indices 0, 1, 2, 3, 4, 5 — a real in-place write recorded from the run, not an animation guess.",
+     "array": {
+      "values": [
+       3,
+       9,
+       10,
+       27,
+       38,
+       43,
+       82
+      ],
+      "pointers": {},
+      "comparing": [
+       0,
+       1,
+       2,
+       3,
+       4,
+       5
+      ]
+     },
+     "graph": {
+      "current": "c0",
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10",
+       "c6"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]",
+       "c6": "[3, 9, 10, 82]"
+      },
+      "pointers": {
+       "call": "c0"
+      }
+     },
+     "stack": [
+      "msort(0..6)"
+     ],
+     "variables": {}
+    },
+    {
+     "line": 12,
+     "explanation": "msort(0..6) RETURNS: its band comes back as [3, 9, 10, 27, 38, 43, 82] — sorted within itself, guaranteed. The whole array is now conquered, and combining solved halves is all the work that remains at this level.",
+     "array": {
+      "values": [
+       3,
+       9,
+       10,
+       27,
+       38,
+       43,
+       82
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": null,
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10",
+       "c6",
+       "c0"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]",
+       "c6": "[3, 9, 10, 82]",
+       "c0": "[3, 9, 10, 27, 38, 43, 82]"
+      },
+      "pointers": {}
+     },
+     "stack": [],
+     "variables": {}
+    },
+    {
+     "line": 12,
+     "explanation": "Every call has returned and the array reads [3, 9, 10, 27, 38, 43, 82]. Walk the tree bottom-up in your head: one-cell bands were trivially sorted, and every merge/partition above them only ever combined already-solved halves — that is the entire proof, performed in front of you.",
+     "array": {
+      "values": [
+       3,
+       9,
+       10,
+       27,
+       38,
+       43,
+       82
+      ],
+      "pointers": {}
+     },
+     "graph": {
+      "current": null,
+      "visited": [
+       "c2",
+       "c4",
+       "c5",
+       "c3",
+       "c1",
+       "c8",
+       "c9",
+       "c7",
+       "c11",
+       "c12",
+       "c10",
+       "c6",
+       "c0"
+      ],
+      "revealed": [
+       "c0",
+       "c1",
+       "c2",
+       "c3",
+       "c4",
+       "c5",
+       "c6",
+       "c7",
+       "c8",
+       "c9",
+       "c10",
+       "c11",
+       "c12"
+      ],
+      "returned": {
+       "c2": "[38]",
+       "c4": "[27]",
+       "c5": "[43]",
+       "c3": "[27, 43]",
+       "c1": "[27, 38, 43]",
+       "c8": "[3]",
+       "c9": "[9]",
+       "c7": "[3, 9]",
+       "c11": "[82]",
+       "c12": "[10]",
+       "c10": "[10, 82]",
+       "c6": "[3, 9, 10, 82]",
+       "c0": "[3, 9, 10, 27, 38, 43, 82]"
+      },
+      "pointers": {}
+     },
+     "stack": [],
+     "variables": {}
+    }
+   ]
+  }
+ },
+ {
+  "name": "union-find (union-find)",
+  "lens": "union-find",
+  "trace": {
+   "language": "python",
+   "code": "def find(parent, x):\n    while parent[x] != x:\n        parent[x] = parent[parent[x]]\n        x = parent[x]\n    return x\n\ndef count_components(n, edges):\n    parent = list(range(n))\n    count = n\n    for a, b in edges:\n        ra, rb = find(parent, a), find(parent, b)\n        if ra != rb:\n            parent[ra] = rb\n            count -= 1\n    return count",
+   "views": {
+    "graph": {
+     "nodes": [
+      {
+       "id": "0",
+       "label": "0"
+      },
+      {
+       "id": "1",
+       "label": "1"
+      },
+      {
+       "id": "2",
+       "label": "2"
+      },
+      {
+       "id": "3",
+       "label": "3"
+      },
+      {
+       "id": "4",
+       "label": "4"
+      }
+     ],
+     "edges": [
+      {
+       "from": "0",
+       "to": "1"
+      },
+      {
+       "from": "1",
+       "to": "2"
+      },
+      {
+       "from": "3",
+       "to": "4"
+      }
+     ],
+     "directed": false
+    }
+   },
+   "steps": [
+    {
+     "line": 9,
+     "explanation": "We run count_components(5, [[0, 1], [1, 2], [3, 4]]) on this exact graph and watch the algorithm's own variables — the node being processed, the distance table, the frontier. Every value below was recorded from the real run; the picture can never disagree with the code.",
+     "graph": {
+      "current": null,
+      "visited": [],
+      "pointers": {}
+     },
+     "variables": {}
+    },
+    {
+     "line": 9,
+     "explanation": "0 starts as its own root — every element begins as a lone set of one, and the parent table simply points each element at itself until a union merges it into a family. 1 starts as its own root — every element begins as a lone set of one, and the parent table simply points each element at itself until a union merges it into a family. 2 starts as its own root — every element begins as a lone set of one, and the parent table simply points each element at itself until a union merges it into a family.",
+     "graph": {
+      "current": null,
+      "visited": [],
+      "pointers": {}
+     },
+     "variables": {
+      "n": 5
+     }
+    },
+    {
+     "line": 2,
+     "explanation": "Now 0 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 0's edges.",
+     "graph": {
+      "current": "0",
+      "visited": [],
+      "pointers": {
+       "curr": "0"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "Now 1 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
+     "graph": {
+      "current": "1",
+      "visited": [
+       "0"
+      ],
+      "pointers": {
+       "curr": "1"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 14,
+     "explanation": "Union: 0's root becomes 1 — the two sets merge into one family, and any future find() on 0's side will now walk up to 1. Watch the forest get flatter as unions accumulate.",
+     "graph": {
+      "current": "1",
+      "visited": [
+       "0"
+      ],
+      "pointers": {
+       "curr": "1"
+      }
+     },
+     "variables": {
+      "n": 5,
+      "count": 5,
+      "a": 0,
+      "b": 1,
+      "ra": 0,
+      "rb": 1
+     }
+    },
+    {
+     "line": 2,
+     "explanation": "Now 2 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 2's edges.",
+     "graph": {
+      "current": "2",
+      "visited": [
+       "0",
+       "1"
+      ],
+      "pointers": {
+       "curr": "2"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 14,
+     "explanation": "Union: 1's root becomes 2 — the two sets merge into one family, and any future find() on 1's side will now walk up to 2. Watch the forest get flatter as unions accumulate.",
+     "graph": {
+      "current": "2",
+      "visited": [
+       "0",
+       "1"
+      ],
+      "pointers": {
+       "curr": "2"
+      }
+     },
+     "variables": {
+      "n": 5,
+      "count": 4,
+      "a": 1,
+      "b": 2,
+      "ra": 1,
+      "rb": 2
+     }
+    },
+    {
+     "line": 2,
+     "explanation": "Now 3 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 3's edges.",
+     "graph": {
+      "current": "3",
+      "visited": [
+       "0",
+       "1",
+       "2"
+      ],
+      "pointers": {
+       "curr": "3"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 2,
+     "explanation": "Now 4 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 4's edges.",
+     "graph": {
+      "current": "4",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "4"
+      }
+     },
+     "variables": {}
+    },
+    {
+     "line": 14,
+     "explanation": "Union: 3's root becomes 4 — the two sets merge into one family, and any future find() on 3's side will now walk up to 4. Watch the forest get flatter as unions accumulate.",
+     "graph": {
+      "current": "4",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "4"
+      }
+     },
+     "variables": {
+      "n": 5,
+      "count": 3,
+      "a": 3,
+      "b": 4,
+      "ra": 3,
+      "rb": 4
+     }
+    },
+    {
+     "line": 14,
+     "explanation": "The walk is complete and the call returns 2. Every number in the final table was earned by a relaxation you watched happen — that is the whole proof, performed in front of you.",
+     "graph": {
+      "current": "4",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3",
+       "4"
+      ],
+      "pointers": {
+       "curr": "4"
+      }
+     },
+     "variables": {}
+    }
+   ]
+  }
+ }
+]
