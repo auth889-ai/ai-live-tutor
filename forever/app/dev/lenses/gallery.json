@@ -203,41 +203,73 @@
  },
  {
   "name": "climbing-stairs (dp-table)",
-  "lens": "pointer-array",
+  "lens": "dp-table",
   "trace": {
    "language": "python",
    "code": "def climb(n):\n    dp = [0] * (n + 1)\n    dp[0] = 1\n    dp[1] = 1\n    for i in range(2, n + 1):\n        dp[i] = dp[i - 1] + dp[i - 2]\n    return dp[n]",
    "views": {
-    "array": {
-     "values": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-     ]
+    "array2d": {
+     "rows": 1,
+     "cols": 9
     }
    },
    "steps": [
     {
      "line": 3,
-     "explanation": "New state appears: n = 8 — keep your eye on this value; every pointer move below is decided by it.",
-     "array": {
-      "pointers": {},
+     "explanation": "We run climb(8) and watch the 1×9 table fill cell by cell. One rule before anything moves: know what a cell MEANS — dp[i][j] is the answer to a smaller version of the same question, and every write below only ever combines already-solved smaller answers.",
+     "array2d": {},
+     "variables": {}
+    },
+    {
+     "line": 3,
+     "explanation": "The table is created: 1 row × 9 columns, seeded with its starting values. These are not answers yet — they are the scaffold the real answers will be built on.",
+     "array2d": {
       "values": [
-       0,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        1,
+        0
+       ],
+       [
+        0,
+        2,
+        0
+       ],
+       [
+        0,
+        3,
+        0
+       ],
+       [
+        0,
+        4,
+        0
+       ],
+       [
+        0,
+        5,
+        0
+       ],
+       [
+        0,
+        6,
+        0
+       ],
+       [
+        0,
+        7,
+        0
+       ],
+       [
+        0,
+        8,
+        0
+       ]
       ]
      },
      "variables": {
@@ -246,22 +278,24 @@
     },
     {
      "line": 4,
-     "explanation": "The array itself changes at index 0, which now holds 1 — a real in-place write recorded from the run, not an animation guess.",
-     "array": {
-      "pointers": {},
-      "comparing": [
+     "explanation": "Base case: dp[0][0] is set to 1. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
        0
       ],
       "values": [
-       1,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
+       [
+        0,
+        0,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ]
       ]
      },
      "variables": {
@@ -270,22 +304,28 @@
     },
     {
      "line": 5,
-     "explanation": "The array itself changes at index 1, which now holds 1 — a real in-place write recorded from the run, not an animation guess.",
-     "array": {
-      "pointers": {},
-      "comparing": [
+     "explanation": "Base case: dp[0][1] is set to 1. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
        1
       ],
       "values": [
-       1,
-       1,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
+       [
+        0,
+        1,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ]
       ]
      },
      "variables": {
@@ -293,50 +333,33 @@
      }
     },
     {
-     "line": 6,
-     "explanation": "`i` starts at index 2, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
-     "array": {
-      "current": 2,
-      "pointers": {
-       "i": 2
-      },
-      "values": [
-       1,
-       1,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ]
-     },
-     "variables": {
-      "n": 8,
-      "i": 2
-     }
-    },
-    {
      "line": 5,
-     "explanation": "The array itself changes at index 2, which now holds 2 — a real in-place write recorded from the run, not an animation guess.",
-     "array": {
-      "pointers": {
-       "i": 2
-      },
-      "comparing": [
+     "explanation": "Base case: dp[0][2] is set to 2. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
        2
       ],
       "values": [
-       1,
-       1,
-       2,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
+       [
+        0,
+        2,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ]
       ]
      },
      "variables": {
@@ -345,50 +368,37 @@
      }
     },
     {
-     "line": 6,
-     "explanation": "`i` moves to index 3, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
-     "array": {
-      "current": 3,
-      "pointers": {
-       "i": 3
-      },
-      "values": [
-       1,
-       1,
-       2,
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ]
-     },
-     "variables": {
-      "n": 8,
-      "i": 3
-     }
-    },
-    {
      "line": 5,
-     "explanation": "The array itself changes at index 3, which now holds 3 — a real in-place write recorded from the run, not an animation guess.",
-     "array": {
-      "pointers": {
-       "i": 3
-      },
-      "comparing": [
+     "explanation": "Base case: dp[0][3] is set to 3. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
        3
       ],
       "values": [
-       1,
-       1,
-       2,
-       3,
-       0,
-       0,
-       0,
-       0,
-       0
+       [
+        0,
+        3,
+        3
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ]
       ]
      },
      "variables": {
@@ -397,50 +407,41 @@
      }
     },
     {
-     "line": 6,
-     "explanation": "`i` moves to index 4, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
-     "array": {
-      "current": 4,
-      "pointers": {
-       "i": 4
-      },
-      "values": [
-       1,
-       1,
-       2,
-       3,
-       0,
-       0,
-       0,
-       0,
-       0
-      ]
-     },
-     "variables": {
-      "n": 8,
-      "i": 4
-     }
-    },
-    {
      "line": 5,
-     "explanation": "The array itself changes at index 4, which now holds 5 — a real in-place write recorded from the run, not an animation guess.",
-     "array": {
-      "pointers": {
-       "i": 4
-      },
-      "comparing": [
+     "explanation": "Base case: dp[0][4] is set to 5. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
        4
       ],
       "values": [
-       1,
-       1,
-       2,
-       3,
-       5,
-       0,
-       0,
-       0,
-       0
+       [
+        0,
+        4,
+        5
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        0,
+        4
+       ]
       ]
      },
      "variables": {
@@ -449,50 +450,45 @@
      }
     },
     {
-     "line": 6,
-     "explanation": "`i` moves to index 5, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
-     "array": {
-      "current": 5,
-      "pointers": {
-       "i": 5
-      },
-      "values": [
-       1,
-       1,
-       2,
-       3,
-       5,
-       0,
-       0,
-       0,
-       0
-      ]
-     },
-     "variables": {
-      "n": 8,
-      "i": 5
-     }
-    },
-    {
      "line": 5,
-     "explanation": "The array itself changes at index 5, which now holds 8 — a real in-place write recorded from the run, not an animation guess.",
-     "array": {
-      "pointers": {
-       "i": 5
-      },
-      "comparing": [
+     "explanation": "Base case: dp[0][5] is set to 8. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
        5
       ],
       "values": [
-       1,
-       1,
-       2,
-       3,
-       5,
-       8,
-       0,
-       0,
-       0
+       [
+        0,
+        5,
+        8
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        0,
+        4
+       ],
+       [
+        0,
+        5
+       ]
       ]
      },
      "variables": {
@@ -501,50 +497,49 @@
      }
     },
     {
-     "line": 6,
-     "explanation": "`i` moves to index 6, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
-     "array": {
-      "current": 6,
-      "pointers": {
-       "i": 6
-      },
-      "values": [
-       1,
-       1,
-       2,
-       3,
-       5,
-       8,
-       0,
-       0,
-       0
-      ]
-     },
-     "variables": {
-      "n": 8,
-      "i": 6
-     }
-    },
-    {
      "line": 5,
-     "explanation": "The array itself changes at index 6, which now holds 13 — a real in-place write recorded from the run, not an animation guess.",
-     "array": {
-      "pointers": {
-       "i": 6
-      },
-      "comparing": [
+     "explanation": "Base case: dp[0][6] is set to 13. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
        6
       ],
       "values": [
-       1,
-       1,
-       2,
-       3,
-       5,
-       8,
-       13,
-       0,
-       0
+       [
+        0,
+        6,
+        13
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        0,
+        4
+       ],
+       [
+        0,
+        5
+       ],
+       [
+        0,
+        6
+       ]
       ]
      },
      "variables": {
@@ -553,50 +548,53 @@
      }
     },
     {
-     "line": 6,
-     "explanation": "`i` moves to index 7, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
-     "array": {
-      "current": 7,
-      "pointers": {
-       "i": 7
-      },
-      "values": [
-       1,
-       1,
-       2,
-       3,
-       5,
-       8,
-       13,
-       0,
-       0
-      ]
-     },
-     "variables": {
-      "n": 8,
-      "i": 7
-     }
-    },
-    {
      "line": 5,
-     "explanation": "The array itself changes at index 7, which now holds 21 — a real in-place write recorded from the run, not an animation guess.",
-     "array": {
-      "pointers": {
-       "i": 7
-      },
-      "comparing": [
+     "explanation": "Base case: dp[0][7] is set to 21. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
        7
       ],
       "values": [
-       1,
-       1,
-       2,
-       3,
-       5,
-       8,
-       13,
-       21,
-       0
+       [
+        0,
+        7,
+        21
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        0,
+        4
+       ],
+       [
+        0,
+        5
+       ],
+       [
+        0,
+        6
+       ],
+       [
+        0,
+        7
+       ]
       ]
      },
      "variables": {
@@ -605,23 +603,57 @@
      }
     },
     {
-     "line": 6,
-     "explanation": "`i` moves to index 8, where the value is 0. These positions are from the real run — the arrows you see are exactly where the pointers stood at this moment.",
-     "array": {
-      "current": 8,
-      "pointers": {
-       "i": 8
-      },
+     "line": 5,
+     "explanation": "Base case: dp[0][8] is set to 34. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
+       8
+      ],
       "values": [
-       1,
-       1,
-       2,
-       3,
-       5,
-       8,
-       13,
-       21,
-       0
+       [
+        0,
+        8,
+        34
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        0,
+        4
+       ],
+       [
+        0,
+        5
+       ],
+       [
+        0,
+        6
+       ],
+       [
+        0,
+        7
+       ],
+       [
+        0,
+        8
+       ]
       ]
      },
      "variables": {
@@ -631,57 +663,52 @@
     },
     {
      "line": 5,
-     "explanation": "The array itself changes at index 8, which now holds 34 — a real in-place write recorded from the run, not an animation guess.",
-     "array": {
-      "pointers": {
-       "i": 8
-      },
-      "comparing": [
+     "explanation": "The table is complete and the call returns 34. The answer was read out of dp[0][8] = 34 — the bottom-right of the region we just filled, the \"full problem\" cell. Count what you watched: one write per cell, each in constant time — that is the O(rows × cols) story, and the filled table IS the proof.",
+     "array2d": {
+      "current": [
+       0,
        8
       ],
-      "values": [
-       1,
-       1,
-       2,
-       3,
-       5,
-       8,
-       13,
-       21,
-       34
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        0,
+        4
+       ],
+       [
+        0,
+        5
+       ],
+       [
+        0,
+        6
+       ],
+       [
+        0,
+        7
+       ],
+       [
+        0,
+        8
+       ]
       ]
      },
-     "variables": {
-      "n": 8,
-      "i": 8
-     }
-    },
-    {
-     "line": 5,
-     "explanation": "The walk is over and the call returns 34. The array ends as [1, 1, 2, 3, 5, 8, 13, 21, 34] — compare it with where it started and every difference is a step you just watched. Replay the arrows in your head: every move you watched was a decision the code made on real data — that decision pattern IS the algorithm.",
-     "array": {
-      "pointers": {
-       "i": 8
-      },
-      "comparing": [
-       8
-      ],
-      "values": [
-       1,
-       1,
-       2,
-       3,
-       5,
-       8,
-       13,
-       21,
-       34
-      ]
-     },
-     "variables": {
-      "n": 8,
-      "i": 8
-     }
+     "variables": {}
     }
    ]
   }
@@ -954,19 +981,19 @@
     "list": {
      "nodes": [
       {
-       "id": "4339487872"
+       "id": "4316402816"
       },
       {
-       "id": "4339486960"
+       "id": "4316401904"
       },
       {
-       "id": "4339142800"
+       "id": "4316057744"
       },
       {
-       "id": "4339153680"
+       "id": "4316068624"
       },
       {
-       "id": "4339665280"
+       "id": "4316580224"
       }
      ]
     }
@@ -987,33 +1014,33 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339153680"
+        "next": "4316068624"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872"
+       "head": "4316402816"
       }
      },
      "variables": {}
@@ -1024,33 +1051,33 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339153680"
+        "next": "4316068624"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
+       "head": "4316402816",
        "prev": null
       }
      },
@@ -1062,34 +1089,34 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339153680"
+        "next": "4316068624"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339487872",
+       "head": "4316402816",
+       "curr": "4316402816",
        "prev": null
       }
      },
@@ -1101,35 +1128,35 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339153680"
+        "next": "4316068624"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339487872",
-       "nxt": "4339486960",
+       "head": "4316402816",
+       "curr": "4316402816",
+       "nxt": "4316401904",
        "prev": null
       }
      },
@@ -1141,36 +1168,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null,
         "rewired": true
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339153680"
+        "next": "4316068624"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339487872",
-       "nxt": "4339486960",
+       "head": "4316402816",
+       "curr": "4316402816",
+       "nxt": "4316401904",
        "prev": null
       }
      },
@@ -1182,36 +1209,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339153680"
+        "next": "4316068624"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339487872",
-       "nxt": "4339486960",
-       "prev": "4339487872"
+       "head": "4316402816",
+       "curr": "4316402816",
+       "nxt": "4316401904",
+       "prev": "4316402816"
       }
      },
      "variables": {}
@@ -1222,36 +1249,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339153680"
+        "next": "4316068624"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339486960",
-       "nxt": "4339486960",
-       "prev": "4339487872"
+       "head": "4316402816",
+       "curr": "4316401904",
+       "nxt": "4316401904",
+       "prev": "4316402816"
       }
      },
      "variables": {}
@@ -1262,36 +1289,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339153680"
+        "next": "4316068624"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339486960",
-       "nxt": "4339142800",
-       "prev": "4339487872"
+       "head": "4316402816",
+       "curr": "4316401904",
+       "nxt": "4316057744",
+       "prev": "4316402816"
       }
      },
      "variables": {}
@@ -1302,37 +1329,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872",
+        "next": "4316402816",
         "rewired": true
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339153680"
+        "next": "4316068624"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339486960",
-       "nxt": "4339142800",
-       "prev": "4339487872"
+       "head": "4316402816",
+       "curr": "4316401904",
+       "nxt": "4316057744",
+       "prev": "4316402816"
       }
      },
      "variables": {}
@@ -1343,36 +1370,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339153680"
+        "next": "4316068624"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339486960",
-       "nxt": "4339142800",
-       "prev": "4339486960"
+       "head": "4316402816",
+       "curr": "4316401904",
+       "nxt": "4316057744",
+       "prev": "4316401904"
       }
      },
      "variables": {}
@@ -1383,36 +1410,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339153680"
+        "next": "4316068624"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339142800",
-       "nxt": "4339142800",
-       "prev": "4339486960"
+       "head": "4316402816",
+       "curr": "4316057744",
+       "nxt": "4316057744",
+       "prev": "4316401904"
       }
      },
      "variables": {}
@@ -1423,36 +1450,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339153680"
+        "next": "4316068624"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339142800",
-       "nxt": "4339153680",
-       "prev": "4339486960"
+       "head": "4316402816",
+       "curr": "4316057744",
+       "nxt": "4316068624",
+       "prev": "4316401904"
       }
      },
      "variables": {}
@@ -1463,37 +1490,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339486960",
+        "next": "4316401904",
         "rewired": true
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339142800",
-       "nxt": "4339153680",
-       "prev": "4339486960"
+       "head": "4316402816",
+       "curr": "4316057744",
+       "nxt": "4316068624",
+       "prev": "4316401904"
       }
      },
      "variables": {}
@@ -1504,36 +1531,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339142800",
-       "nxt": "4339153680",
-       "prev": "4339142800"
+       "head": "4316402816",
+       "curr": "4316057744",
+       "nxt": "4316068624",
+       "prev": "4316057744"
       }
      },
      "variables": {}
@@ -1544,36 +1571,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339153680",
-       "nxt": "4339153680",
-       "prev": "4339142800"
+       "head": "4316402816",
+       "curr": "4316068624",
+       "nxt": "4316068624",
+       "prev": "4316057744"
       }
      },
      "variables": {}
@@ -1584,36 +1611,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339665280"
+        "next": "4316580224"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339153680",
-       "nxt": "4339665280",
-       "prev": "4339142800"
+       "head": "4316402816",
+       "curr": "4316068624",
+       "nxt": "4316580224",
+       "prev": "4316057744"
       }
      },
      "variables": {}
@@ -1624,37 +1651,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339142800",
+        "next": "4316057744",
         "rewired": true
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339153680",
-       "nxt": "4339665280",
-       "prev": "4339142800"
+       "head": "4316402816",
+       "curr": "4316068624",
+       "nxt": "4316580224",
+       "prev": "4316057744"
       }
      },
      "variables": {}
@@ -1665,36 +1692,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339153680",
-       "nxt": "4339665280",
-       "prev": "4339153680"
+       "head": "4316402816",
+       "curr": "4316068624",
+       "nxt": "4316580224",
+       "prev": "4316068624"
       }
      },
      "variables": {}
@@ -1705,36 +1732,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339665280",
-       "nxt": "4339665280",
-       "prev": "4339153680"
+       "head": "4316402816",
+       "curr": "4316580224",
+       "nxt": "4316580224",
+       "prev": "4316068624"
       }
      },
      "variables": {}
@@ -1745,36 +1772,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339665280",
+       "head": "4316402816",
+       "curr": "4316580224",
        "nxt": null,
-       "prev": "4339153680"
+       "prev": "4316068624"
       }
      },
      "variables": {}
@@ -1785,37 +1812,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
-        "next": "4339153680",
+        "next": "4316068624",
         "rewired": true
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339665280",
+       "head": "4316402816",
+       "curr": "4316580224",
        "nxt": null,
-       "prev": "4339153680"
+       "prev": "4316068624"
       }
      },
      "variables": {}
@@ -1826,36 +1853,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
-        "next": "4339153680"
+        "next": "4316068624"
        }
       ],
       "pointers": {
-       "head": "4339487872",
-       "curr": "4339665280",
+       "head": "4316402816",
+       "curr": "4316580224",
        "nxt": null,
-       "prev": "4339665280"
+       "prev": "4316580224"
       }
      },
      "variables": {}
@@ -1866,36 +1893,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
-        "next": "4339153680"
+        "next": "4316068624"
        }
       ],
       "pointers": {
-       "head": "4339487872",
+       "head": "4316402816",
        "curr": null,
        "nxt": null,
-       "prev": "4339665280"
+       "prev": "4316580224"
       }
      },
      "variables": {}
@@ -1906,36 +1933,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4339487872",
+        "id": "4316402816",
         "value": 1,
         "next": null
        },
        {
-        "id": "4339486960",
+        "id": "4316401904",
         "value": 2,
-        "next": "4339487872"
+        "next": "4316402816"
        },
        {
-        "id": "4339142800",
+        "id": "4316057744",
         "value": 3,
-        "next": "4339486960"
+        "next": "4316401904"
        },
        {
-        "id": "4339153680",
+        "id": "4316068624",
         "value": 4,
-        "next": "4339142800"
+        "next": "4316057744"
        },
        {
-        "id": "4339665280",
+        "id": "4316580224",
         "value": 5,
-        "next": "4339153680"
+        "next": "4316068624"
        }
       ],
       "pointers": {
-       "head": "4339487872",
+       "head": "4316402816",
        "curr": null,
        "nxt": null,
-       "prev": "4339665280"
+       "prev": "4316580224"
       }
      },
      "variables": {}
@@ -11661,243 +11688,222 @@
  },
  {
   "name": "01-bfs (deque, weighted 0/1 edges)",
-  "lens": "graph-adjacency",
+  "lens": "dp-table",
   "trace": {
    "language": "python",
    "code": "from collections import deque\ndef zero_one_bfs(adj, src, n):\n    dist = [float('inf')] * n\n    dist[src] = 0\n    dq = deque([src])\n    while dq:\n        u = dq.popleft()\n        for v, w in adj[u]:\n            if dist[u] + w < dist[v]:\n                dist[v] = dist[u] + w\n                if w == 0: dq.appendleft(v)\n                else: dq.append(v)\n    return dist\n\ngraph = {0: [(1, 0), (2, 1)], 1: [(3, 1)], 2: [(3, 0)], 3: []}",
    "views": {
-    "graph": {
-     "nodes": [
-      {
-       "id": "0",
-       "label": "0"
-      },
-      {
-       "id": "1",
-       "label": "1"
-      },
-      {
-       "id": "2",
-       "label": "2"
-      },
-      {
-       "id": "3",
-       "label": "3"
-      }
-     ],
-     "edges": [
-      {
-       "from": "0",
-       "to": "1",
-       "weight": 0
-      },
-      {
-       "from": "0",
-       "to": "2",
-       "weight": 1
-      },
-      {
-       "from": "1",
-       "to": "3",
-       "weight": 1
-      },
-      {
-       "from": "2",
-       "to": "3",
-       "weight": 0
-      }
-     ],
-     "directed": true
+    "array2d": {
+     "rows": 1,
+     "cols": 4
     }
    },
    "steps": [
     {
-     "line": 6,
-     "explanation": "We run zero_one_bfs(graph, 0, 4) on this exact graph and watch the algorithm's own variables — the node being processed, the distance table, the frontier. Every value below was recorded from the real run; the picture can never disagree with the code.",
-     "graph": {
-      "current": null,
-      "visited": [],
-      "pointers": {}
-     },
+     "line": 4,
+     "explanation": "We run zero_one_bfs(graph, 0, 4) and watch the 1×4 table fill cell by cell. One rule before anything moves: know what a cell MEANS — dp[i][j] is the answer to a smaller version of the same question, and every write below only ever combines already-solved smaller answers.",
+     "array2d": {},
      "variables": {}
     },
     {
-     "line": 6,
-     "explanation": "The queue now holds 0 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
-     "graph": {
-      "current": null,
-      "visited": [],
-      "pointers": {}
+     "line": 4,
+     "explanation": "The table is created: 1 row × 4 columns, seeded with its starting values. These are not answers yet — they are the scaffold the real answers will be built on.",
+     "array2d": {
+      "values": [
+       [
+        0,
+        0,
+        "inf"
+       ],
+       [
+        0,
+        1,
+        "inf"
+       ],
+       [
+        0,
+        2,
+        "inf"
+       ],
+       [
+        0,
+        3,
+        "inf"
+       ]
+      ]
      },
-     "queue": [
-      "0"
-     ],
      "variables": {
       "src": 0,
       "n": 4
      }
     },
     {
-     "line": 8,
-     "explanation": "Now 0 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 0's edges.",
-     "graph": {
-      "current": "0",
-      "visited": [],
-      "pointers": {
-       "curr": "0"
-      }
+     "line": 5,
+     "explanation": "Base case: dp[0][0] is set to 0. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
+       0
+      ],
+      "values": [
+       [
+        0,
+        0,
+        0
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ]
+      ]
      },
-     "queue": [],
      "variables": {
       "src": 0,
       "n": 4
      }
     },
     {
-     "line": 8,
-     "explanation": "The queue now holds 1 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
-     "graph": {
-      "current": "0",
-      "visited": [],
-      "pointers": {
-       "curr": "0"
-      }
+     "line": 11,
+     "explanation": "Base case: dp[0][1] is set to 0. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
+       1
+      ],
+      "values": [
+       [
+        0,
+        1,
+        0
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ]
+      ]
      },
-     "queue": [
-      "1"
-     ],
      "variables": {
       "src": 0,
       "n": 4,
+      "u": 0,
       "v": 1,
       "w": 0
      }
     },
     {
-     "line": 8,
-     "explanation": "The queue now holds 1, 2 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
-     "graph": {
-      "current": "0",
-      "visited": [],
-      "pointers": {
-       "curr": "0"
-      }
+     "line": 11,
+     "explanation": "Base case: dp[0][2] is set to 1. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
+       2
+      ],
+      "values": [
+       [
+        0,
+        2,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ]
+      ]
      },
-     "queue": [
-      "1",
-      "2"
-     ],
      "variables": {
       "src": 0,
       "n": 4,
+      "u": 0,
       "v": 2,
       "w": 1
      }
     },
     {
-     "line": 8,
-     "explanation": "Now 1 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
-     "graph": {
-      "current": "1",
-      "visited": [
-       "0"
+     "line": 11,
+     "explanation": "Base case: dp[0][3] is set to 1. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
+       3
       ],
-      "pointers": {
-       "curr": "1"
-      }
+      "values": [
+       [
+        0,
+        3,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ]
+      ]
      },
-     "queue": [
-      "2"
-     ],
      "variables": {
       "src": 0,
       "n": 4,
-      "v": 2,
-      "w": 1
-     }
-    },
-    {
-     "line": 8,
-     "explanation": "The queue now holds 2, 3 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
-     "graph": {
-      "current": "1",
-      "visited": [
-       "0"
-      ],
-      "pointers": {
-       "curr": "1"
-      }
-     },
-     "queue": [
-      "2",
-      "3"
-     ],
-     "variables": {
-      "src": 0,
-      "n": 4,
+      "u": 1,
       "v": 3,
       "w": 1
      }
     },
     {
-     "line": 8,
-     "explanation": "Now 2 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 2's edges.",
-     "graph": {
-      "current": "2",
-      "visited": [
-       "0",
-       "1"
+     "line": 11,
+     "explanation": "The table is complete and the call returns [0,0,1,1]. The answer was read out of dp[0][3] = 1 — the bottom-right of the region we just filled, the \"full problem\" cell. Count what you watched: one write per cell, each in constant time — that is the O(rows × cols) story, and the filled table IS the proof.",
+     "array2d": {
+      "current": [
+       0,
+       3
       ],
-      "pointers": {
-       "curr": "2"
-      }
-     },
-     "queue": [
-      "3"
-     ],
-     "variables": {
-      "src": 0,
-      "n": 4,
-      "v": 3,
-      "w": 1
-     }
-    },
-    {
-     "line": 8,
-     "explanation": "Now 3 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 3's edges.",
-     "graph": {
-      "current": "3",
-      "visited": [
-       "0",
-       "1",
-       "2"
-      ],
-      "pointers": {
-       "curr": "3"
-      }
-     },
-     "queue": [],
-     "variables": {
-      "src": 0,
-      "n": 4,
-      "v": 3,
-      "w": 0
-     }
-    },
-    {
-     "line": 8,
-     "explanation": "The walk is complete and the call returns [0,0,1,1]. Every number in the final table was earned by a relaxation you watched happen — that is the whole proof, performed in front of you.",
-     "graph": {
-      "current": "3",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
-      ],
-      "pointers": {
-       "curr": "3"
-      }
+      "filled": [
+       [
+        0,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ]
+      ]
      },
      "variables": {}
     }

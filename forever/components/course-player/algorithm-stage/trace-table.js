@@ -59,7 +59,7 @@ export function TraceTable({ history = [], allSteps = null, nodeLabels = null })
   return (
     <div style={{ overflowX: 'auto', border: '1px solid #f0dcd5', borderRadius: 10, background: '#fffcfa' }}>
       <div style={{ padding: '6px 12px', fontSize: 12, color: '#8a6d3b', background: '#fdeaa7', fontWeight: 700 }}>Dry Run Trace — step by step</div>
-      <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13, fontFamily: 'ui-monospace, monospace' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 'max-content', fontSize: 13, fontFamily: 'ui-monospace, monospace' }}>
         <thead>
           <tr>
             <th style={cell(true)}>Step</th>
@@ -87,7 +87,7 @@ export function TraceTable({ history = [], allSteps = null, nodeLabels = null })
                 {has.stack ? <td style={cell(false)}>{fmtList(s.stack)}</td> : null}
                 {has.visited ? <td style={cell(false)}>{(s.graph?.visited ?? []).map(labelOf).join(', ')}</td> : null}
                 {evolving.map((c) => <td key={c} style={{ ...cell(false), textAlign: 'center' }}>{c in vars ? fmtCell(vars[c]) : ''}</td>)}
-                {hasAction ? <td style={{ ...cell(false), fontFamily: 'inherit', color: '#5a4a2a' }}>{firstSentence(s.explanation)}</td> : null}
+                {hasAction ? <td style={{ ...cell(false), fontFamily: 'inherit', color: '#5a4a2a', minWidth: 220, maxWidth: 340, whiteSpace: 'normal', overflowWrap: 'break-word' }}>{firstSentence(s.explanation)}</td> : null}
               </tr>
             );
           })}

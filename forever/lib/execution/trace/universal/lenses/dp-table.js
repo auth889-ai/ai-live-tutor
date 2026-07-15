@@ -90,8 +90,41 @@ export function detectDpTable(recording, _ctx = {}) {
 
     if (!best || writes.length > best.writes) best = { name, rows, cols, writes: writes.length };
   }
-  if (!best) return null;
-  return { lens: 'dp-table', confidence: 0.9, name: best.name, rows: best.rows, cols: best.cols };
+  if (best) return { lens: 'dp-table', confidence: 0.9, name: best.name, rows: best.rows, cols: best.cols };
+
+  // 1-D DP (LC70-class: dp[i] = dp[i-1] + dp[i-2]) — previously fell to pointer-array, which
+  // renders fine but loses the dp lens's reads/deps coloring. STRICT fingerprint so result-
+  // building appends can never false-positive: a flat scalar list of FIXED length (>=3) whose
+  // first sighting is uniform (the scaffold) and whose snapshot diffs are single-cell writes
+  // advancing left-to-right (>=80%), with >=3 writes.
+  const isRow = (v) => Array.isArray(v) && v.length >= 3 && v.every((x) => ['number', 'string', 'boolean'].includes(typeof x));
+  const rowNames = new Set(lines.flatMap((e) => Object.keys(e.locals).filter((k) => isRow(e.locals[k]))));
+  let bestRow = null;
+  for (const name of rowNames) {
+    const snaps = lines.map((e) => e.locals[name]).filter(isRow);
+    if (snaps.length < 3) continue;
+    const len = snaps[0].length;
+    if (!snaps.every((r) => r.length === len)) continue; // fixed length: appends excluded
+    const firstCells = snaps[0];
+    if (!firstCells.every((v) => JSON.stringify(v) === JSON.stringify(firstCells[0]))) continue; // uniform scaffold
+    const writes = [];
+    let clean = true;
+    for (let i = 1; i < snaps.length; i += 1) {
+      const changed = [];
+      for (let c = 0; c < len; c += 1) {
+        if (JSON.stringify(snaps[i - 1][c]) !== JSON.stringify(snaps[i][c])) changed.push(c);
+      }
+      if (changed.length > 1) { clean = false; break; } // one cell per step: DP fill, not bulk mutation
+      if (changed.length === 1) writes.push(changed[0]);
+    }
+    if (!clean || writes.length < 3) continue;
+    let ordered = 0;
+    for (let i = 1; i < writes.length; i += 1) if (writes[i] >= writes[i - 1]) ordered += 1;
+    if (ordered / (writes.length - 1) < 0.8) continue;
+    if (!bestRow || writes.length > bestRow.writes) bestRow = { name, cols: len, writes: writes.length };
+  }
+  if (!bestRow) return null;
+  return { lens: 'dp-table', confidence: 0.9, name: bestRow.name, rows: 1, cols: bestRow.cols, oneD: true };
 }
 
 // Adapt the recording to the proven dp-table compiler: one {line, table, locals} per sighting.
@@ -100,7 +133,9 @@ export function compileDpTableLens({ recording, plan, code, entry = null, langua
   const events = [];
   for (const e of (recording?.events ?? [])) {
     if (e.ev !== 'line') continue;
-    const table = e.locals?.[plan.name];
+    let table = e.locals?.[plan.name];
+    // 1-D DP renders as a single-row table — same lens, same reads/deps coloring.
+    if (plan.oneD && Array.isArray(table) && !isTable(table)) table = [table];
     if (!isTable(table)) continue;
     const locals = {};
     for (const [k, v] of Object.entries(e.locals)) {
