@@ -12,6 +12,65 @@ const exec = async ({ source }) => {
 };
 
 const PROBLEMS = [
+  ['bipartite-colors (per-node color labels)', `from collections import deque
+def is_bipartite(adj):
+    color = {}
+    for start in adj:
+        if start in color:
+            continue
+        color[start] = 0
+        q = deque([start])
+        while q:
+            u = q.popleft()
+            for v in adj[u]:
+                if v not in color:
+                    color[v] = 1 - color[u]
+                    q.append(v)
+                elif color[v] == color[u]:
+                    return False
+    return True`, "is_bipartite({'A': ['B', 'D'], 'B': ['A', 'C'], 'C': ['B', 'D'], 'D': ['A', 'C']})"],
+  ['prim-mst (in_mst + key labels)', `import heapq
+def prim(n, edges):
+    adj = {i: [] for i in range(n)}
+    for u, v, w in edges:
+        adj[u].append((v, w))
+        adj[v].append((u, w))
+    in_mst = [0] * n
+    key = [10**9] * n
+    key[0] = 0
+    pq = [(0, 0)]
+    total = 0
+    while pq:
+        k, u = heapq.heappop(pq)
+        if in_mst[u]:
+            continue
+        in_mst[u] = 1
+        total += k
+        for v, w in adj[u]:
+            if not in_mst[v] and w < key[v]:
+                key[v] = w
+                heapq.heappush(pq, (w, v))
+    return total`, 'prim(5, [[0,1,2],[0,3,6],[1,2,3],[1,3,8],[1,4,5],[2,4,7],[3,4,9]])'],
+  ['edit-distance (2-D dp, min-family)', `def edit_distance(a, b):
+    n, m = len(a), len(b)
+    dp = [[0] * (m + 1) for _ in range(n + 1)]
+    for i in range(n + 1):
+        dp[i][0] = i
+    for j in range(m + 1):
+        dp[0][j] = j
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            if a[i-1] == b[j-1]:
+                dp[i][j] = dp[i-1][j-1]
+            else:
+                dp[i][j] = 1 + min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1])
+    return dp[n][m]`, 'edit_distance("cat", "cut")'],
+  ['unique-paths (2-D dp, top+left proved)', `def unique_paths(m, n):
+    dp = [[1] * n for _ in range(m)]
+    for i in range(1, m):
+        for j in range(1, n):
+            dp[i][j] = dp[i-1][j] + dp[i][j-1]
+    return dp[m-1][n-1]`, 'unique_paths(3, 4)'],
   ['tarjan-bridges (graph-adjacency + nodeState)', `def critical_connections(n, connections):
     adj = {i: [] for i in range(n)}
     for u, v in connections:

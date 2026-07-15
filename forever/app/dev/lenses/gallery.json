@@ -1,5 +1,2875 @@
 [
  {
+  "name": "bipartite-colors (per-node color labels)",
+  "lens": "graph-adjacency",
+  "trace": {
+   "language": "python",
+   "code": "from collections import deque\ndef is_bipartite(adj):\n    color = {}\n    for start in adj:\n        if start in color:\n            continue\n        color[start] = 0\n        q = deque([start])\n        while q:\n            u = q.popleft()\n            for v in adj[u]:\n                if v not in color:\n                    color[v] = 1 - color[u]\n                    q.append(v)\n                elif color[v] == color[u]:\n                    return False\n    return True",
+   "views": {
+    "graph": {
+     "nodes": [
+      {
+       "id": "A",
+       "label": "A"
+      },
+      {
+       "id": "B",
+       "label": "B"
+      },
+      {
+       "id": "C",
+       "label": "C"
+      },
+      {
+       "id": "D",
+       "label": "D"
+      }
+     ],
+     "edges": [
+      {
+       "from": "A",
+       "to": "B"
+      },
+      {
+       "from": "A",
+       "to": "D"
+      },
+      {
+       "from": "B",
+       "to": "A"
+      },
+      {
+       "from": "B",
+       "to": "C"
+      },
+      {
+       "from": "C",
+       "to": "B"
+      },
+      {
+       "from": "C",
+       "to": "D"
+      },
+      {
+       "from": "D",
+       "to": "A"
+      },
+      {
+       "from": "D",
+       "to": "C"
+      }
+     ],
+     "directed": false
+    }
+   },
+   "steps": [
+    {
+     "line": 8,
+     "explanation": "We run is_bipartite({'A': ['B', 'D'], 'B': ['A', 'C'], 'C': ['B', 'D'], 'D': ['A', 'C']}) on this exact graph and watch the algorithm's own variables — the node being processed, the distance table, the frontier. Every value below was recorded from the real run; the picture can never disagree with the code.",
+     "graph": {
+      "current": null,
+      "visited": [],
+      "pointers": {}
+     },
+     "variables": {}
+    },
+    {
+     "line": 8,
+     "explanation": "color[A] gets its first value: 0 — it now rides under A on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": null,
+      "visited": [],
+      "pointers": {}
+     },
+     "nodeState": {
+      "A": {
+       "color": 0
+      }
+     },
+     "variables": {
+      "start": "A"
+     }
+    },
+    {
+     "line": 9,
+     "explanation": "The queue now holds A — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": null,
+      "visited": [],
+      "pointers": {}
+     },
+     "queue": [
+      "A"
+     ],
+     "nodeState": {
+      "A": {
+       "color": 0
+      }
+     },
+     "variables": {
+      "start": "A"
+     }
+    },
+    {
+     "line": 11,
+     "explanation": "Now A is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along A's edges.",
+     "graph": {
+      "current": "A",
+      "visited": [],
+      "pointers": {
+       "curr": "A"
+      }
+     },
+     "queue": [],
+     "nodeState": {
+      "A": {
+       "color": 0
+      }
+     },
+     "variables": {
+      "start": "A"
+     }
+    },
+    {
+     "line": 14,
+     "explanation": "color[B] gets its first value: 1 — it now rides under B on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "A",
+      "visited": [],
+      "pointers": {
+       "curr": "A"
+      }
+     },
+     "queue": [],
+     "nodeState": {
+      "A": {
+       "color": 0
+      },
+      "B": {
+       "color": 1
+      }
+     },
+     "variables": {
+      "start": "A",
+      "v": "B"
+     }
+    },
+    {
+     "line": 11,
+     "explanation": "The queue now holds B — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "A",
+      "visited": [],
+      "pointers": {
+       "curr": "A"
+      }
+     },
+     "queue": [
+      "B"
+     ],
+     "nodeState": {
+      "A": {
+       "color": 0
+      },
+      "B": {
+       "color": 1
+      }
+     },
+     "variables": {
+      "start": "A",
+      "v": "B"
+     }
+    },
+    {
+     "line": 14,
+     "explanation": "color[D] gets its first value: 1 — it now rides under D on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "A",
+      "visited": [],
+      "pointers": {
+       "curr": "A"
+      }
+     },
+     "queue": [
+      "B"
+     ],
+     "nodeState": {
+      "A": {
+       "color": 0
+      },
+      "B": {
+       "color": 1
+      },
+      "D": {
+       "color": 1
+      }
+     },
+     "variables": {
+      "start": "A",
+      "v": "D"
+     }
+    },
+    {
+     "line": 11,
+     "explanation": "The queue now holds B, D — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "A",
+      "visited": [],
+      "pointers": {
+       "curr": "A"
+      }
+     },
+     "queue": [
+      "B",
+      "D"
+     ],
+     "nodeState": {
+      "A": {
+       "color": 0
+      },
+      "B": {
+       "color": 1
+      },
+      "D": {
+       "color": 1
+      }
+     },
+     "variables": {
+      "start": "A",
+      "v": "D"
+     }
+    },
+    {
+     "line": 11,
+     "explanation": "Now B is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along B's edges.",
+     "graph": {
+      "current": "B",
+      "visited": [
+       "A"
+      ],
+      "pointers": {
+       "curr": "B"
+      }
+     },
+     "queue": [
+      "D"
+     ],
+     "nodeState": {
+      "A": {
+       "color": 0
+      },
+      "B": {
+       "color": 1
+      },
+      "D": {
+       "color": 1
+      }
+     },
+     "variables": {
+      "start": "A",
+      "v": "D"
+     }
+    },
+    {
+     "line": 14,
+     "explanation": "color[C] gets its first value: 0 — it now rides under C on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "B",
+      "visited": [
+       "A"
+      ],
+      "pointers": {
+       "curr": "B"
+      }
+     },
+     "queue": [
+      "D"
+     ],
+     "nodeState": {
+      "A": {
+       "color": 0
+      },
+      "B": {
+       "color": 1
+      },
+      "D": {
+       "color": 1
+      },
+      "C": {
+       "color": 0
+      }
+     },
+     "variables": {
+      "start": "A",
+      "v": "C"
+     }
+    },
+    {
+     "line": 11,
+     "explanation": "The queue now holds D, C — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "B",
+      "visited": [
+       "A"
+      ],
+      "pointers": {
+       "curr": "B"
+      }
+     },
+     "queue": [
+      "D",
+      "C"
+     ],
+     "nodeState": {
+      "A": {
+       "color": 0
+      },
+      "B": {
+       "color": 1
+      },
+      "D": {
+       "color": 1
+      },
+      "C": {
+       "color": 0
+      }
+     },
+     "variables": {
+      "start": "A",
+      "v": "C"
+     }
+    },
+    {
+     "line": 11,
+     "explanation": "Now D is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along D's edges.",
+     "graph": {
+      "current": "D",
+      "visited": [
+       "A",
+       "B"
+      ],
+      "pointers": {
+       "curr": "D"
+      }
+     },
+     "queue": [
+      "C"
+     ],
+     "nodeState": {
+      "A": {
+       "color": 0
+      },
+      "B": {
+       "color": 1
+      },
+      "D": {
+       "color": 1
+      },
+      "C": {
+       "color": 0
+      }
+     },
+     "variables": {
+      "start": "A",
+      "v": "C"
+     }
+    },
+    {
+     "line": 11,
+     "explanation": "Now C is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along C's edges.",
+     "graph": {
+      "current": "C",
+      "visited": [
+       "A",
+       "B",
+       "D"
+      ],
+      "pointers": {
+       "curr": "C"
+      }
+     },
+     "queue": [],
+     "nodeState": {
+      "A": {
+       "color": 0
+      },
+      "B": {
+       "color": 1
+      },
+      "D": {
+       "color": 1
+      },
+      "C": {
+       "color": 0
+      }
+     },
+     "variables": {
+      "start": "A",
+      "v": "C"
+     }
+    },
+    {
+     "line": 11,
+     "explanation": "The walk is complete and the call returns true. Every number in the final table was earned by a relaxation you watched happen — that is the whole proof, performed in front of you.",
+     "graph": {
+      "current": "C",
+      "visited": [
+       "A",
+       "B",
+       "D",
+       "C"
+      ],
+      "pointers": {
+       "curr": "C"
+      }
+     },
+     "nodeState": {
+      "A": {
+       "color": 0
+      },
+      "B": {
+       "color": 1
+      },
+      "D": {
+       "color": 1
+      },
+      "C": {
+       "color": 0
+      }
+     },
+     "variables": {}
+    }
+   ]
+  }
+ },
+ {
+  "name": "prim-mst (in_mst + key labels)",
+  "lens": "graph-adjacency",
+  "trace": {
+   "language": "python",
+   "code": "import heapq\ndef prim(n, edges):\n    adj = {i: [] for i in range(n)}\n    for u, v, w in edges:\n        adj[u].append((v, w))\n        adj[v].append((u, w))\n    in_mst = [0] * n\n    key = [10**9] * n\n    key[0] = 0\n    pq = [(0, 0)]\n    total = 0\n    while pq:\n        k, u = heapq.heappop(pq)\n        if in_mst[u]:\n            continue\n        in_mst[u] = 1\n        total += k\n        for v, w in adj[u]:\n            if not in_mst[v] and w < key[v]:\n                key[v] = w\n                heapq.heappush(pq, (w, v))\n    return total",
+   "views": {
+    "graph": {
+     "nodes": [
+      {
+       "id": "0",
+       "label": "0"
+      },
+      {
+       "id": "1",
+       "label": "1"
+      },
+      {
+       "id": "2",
+       "label": "2"
+      },
+      {
+       "id": "3",
+       "label": "3"
+      },
+      {
+       "id": "4",
+       "label": "4"
+      }
+     ],
+     "edges": [
+      {
+       "from": "0",
+       "to": "1",
+       "weight": 2
+      },
+      {
+       "from": "0",
+       "to": "3",
+       "weight": 6
+      },
+      {
+       "from": "1",
+       "to": "0",
+       "weight": 2
+      },
+      {
+       "from": "1",
+       "to": "2",
+       "weight": 3
+      },
+      {
+       "from": "1",
+       "to": "3",
+       "weight": 8
+      },
+      {
+       "from": "1",
+       "to": "4",
+       "weight": 5
+      },
+      {
+       "from": "2",
+       "to": "1",
+       "weight": 3
+      },
+      {
+       "from": "2",
+       "to": "4",
+       "weight": 7
+      },
+      {
+       "from": "3",
+       "to": "0",
+       "weight": 6
+      },
+      {
+       "from": "3",
+       "to": "1",
+       "weight": 8
+      },
+      {
+       "from": "3",
+       "to": "4",
+       "weight": 9
+      },
+      {
+       "from": "4",
+       "to": "1",
+       "weight": 5
+      },
+      {
+       "from": "4",
+       "to": "2",
+       "weight": 7
+      },
+      {
+       "from": "4",
+       "to": "3",
+       "weight": 9
+      }
+     ],
+     "directed": false
+    }
+   },
+   "steps": [
+    {
+     "line": 5,
+     "explanation": "We run prim(5, [[0,1,2],[0,3,6],[1,2,3],[1,3,8],[1,4,5],[2,4,7],[3,4,9]]) on this exact graph and watch the algorithm's own variables — the node being processed, the distance table, the frontier. Every value below was recorded from the real run; the picture can never disagree with the code.",
+     "graph": {
+      "current": null,
+      "visited": [],
+      "pointers": {}
+     },
+     "variables": {}
+    },
+    {
+     "line": 5,
+     "explanation": "Now 0 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 0's edges.",
+     "graph": {
+      "current": "0",
+      "visited": [],
+      "pointers": {
+       "curr": "0"
+      }
+     },
+     "nodeState": {},
+     "variables": {
+      "n": 5,
+      "v": 1,
+      "w": 2
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "Now 1 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
+     "graph": {
+      "current": "1",
+      "visited": [
+       "0"
+      ],
+      "pointers": {
+       "curr": "1"
+      }
+     },
+     "nodeState": {},
+     "variables": {
+      "n": 5,
+      "v": 2,
+      "w": 3
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "Now 2 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 2's edges.",
+     "graph": {
+      "current": "2",
+      "visited": [
+       "0",
+       "1"
+      ],
+      "pointers": {
+       "curr": "2"
+      }
+     },
+     "nodeState": {},
+     "variables": {
+      "n": 5,
+      "v": 4,
+      "w": 7
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "Now 3 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 3's edges.",
+     "graph": {
+      "current": "3",
+      "visited": [
+       "0",
+       "1",
+       "2"
+      ],
+      "pointers": {
+       "curr": "3"
+      }
+     },
+     "nodeState": {},
+     "variables": {
+      "n": 5,
+      "v": 4,
+      "w": 9
+     }
+    },
+    {
+     "line": 10,
+     "explanation": "key[0] gets its first value: 0 — it now rides under 0 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "3",
+      "visited": [
+       "0",
+       "1",
+       "2"
+      ],
+      "pointers": {
+       "curr": "3"
+      }
+     },
+     "nodeState": {
+      "0": {
+       "key": 0
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 4,
+      "w": 9
+     }
+    },
+    {
+     "line": 11,
+     "explanation": "The queue now holds 0:0 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "3",
+      "visited": [
+       "0",
+       "1",
+       "2"
+      ],
+      "pointers": {
+       "curr": "3"
+      }
+     },
+     "queue": [
+      "0:0"
+     ],
+     "nodeState": {
+      "0": {
+       "key": 0
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 4,
+      "w": 9
+     }
+    },
+    {
+     "line": 14,
+     "explanation": "Now 0 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 0's edges.",
+     "graph": {
+      "current": "0",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "0"
+      }
+     },
+     "queue": [],
+     "nodeState": {
+      "0": {
+       "key": 0
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 4,
+      "w": 9,
+      "total": 0,
+      "k": 0
+     }
+    },
+    {
+     "line": 17,
+     "explanation": "in_mst[0] gets its first value: 1 — it now rides under 0 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "0",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "0"
+      }
+     },
+     "queue": [],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 4,
+      "w": 9,
+      "total": 0,
+      "k": 0
+     }
+    },
+    {
+     "line": 21,
+     "explanation": "key[1] gets its first value: 2 — it now rides under 1 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "0",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "0"
+      }
+     },
+     "queue": [],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "key": 2
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 1,
+      "w": 2,
+      "total": 0,
+      "k": 0
+     }
+    },
+    {
+     "line": 18,
+     "explanation": "The queue now holds 2:1 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "0",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "0"
+      }
+     },
+     "queue": [
+      "2:1"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "key": 2
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 1,
+      "w": 2,
+      "total": 0,
+      "k": 0
+     }
+    },
+    {
+     "line": 21,
+     "explanation": "key[3] gets its first value: 6 — it now rides under 3 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "0",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "0"
+      }
+     },
+     "queue": [
+      "2:1"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "key": 2
+      },
+      "3": {
+       "key": 6
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 3,
+      "w": 6,
+      "total": 0,
+      "k": 0
+     }
+    },
+    {
+     "line": 18,
+     "explanation": "The queue now holds 2:1, 6:3 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "0",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "0"
+      }
+     },
+     "queue": [
+      "2:1",
+      "6:3"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "key": 2
+      },
+      "3": {
+       "key": 6
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 3,
+      "w": 6,
+      "total": 0,
+      "k": 0
+     }
+    },
+    {
+     "line": 14,
+     "explanation": "Now 1 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
+     "graph": {
+      "current": "1",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "1"
+      }
+     },
+     "queue": [
+      "6:3"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "key": 2
+      },
+      "3": {
+       "key": 6
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 3,
+      "w": 6,
+      "total": 0,
+      "k": 2
+     }
+    },
+    {
+     "line": 17,
+     "explanation": "in_mst[1] gets its first value: 1 — it now rides under 1 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "1",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "1"
+      }
+     },
+     "queue": [
+      "6:3"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "in_mst": 1,
+       "key": 2
+      },
+      "3": {
+       "key": 6
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 3,
+      "w": 6,
+      "total": 0,
+      "k": 2
+     }
+    },
+    {
+     "line": 21,
+     "explanation": "key[2] gets its first value: 3 — it now rides under 2 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "1",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "1"
+      }
+     },
+     "queue": [
+      "6:3"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "in_mst": 1,
+       "key": 2
+      },
+      "2": {
+       "key": 3
+      },
+      "3": {
+       "key": 6
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 2,
+      "w": 3,
+      "total": 2,
+      "k": 2
+     }
+    },
+    {
+     "line": 18,
+     "explanation": "The queue now holds 3:2, 6:3 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "1",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "1"
+      }
+     },
+     "queue": [
+      "3:2",
+      "6:3"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "in_mst": 1,
+       "key": 2
+      },
+      "2": {
+       "key": 3
+      },
+      "3": {
+       "key": 6
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 2,
+      "w": 3,
+      "total": 2,
+      "k": 2
+     }
+    },
+    {
+     "line": 21,
+     "explanation": "key[4] gets its first value: 5 — it now rides under 4 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "1",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "1"
+      }
+     },
+     "queue": [
+      "3:2",
+      "6:3"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "in_mst": 1,
+       "key": 2
+      },
+      "2": {
+       "key": 3
+      },
+      "3": {
+       "key": 6
+      },
+      "4": {
+       "key": 5
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 4,
+      "w": 5,
+      "total": 2,
+      "k": 2
+     }
+    },
+    {
+     "line": 18,
+     "explanation": "The queue now holds 3:2, 5:4, 6:3 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "1",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "1"
+      }
+     },
+     "queue": [
+      "3:2",
+      "5:4",
+      "6:3"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "in_mst": 1,
+       "key": 2
+      },
+      "2": {
+       "key": 3
+      },
+      "3": {
+       "key": 6
+      },
+      "4": {
+       "key": 5
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 4,
+      "w": 5,
+      "total": 2,
+      "k": 2
+     }
+    },
+    {
+     "line": 14,
+     "explanation": "Now 2 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 2's edges.",
+     "graph": {
+      "current": "2",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "2"
+      }
+     },
+     "queue": [
+      "5:4",
+      "6:3"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "in_mst": 1,
+       "key": 2
+      },
+      "2": {
+       "key": 3
+      },
+      "3": {
+       "key": 6
+      },
+      "4": {
+       "key": 5
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 4,
+      "w": 5,
+      "total": 2,
+      "k": 3
+     }
+    },
+    {
+     "line": 17,
+     "explanation": "in_mst[2] gets its first value: 1 — it now rides under 2 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "2",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "2"
+      }
+     },
+     "queue": [
+      "5:4",
+      "6:3"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "in_mst": 1,
+       "key": 2
+      },
+      "2": {
+       "in_mst": 1,
+       "key": 3
+      },
+      "3": {
+       "key": 6
+      },
+      "4": {
+       "key": 5
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 4,
+      "w": 5,
+      "total": 2,
+      "k": 3
+     }
+    },
+    {
+     "line": 14,
+     "explanation": "Now 4 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 4's edges.",
+     "graph": {
+      "current": "4",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "4"
+      }
+     },
+     "queue": [
+      "6:3"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "in_mst": 1,
+       "key": 2
+      },
+      "2": {
+       "in_mst": 1,
+       "key": 3
+      },
+      "3": {
+       "key": 6
+      },
+      "4": {
+       "key": 5
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 4,
+      "w": 7,
+      "total": 5,
+      "k": 5
+     }
+    },
+    {
+     "line": 17,
+     "explanation": "in_mst[4] gets its first value: 1 — it now rides under 4 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "4",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3"
+      ],
+      "pointers": {
+       "curr": "4"
+      }
+     },
+     "queue": [
+      "6:3"
+     ],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "in_mst": 1,
+       "key": 2
+      },
+      "2": {
+       "in_mst": 1,
+       "key": 3
+      },
+      "3": {
+       "key": 6
+      },
+      "4": {
+       "in_mst": 1,
+       "key": 5
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 4,
+      "w": 7,
+      "total": 5,
+      "k": 5
+     }
+    },
+    {
+     "line": 14,
+     "explanation": "Now 3 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 3's edges.",
+     "graph": {
+      "current": "3",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3",
+       "4"
+      ],
+      "pointers": {
+       "curr": "3"
+      }
+     },
+     "queue": [],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "in_mst": 1,
+       "key": 2
+      },
+      "2": {
+       "in_mst": 1,
+       "key": 3
+      },
+      "3": {
+       "key": 6
+      },
+      "4": {
+       "in_mst": 1,
+       "key": 5
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 3,
+      "w": 9,
+      "total": 10,
+      "k": 6
+     }
+    },
+    {
+     "line": 17,
+     "explanation": "in_mst[3] gets its first value: 1 — it now rides under 3 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "3",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3",
+       "4"
+      ],
+      "pointers": {
+       "curr": "3"
+      }
+     },
+     "queue": [],
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "in_mst": 1,
+       "key": 2
+      },
+      "2": {
+       "in_mst": 1,
+       "key": 3
+      },
+      "3": {
+       "in_mst": 1,
+       "key": 6
+      },
+      "4": {
+       "in_mst": 1,
+       "key": 5
+      }
+     },
+     "variables": {
+      "n": 5,
+      "v": 3,
+      "w": 9,
+      "total": 10,
+      "k": 6
+     }
+    },
+    {
+     "line": 17,
+     "explanation": "The walk is complete and the call returns 16. Every number in the final table was earned by a relaxation you watched happen — that is the whole proof, performed in front of you.",
+     "graph": {
+      "current": "3",
+      "visited": [
+       "0",
+       "1",
+       "2",
+       "3",
+       "4"
+      ],
+      "pointers": {
+       "curr": "3"
+      }
+     },
+     "nodeState": {
+      "0": {
+       "in_mst": 1,
+       "key": 0
+      },
+      "1": {
+       "in_mst": 1,
+       "key": 2
+      },
+      "2": {
+       "in_mst": 1,
+       "key": 3
+      },
+      "3": {
+       "in_mst": 1,
+       "key": 6
+      },
+      "4": {
+       "in_mst": 1,
+       "key": 5
+      }
+     },
+     "variables": {}
+    }
+   ]
+  }
+ },
+ {
+  "name": "edit-distance (2-D dp, min-family)",
+  "lens": "dp-table",
+  "trace": {
+   "language": "python",
+   "code": "def edit_distance(a, b):\n    n, m = len(a), len(b)\n    dp = [[0] * (m + 1) for _ in range(n + 1)]\n    for i in range(n + 1):\n        dp[i][0] = i\n    for j in range(m + 1):\n        dp[0][j] = j\n    for i in range(1, n + 1):\n        for j in range(1, m + 1):\n            if a[i-1] == b[j-1]:\n                dp[i][j] = dp[i-1][j-1]\n            else:\n                dp[i][j] = 1 + min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1])\n    return dp[n][m]",
+   "views": {
+    "array2d": {
+     "rows": 4,
+     "cols": 4
+    }
+   },
+   "steps": [
+    {
+     "line": 4,
+     "explanation": "We run edit_distance(\"cat\", \"cut\") and watch the 4×4 table fill cell by cell. One rule before anything moves: know what a cell MEANS — dp[i][j] is the answer to a smaller version of the same question, and every write below only ever combines already-solved smaller answers.",
+     "array2d": {},
+     "variables": {}
+    },
+    {
+     "line": 4,
+     "explanation": "The table is created: 4 rows × 4 columns, seeded with its starting values. These are not answers yet — they are the scaffold the real answers will be built on.",
+     "array2d": {
+      "values": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        1,
+        0
+       ],
+       [
+        0,
+        2,
+        0
+       ],
+       [
+        0,
+        3,
+        0
+       ],
+       [
+        1,
+        0,
+        0
+       ],
+       [
+        1,
+        1,
+        0
+       ],
+       [
+        1,
+        2,
+        0
+       ],
+       [
+        1,
+        3,
+        0
+       ],
+       [
+        2,
+        0,
+        0
+       ],
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        2,
+        2,
+        0
+       ],
+       [
+        2,
+        3,
+        0
+       ],
+       [
+        3,
+        0,
+        0
+       ],
+       [
+        3,
+        1,
+        0
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        3,
+        3,
+        0
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "Base case: dp[1][0] is set to 1. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       1,
+       0
+      ],
+      "values": [
+       [
+        1,
+        0,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 1
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "Base case: dp[2][0] is set to 2. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       2,
+       0
+      ],
+      "values": [
+       [
+        2,
+        0,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 2
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "Base case: dp[3][0] is set to 3. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       3,
+       0
+      ],
+      "values": [
+       [
+        3,
+        0,
+        3
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 3
+     }
+    },
+    {
+     "line": 6,
+     "explanation": "Base case: dp[0][1] is set to 1. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
+       1
+      ],
+      "values": [
+       [
+        0,
+        1,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        0,
+        1
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 3,
+      "j": 1
+     }
+    },
+    {
+     "line": 6,
+     "explanation": "Base case: dp[0][2] is set to 2. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
+       2
+      ],
+      "values": [
+       [
+        0,
+        2,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 3,
+      "j": 2
+     }
+    },
+    {
+     "line": 6,
+     "explanation": "Base case: dp[0][3] is set to 3. Row 0 and column 0 are the \"empty problem\" answers — they cost nothing to know, and every harder cell will lean on them.",
+     "array2d": {
+      "current": [
+       0,
+       3
+      ],
+      "values": [
+       [
+        0,
+        3,
+        3
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 3,
+      "j": 3
+     }
+    },
+    {
+     "line": 9,
+     "explanation": "dp[1][2] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       1,
+       2
+      ],
+      "values": [
+       [
+        1,
+        2,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        1,
+        2
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 1,
+      "j": 2
+     }
+    },
+    {
+     "line": 9,
+     "explanation": "dp[1][3] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       1,
+       3
+      ],
+      "values": [
+       [
+        1,
+        3,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 1,
+      "j": 3
+     }
+    },
+    {
+     "line": 9,
+     "explanation": "dp[2][1] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       2,
+       1
+      ],
+      "values": [
+       [
+        2,
+        1,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        2,
+        1
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 2,
+      "j": 1
+     }
+    },
+    {
+     "line": 9,
+     "explanation": "dp[2][2] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       2,
+       2
+      ],
+      "values": [
+       [
+        2,
+        2,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 2,
+      "j": 2
+     }
+    },
+    {
+     "line": 9,
+     "explanation": "dp[2][3] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       2,
+       3
+      ],
+      "values": [
+       [
+        2,
+        3,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 2,
+      "j": 3
+     }
+    },
+    {
+     "line": 9,
+     "explanation": "dp[3][1] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       3,
+       1
+      ],
+      "values": [
+       [
+        3,
+        1,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        3,
+        1
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 3,
+      "j": 1
+     }
+    },
+    {
+     "line": 9,
+     "explanation": "dp[3][2] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       3,
+       2
+      ],
+      "values": [
+       [
+        3,
+        2,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        3,
+        1
+       ],
+       [
+        3,
+        2
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 3,
+      "j": 2
+     }
+    },
+    {
+     "line": 9,
+     "explanation": "dp[3][3] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       3,
+       3
+      ],
+      "values": [
+       [
+        3,
+        3,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        3,
+        1
+       ],
+       [
+        3,
+        2
+       ],
+       [
+        3,
+        3
+       ]
+      ]
+     },
+     "variables": {
+      "a": "cat",
+      "b": "cut",
+      "n": 3,
+      "m": 3,
+      "i": 3,
+      "j": 3
+     }
+    },
+    {
+     "line": 9,
+     "explanation": "The table is complete and the call returns 1. The answer was read out of dp[3][3] = 1 — the bottom-right of the region we just filled, the \"full problem\" cell. Count what you watched: one write per cell, each in constant time — that is the O(rows × cols) story, and the filled table IS the proof.",
+     "array2d": {
+      "current": [
+       3,
+       3
+      ],
+      "filled": [
+       [
+        1,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        3,
+        0
+       ],
+       [
+        0,
+        1
+       ],
+       [
+        0,
+        2
+       ],
+       [
+        0,
+        3
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        3,
+        1
+       ],
+       [
+        3,
+        2
+       ],
+       [
+        3,
+        3
+       ]
+      ]
+     },
+     "variables": {}
+    }
+   ]
+  }
+ },
+ {
+  "name": "unique-paths (2-D dp, top+left proved)",
+  "lens": "dp-table",
+  "trace": {
+   "language": "python",
+   "code": "def unique_paths(m, n):\n    dp = [[1] * n for _ in range(m)]\n    for i in range(1, m):\n        for j in range(1, n):\n            dp[i][j] = dp[i-1][j] + dp[i][j-1]\n    return dp[m-1][n-1]",
+   "views": {
+    "array2d": {
+     "rows": 3,
+     "cols": 4
+    }
+   },
+   "steps": [
+    {
+     "line": 3,
+     "explanation": "We run unique_paths(3, 4) and watch the 3×4 table fill cell by cell. One rule before anything moves: know what a cell MEANS — dp[i][j] is the answer to a smaller version of the same question, and every write below only ever combines already-solved smaller answers.",
+     "array2d": {},
+     "variables": {}
+    },
+    {
+     "line": 3,
+     "explanation": "The table is created: 3 rows × 4 columns, seeded with its starting values. These are not answers yet — they are the scaffold the real answers will be built on.",
+     "array2d": {
+      "values": [
+       [
+        0,
+        0,
+        1
+       ],
+       [
+        0,
+        1,
+        1
+       ],
+       [
+        0,
+        2,
+        1
+       ],
+       [
+        0,
+        3,
+        1
+       ],
+       [
+        1,
+        0,
+        1
+       ],
+       [
+        1,
+        1,
+        1
+       ],
+       [
+        1,
+        2,
+        1
+       ],
+       [
+        1,
+        3,
+        1
+       ],
+       [
+        2,
+        0,
+        1
+       ],
+       [
+        2,
+        1,
+        1
+       ],
+       [
+        2,
+        2,
+        1
+       ],
+       [
+        2,
+        3,
+        1
+       ]
+      ]
+     },
+     "variables": {
+      "m": 3,
+      "n": 4
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "dp[1][1] becomes 2 (it was 1) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       1,
+       1
+      ],
+      "values": [
+       [
+        1,
+        1,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ]
+      ]
+     },
+     "variables": {
+      "m": 3,
+      "n": 4,
+      "i": 1,
+      "j": 1
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "dp[1][2] becomes 3 (it was 1) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does. (rule: top + left)",
+     "array2d": {
+      "current": [
+       1,
+       2
+      ],
+      "values": [
+       [
+        1,
+        2,
+        3
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ]
+      ],
+      "highlight": [
+       [
+        0,
+        2
+       ],
+       [
+        1,
+        1
+       ]
+      ],
+      "rule": "top + left"
+     },
+     "variables": {
+      "m": 3,
+      "n": 4,
+      "i": 1,
+      "j": 2
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "dp[1][3] becomes 4 (it was 1) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does. (rule: top + left)",
+     "array2d": {
+      "current": [
+       1,
+       3
+      ],
+      "values": [
+       [
+        1,
+        3,
+        4
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ]
+      ],
+      "highlight": [
+       [
+        0,
+        3
+       ],
+       [
+        1,
+        2
+       ]
+      ],
+      "rule": "top + left"
+     },
+     "variables": {
+      "m": 3,
+      "n": 4,
+      "i": 1,
+      "j": 3
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "dp[2][1] becomes 3 (it was 1) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does. (rule: top + left)",
+     "array2d": {
+      "current": [
+       2,
+       1
+      ],
+      "values": [
+       [
+        2,
+        1,
+        3
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        2,
+        1
+       ]
+      ],
+      "highlight": [
+       [
+        1,
+        1
+       ],
+       [
+        2,
+        0
+       ]
+      ],
+      "rule": "top + left"
+     },
+     "variables": {
+      "m": 3,
+      "n": 4,
+      "i": 2,
+      "j": 1
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "dp[2][2] becomes 6 (it was 1) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does. (rule: top + left)",
+     "array2d": {
+      "current": [
+       2,
+       2
+      ],
+      "values": [
+       [
+        2,
+        2,
+        6
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ]
+      ],
+      "highlight": [
+       [
+        1,
+        2
+       ],
+       [
+        2,
+        1
+       ]
+      ],
+      "rule": "top + left"
+     },
+     "variables": {
+      "m": 3,
+      "n": 4,
+      "i": 2,
+      "j": 2
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "dp[2][3] becomes 10 (it was 1) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does. (rule: top + left)",
+     "array2d": {
+      "current": [
+       2,
+       3
+      ],
+      "values": [
+       [
+        2,
+        3,
+        10
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ]
+      ],
+      "highlight": [
+       [
+        1,
+        3
+       ],
+       [
+        2,
+        2
+       ]
+      ],
+      "rule": "top + left"
+     },
+     "variables": {
+      "m": 3,
+      "n": 4,
+      "i": 2,
+      "j": 3
+     }
+    },
+    {
+     "line": 4,
+     "explanation": "The table is complete and the call returns 10. The answer was read out of dp[2][3] = 10 — the bottom-right of the region we just filled, the \"full problem\" cell. Count what you watched: one write per cell, each in constant time — that is the O(rows × cols) story, and the filled table IS the proof.",
+     "array2d": {
+      "current": [
+       2,
+       3
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ]
+      ]
+     },
+     "variables": {}
+    }
+   ]
+  }
+ },
+ {
   "name": "tarjan-bridges (graph-adjacency + nodeState)",
   "lens": "graph-adjacency",
   "trace": {
@@ -2134,19 +5004,19 @@
     "list": {
      "nodes": [
       {
-       "id": "4315042944"
+       "id": "4341355648"
       },
       {
-       "id": "4315042032"
+       "id": "4341354736"
       },
       {
-       "id": "4314697872"
+       "id": "4341010576"
       },
       {
-       "id": "4314708752"
+       "id": "4341021456"
       },
       {
-       "id": "4315220352"
+       "id": "4341516672"
       }
      ]
     }
@@ -2167,33 +5037,33 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4314708752"
+        "next": "4341021456"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944"
+       "head": "4341355648"
       }
      },
      "variables": {}
@@ -2204,33 +5074,33 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4314708752"
+        "next": "4341021456"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
+       "head": "4341355648",
        "prev": null
       }
      },
@@ -2242,34 +5112,34 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4314708752"
+        "next": "4341021456"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4315042944",
+       "head": "4341355648",
+       "curr": "4341355648",
        "prev": null
       }
      },
@@ -2281,35 +5151,35 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4314708752"
+        "next": "4341021456"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4315042944",
-       "nxt": "4315042032",
+       "head": "4341355648",
+       "curr": "4341355648",
+       "nxt": "4341354736",
        "prev": null
       }
      },
@@ -2321,36 +5191,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null,
         "rewired": true
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4314708752"
+        "next": "4341021456"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4315042944",
-       "nxt": "4315042032",
+       "head": "4341355648",
+       "curr": "4341355648",
+       "nxt": "4341354736",
        "prev": null
       }
      },
@@ -2362,36 +5232,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4314708752"
+        "next": "4341021456"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4315042944",
-       "nxt": "4315042032",
-       "prev": "4315042944"
+       "head": "4341355648",
+       "curr": "4341355648",
+       "nxt": "4341354736",
+       "prev": "4341355648"
       }
      },
      "variables": {}
@@ -2402,36 +5272,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4314708752"
+        "next": "4341021456"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4315042032",
-       "nxt": "4315042032",
-       "prev": "4315042944"
+       "head": "4341355648",
+       "curr": "4341354736",
+       "nxt": "4341354736",
+       "prev": "4341355648"
       }
      },
      "variables": {}
@@ -2442,36 +5312,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4314708752"
+        "next": "4341021456"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4315042032",
-       "nxt": "4314697872",
-       "prev": "4315042944"
+       "head": "4341355648",
+       "curr": "4341354736",
+       "nxt": "4341010576",
+       "prev": "4341355648"
       }
      },
      "variables": {}
@@ -2482,37 +5352,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944",
+        "next": "4341355648",
         "rewired": true
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4314708752"
+        "next": "4341021456"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4315042032",
-       "nxt": "4314697872",
-       "prev": "4315042944"
+       "head": "4341355648",
+       "curr": "4341354736",
+       "nxt": "4341010576",
+       "prev": "4341355648"
       }
      },
      "variables": {}
@@ -2523,36 +5393,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4314708752"
+        "next": "4341021456"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4315042032",
-       "nxt": "4314697872",
-       "prev": "4315042032"
+       "head": "4341355648",
+       "curr": "4341354736",
+       "nxt": "4341010576",
+       "prev": "4341354736"
       }
      },
      "variables": {}
@@ -2563,36 +5433,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4314708752"
+        "next": "4341021456"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4314697872",
-       "nxt": "4314697872",
-       "prev": "4315042032"
+       "head": "4341355648",
+       "curr": "4341010576",
+       "nxt": "4341010576",
+       "prev": "4341354736"
       }
      },
      "variables": {}
@@ -2603,36 +5473,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4314708752"
+        "next": "4341021456"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4314697872",
-       "nxt": "4314708752",
-       "prev": "4315042032"
+       "head": "4341355648",
+       "curr": "4341010576",
+       "nxt": "4341021456",
+       "prev": "4341354736"
       }
      },
      "variables": {}
@@ -2643,37 +5513,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4315042032",
+        "next": "4341354736",
         "rewired": true
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4314697872",
-       "nxt": "4314708752",
-       "prev": "4315042032"
+       "head": "4341355648",
+       "curr": "4341010576",
+       "nxt": "4341021456",
+       "prev": "4341354736"
       }
      },
      "variables": {}
@@ -2684,36 +5554,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4314697872",
-       "nxt": "4314708752",
-       "prev": "4314697872"
+       "head": "4341355648",
+       "curr": "4341010576",
+       "nxt": "4341021456",
+       "prev": "4341010576"
       }
      },
      "variables": {}
@@ -2724,36 +5594,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4314708752",
-       "nxt": "4314708752",
-       "prev": "4314697872"
+       "head": "4341355648",
+       "curr": "4341021456",
+       "nxt": "4341021456",
+       "prev": "4341010576"
       }
      },
      "variables": {}
@@ -2764,36 +5634,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4315220352"
+        "next": "4341516672"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4314708752",
-       "nxt": "4315220352",
-       "prev": "4314697872"
+       "head": "4341355648",
+       "curr": "4341021456",
+       "nxt": "4341516672",
+       "prev": "4341010576"
       }
      },
      "variables": {}
@@ -2804,37 +5674,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4314697872",
+        "next": "4341010576",
         "rewired": true
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4314708752",
-       "nxt": "4315220352",
-       "prev": "4314697872"
+       "head": "4341355648",
+       "curr": "4341021456",
+       "nxt": "4341516672",
+       "prev": "4341010576"
       }
      },
      "variables": {}
@@ -2845,36 +5715,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4314708752",
-       "nxt": "4315220352",
-       "prev": "4314708752"
+       "head": "4341355648",
+       "curr": "4341021456",
+       "nxt": "4341516672",
+       "prev": "4341021456"
       }
      },
      "variables": {}
@@ -2885,36 +5755,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4315220352",
-       "nxt": "4315220352",
-       "prev": "4314708752"
+       "head": "4341355648",
+       "curr": "4341516672",
+       "nxt": "4341516672",
+       "prev": "4341021456"
       }
      },
      "variables": {}
@@ -2925,36 +5795,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4315220352",
+       "head": "4341355648",
+       "curr": "4341516672",
        "nxt": null,
-       "prev": "4314708752"
+       "prev": "4341021456"
       }
      },
      "variables": {}
@@ -2965,37 +5835,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
-        "next": "4314708752",
+        "next": "4341021456",
         "rewired": true
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4315220352",
+       "head": "4341355648",
+       "curr": "4341516672",
        "nxt": null,
-       "prev": "4314708752"
+       "prev": "4341021456"
       }
      },
      "variables": {}
@@ -3006,36 +5876,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
-        "next": "4314708752"
+        "next": "4341021456"
        }
       ],
       "pointers": {
-       "head": "4315042944",
-       "curr": "4315220352",
+       "head": "4341355648",
+       "curr": "4341516672",
        "nxt": null,
-       "prev": "4315220352"
+       "prev": "4341516672"
       }
      },
      "variables": {}
@@ -3046,36 +5916,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
-        "next": "4314708752"
+        "next": "4341021456"
        }
       ],
       "pointers": {
-       "head": "4315042944",
+       "head": "4341355648",
        "curr": null,
        "nxt": null,
-       "prev": "4315220352"
+       "prev": "4341516672"
       }
      },
      "variables": {}
@@ -3086,36 +5956,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4315042944",
+        "id": "4341355648",
         "value": 1,
         "next": null
        },
        {
-        "id": "4315042032",
+        "id": "4341354736",
         "value": 2,
-        "next": "4315042944"
+        "next": "4341355648"
        },
        {
-        "id": "4314697872",
+        "id": "4341010576",
         "value": 3,
-        "next": "4315042032"
+        "next": "4341354736"
        },
        {
-        "id": "4314708752",
+        "id": "4341021456",
         "value": 4,
-        "next": "4314697872"
+        "next": "4341010576"
        },
        {
-        "id": "4315220352",
+        "id": "4341516672",
         "value": 5,
-        "next": "4314708752"
+        "next": "4341021456"
        }
       ],
       "pointers": {
-       "head": "4315042944",
+       "head": "4341355648",
        "curr": null,
        "nxt": null,
-       "prev": "4315220352"
+       "prev": "4341516672"
       }
      },
      "variables": {}
