@@ -603,7 +603,29 @@ def can_finish(n, pres):
             elif v != parent:
                 low[u] = min(low[u], disc[v])
     dfs(0, -1)
-    return bridges`, 'critical_connections(6, [[0,1],[1,2],[2,0],[1,3],[3,4],[4,5],[5,3]])'],
+    return bridges`, 'critical_connections(8, [[0,1],[1,2],[2,0],[2,5],[5,3],[3,4],[4,5],[5,6],[6,7],[6,5]])'],
+  ['graphs', 'Prim MST (key relaxation, in_mst)', `import heapq
+def prim(n, edges):
+    adj = {i: [] for i in range(n)}
+    for u, v, w in edges:
+        adj[u].append((v, w))
+        adj[v].append((u, w))
+    in_mst = [0] * n
+    key = [10**9] * n
+    key[0] = 0
+    pq = [(0, 0)]
+    total = 0
+    while pq:
+        k, u = heapq.heappop(pq)
+        if in_mst[u]:
+            continue
+        in_mst[u] = 1
+        total += k
+        for v, w in adj[u]:
+            if not in_mst[v] and w < key[v]:
+                key[v] = w
+                heapq.heappush(pq, (w, v))
+    return total`, 'prim(5, [[0,1,2],[0,3,6],[1,2,3],[1,3,8],[1,4,5],[2,4,7],[3,4,9]])'],
   ['graphs', 'G-25 Eventual Safe States (BFS)', `from collections import deque
 def safe_nodes(adj):
     rev = {u: [] for u in adj}

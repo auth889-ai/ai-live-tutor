@@ -116,17 +116,25 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
       roles.dist = name;
       continue;
     }
-    // Indegrees are COUNTS: every sighting must be all non-negative ints. Without this guard
-    // Tarjan's low[] ([-1]*n scaffold, then min-updates = per-index decreases) was claimed as
-    // indegree and narrated as "an incoming edge is satisfied" — a lying sentence (measured
-    // live on LC1192). One negative anywhere disqualifies the whole variable, not the snapshot.
+    // Indegrees are COUNTS: all non-negative ints, satisfied ONE EDGE AT A TIME — every drop
+    // is exactly -1. Both guards were bought with measured lies: Tarjan's low[] ([-1] scaffold,
+    // min-updates) narrated as "an incoming edge is satisfied" (negatives), and Prim's key[]
+    // (relaxations jump 10^9 -> 2) claimed the same way (jump drops). One violation anywhere
+    // disqualifies the whole variable; a rejected candidate falls to the nodeState channel,
+    // where it rides the drawing under its REAL name instead of a wrong story.
     const ilists = snaps.filter((v) => Array.isArray(v) && v.length >= 2 && v.every((x) => Number.isInteger(x)));
     if (!roles.indegree && ilists.length >= 2 && ilists.every((v) => v.every((x) => x >= 0))) {
       let drops = 0;
+      let jumpy = false;
       for (let i = 1; i < ilists.length; i += 1) {
-        for (let k = 0; k < ilists[i].length; k += 1) if (ilists[i][k] < (ilists[i - 1][k] ?? Infinity)) drops += 1;
+        for (let k = 0; k < ilists[i].length; k += 1) {
+          const prev = ilists[i - 1][k];
+          if (prev === undefined || ilists[i][k] >= prev) continue;
+          if (ilists[i][k] === prev - 1) drops += 1;
+          else jumpy = true;
+        }
       }
-      if (drops >= 2) roles.indegree = name;
+      if (drops >= 2 && !jumpy) roles.indegree = name;
     }
   }
 

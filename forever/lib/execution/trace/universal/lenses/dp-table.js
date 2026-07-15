@@ -44,18 +44,27 @@ export function detectDpTable(recording, _ctx = {}) {
     // Fingerprint 2 — the fill leaves a sweep trail: collect every cell write in order and
     // demand ≥80% of consecutive writes advance in row-major order (nested loops' fingerprint).
     const writes = [];
+    let inPlace = false; // any write into a cell that EXISTED before (a fill, not an append)
     for (let i = 1; i < snaps.length; i += 1) {
       const prev = snaps[i - 1];
       const cur = snaps[i];
       for (let r = 0; r < cur.length; r += 1) {
         for (let c = 0; c < (cur[r]?.length ?? 0); c += 1) {
-          if (JSON.stringify(prev?.[r]?.[c]) !== JSON.stringify(cur[r][c])) writes.push([r, c]);
+          if (JSON.stringify(prev?.[r]?.[c]) !== JSON.stringify(cur[r][c])) {
+            writes.push([r, c]);
+            if (prev?.[r]?.[c] !== undefined) inPlace = true;
+          }
         }
       }
     }
     // 3, not more: teaching inputs are TINY, and a write that stores the value a cell already
     // held (dp[1][1] = max(0,0) on a 0-scaffold) is invisible to state diffing.
     if (writes.length < 3) continue;
+    // APPEND-ONLY + 2 columns = a growing PAIRS list (bridges/edges/intervals/coordinates —
+    // a RESULT accumulator, not a DP fill). Measured live: Tarjan on an 8-node graph found 3
+    // bridges and the [[u,v],...] accumulator out-claimed the real graph as a 3x2 "DP table".
+    // A genuine 2-col DP is pre-allocated (in-place writes); an appended DP row is >= 3 wide.
+    if (!inPlace && cols === 2) continue;
     let ordered = 0;
     for (let i = 1; i < writes.length; i += 1) {
       const [ar, ac] = writes[i - 1];
