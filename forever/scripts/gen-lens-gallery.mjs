@@ -133,6 +133,51 @@ g = {"A": [("B", 4), ("C", 1)], "B": [("D", 1)], "C": [("B", 2), ("D", 5)], "D":
             else:
                 dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
     return dp[m][n]`, "lcs('ace', 'abcde')"],
+  ['rotting-oranges (multi-source grid BFS, LC994)', `from collections import deque
+def oranges(grid):
+    rows, cols = len(grid), len(grid[0])
+    queue = deque()
+    fresh = 0
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] == 2: queue.append((r, c, 0))
+            elif grid[r][c] == 1: fresh += 1
+    minutes = 0
+    while queue:
+        r, c, t = queue.popleft()
+        minutes = max(minutes, t)
+        for dr, dc in ((1,0),(-1,0),(0,1),(0,-1)):
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] == 1:
+                grid[nr][nc] = 2
+                fresh -= 1
+                queue.append((nr, nc, t + 1))
+    return minutes if fresh == 0 else -1
+
+g = [[2,1,1],[1,1,0],[0,1,1]]`, 'oranges(g)'],
+  ['bellman-ford (LC787-style relaxation)', `def bellman(n, edges, src):
+    dist = [float('inf')] * n
+    dist[src] = 0
+    for _ in range(n - 1):
+        for u, v, w in edges:
+            if dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+    return dist`, 'bellman(4, [[0,1,4],[0,2,1],[2,1,2],[1,3,1],[2,3,6]], 0)'],
+  ['01-bfs (deque, weighted 0/1 edges)', `from collections import deque
+def zero_one_bfs(adj, src, n):
+    dist = [float('inf')] * n
+    dist[src] = 0
+    dq = deque([src])
+    while dq:
+        u = dq.popleft()
+        for v, w in adj[u]:
+            if dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+                if w == 0: dq.appendleft(v)
+                else: dq.append(v)
+    return dist
+
+graph = {0: [(1, 0), (2, 1)], 1: [(3, 1)], 2: [(3, 0)], 3: []}`, 'zero_one_bfs(graph, 0, 4)'],
 ];
 
 const gallery = [];
