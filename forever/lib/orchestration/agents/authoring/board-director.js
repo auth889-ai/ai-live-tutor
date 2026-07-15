@@ -152,7 +152,7 @@ async function runBoardCall({ system, user, sourcePack, layout, brief = null }) 
       for (const object of objects) {
         if (object.decorative === true || object.grounding === 'analogy') continue; // cites nothing by design
         if (!sourcePack.chunks.some((chunk) => chunk.id === object.sourceRef?.chunkId)) {
-          throw new Error(`object ${object.id} cites unknown chunk ${object.sourceRef?.chunkId}`);
+          throw new Error(`object ${object.id} cites unknown chunk ${object.sourceRef?.chunkId} — copy ONE of the real chunkIds EXACTLY: ${sourcePack.chunks.slice(0, 8).map((chunk) => chunk.id).join(', ')}`);
         }
       }
       // Structure-true rule (classify-then-constrain): a tree/graph concept must be DRAWN

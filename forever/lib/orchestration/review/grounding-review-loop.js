@@ -99,9 +99,23 @@ export async function runGroundingReview({
   const arbitrate = async (state) => {
     onStep('The Arbiter is reviewing the surviving objections');
     const groundingObjections = state.lastObjections.filter((m) => m.fromRole === FOREVER_AGENT_ROLES.groundingAuditor);
-    const { sustained, usage } = await agents.ruleOnObjections({
-      sceneId, objections: groundingObjections, objects: state.board.objects, sourcePack,
-    });
+    let sustained;
+    let usage = null;
+    let arbiterDown = false;
+    try {
+      ({ sustained, usage } = await agents.ruleOnObjections({
+        sceneId, objections: groundingObjections, objects: state.board.objects, sourcePack,
+      }));
+    } catch (error) {
+      // A provider flake on the Arbiter must not kill a whole scene (live-caught: an LC200
+      // dry-run died on "Request timed out"). Fallback = the STRICT consensus rule that
+      // predates the Arbiter: every surviving grounding objection is treated as sustained —
+      // its object dies, the clean core ships. Stricter than the Arbiter (it can only remove
+      // MORE), so honesty is preserved; the loss is precision, logged loudly.
+      arbiterDown = true;
+      sustained = new Set(groundingObjections.flatMap((m) => (m.evidenceRefs ?? []).map((r) => r.objectId).filter(Boolean)));
+      console.error(`[review] Arbiter unavailable (${String(error?.message).slice(0, 80)}) — strict-consensus fallback: ${sustained.size} objected object(s) removed`);
+    }
     const overruled = groundingObjections.length - sustained.size;
     // Sustained objections remove THEIR objects (the auditor was right about those);
     // overruled ones die here. The scene fails only if no teachable core remains.
@@ -112,7 +126,9 @@ export async function runGroundingReview({
       kind: 'verdict',
       fromRole: FOREVER_AGENT_ROLES.arbiter,
       sceneId,
-      body: `Arbiter ruling: ${overruled} objection(s) overruled, ${sustained.size} sustained${sustained.size ? ` (objects removed: ${[...sustained].join(', ')})` : ''}.`,
+      body: arbiterDown
+        ? `Arbiter unavailable — strict consensus applied: all ${sustained.size} objected object(s) removed${sustained.size ? ` (${[...sustained].join(', ')})` : ''}.`
+        : `Arbiter ruling: ${overruled} objection(s) overruled, ${sustained.size} sustained${sustained.size ? ` (objects removed: ${[...sustained].join(', ')})` : ''}.`,
       verdict: { decision: objects.some((o) => o.decorative !== true) ? 'accept' : 'reject', binding: true },
     });
     if (!objects.some((object) => object.decorative !== true)) {

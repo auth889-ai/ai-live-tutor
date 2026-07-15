@@ -156,3 +156,32 @@ test('ARBITRATION: at the round cap, overruled objections ship the scene; sustai
   assert.deepEqual(result.objects.map((o) => o.id), ['title', 'good_analogy']);
   assert.ok(result.transcript.some((m) => /Arbiter ruling: 1 objection\(s\) overruled, 1 sustained/.test(m.body)));
 });
+
+test('an Arbiter provider flake falls back to strict consensus — objected objects die, the scene SURVIVES', async () => {
+  // Live-caught: an LC200 dry-run scene was dropped entirely because the arbiter call timed out.
+  const board = { objects: [
+    { id: 'good', objectType: 't', renderHint: 'text', region: 'notebook_body', content: 'solid', sourceRef: { chunkId: 'c1' } },
+    { id: 'bad', objectType: 't', renderHint: 'text', region: 'notebook_body', content: 'shaky', sourceRef: { chunkId: 'c1' } },
+  ] };
+  const objection = {
+    id: 'obj1', kind: 'objection', fromRole: 'grounding_auditor', sceneId: 'sc_t',
+    body: 'not supported', evidenceRefs: [{ objectId: 'bad' }],
+  };
+  let audits = 0;
+  const result = await runGroundingReview({
+    sceneId: 'sc_t',
+    sourcePack: { chunks: [{ id: 'c1', text: 'source' }] },
+    maxRounds: 1,
+    agents: {
+      designBoard: async () => board,
+      reviseBoard: async () => board, // revision returns the same board -> objection survives to the cap
+      auditGrounding: async () => ({ objections: (audits += 1) ? [objection] : [], usage: null }),
+      auditPedagogy: async () => ({ objections: [], usage: null }),
+      ruleOnObjections: async () => { throw new Error('Request timed out.'); },
+    },
+  });
+  assert.ok(result && !result.failed, 'the scene ships instead of dying with the arbiter');
+  assert.deepEqual(result.objects.map((o) => o.id), ['good'], 'strict consensus removed exactly the objected object');
+  const verdict = result.transcript.find((m) => m.kind === 'verdict');
+  assert.match(verdict.body, /Arbiter unavailable — strict consensus/, 'the audit trail tells the truth about the fallback');
+});

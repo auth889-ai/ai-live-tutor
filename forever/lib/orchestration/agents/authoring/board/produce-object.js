@@ -21,7 +21,7 @@ export function finalizeBoardObject(raw, { sourcePack, layout, brief, imageIndex
   validateBoardObject(object, layout);
   if (object.decorative !== true && object.grounding !== 'analogy'
     && !sourcePack.chunks.some((chunk) => chunk.id === object.sourceRef?.chunkId)) {
-    throw new Error(`object ${object.id} cites unknown chunk ${object.sourceRef?.chunkId}`);
+    throw new Error(`object ${object.id} cites unknown chunk ${object.sourceRef?.chunkId} — copy ONE of the real chunkIds EXACTLY: ${sourcePack.chunks.slice(0, 8).map((chunk) => chunk.id).join(', ')}`);
   }
   return object;
 }
