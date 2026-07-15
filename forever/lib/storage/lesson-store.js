@@ -13,6 +13,24 @@ import { dbEnabled, lessonsCollection } from './db.js';
 
 const ROOT = path.join(process.cwd(), '.data', 'lessons');
 
+// Atlas's dev network is flaky (documented: secureConnect timeouts, ReplicaSetNoPrimary —
+// live user report: a lesson page 500'd on one). READS retry transient network errors twice
+// with a short backoff before failing; a student should never need to know about a socket.
+const TRANSIENT_DB = /timed out|ETIMEDOUT|ECONNRESET|ServerSelection|NoPrimary|NetworkTimeout|SystemOverloaded/i;
+async function withDbRetry(operation, { attempts = 3, delayMs = 700 } = {}) {
+  let lastError;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (!TRANSIENT_DB.test(String(error?.message ?? error))) throw error;
+      if (i < attempts - 1) await new Promise((resolve) => setTimeout(resolve, delayMs * (i + 1)));
+    }
+  }
+  throw lastError;
+}
+
 function lessonFacts(lesson) {
   return {
     title: lesson.lessonTitle ?? 'Untitled lesson',
@@ -42,9 +60,11 @@ export async function saveLesson(id, lesson, { ownerId = null, collection = less
 // Returns the lesson only if it belongs to forUser (ownerless lessons stay readable).
 export async function loadLesson(id, { forUser = null, collection = lessonsCollection } = {}) {
   if (dbEnabled()) {
-    const lessons = await collection();
-    const doc = await lessons.findOne({ _id: sanitize(id), $or: [{ ownerId: null }, { ownerId: forUser }] });
-    return doc?.payload ?? null;
+    return withDbRetry(async () => {
+      const lessons = await collection();
+      const doc = await lessons.findOne({ _id: sanitize(id), $or: [{ ownerId: null }, { ownerId: forUser }] });
+      return doc?.payload ?? null;
+    });
   }
   try {
     const lesson = JSON.parse(await readFile(path.join(ROOT, `${sanitize(id)}.json`), 'utf8'));
@@ -65,14 +85,16 @@ export async function listLessonIds({ forUser = null, collection = lessonsCollec
 // a 16-lesson course is ONE course card, never 16 loose files flooding the shelf.
 export async function listLessons({ forUser = null, includeCourseLessons = false, collection = lessonsCollection } = {}) {
   if (dbEnabled()) {
-    const lessons = await collection();
-    const docs = await lessons
-      .find({ $or: [{ ownerId: null }, { ownerId: forUser }] }, { projection: { title: 1, scenes: 1, durationMs: 1, voiced: 1, coverImage: 1, updatedAt: 1, 'payload.courseRef.courseId': 1 } })
-      .sort({ updatedAt: -1 })
-      .toArray();
-    return docs
-      .map((doc) => ({ id: doc._id, title: doc.title, scenes: doc.scenes, voiced: doc.voiced === true, durationMs: doc.durationMs ?? 0, coverImage: doc.coverImage ?? null, courseId: doc.payload?.courseRef?.courseId ?? null }))
-      .filter((lesson) => includeCourseLessons || !lesson.courseId);
+    return withDbRetry(async () => {
+      const lessons = await collection();
+      const docs = await lessons
+        .find({ $or: [{ ownerId: null }, { ownerId: forUser }] }, { projection: { title: 1, scenes: 1, durationMs: 1, voiced: 1, coverImage: 1, updatedAt: 1, 'payload.courseRef.courseId': 1 } })
+        .sort({ updatedAt: -1 })
+        .toArray();
+      return docs
+        .map((doc) => ({ id: doc._id, title: doc.title, scenes: doc.scenes, voiced: doc.voiced === true, durationMs: doc.durationMs ?? 0, coverImage: doc.coverImage ?? null, courseId: doc.payload?.courseRef?.courseId ?? null }))
+        .filter((lesson) => includeCourseLessons || !lesson.courseId);
+    });
   }
   try {
     const ids = (await readdir(ROOT)).filter((name) => name.endsWith('.json')).map((name) => name.replace(/\.json$/, ''));
