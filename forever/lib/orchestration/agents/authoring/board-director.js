@@ -43,6 +43,8 @@ Rules you must never break:
     {"diagramType":"cycle","steps":["A","B","C"]}                        (a repeating cycle)
     {"diagramType":"tree","root":{"label":"Topic","children":[{"label":"Sub","detail":"..."}]}}
     {"diagramType":"comparison","columns":["X","Y"],"rows":[{"label":"Feature","values":["No","Yes"]}]}
+    {"diagramType":"grid","rows":[[1,1,1,1],[1,2,3,4],[1,3,6,10]],"highlight":[[2,3]]}   (a DP TABLE / matrix / 2D board —
+      ALWAYS this for grid concepts; a matrix drawn as coordinate-labeled graph nodes is REJECTED)
   ARRAYS (binary search, two-pointer, sliding window, sorting) — show the concrete array:
     {"diagramType":"array","values":["2","5","8","12","16","23","38","56"]}
   DATA STRUCTURES (binary tree, BST, graph, linked list) — output a real laid-out graph:

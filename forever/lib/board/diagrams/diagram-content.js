@@ -15,6 +15,34 @@ export const MERMAID_KEYWORDS = Object.freeze([
   'xychart', 'xychart-beta', 'block', 'block-beta', 'packet', 'packet-beta', 'kanban', 'treemap', 'mindmap',
 ]);
 
+// A GRID/MATRIX concept (DP table, game board, 2D state) as a real value grid — never a
+// node-edge graph (live screenshot: a 3x4 DP table drawn as scattered coordinate boxes with
+// orphans floating loose). rows = 2D array of scalar cell values ('' for not-yet-filled);
+// optional labels + highlighted cells. Rendered as a table-grid (the tool law: 2-D DP needs
+// a grid renderer, not React Flow).
+function validateGridDiagram(content, context) {
+  const rows = content.rows;
+  if (!Array.isArray(rows) || rows.length < 1 || !rows.every((r) => Array.isArray(r) && r.length >= 1)) {
+    throw new Error(`${context} (grid) needs rows: a 2D array of cell values`);
+  }
+  const cols = rows[0].length;
+  if (!rows.every((r) => r.length === cols)) throw new Error(`${context} (grid) rows must all have the same length`);
+  if (rows.length > 24 || cols > 24) throw new Error(`${context} (grid) exceeds 24x24 — pick a smaller teaching example`);
+  const scalar = (v) => ['number', 'string', 'boolean'].includes(typeof v);
+  if (!rows.every((r) => r.every(scalar))) throw new Error(`${context} (grid) cells must be scalars ('' for empty)`);
+  for (const key of ['rowLabels', 'colLabels']) {
+    if (content[key] !== undefined && (!Array.isArray(content[key]) || !content[key].every((l) => typeof l === 'string'))) {
+      throw new Error(`${context} (grid) ${key} must be an array of strings`);
+    }
+  }
+  if (content.highlight !== undefined) {
+    const ok = Array.isArray(content.highlight) && content.highlight.every((c) => Array.isArray(c) && c.length === 2
+      && Number.isInteger(c[0]) && c[0] >= 0 && c[0] < rows.length && Number.isInteger(c[1]) && c[1] >= 0 && c[1] < cols);
+    if (!ok) throw new Error(`${context} (grid) highlight must be in-bounds [row,col] cells`);
+  }
+  return content;
+}
+
 export function validateDiagramContent(content, context = 'diagram') {
   if (!content || typeof content !== 'object') throw new Error(`${context} content must be an object`);
   const type = content.diagramType;
@@ -120,8 +148,9 @@ export function validateDiagramContent(content, context = 'diagram') {
     }
     return content;
   }
+  if (type === 'grid') return validateGridDiagram(content, context);
   throw new Error(
-    `${context} has unknown diagramType: ${type} — use one of ${STRUCTURED_TYPES.join('/')}/graph/array, or diagramType "mermaid" with the diagram source in content.code (first line declaring its Mermaid type, e.g. "xychart-beta" or "sequenceDiagram")`,
+    `${context} has unknown diagramType: ${type} — use one of ${STRUCTURED_TYPES.join('/')}/graph/array/grid, or diagramType "mermaid" with the diagram source in content.code (first line declaring its Mermaid type, e.g. "xychart-beta" or "sequenceDiagram")`,
   );
 }
 

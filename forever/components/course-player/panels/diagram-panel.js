@@ -20,6 +20,7 @@ import { isConceptGraph } from '../../../lib/board/diagrams/flow-layout.js';
 mermaid.initialize({ startOnLoad: false, look: 'handDrawn', handDrawnSeed: 7, theme: 'neutral', securityLevel: 'strict', flowchart: { htmlLabels: true, curve: 'basis' } });
 
 export function DiagramPanel({ content, progress = 1, activeNode = null, activeStep = null }) {
+  if (content.diagramType === 'grid') return <GridBoard content={content} />;
   if (content.diagramType === 'comparison') return <ComparisonTable content={content} />;
   if (content.diagramType === 'trace') return <TraceTable content={content} />;
   if (content.diagramType === 'array') return <ArrayView content={content} progress={progress} activeStep={activeStep} />; // array dry-run (binary search / two-pointer)
@@ -214,4 +215,52 @@ function hash(text) {
   let h = 0;
   for (let i = 0; i < text.length; i += 1) h = (Math.imul(31, h) + text.charCodeAt(i)) | 0;
   return h;
+}
+
+
+// A concept-board VALUE GRID (DP table, game board) — the static sibling of the trace
+// cockpit's GridView: same cell language (highlight amber, filled values), no node-graphs
+// for matrices ever again (live screenshot: the scattered coordinate-box disease).
+function GridBoard({ content }) {
+  const rows = content.rows ?? [];
+  const cols = rows[0]?.length ?? 0;
+  const highlight = new Set((content.highlight ?? []).map(([r, c]) => `${r},${c}`));
+  const colLabels = content.colLabels ?? null;
+  const rowLabels = content.rowLabels ?? null;
+  return (
+    <div style={{ overflowX: 'auto', display: 'flex', justifyContent: 'center' }}>
+      <table style={{ borderCollapse: 'separate', borderSpacing: 4, fontFamily: 'ui-monospace, monospace', fontSize: 14 }}>
+        {colLabels ? (
+          <thead>
+            <tr>
+              {rowLabels ? <th /> : null}
+              {colLabels.slice(0, cols).map((c, i) => <th key={i} style={{ padding: '2px 8px', color: '#a89b7d', fontWeight: 700 }}>{c}</th>)}
+            </tr>
+          </thead>
+        ) : null}
+        <tbody>
+          {rows.map((row, r) => (
+            <tr key={r}>
+              {rowLabels ? <th style={{ padding: '2px 8px', color: '#a89b7d', fontWeight: 700 }}>{rowLabels[r] ?? ''}</th> : null}
+              {row.map((v, c) => {
+                const isHi = highlight.has(`${r},${c}`);
+                const empty = v === '' || v === null;
+                return (
+                  <td key={c} style={{
+                    minWidth: 42, height: 40, textAlign: 'center', fontWeight: 700, color: '#3a3327',
+                    border: `2px solid ${isHi ? '#d35400' : empty ? '#e0d6c2' : '#27ae60'}`,
+                    borderRadius: 6,
+                    background: isHi ? '#ffd9a8' : empty ? '#fffcfa' : '#eafaf0',
+                    boxShadow: isHi ? '0 0 0 4px rgba(211,84,0,0.2)' : 'none',
+                  }}>
+                    {String(v ?? '')}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }

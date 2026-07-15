@@ -10,6 +10,20 @@ const FLAT_TYPES = new Set(['flowchart', 'cycle']);
 
 // Returns a repairable violation message, or null when the board is structure-true.
 export function structureViolation(objects, brief) {
+  // GRID-AS-GRAPH (live screenshot: a 3x4 DP table drawn as scattered coordinate boxes):
+  // a node-edge diagram whose labels are mostly (r,c) coordinate tuples IS a matrix concept —
+  // reject it toward diagramType "grid" with the real cell values.
+  const coordish = /^\(?\s*\d+\s*,\s*\d+\s*\)?/;
+  for (const o of objects ?? []) {
+    if (o?.renderHint !== 'diagram' || o.content?.diagramType !== 'graph') continue;
+    const nodes = o.content.nodes ?? [];
+    if (nodes.length >= 4) {
+      const coordLabeled = nodes.filter((n) => coordish.test(String(n.label ?? n.id ?? '').replace(/^[A-Za-z]+\s*/, ''))).length;
+      if (coordLabeled / nodes.length >= 0.6) {
+        return `object ${o.id}: a grid/matrix concept is drawn as a node-edge graph of coordinate boxes — draw the MATRIX itself instead: diagramType "grid" with rows = the real 2D cell values ('' for unfilled), optional rowLabels/colLabels, and "highlight" on the cells being discussed. A table is a table, never scattered nodes.`;
+      }
+    }
+  }
   const conceptText = `${brief?.title ?? ''} ${brief?.directive ?? ''}`;
   if (!STRUCTURAL_CONCEPTS.test(conceptText)) return null;
 
