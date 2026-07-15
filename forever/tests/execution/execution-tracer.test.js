@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { parseStepEvents, STEP_MARKER } from '../../lib/execution/trace/parse-steps.js';
-import { traceExecution } from '../../lib/orchestration/agents/coding/execution-tracer.js';
+import { traceExecution, dryRunQualityIssue } from '../../lib/orchestration/agents/coding/execution-tracer.js';
 
 // --- parser ---
 
