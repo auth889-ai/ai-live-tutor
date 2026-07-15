@@ -20,7 +20,11 @@
 // line renders as a lie (same rule as the xychart gate).
 
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
-const SERIES_STYLES = new Set(['solid', 'dashed', 'ghost']);
+// 'scatter' renders points-only (no connecting line) — the DATASET as a first-class citizen:
+// labeled examples before the boundary (Ng's tiny-dataset-first), residuals, outliers. A
+// scatter point may be [x, y] or [x, y, "className"] so two classes plot distinctly
+// (spam/not-spam) while staying one legend entry per class via separate series.
+const SERIES_STYLES = new Set(['solid', 'dashed', 'ghost', 'scatter']);
 const ANNOTATION_TYPES = new Set(['point', 'vline', 'hline', 'arrow', 'region']);
 
 export function validateChartContent(content, context = 'chart') {
@@ -49,11 +53,13 @@ export function validateChartContent(content, context = 'chart') {
     if (ids.has(s.id)) throw new Error(`${context} duplicate series id "${s.id}"`);
     ids.add(s.id);
     if (typeof s.label !== 'string' || !s.label.trim()) throw new Error(`${at} needs a label — the legend must name every curve`);
-    if (s.style !== undefined && !SERIES_STYLES.has(s.style)) throw new Error(`${at} style must be one of solid/dashed/ghost`);
-    if (!Array.isArray(s.points) || s.points.length < 2) throw new Error(`${at} needs points: [[x, y], …] with at least 2 points`);
+    if (s.style !== undefined && !SERIES_STYLES.has(s.style)) throw new Error(`${at} style must be one of solid/dashed/ghost/scatter`);
+    const minPoints = s.style === 'scatter' ? 1 : 2; // one outlier is a legitimate scatter; a line needs two ends
+    if (!Array.isArray(s.points) || s.points.length < minPoints) throw new Error(`${at} needs points: [[x, y], …] with at least ${minPoints} point${minPoints > 1 ? 's' : ''}`);
     s.points.forEach((p, j) => {
-      if (!Array.isArray(p) || p.length !== 2 || !isNum(p[0]) || !isNum(p[1])) {
-        throw new Error(`${at} point ${j} must be a numeric [x, y] pair`);
+      if (!Array.isArray(p) || p.length < 2 || p.length > 3 || !isNum(p[0]) || !isNum(p[1])
+        || (p.length === 3 && (typeof p[2] !== 'string' || !p[2].trim()))) {
+        throw new Error(`${at} point ${j} must be a numeric [x, y] pair (scatter may add a class label: [x, y, "spam"])`);
       }
       if (!inX(p[0]) || !inY(p[1])) {
         throw new Error(`${at} point ${j} [${p[0]}, ${p[1]}] lies outside the declared axes — extend the axis range or fix the data (an off-scale curve renders as a lie)`);

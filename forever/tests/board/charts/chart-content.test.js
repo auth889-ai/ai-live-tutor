@@ -58,3 +58,19 @@ test('annotations are typed and range-checked; unnamed point markers are rejecte
   assert.throws(() => validateChartContent({ ...axes, series: supplyDemandShift.series, annotations: [{ type: 'region', x1: 200, x2: 100 }] }), /x1 < x2/);
   assert.throws(() => validateChartContent({ ...axes, series: supplyDemandShift.series, annotations: [{ type: 'arrow', from: [0, 0], to: [400, 2] }] }), /in-range numeric to/);
 });
+
+test('scatter series: the dataset as a first-class citizen (points-only, optional class tags, 1 point ok)', () => {
+  const chart = {
+    xAxis: { label: 'suspicious words', min: 0, max: 8 },
+    yAxis: { label: 'links', min: 0, max: 6 },
+    series: [
+      { id: 'spam', label: 'Spam', style: 'scatter', points: [[7, 4, 'spam'], [5, 3, 'spam']] },
+      { id: 'ham', label: 'Not spam', style: 'scatter', points: [[0, 1]] }, // one point is a legit scatter
+      { id: 'boundary', label: 'Decision boundary', points: [[0, 5.5], [8, 0.5]] },
+    ],
+  };
+  validateChartContent(chart);
+  // A class tag must be a non-empty string; a LINE series still needs 2+ points.
+  assert.throws(() => validateChartContent({ ...chart, series: [{ id: 'bad', label: 'B', style: 'scatter', points: [[1, 1, 42]] }] }), /class label/);
+  assert.throws(() => validateChartContent({ ...chart, series: [{ id: 'line1', label: 'L', points: [[1, 1]] }] }), /at least 2 points/);
+});
