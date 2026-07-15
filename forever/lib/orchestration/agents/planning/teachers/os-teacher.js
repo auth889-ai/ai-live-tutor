@@ -4,13 +4,13 @@
 // lesson mechanics to the shared deep planner so gates/guarantees stay uniform.
 
 import { designPedagogy } from '../teacher.js';
-import { DOMAIN_TEACHING } from '../domain-teaching.js';
+import { REGISTER as OWN_REGISTER } from '../registers/os_arch.js';
 
 
 
 export const DOMAIN = 'os_arch';
 
-export const REGISTER = DOMAIN_TEACHING['os_arch'];
+export const REGISTER = OWN_REGISTER; // the subject's prompt, owned by its own file
 
 export async function designLesson({ sourcePack, minScenes, maxScenes }) {
   return designPedagogy({ sourcePack, minScenes, maxScenes, domain: DOMAIN, register: REGISTER });
