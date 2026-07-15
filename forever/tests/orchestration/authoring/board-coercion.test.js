@@ -147,3 +147,22 @@ test('object column headers unwrap to strings (live: crashed the player page as 
   ]);
   assert.deepEqual(table.content.columns, ['Star', 'Snowflake', 'Galaxy']);
 });
+
+test('an unsourced manipulable is stamped grounding:analogy — engine math is self-verifying (Math build live-catch)', () => {
+  const [out] = coerceBoardObjects([{
+    id: 'manipulate_it', objectType: 'tangent_explorer', renderHint: 'manipulable', region: 'notebook_body',
+    content: { param: { id: 'x0' } },
+  }], { brief: { pedagogicalRole: 'worked_example' } });
+  assert.equal(out.grounding, 'analogy');
+});
+
+test('a kind-less quiz with an unambiguous shape gets its kind stamped, never guessed (Math build live-catch)', () => {
+  const [descriptive, teachBack, ambiguous] = coerceBoardObjects([
+    { id: 'q1', objectType: 'quiz', renderHint: 'quiz', region: 'notebook_body', content: { question: 'q', scenario: 's', modelAnswer: 'm'.repeat(90), rubricPoints: ['a', 'b'] } },
+    { id: 'q2', objectType: 'quiz', renderHint: 'quiz', region: 'notebook_body', content: { question: 'q', audience: 'a sibling', dimensions: ['correctness', 'jargon'], modelExplanation: 'm'.repeat(90) } },
+    { id: 'q3', objectType: 'quiz', renderHint: 'quiz', region: 'notebook_body', content: { question: 'q', scenario: 's', rubricPoints: ['a'], audience: 'x', dimensions: ['y'] } },
+  ]);
+  assert.equal(descriptive.content.kind, 'descriptive');
+  assert.equal(teachBack.content.kind, 'teach_back');
+  assert.equal(ambiguous.content.kind, undefined, 'both shapes present -> untouched, loud failure preserved');
+});

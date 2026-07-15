@@ -94,6 +94,28 @@ export function coerceBoardObjects(objects, { layout = null, brief = null, chunk
       out.grounding = 'analogy';
     }
 
+    // An unsourced MANIPULABLE is a teaching device by nature — its curve is computed by the
+    // ENGINE's whitelisted formula, so the number on screen is self-verifying; the sourceRef
+    // rule exists for facts a model asserts, not math the engine performs (live-caught: the
+    // Math build's tangent-line explorer died for a missing sourceRef in a worked_example
+    // scene, which TEACHING_DEVICE_ROLES does not cover).
+    if (out.renderHint === 'manipulable' && !out.sourceRef && out.decorative !== true
+      && out.grounding === undefined) {
+      out.grounding = 'analogy';
+    }
+
+    // A quiz whose fields unambiguously declare its kind but forgot the tag falls through to
+    // the MCQ validator and dies "needs at least 2 choices" (live-caught: the Math build's
+    // practice quiz was descriptive-shaped, kind-less, and its death killed the whole scene).
+    // The shape IS the intent — stamp it. Never guesses between kinds: both patterns present
+    // leaves the object untouched for the loud failure.
+    if (out.renderHint === 'quiz' && out.content && typeof out.content === 'object' && !out.content.kind) {
+      const looksDescriptive = typeof out.content.scenario === 'string' && Array.isArray(out.content.rubricPoints);
+      const looksTeachBack = typeof out.content.audience === 'string' && Array.isArray(out.content.dimensions);
+      if (looksDescriptive && !looksTeachBack) out.content = { ...out.content, kind: 'descriptive' };
+      if (looksTeachBack && !looksDescriptive) out.content = { ...out.content, kind: 'teach_back' };
+    }
+
     // A scene TITLE/heading is structure, not a factual claim — an unsourced one is
     // decorative, not a dropped scene (live-caught twice: coder-plus omits sourceRef on
     // titles, and writes objectType "scene_title"/"title" as freely as "text"). Matched by
