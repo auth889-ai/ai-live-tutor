@@ -50,6 +50,12 @@ export async function saveLesson(id, lesson, { ownerId = null, collection = less
       { _id: id, ownerId, ...lessonFacts(lesson), payload: stored, updatedAt: new Date() },
       { upsert: true }, // idempotent: a retried job overwrites the same lesson
     );
+    // LOCAL MIRROR (graceful degradation): Atlas dev windows go fully unreachable for minutes
+    // (live: a lesson page 500'd through all retries). The mirror makes reads survivable.
+    try {
+      await mkdir(ROOT, { recursive: true });
+      await writeFile(path.join(ROOT, `${sanitize(id)}.json`), JSON.stringify(stored));
+    } catch { /* mirror is best-effort */ }
     return id;
   }
   await mkdir(ROOT, { recursive: true });
@@ -60,11 +66,24 @@ export async function saveLesson(id, lesson, { ownerId = null, collection = less
 // Returns the lesson only if it belongs to forUser (ownerless lessons stay readable).
 export async function loadLesson(id, { forUser = null, collection = lessonsCollection } = {}) {
   if (dbEnabled()) {
-    return withDbRetry(async () => {
-      const lessons = await collection();
-      const doc = await lessons.findOne({ _id: sanitize(id), $or: [{ ownerId: null }, { ownerId: forUser }] });
-      return doc?.payload ?? null;
-    });
+    try {
+      return await withDbRetry(async () => {
+        const lessons = await collection();
+        const doc = await lessons.findOne({ _id: sanitize(id), $or: [{ ownerId: null }, { ownerId: forUser }] });
+        return doc?.payload ?? null;
+      });
+    } catch (error) {
+      // DB fully unreachable after retries -> serve the local mirror (same privacy check as
+      // the filesystem backend). Stale-but-teaching beats a 500 for a student.
+      console.error(`[lesson-store] DB unreachable (${String(error?.message).slice(0, 60)}) — serving local mirror for ${id}`);
+      try {
+        const lesson = JSON.parse(await readFile(path.join(ROOT, `${sanitize(id)}.json`), 'utf8'));
+        if (lesson.ownerId && lesson.ownerId !== forUser) return null;
+        return lesson;
+      } catch {
+        throw error; // no mirror either -> surface the real failure
+      }
+    }
   }
   try {
     const lesson = JSON.parse(await readFile(path.join(ROOT, `${sanitize(id)}.json`), 'utf8'));
