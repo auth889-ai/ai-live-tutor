@@ -954,19 +954,19 @@
     "list": {
      "nodes": [
       {
-       "id": "4351939712"
+       "id": "4317926528"
       },
       {
-       "id": "4351938800"
+       "id": "4317925616"
       },
       {
-       "id": "4351594640"
+       "id": "4317581456"
       },
       {
-       "id": "4351605520"
+       "id": "4317592336"
       },
       {
-       "id": "4352117120"
+       "id": "4318103936"
       }
      ]
     }
@@ -987,33 +987,33 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351605520"
+        "next": "4317592336"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712"
+       "head": "4317926528"
       }
      },
      "variables": {}
@@ -1024,33 +1024,33 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351605520"
+        "next": "4317592336"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
+       "head": "4317926528",
        "prev": null
       }
      },
@@ -1062,34 +1062,34 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351605520"
+        "next": "4317592336"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351939712",
+       "head": "4317926528",
+       "curr": "4317926528",
        "prev": null
       }
      },
@@ -1101,35 +1101,35 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351605520"
+        "next": "4317592336"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351939712",
-       "nxt": "4351938800",
+       "head": "4317926528",
+       "curr": "4317926528",
+       "nxt": "4317925616",
        "prev": null
       }
      },
@@ -1141,36 +1141,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null,
         "rewired": true
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351605520"
+        "next": "4317592336"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351939712",
-       "nxt": "4351938800",
+       "head": "4317926528",
+       "curr": "4317926528",
+       "nxt": "4317925616",
        "prev": null
       }
      },
@@ -1182,36 +1182,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351605520"
+        "next": "4317592336"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351939712",
-       "nxt": "4351938800",
-       "prev": "4351939712"
+       "head": "4317926528",
+       "curr": "4317926528",
+       "nxt": "4317925616",
+       "prev": "4317926528"
       }
      },
      "variables": {}
@@ -1222,36 +1222,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351605520"
+        "next": "4317592336"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351938800",
-       "nxt": "4351938800",
-       "prev": "4351939712"
+       "head": "4317926528",
+       "curr": "4317925616",
+       "nxt": "4317925616",
+       "prev": "4317926528"
       }
      },
      "variables": {}
@@ -1262,36 +1262,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351605520"
+        "next": "4317592336"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351938800",
-       "nxt": "4351594640",
-       "prev": "4351939712"
+       "head": "4317926528",
+       "curr": "4317925616",
+       "nxt": "4317581456",
+       "prev": "4317926528"
       }
      },
      "variables": {}
@@ -1302,37 +1302,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712",
+        "next": "4317926528",
         "rewired": true
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351605520"
+        "next": "4317592336"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351938800",
-       "nxt": "4351594640",
-       "prev": "4351939712"
+       "head": "4317926528",
+       "curr": "4317925616",
+       "nxt": "4317581456",
+       "prev": "4317926528"
       }
      },
      "variables": {}
@@ -1343,36 +1343,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351605520"
+        "next": "4317592336"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351938800",
-       "nxt": "4351594640",
-       "prev": "4351938800"
+       "head": "4317926528",
+       "curr": "4317925616",
+       "nxt": "4317581456",
+       "prev": "4317925616"
       }
      },
      "variables": {}
@@ -1383,36 +1383,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351605520"
+        "next": "4317592336"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351594640",
-       "nxt": "4351594640",
-       "prev": "4351938800"
+       "head": "4317926528",
+       "curr": "4317581456",
+       "nxt": "4317581456",
+       "prev": "4317925616"
       }
      },
      "variables": {}
@@ -1423,36 +1423,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351605520"
+        "next": "4317592336"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351594640",
-       "nxt": "4351605520",
-       "prev": "4351938800"
+       "head": "4317926528",
+       "curr": "4317581456",
+       "nxt": "4317592336",
+       "prev": "4317925616"
       }
      },
      "variables": {}
@@ -1463,37 +1463,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351938800",
+        "next": "4317925616",
         "rewired": true
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351594640",
-       "nxt": "4351605520",
-       "prev": "4351938800"
+       "head": "4317926528",
+       "curr": "4317581456",
+       "nxt": "4317592336",
+       "prev": "4317925616"
       }
      },
      "variables": {}
@@ -1504,36 +1504,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351594640",
-       "nxt": "4351605520",
-       "prev": "4351594640"
+       "head": "4317926528",
+       "curr": "4317581456",
+       "nxt": "4317592336",
+       "prev": "4317581456"
       }
      },
      "variables": {}
@@ -1544,36 +1544,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351605520",
-       "nxt": "4351605520",
-       "prev": "4351594640"
+       "head": "4317926528",
+       "curr": "4317592336",
+       "nxt": "4317592336",
+       "prev": "4317581456"
       }
      },
      "variables": {}
@@ -1584,36 +1584,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4352117120"
+        "next": "4318103936"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351605520",
-       "nxt": "4352117120",
-       "prev": "4351594640"
+       "head": "4317926528",
+       "curr": "4317592336",
+       "nxt": "4318103936",
+       "prev": "4317581456"
       }
      },
      "variables": {}
@@ -1624,37 +1624,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4351594640",
+        "next": "4317581456",
         "rewired": true
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351605520",
-       "nxt": "4352117120",
-       "prev": "4351594640"
+       "head": "4317926528",
+       "curr": "4317592336",
+       "nxt": "4318103936",
+       "prev": "4317581456"
       }
      },
      "variables": {}
@@ -1665,36 +1665,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4351605520",
-       "nxt": "4352117120",
-       "prev": "4351605520"
+       "head": "4317926528",
+       "curr": "4317592336",
+       "nxt": "4318103936",
+       "prev": "4317592336"
       }
      },
      "variables": {}
@@ -1705,36 +1705,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4352117120",
-       "nxt": "4352117120",
-       "prev": "4351605520"
+       "head": "4317926528",
+       "curr": "4318103936",
+       "nxt": "4318103936",
+       "prev": "4317592336"
       }
      },
      "variables": {}
@@ -1745,36 +1745,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4352117120",
+       "head": "4317926528",
+       "curr": "4318103936",
        "nxt": null,
-       "prev": "4351605520"
+       "prev": "4317592336"
       }
      },
      "variables": {}
@@ -1785,37 +1785,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
-        "next": "4351605520",
+        "next": "4317592336",
         "rewired": true
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4352117120",
+       "head": "4317926528",
+       "curr": "4318103936",
        "nxt": null,
-       "prev": "4351605520"
+       "prev": "4317592336"
       }
      },
      "variables": {}
@@ -1826,36 +1826,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
-        "next": "4351605520"
+        "next": "4317592336"
        }
       ],
       "pointers": {
-       "head": "4351939712",
-       "curr": "4352117120",
+       "head": "4317926528",
+       "curr": "4318103936",
        "nxt": null,
-       "prev": "4352117120"
+       "prev": "4318103936"
       }
      },
      "variables": {}
@@ -1866,36 +1866,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
-        "next": "4351605520"
+        "next": "4317592336"
        }
       ],
       "pointers": {
-       "head": "4351939712",
+       "head": "4317926528",
        "curr": null,
        "nxt": null,
-       "prev": "4352117120"
+       "prev": "4318103936"
       }
      },
      "variables": {}
@@ -1906,36 +1906,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4351939712",
+        "id": "4317926528",
         "value": 1,
         "next": null
        },
        {
-        "id": "4351938800",
+        "id": "4317925616",
         "value": 2,
-        "next": "4351939712"
+        "next": "4317926528"
        },
        {
-        "id": "4351594640",
+        "id": "4317581456",
         "value": 3,
-        "next": "4351938800"
+        "next": "4317925616"
        },
        {
-        "id": "4351605520",
+        "id": "4317592336",
         "value": 4,
-        "next": "4351594640"
+        "next": "4317581456"
        },
        {
-        "id": "4352117120",
+        "id": "4318103936",
         "value": 5,
-        "next": "4351605520"
+        "next": "4317592336"
        }
       ],
       "pointers": {
-       "head": "4351939712",
+       "head": "4317926528",
        "curr": null,
        "nxt": null,
-       "prev": "4352117120"
+       "prev": "4318103936"
       }
      },
      "variables": {}
@@ -7923,6 +7923,1761 @@
       "pointers": {
        "curr": "4"
       }
+     },
+     "variables": {}
+    }
+   ]
+  }
+ },
+ {
+  "name": "dijkstra (weighted graph + distances)",
+  "lens": "graph-adjacency",
+  "trace": {
+   "language": "python",
+   "code": "import heapq\ndef dijkstra(adj, src):\n    dist = {v: float('inf') for v in adj}\n    dist[src] = 0\n    heap = [(0, src)]\n    while heap:\n        d, u = heapq.heappop(heap)\n        if d > dist[u]:\n            continue\n        for v, w in adj[u]:\n            if d + w < dist[v]:\n                dist[v] = d + w\n                heapq.heappush(heap, (dist[v], v))\n    return dist\n\ng = {\"A\": [(\"B\", 4), (\"C\", 1)], \"B\": [(\"D\", 1)], \"C\": [(\"B\", 2), (\"D\", 5)], \"D\": []}",
+   "views": {
+    "graph": {
+     "nodes": [
+      {
+       "id": "A",
+       "label": "A"
+      },
+      {
+       "id": "B",
+       "label": "B"
+      },
+      {
+       "id": "C",
+       "label": "C"
+      },
+      {
+       "id": "D",
+       "label": "D"
+      }
+     ],
+     "edges": [
+      {
+       "from": "A",
+       "to": "B",
+       "weight": 4
+      },
+      {
+       "from": "A",
+       "to": "C",
+       "weight": 1
+      },
+      {
+       "from": "B",
+       "to": "D",
+       "weight": 1
+      },
+      {
+       "from": "C",
+       "to": "B",
+       "weight": 2
+      },
+      {
+       "from": "C",
+       "to": "D",
+       "weight": 5
+      }
+     ],
+     "directed": true
+    }
+   },
+   "steps": [
+    {
+     "line": 4,
+     "explanation": "We run dijkstra(g, 'A') on this exact graph and watch the algorithm's own variables — the node being processed, the distance table, the frontier. Every value below was recorded from the real run; the picture can never disagree with the code.",
+     "graph": {
+      "current": null,
+      "visited": [],
+      "pointers": {}
+     },
+     "traceRow": {
+      "at": "—"
+     },
+     "variables": {}
+    },
+    {
+     "line": 4,
+     "explanation": "The table starts with A = \"inf\" — the starting point costs nothing to reach, and every other node begins unknown. The table starts with B = \"inf\" — the starting point costs nothing to reach, and every other node begins unknown. The table starts with C = \"inf\" — the starting point costs nothing to reach, and every other node begins unknown. …and 1 more table updates land in this same moment — the table panel shows them all.",
+     "graph": {
+      "current": null,
+      "visited": [],
+      "pointers": {}
+     },
+     "traceRow": {
+      "at": "—",
+      "A": "inf",
+      "B": "inf",
+      "C": "inf",
+      "D": "inf"
+     },
+     "variables": {
+      "src": "A"
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "Relaxation: through the current node, A is reachable in 0 — better than the \"inf\" we knew before, so the table is UPDATED. This one comparison, repeated everywhere, is the entire algorithm.",
+     "graph": {
+      "current": null,
+      "visited": [],
+      "pointers": {}
+     },
+     "traceRow": {
+      "at": "—",
+      "A": 0,
+      "B": "inf",
+      "C": "inf",
+      "D": "inf"
+     },
+     "variables": {
+      "src": "A"
+     }
+    },
+    {
+     "line": 6,
+     "explanation": "The queue now holds 0:A — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": null,
+      "visited": [],
+      "pointers": {}
+     },
+     "queue": [
+      "0:A"
+     ],
+     "traceRow": {
+      "at": "—",
+      "A": 0,
+      "B": "inf",
+      "C": "inf",
+      "D": "inf"
+     },
+     "variables": {
+      "src": "A"
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "Now A is taken out of the frontier and becomes the node under the pointer. Its tentative distance is 0 — the smallest of everything still waiting, which is exactly why it goes next. Whatever we learn in this moment, we learn by looking along A's edges.",
+     "graph": {
+      "current": "A",
+      "visited": [],
+      "pointers": {
+       "curr": "A"
+      }
+     },
+     "queue": [],
+     "traceRow": {
+      "at": "A",
+      "A": 0,
+      "B": "inf",
+      "C": "inf",
+      "D": "inf"
+     },
+     "variables": {
+      "src": "A",
+      "d": 0
+     }
+    },
+    {
+     "line": 13,
+     "explanation": "Relaxation: through A, B is reachable in 4 — better than the \"inf\" we knew before, so the table is UPDATED. This one comparison, repeated everywhere, is the entire algorithm.",
+     "graph": {
+      "current": "A",
+      "visited": [],
+      "pointers": {
+       "curr": "A"
+      }
+     },
+     "queue": [],
+     "activeEdge": [
+      "A",
+      "B"
+     ],
+     "traceRow": {
+      "at": "A",
+      "A": 0,
+      "B": 4,
+      "C": "inf",
+      "D": "inf"
+     },
+     "variables": {
+      "src": "A",
+      "v": "B",
+      "d": 0,
+      "w": 4
+     }
+    },
+    {
+     "line": 10,
+     "explanation": "The queue now holds 4:B — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "A",
+      "visited": [],
+      "pointers": {
+       "curr": "A"
+      }
+     },
+     "queue": [
+      "4:B"
+     ],
+     "traceRow": {
+      "at": "A",
+      "A": 0,
+      "B": 4,
+      "C": "inf",
+      "D": "inf"
+     },
+     "variables": {
+      "src": "A",
+      "v": "B",
+      "d": 0,
+      "w": 4
+     }
+    },
+    {
+     "line": 13,
+     "explanation": "Relaxation: through A, C is reachable in 1 — better than the \"inf\" we knew before, so the table is UPDATED. This one comparison, repeated everywhere, is the entire algorithm.",
+     "graph": {
+      "current": "A",
+      "visited": [],
+      "pointers": {
+       "curr": "A"
+      }
+     },
+     "queue": [
+      "4:B"
+     ],
+     "activeEdge": [
+      "A",
+      "C"
+     ],
+     "traceRow": {
+      "at": "A",
+      "A": 0,
+      "B": 4,
+      "C": 1,
+      "D": "inf"
+     },
+     "variables": {
+      "src": "A",
+      "v": "C",
+      "d": 0,
+      "w": 1
+     }
+    },
+    {
+     "line": 10,
+     "explanation": "The queue now holds 1:C, 4:B — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "A",
+      "visited": [],
+      "pointers": {
+       "curr": "A"
+      }
+     },
+     "queue": [
+      "1:C",
+      "4:B"
+     ],
+     "traceRow": {
+      "at": "A",
+      "A": 0,
+      "B": 4,
+      "C": 1,
+      "D": "inf"
+     },
+     "variables": {
+      "src": "A",
+      "v": "C",
+      "d": 0,
+      "w": 1
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "Now C is taken out of the frontier and becomes the node under the pointer. Its tentative distance is 1 — the smallest of everything still waiting, which is exactly why it goes next. Whatever we learn in this moment, we learn by looking along C's edges.",
+     "graph": {
+      "current": "C",
+      "visited": [
+       "A"
+      ],
+      "pointers": {
+       "curr": "C"
+      }
+     },
+     "queue": [
+      "4:B"
+     ],
+     "traceRow": {
+      "at": "C",
+      "A": 0,
+      "B": 4,
+      "C": 1,
+      "D": "inf"
+     },
+     "variables": {
+      "src": "A",
+      "v": "C",
+      "d": 1,
+      "w": 1
+     }
+    },
+    {
+     "line": 13,
+     "explanation": "Relaxation: through C, B is reachable in 3 — better than the 4 we knew before, so the table is UPDATED. This one comparison, repeated everywhere, is the entire algorithm.",
+     "graph": {
+      "current": "C",
+      "visited": [
+       "A"
+      ],
+      "pointers": {
+       "curr": "C"
+      }
+     },
+     "queue": [
+      "4:B"
+     ],
+     "activeEdge": [
+      "C",
+      "B"
+     ],
+     "traceRow": {
+      "at": "C",
+      "A": 0,
+      "B": 3,
+      "C": 1,
+      "D": "inf"
+     },
+     "variables": {
+      "src": "A",
+      "v": "B",
+      "d": 1,
+      "w": 2
+     }
+    },
+    {
+     "line": 10,
+     "explanation": "The queue now holds 3:B, 4:B — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "C",
+      "visited": [
+       "A"
+      ],
+      "pointers": {
+       "curr": "C"
+      }
+     },
+     "queue": [
+      "3:B",
+      "4:B"
+     ],
+     "traceRow": {
+      "at": "C",
+      "A": 0,
+      "B": 3,
+      "C": 1,
+      "D": "inf"
+     },
+     "variables": {
+      "src": "A",
+      "v": "B",
+      "d": 1,
+      "w": 2
+     }
+    },
+    {
+     "line": 13,
+     "explanation": "Relaxation: through C, D is reachable in 6 — better than the \"inf\" we knew before, so the table is UPDATED. This one comparison, repeated everywhere, is the entire algorithm.",
+     "graph": {
+      "current": "C",
+      "visited": [
+       "A"
+      ],
+      "pointers": {
+       "curr": "C"
+      }
+     },
+     "queue": [
+      "3:B",
+      "4:B"
+     ],
+     "activeEdge": [
+      "C",
+      "D"
+     ],
+     "traceRow": {
+      "at": "C",
+      "A": 0,
+      "B": 3,
+      "C": 1,
+      "D": 6
+     },
+     "variables": {
+      "src": "A",
+      "v": "D",
+      "d": 1,
+      "w": 5
+     }
+    },
+    {
+     "line": 10,
+     "explanation": "The queue now holds 3:B, 4:B, 6:D — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "C",
+      "visited": [
+       "A"
+      ],
+      "pointers": {
+       "curr": "C"
+      }
+     },
+     "queue": [
+      "3:B",
+      "4:B",
+      "6:D"
+     ],
+     "traceRow": {
+      "at": "C",
+      "A": 0,
+      "B": 3,
+      "C": 1,
+      "D": 6
+     },
+     "variables": {
+      "src": "A",
+      "v": "D",
+      "d": 1,
+      "w": 5
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "Now B is taken out of the frontier and becomes the node under the pointer. Its tentative distance is 3 — the smallest of everything still waiting, which is exactly why it goes next. Whatever we learn in this moment, we learn by looking along B's edges.",
+     "graph": {
+      "current": "B",
+      "visited": [
+       "A",
+       "C"
+      ],
+      "pointers": {
+       "curr": "B"
+      }
+     },
+     "queue": [
+      "4:B",
+      "6:D"
+     ],
+     "traceRow": {
+      "at": "B",
+      "A": 0,
+      "B": 3,
+      "C": 1,
+      "D": 6
+     },
+     "variables": {
+      "src": "A",
+      "v": "D",
+      "d": 3,
+      "w": 5
+     }
+    },
+    {
+     "line": 13,
+     "explanation": "Relaxation: through B, D is reachable in 4 — better than the 6 we knew before, so the table is UPDATED. This one comparison, repeated everywhere, is the entire algorithm.",
+     "graph": {
+      "current": "B",
+      "visited": [
+       "A",
+       "C"
+      ],
+      "pointers": {
+       "curr": "B"
+      }
+     },
+     "queue": [
+      "4:B",
+      "6:D"
+     ],
+     "activeEdge": [
+      "B",
+      "D"
+     ],
+     "traceRow": {
+      "at": "B",
+      "A": 0,
+      "B": 3,
+      "C": 1,
+      "D": 4
+     },
+     "variables": {
+      "src": "A",
+      "v": "D",
+      "d": 3,
+      "w": 1
+     }
+    },
+    {
+     "line": 10,
+     "explanation": "The queue now holds 4:B, 4:D, 6:D — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "B",
+      "visited": [
+       "A",
+       "C"
+      ],
+      "pointers": {
+       "curr": "B"
+      }
+     },
+     "queue": [
+      "4:B",
+      "4:D",
+      "6:D"
+     ],
+     "traceRow": {
+      "at": "B",
+      "A": 0,
+      "B": 3,
+      "C": 1,
+      "D": 4
+     },
+     "variables": {
+      "src": "A",
+      "v": "D",
+      "d": 3,
+      "w": 1
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "The queue now holds 4:D, 6:D — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
+     "graph": {
+      "current": "B",
+      "visited": [
+       "A",
+       "C"
+      ],
+      "pointers": {
+       "curr": "B"
+      }
+     },
+     "queue": [
+      "4:D",
+      "6:D"
+     ],
+     "traceRow": {
+      "at": "B",
+      "A": 0,
+      "B": 3,
+      "C": 1,
+      "D": 4
+     },
+     "variables": {
+      "src": "A",
+      "v": "D",
+      "d": 4,
+      "w": 1
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "Now D is taken out of the frontier and becomes the node under the pointer. Its tentative distance is 4 — the smallest of everything still waiting, which is exactly why it goes next. Whatever we learn in this moment, we learn by looking along D's edges.",
+     "graph": {
+      "current": "D",
+      "visited": [
+       "A",
+       "C",
+       "B"
+      ],
+      "pointers": {
+       "curr": "D"
+      }
+     },
+     "queue": [
+      "6:D"
+     ],
+     "traceRow": {
+      "at": "D",
+      "A": 0,
+      "B": 3,
+      "C": 1,
+      "D": 4
+     },
+     "variables": {
+      "src": "A",
+      "v": "D",
+      "d": 4,
+      "w": 1
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "The queue is now empty — nothing is waiting anymore, which is exactly the signal that the algorithm is about to finish.",
+     "graph": {
+      "current": "D",
+      "visited": [
+       "A",
+       "C",
+       "B"
+      ],
+      "pointers": {
+       "curr": "D"
+      }
+     },
+     "queue": [],
+     "traceRow": {
+      "at": "D",
+      "A": 0,
+      "B": 3,
+      "C": 1,
+      "D": 4
+     },
+     "variables": {
+      "src": "A",
+      "v": "D",
+      "d": 6,
+      "w": 1
+     }
+    },
+    {
+     "line": 8,
+     "explanation": "The walk is complete and the call returns {\"A\":0,\"B\":3,\"C\":1,\"D\":4}. Every number in the final table was earned by a relaxation you watched happen — that is the whole proof, performed in front of you.",
+     "graph": {
+      "current": "D",
+      "visited": [
+       "A",
+       "C",
+       "B",
+       "D"
+      ],
+      "pointers": {
+       "curr": "D"
+      }
+     },
+     "traceRow": {
+      "at": "D",
+      "A": 0,
+      "B": 3,
+      "C": 1,
+      "D": 4
+     },
+     "variables": {}
+    }
+   ]
+  }
+ },
+ {
+  "name": "LCS (2-D dp-table)",
+  "lens": "dp-table",
+  "trace": {
+   "language": "python",
+   "code": "def lcs(a, b):\n    m, n = len(a), len(b)\n    dp = [[0] * (n + 1) for _ in range(m + 1)]\n    for i in range(1, m + 1):\n        for j in range(1, n + 1):\n            if a[i - 1] == b[j - 1]:\n                dp[i][j] = dp[i - 1][j - 1] + 1\n            else:\n                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])\n    return dp[m][n]",
+   "views": {
+    "array2d": {
+     "rows": 4,
+     "cols": 6
+    }
+   },
+   "steps": [
+    {
+     "line": 4,
+     "explanation": "We run lcs('ace', 'abcde') and watch the 4×6 table fill cell by cell. One rule before anything moves: know what a cell MEANS — dp[i][j] is the answer to a smaller version of the same question, and every write below only ever combines already-solved smaller answers.",
+     "array2d": {},
+     "variables": {}
+    },
+    {
+     "line": 4,
+     "explanation": "The table is created: 4 rows × 6 columns, seeded with its starting values. These are not answers yet — they are the scaffold the real answers will be built on.",
+     "array2d": {
+      "values": [
+       [
+        0,
+        0,
+        0
+       ],
+       [
+        0,
+        1,
+        0
+       ],
+       [
+        0,
+        2,
+        0
+       ],
+       [
+        0,
+        3,
+        0
+       ],
+       [
+        0,
+        4,
+        0
+       ],
+       [
+        0,
+        5,
+        0
+       ],
+       [
+        1,
+        0,
+        0
+       ],
+       [
+        1,
+        1,
+        0
+       ],
+       [
+        1,
+        2,
+        0
+       ],
+       [
+        1,
+        3,
+        0
+       ],
+       [
+        1,
+        4,
+        0
+       ],
+       [
+        1,
+        5,
+        0
+       ],
+       [
+        2,
+        0,
+        0
+       ],
+       [
+        2,
+        1,
+        0
+       ],
+       [
+        2,
+        2,
+        0
+       ],
+       [
+        2,
+        3,
+        0
+       ],
+       [
+        2,
+        4,
+        0
+       ],
+       [
+        2,
+        5,
+        0
+       ],
+       [
+        3,
+        0,
+        0
+       ],
+       [
+        3,
+        1,
+        0
+       ],
+       [
+        3,
+        2,
+        0
+       ],
+       [
+        3,
+        3,
+        0
+       ],
+       [
+        3,
+        4,
+        0
+       ],
+       [
+        3,
+        5,
+        0
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[1][1] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       1,
+       1
+      ],
+      "values": [
+       [
+        1,
+        1,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 1,
+      "j": 1
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[1][2] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       1,
+       2
+      ],
+      "values": [
+       [
+        1,
+        2,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 1,
+      "j": 2
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[1][3] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       1,
+       3
+      ],
+      "values": [
+       [
+        1,
+        3,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 1,
+      "j": 3
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[1][4] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       1,
+       4
+      ],
+      "values": [
+       [
+        1,
+        4,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 1,
+      "j": 4
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[1][5] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       1,
+       5
+      ],
+      "values": [
+       [
+        1,
+        5,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        1,
+        5
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 1,
+      "j": 5
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[2][1] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       2,
+       1
+      ],
+      "values": [
+       [
+        2,
+        1,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        1,
+        5
+       ],
+       [
+        2,
+        1
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 2,
+      "j": 1
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[2][2] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       2,
+       2
+      ],
+      "values": [
+       [
+        2,
+        2,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        1,
+        5
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 2,
+      "j": 2
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[2][3] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       2,
+       3
+      ],
+      "values": [
+       [
+        2,
+        3,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        1,
+        5
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 2,
+      "j": 3
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[2][4] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       2,
+       4
+      ],
+      "values": [
+       [
+        2,
+        4,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        1,
+        5
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        2,
+        4
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 2,
+      "j": 4
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[2][5] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       2,
+       5
+      ],
+      "values": [
+       [
+        2,
+        5,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        1,
+        5
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        2,
+        4
+       ],
+       [
+        2,
+        5
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 2,
+      "j": 5
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[3][1] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       3,
+       1
+      ],
+      "values": [
+       [
+        3,
+        1,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        1,
+        5
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        2,
+        4
+       ],
+       [
+        2,
+        5
+       ],
+       [
+        3,
+        1
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 3,
+      "j": 1
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[3][2] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       3,
+       2
+      ],
+      "values": [
+       [
+        3,
+        2,
+        1
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        1,
+        5
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        2,
+        4
+       ],
+       [
+        2,
+        5
+       ],
+       [
+        3,
+        1
+       ],
+       [
+        3,
+        2
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 3,
+      "j": 2
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[3][3] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       3,
+       3
+      ],
+      "values": [
+       [
+        3,
+        3,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        1,
+        5
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        2,
+        4
+       ],
+       [
+        2,
+        5
+       ],
+       [
+        3,
+        1
+       ],
+       [
+        3,
+        2
+       ],
+       [
+        3,
+        3
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 3,
+      "j": 3
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[3][4] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       3,
+       4
+      ],
+      "values": [
+       [
+        3,
+        4,
+        2
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        1,
+        5
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        2,
+        4
+       ],
+       [
+        2,
+        5
+       ],
+       [
+        3,
+        1
+       ],
+       [
+        3,
+        2
+       ],
+       [
+        3,
+        3
+       ],
+       [
+        3,
+        4
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 3,
+      "j": 4
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "dp[3][5] becomes 3 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "array2d": {
+      "current": [
+       3,
+       5
+      ],
+      "values": [
+       [
+        3,
+        5,
+        3
+       ]
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        1,
+        5
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        2,
+        4
+       ],
+       [
+        2,
+        5
+       ],
+       [
+        3,
+        1
+       ],
+       [
+        3,
+        2
+       ],
+       [
+        3,
+        3
+       ],
+       [
+        3,
+        4
+       ],
+       [
+        3,
+        5
+       ]
+      ]
+     },
+     "variables": {
+      "a": "ace",
+      "b": "abcde",
+      "m": 3,
+      "n": 5,
+      "i": 3,
+      "j": 5
+     }
+    },
+    {
+     "line": 5,
+     "explanation": "The table is complete and the call returns 3. The answer was read out of dp[3][5] = 3 — the bottom-right of the region we just filled, the \"full problem\" cell. Count what you watched: one write per cell, each in constant time — that is the O(rows × cols) story, and the filled table IS the proof.",
+     "array2d": {
+      "current": [
+       3,
+       5
+      ],
+      "filled": [
+       [
+        1,
+        1
+       ],
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        3
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        1,
+        5
+       ],
+       [
+        2,
+        1
+       ],
+       [
+        2,
+        2
+       ],
+       [
+        2,
+        3
+       ],
+       [
+        2,
+        4
+       ],
+       [
+        2,
+        5
+       ],
+       [
+        3,
+        1
+       ],
+       [
+        3,
+        2
+       ],
+       [
+        3,
+        3
+       ],
+       [
+        3,
+        4
+       ],
+       [
+        3,
+        5
+       ]
+      ]
      },
      "variables": {}
     }
