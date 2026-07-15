@@ -230,17 +230,34 @@ export async function designBoard({ sourcePack, layout = 'teacher_notebook_code'
     if (result.object) objects.push(result.object);
   }
 
+  // 2b. MAZUR COMMIT (physics register: PREDICT-AND-COMMIT before every reveal — live round 1:
+  //     'The Bet You'll Lose' FRAMED the bet but never made the student commit). A physics
+  //     motivate/hook scene without a quiz gets a committed-prediction checkpoint.
+  if (domain === 'physics' && ['motivate', 'hook'].includes(brief?.pedagogicalRole)
+    && !objects.some((o) => o.renderHint === 'quiz')) {
+    const result = await produceObject({
+      stub: {
+        id: 'staked_prediction',
+        renderHint: 'quiz',
+        region: fallbackRegion,
+        purpose: `The STAKED PREDICTION for this scene's hook: ${brief.directive} — an MCQ whose choices are the plausible predictions (including the popular WRONG one); the student must commit BEFORE the reveal. The explanation confronts the wrong intuition with the evidence.`,
+      },
+      sourcePack, layout, brief, imageIndex, call,
+    });
+    if (result.object) objects.push(result.object);
+  }
+
   // 3. The MANIPULATE beat (live-caught 2026-07-15: an ML lesson's "The Threshold is YOUR
   //    Decision" scene shipped a static chart while the Pedagogy Critic objected "no parameter
   //    adjustment required" — soft planner guidance lost to habit, exactly like figures did).
   //    In a quantitative domain, when the scene's own directive IS a cause-effect idea, the
   //    board gets a manipulable: the student drags the parameter and the curve recomputes.
   const QUANT_DOMAINS = new Set(['ml_ai', 'math', 'physics', 'economics', 'business_finance']);
-  const CAUSE_EFFECT = /threshold|learning rate|steep|slope|coefficient|parameter|elasticity|shift|trade-?off|what happens (when|if)|as .{0,24}(increases|decreases|rises|falls|changes)/i;
+  const CAUSE_EFFECT = /threshold|learning rate|steep|slope|coefficient|parameter|elasticity|shift|trade-?off|angle|gravity|velocity|speed|force|mass|launch|what happens (when|if)|what changes|as .{0,24}(increases|decreases|rises|falls|changes|doubles)/i;
   // Placement discipline (live round-2: 5 of 9 scenes got sliders, recap+practice duplicating
   // the threshold one) — the guarantee fires only on CONTENT scenes where the cause-effect is
   // being TAUGHT; recap/practice may still get one organically from the planner, never forced.
-  const MANIPULATE_ROLES = new Set(['intuition', 'mechanism', 'worked_example', 'dry_run', 'edge_cases', 'application', 'misconception']);
+  const MANIPULATE_ROLES = new Set(['intuition', 'mechanism', 'worked_example', 'dry_run', 'edge_cases', 'application', 'misconception', 'visualize', 'complexity']);
   const sceneIdea = `${brief?.title ?? ''} ${brief?.directive ?? ''}`;
   if (QUANT_DOMAINS.has(domain) && MANIPULATE_ROLES.has(brief?.pedagogicalRole)
     && CAUSE_EFFECT.test(sceneIdea) && !objects.some((o) => o.renderHint === 'manipulable')) {

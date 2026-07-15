@@ -15,8 +15,10 @@ const VOICE_SCHEMA = z.object({
     id: z.coerce.string(),
     text: z.string(),
     targetObjectId: z.coerce.string(),
-    focusRef: z.union([z.string(), z.number()]).optional(),
-    traceStep: z.number().int().optional(),
+    // Enrichment fields: a null/garbage focusRef must never kill a scene's narration
+    // (live-caught: 'focusRef: Invalid input' x3 dropped the physics worked example).
+    focusRef: z.preprocess((v) => (typeof v === 'string' || typeof v === 'number' ? v : undefined), z.union([z.string(), z.number()]).optional()),
+    traceStep: z.preprocess((v) => (Number.isInteger(v) ? v : undefined), z.number().int().optional()),
   })).min(1),
 });
 
