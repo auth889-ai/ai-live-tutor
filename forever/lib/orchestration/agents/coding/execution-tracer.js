@@ -69,7 +69,7 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
     // intermediate candidate. Last attempt ships ungated — every earlier failure logged loudly.
     const gate = (trace) => {
       if (attempt >= maxFixes) return;
-      const issue = dryRunQualityIssue({ steps: trace.steps, directive, code });
+      const issue = dryRunQualityIssue({ steps: trace.steps, directive, code, tool: trace.meta?.tool });
       if (issue) throw new Error(`quality gate: ${issue}`);
     };
     try {
@@ -91,7 +91,16 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
 // THE ELITE-QUALITY GATE — one bar for EVERY mode. A trace that merely validates is not
 // automatically a lesson: pointers must ride the structure at every stateful step, a
 // stack/queue algorithm must SHOW its collection, and the words must teach — not caption.
-export function dryRunQualityIssue({ steps, directive, code }) {
+export function dryRunQualityIssue({ steps, directive, code, tool = null }) {
+  // GRAPH-STEALING RULE (live-caught on LC1192: the agent picked recursion mode for Tarjan —
+  // legitimate reading, dfs IS recursive — but that renders the CALL TREE while the lesson is
+  // the NETWORK with per-node disc/low labels; the same build had chosen graphwalk a run
+  // earlier, so the choice wobbles). Deterministic tiebreak: recursive code that ITERATES AN
+  // ADJACENCY (for v in adj[u]) is a graph walk — prescribe auto, whose detectors pick the
+  // graph lens with per-node state (and still handle trees/divide-conquer correctly if not).
+  if (tool === 'recursion' && /for\s+[\w,\s]+in\s+\w+\s*\[/.test(String(code ?? ''))) {
+    return `This recursion WALKS A GRAPH (it iterates an adjacency: "for … in adj[…]"), so the network drawing with live per-node values is the lesson — the call tree alone is not. Output "auto": {"entry": "<one call expression invoking the code on the concrete example>"} instead: the engine runs the code for real and draws the graph walk with every per-node value recorded.`;
+  }
   const stateful = steps.filter((s) => s.array || s.graph);
   const withPointers = stateful.filter((s) => s.array?.pointers || s.graph?.pointers);
   if (stateful.length > 0 && withPointers.length < stateful.length) {

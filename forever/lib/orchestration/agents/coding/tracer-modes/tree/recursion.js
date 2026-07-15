@@ -22,7 +22,10 @@ functions use "args" instead and support "memoize". The function must be PURE an
 SELF-CONTAINED: its parameters are its ONLY inputs — no global
 variables, no own memo/cache dict, no prints. Its arguments MUST be plain JSON literals
 (numbers/strings/lists) — NEVER tree nodes or objects. A recursive TREE/GRAPH walk is NOT
-recursion mode: use TRAVERSAL MODE for it (declare the tree in views.graph instead). For memoization lessons set "memoize": true — OUR
+recursion mode: use TRAVERSAL MODE for it (declare the tree in views.graph instead). A recursive
+function that ITERATES AN ADJACENCY (for v in adj[u] — Tarjan, graph DFS, topological sort) is a
+GRAPH WALK: use "auto" or "graphwalk" — the network drawing with live per-node values (disc/low,
+dist) is the lesson there, not the call tree. For memoization lessons set "memoize": true — OUR
 tracker supplies the memo and the animation shows every memo hit; the recursive calls stay plain
 (e.g. return fib(n-1) + fib(n-2)). Our instrumented tracker runs it for real and derives every
 animation step — do not write tracking code.`,

@@ -236,3 +236,23 @@ test('LC200 regression: a 2-step call->return junk trace for loopy code is rejec
   ];
   assert.equal(dryRunQualityIssue({ steps: legal, directive: 'binary search dry run', code }), null);
 });
+
+test('LC1192 regression: recursion mode on adjacency-walking code is rejected, steering to auto', () => {
+  // Live-caught: Tarjan chose recursion mode (dfs IS recursive) and shipped the call tree
+  // instead of the network with disc/low labels. The gate reads the CODE, not the steps —
+  // any recursive adjacency walk belongs to a graph lens.
+  const tarjan = 'def critical_connections(n, connections):\n    def dfs(u, parent):\n        for v in adj[u]:\n            pass';
+  const richSteps = Array.from({ length: 8 }, (_, i) => ({
+    line: 3,
+    explanation: `Call ${i} opens and the tree grows one frame deeper — watch the traversal walk into fresh territory here.`,
+    graph: { current: String(i), visited: [String(i)], revealed: [String(i)], pointers: { call: String(i) } },
+    stack: [`dfs(${i})`],
+  }));
+  const issue = dryRunQualityIssue({ steps: richSteps, directive: 'Tarjan bridges dry run', code: tarjan, tool: 'recursion' });
+  assert.match(issue, /WALKS A GRAPH.*auto/s, 'prescribes auto with the reason');
+  // Plain recursion (fib) in recursion mode stays legal — no adjacency iteration in the code.
+  const fib = 'def fib(n):\n    if n < 2: return n\n    return fib(n-1) + fib(n-2)';
+  assert.equal(dryRunQualityIssue({ steps: richSteps, directive: 'fib dry run', code: fib, tool: 'recursion' }), null);
+  // The same adjacency code through a GRAPH tool is legal — the rule only guards recursion mode.
+  assert.equal(dryRunQualityIssue({ steps: richSteps, directive: 'Tarjan bridges dry run', code: tarjan, tool: 'graphwalk' }), null);
+});
