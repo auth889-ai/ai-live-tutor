@@ -113,8 +113,23 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
     if (!roles.dist && dicts.length >= 2 && Object.keys(dicts.at(-1)).length > 0
       && Object.entries(dicts.at(-1)).every(([k, v]) => adj.ids.has(String(k)) && typeof v === 'number')
       && JSON.stringify(dicts[0]) !== JSON.stringify(dicts.at(-1))) {
-      roles.dist = name;
-      continue;
+      // DISTANCE-NESS GUARD (measured lie: bipartite's color {A:0,B:1,...} was claimed as dist
+      // and narrated "its DISTANCE becomes 1" — about a color). Real distance tables show >= 3
+      // distinct values (levels/costs spread out) or at least one RELAXATION (an entry
+      // improving downward). A 2-value dict with neither is a labeling (colors, parity,
+      // membership) — it falls through to the nodeState channel under its real name.
+      const distinct = new Set(Object.values(dicts.at(-1)).map(String)).size;
+      let improved = false;
+      for (let i = 1; i < dicts.length && !improved; i += 1) {
+        for (const [k, v] of Object.entries(dicts[i])) {
+          const prev = dicts[i - 1][k];
+          if (typeof prev === 'number' && typeof v === 'number' && v < prev) { improved = true; break; }
+        }
+      }
+      if (distinct >= 3 || improved) {
+        roles.dist = name;
+        continue;
+      }
     }
     // Indegrees are COUNTS: all non-negative ints, satisfied ONE EDGE AT A TIME — every drop
     // is exactly -1. Both guards were bought with measured lies: Tarjan's low[] ([-1] scaffold,

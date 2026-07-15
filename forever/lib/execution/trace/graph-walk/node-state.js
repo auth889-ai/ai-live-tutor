@@ -22,7 +22,10 @@ const isPlainObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 export function readNodeKeyed(value, ids) {
   if (isPlainObj(value)) {
     const entries = Object.entries(value);
-    if (entries.length === 0) return null;
+    // An empty dict is "no knowledge YET" (color/level maps start as {}), not "not node-keyed"
+    // — returning null here disqualified every grows-from-empty labeling (measured: bipartite's
+    // color map never reached the drawing).
+    if (entries.length === 0) return {};
     if (!entries.every(([k, v]) => ids.has(String(k)) && (isScalar(v) || v === null))) return null;
     return Object.fromEntries(entries.map(([k, v]) => [String(k), v]));
   }
