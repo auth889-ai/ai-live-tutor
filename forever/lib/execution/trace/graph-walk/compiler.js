@@ -16,8 +16,9 @@ import { validateExecutionTrace } from '../../../board/execution/execution-trace
 
 import {
   narrateStart, narrateTake, narrateRelax, narrateFinalize,
-  narrateUnion, narrateIndegree, narrateCollection, narrateDone,
+  narrateUnion, narrateIndegree, narrateCollection, narrateNodeState, narrateDone,
 } from './narrate.js';
+import { detectNodeStateVars, createNodeStateTracker } from './node-state.js';
 
 export const GRAPH_LENS_ROLES = Object.freeze(['current', 'dist', 'visited', 'pq', 'queue', 'stack', 'parent', 'indegree']);
 
@@ -62,6 +63,13 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     return items.map(displayItem);
   };
 
+  // PER-NODE STATE (mockup parity, root-cause fix): any node-keyed local OUTSIDE the role
+  // vocabulary (Tarjan's disc/low, union-find rank, BFS level) is detected generically and
+  // ridden onto the drawing as labels under the nodes — the data the reference visualizers
+  // are rich with, which the old projection silently discarded.
+  const auxVars = detectNodeStateVars(events, { ids, exclude: lensNames });
+  const auxTracker = auxVars.length ? createNodeStateTracker(auxVars, ids) : null;
+
   const steps = [];
   let current = null;
   const visitOrder = []; // finalize ORDER is ours to track — sets are unordered (research pitfall)
@@ -82,6 +90,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     ...(frontier ? { [frontierKey]: frontier } : {}),
     ...(activeEdge ? { activeEdge } : {}),
     ...(roles.dist ? { traceRow: distRow() } : {}),
+    ...(auxTracker ? { nodeState: auxTracker.snapshot() } : {}),
     variables: variables ?? {},
   });
 
@@ -144,6 +153,16 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     }
     if (indegRaw) prevIndegree = { ...indegRaw };
 
+    // PER-NODE STATE WRITE: disc/low/rank/level changed — a real teaching moment (Tarjan's
+    // low-update on backtrack IS the lesson), narrated with old -> new like a relaxation.
+    if (auxTracker) {
+      const writes = auxTracker.update(locals);
+      for (const w of writes.slice(0, 3)) {
+        parts.push(narrateNodeState({ varName: w.varName, node: name(w.node), oldValue: w.oldValue, newValue: w.newValue }));
+      }
+      if (writes.length > 3) parts.push(`…and ${writes.length - 3} more per-node labels rewrite in this same moment — read them straight off the drawing.`);
+    }
+
     // FRONTIER: always shown when declared; a pure frontier change is still a visible moment.
     let frontier = null;
     const frontierRaw = frontierRole ? locals[roles[frontierRole]] : null;
@@ -157,7 +176,11 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     if (parts.length === 0) continue;
 
     const variables = Object.fromEntries(
-      Object.entries(locals).filter(([k, v]) => !lensNames.has(k) && (typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean')),
+      Object.entries(locals).filter(([k, v]) => !lensNames.has(k) && (typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean')
+        // Python repr junk ("<function dfs at 0x...>", "<object ...>") is not a value a teacher
+        // would write on the board — measured live: a closure leaked into the trace table.
+        // (prefix-only match: the recorder truncates long strings, so the closing ">" may be cut)
+        && !(typeof v === 'string' && v.startsWith('<') && /function|object|module|method|class '| at 0x[0-9a-f]/.test(v))),
     );
     steps.push(snap({ line, explanation: parts.join(' '), activeEdge, frontier, variables }));
   }

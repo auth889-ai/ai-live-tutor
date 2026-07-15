@@ -126,6 +126,16 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     if (step.traceRow !== undefined && (typeof step.traceRow !== 'object' || Array.isArray(step.traceRow))) {
       throw new Error(`${at} traceRow must be an object`);
     }
+    // Per-node state labels (disc/low/rank/level) riding on the drawing: {nodeId: {var: scalar}},
+    // every node id real — a label pointing at a node that does not exist is a lie, so it throws.
+    if (step.nodeState !== undefined) {
+      if (typeof step.nodeState !== 'object' || Array.isArray(step.nodeState)) throw new Error(`${at} nodeState must be an object`);
+      if (!graphIds) throw new Error(`${at} has nodeState but no views.graph is declared`);
+      for (const [nid, kv] of Object.entries(step.nodeState)) {
+        if (!graphIds.has(String(nid))) throw new Error(`${at} nodeState references a missing node "${nid}"`);
+        if (!kv || typeof kv !== 'object' || Array.isArray(kv)) throw new Error(`${at} nodeState["${nid}"] must be an object of per-variable values`);
+      }
+    }
   });
 
   // If ANY step is timed, ALL must be, and windows must be ascending + non-overlapping — so the

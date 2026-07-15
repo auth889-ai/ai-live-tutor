@@ -72,14 +72,30 @@ const NodeInner = memo(function NodeInner({ label, status, circle, fontSize, bad
           className={badge.changed ? 'algo-badge algo-badge--changed' : 'algo-badge'}
           style={{
             position: 'absolute', top: '100%', left: '50%', transform: 'translate(-50%, 3px)',
-            whiteSpace: 'nowrap', padding: '1px 7px', borderRadius: 8, fontSize: 11.5, fontWeight: 800,
-            fontFamily: 'ui-monospace, monospace', lineHeight: 1.5, pointerEvents: 'none',
-            background: badge.changed ? '#e8604c' : '#fffcfa', color: badge.changed ? '#fff' : '#5a4a2a',
+            whiteSpace: 'nowrap', padding: badge.rows ? '2px 7px' : '1px 7px', borderRadius: 8,
+            fontSize: badge.rows ? 11 : 11.5, fontWeight: 800,
+            fontFamily: 'ui-monospace, monospace', lineHeight: badge.rows ? 1.35 : 1.5, pointerEvents: 'none',
+            background: badge.changed && !badge.rows ? '#e8604c' : '#fffcfa', color: badge.changed && !badge.rows ? '#fff' : '#5a4a2a',
             border: `1.5px solid ${badge.changed ? '#b93c2b' : '#e8d5c8'}`, boxShadow: '0 1px 4px rgba(120,90,40,0.15)',
+            textAlign: 'left',
           }}
         >
-          {badge.changed && badge.old !== undefined ? <s style={{ opacity: 0.75, marginRight: 4 }}>{badge.old}</s> : null}
-          {badge.text}
+          {badge.rows ? (
+            // Multi-key per-node state (the mockup's "disc: 3 / low: 1" box): one row per
+            // variable; the row rewritten THIS step turns accent with old struck through.
+            badge.rows.map((r) => (
+              <div key={r.k} style={{ color: r.changed ? '#b93c2b' : '#5a4a2a' }}>
+                <span style={{ opacity: 0.72, fontWeight: 700 }}>{r.k}: </span>
+                {r.changed && r.old !== undefined ? <s style={{ opacity: 0.6, marginRight: 3 }}>{r.old}</s> : null}
+                {r.text}
+              </div>
+            ))
+          ) : (
+            <>
+              {badge.changed && badge.old !== undefined ? <s style={{ opacity: 0.75, marginRight: 4 }}>{badge.old}</s> : null}
+              {badge.text}
+            </>
+          )}
         </div>
       ) : null}
     </div>
@@ -149,15 +165,28 @@ function buildFlowElements(laid, content, state) {
     const label = value !== undefined ? `${n.label}\n= ${JSON.stringify(value)}` : n.label;
     // The instructor move: per-node numbers (dist/indegree) live ON the drawing, and an
     // improvement renders as the crossed-out old value next to the new one (their "7 -> 3").
+    // Multi-key state (Tarjan's disc/low, LH/RH) outranks the single-value channel; capped to
+    // graphs the labels stay readable on — bigger graphs keep the cleaner single badge.
+    const ns = laid.nodes.length <= 28 ? (state.nodeState[n.id] ?? state.nodeState[n.label]) : null;
+    const prevNs = state.prevNodeState[n.id] ?? state.prevNodeState[n.label] ?? {};
     const raw = state.values[n.label] ?? state.values[n.id];
     const prev = state.prevValues[n.label] ?? state.prevValues[n.id];
-    const badge = raw !== undefined && raw !== null && raw !== ''
-      ? {
+    let badge = null;
+    if (ns && Object.keys(ns).length > 0) {
+      const rows = Object.entries(ns).map(([k, v]) => ({
+        k,
+        text: String(v),
+        changed: JSON.stringify(prevNs[k]) !== JSON.stringify(v),
+        old: prevNs[k] !== undefined ? String(prevNs[k]) : undefined,
+      }));
+      badge = { rows, changed: rows.some((r) => r.changed) };
+    } else if (raw !== undefined && raw !== null && raw !== '') {
+      badge = {
         text: String(raw),
         changed: JSON.stringify(prev) !== JSON.stringify(raw),
         old: prev !== undefined && prev !== null && prev !== '' ? String(prev) : undefined,
-      }
-      : null;
+      };
+    }
     const longest = Math.max(...String(label).split('\n').map((l) => l.length));
     // Reference sizing (tree/): text starts HUGE and scales down to fit — bold labels carry
     // the drawing. Cap raised now that labels are compact (varying args only).

@@ -3,7 +3,7 @@ node_modules/
 client/node_modules/
 server/node_modules/
 eva/
-
+wrong/
 dev/
 # env / secrets
 forever/public/images/image*.png

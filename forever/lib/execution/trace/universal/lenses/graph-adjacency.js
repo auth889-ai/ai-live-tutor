@@ -116,8 +116,12 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
       roles.dist = name;
       continue;
     }
+    // Indegrees are COUNTS: every sighting must be all non-negative ints. Without this guard
+    // Tarjan's low[] ([-1]*n scaffold, then min-updates = per-index decreases) was claimed as
+    // indegree and narrated as "an incoming edge is satisfied" — a lying sentence (measured
+    // live on LC1192). One negative anywhere disqualifies the whole variable, not the snapshot.
     const ilists = snaps.filter((v) => Array.isArray(v) && v.length >= 2 && v.every((x) => Number.isInteger(x)));
-    if (!roles.indegree && ilists.length >= 2) {
+    if (!roles.indegree && ilists.length >= 2 && ilists.every((v) => v.every((x) => x >= 0))) {
       let drops = 0;
       for (let i = 1; i < ilists.length; i += 1) {
         for (let k = 0; k < ilists[i].length; k += 1) if (ilists[i][k] < (ilists[i - 1][k] ?? Infinity)) drops += 1;

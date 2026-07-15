@@ -582,6 +582,28 @@ def can_finish(n, pres):
             if indeg[v] == 0:
                 q.append(v)
     return done == n`, 'can_finish(3, [[1, 0], [2, 1]])'],
+  ['graphs', 'LC1192 Critical Connections (Tarjan)', `def critical_connections(n, connections):
+    adj = {i: [] for i in range(n)}
+    for u, v in connections:
+        adj[u].append(v)
+        adj[v].append(u)
+    disc = [-1] * n
+    low = [-1] * n
+    bridges = []
+    time = [0]
+    def dfs(u, parent):
+        disc[u] = low[u] = time[0]
+        time[0] += 1
+        for v in adj[u]:
+            if disc[v] == -1:
+                dfs(v, u)
+                low[u] = min(low[u], low[v])
+                if low[v] > disc[u]:
+                    bridges.append([u, v])
+            elif v != parent:
+                low[u] = min(low[u], disc[v])
+    dfs(0, -1)
+    return bridges`, 'critical_connections(6, [[0,1],[1,2],[2,0],[1,3],[3,4],[4,5],[5,3]])'],
   ['graphs', 'G-25 Eventual Safe States (BFS)', `from collections import deque
 def safe_nodes(adj):
     rev = {u: [] for u in adj}

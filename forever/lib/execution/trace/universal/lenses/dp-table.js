@@ -124,7 +124,13 @@ export function detectDpTable(recording, _ctx = {}) {
     if (!bestRow || writes.length > bestRow.writes) bestRow = { name, cols: len, writes: writes.length };
   }
   if (!bestRow) return null;
-  return { lens: 'dp-table', confidence: 0.9, name: bestRow.name, rows: 1, cols: bestRow.cols, oneD: true };
+  // 0.86, deliberately BELOW graph-adjacency's 0.88: the 1-D fingerprint is a heuristic while
+  // an adjacency + a walker is structural proof — and Tarjan's disc[] ([-1]*n scaffold, written
+  // strictly left-to-right by DFS discovery order) is a perfect FALSE 1-D DP. Measured live:
+  // LC1192 critical-connections rendered as "dp[0][5], bottom-right" — a lying visual. The
+  // graph lens must win whenever both fire; genuine 1-D DP (LC70-class) has no walked graph
+  // in the recording, so it still claims its own family at 0.86.
+  return { lens: 'dp-table', confidence: 0.86, name: bestRow.name, rows: 1, cols: bestRow.cols, oneD: true };
 }
 
 // Adapt the recording to the proven dp-table compiler: one {line, table, locals} per sighting.

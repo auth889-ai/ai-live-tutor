@@ -52,6 +52,15 @@ export function narrateCollection({ kind, items }) {
     : `The ${kind} now holds ${items.join(', ')} — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.`;
 }
 
+// A per-node state label (disc/low/rank/level — whatever the algorithm keeps per node) is
+// written or rewritten: the label under that node on the drawing updates at this moment.
+export function narrateNodeState({ varName, node, oldValue, newValue }) {
+  if (oldValue === undefined) {
+    return `${varName}[${node}] gets its first value: ${JSON.stringify(newValue)} — it now rides under ${node} on the drawing, and the algorithm will read it back later, so keep half an eye on it.`;
+  }
+  return `${varName}[${node}] rewrites ${JSON.stringify(oldValue)} → ${JSON.stringify(newValue)} — watch the label under ${node} update: this rewrite is the algorithm learning something it did not know a step ago.`;
+}
+
 // Terminal beat: read the answer OUT of the walk (or cut the recording openly).
 export function narrateDone({ result, orderNames, truncated }) {
   if (truncated) {
