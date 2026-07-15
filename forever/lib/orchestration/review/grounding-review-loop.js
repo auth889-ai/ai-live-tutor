@@ -47,7 +47,7 @@ export async function runGroundingReview({
 
   const design = async () => {
     onStep('The Board Director is designing the board');
-    const board = await agents.designBoard({ sourcePack, layout, brief });
+    const board = await agents.designBoard({ sourcePack, layout, brief, domain });
     return {
       board,
       round: 0,

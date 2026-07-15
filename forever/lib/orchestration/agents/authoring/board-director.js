@@ -167,7 +167,7 @@ async function runBoardCall({ system, user, sourcePack, layout, brief = null }) 
   throw new Error(`Board Director failed contract validation after repair: ${lastError}`);
 }
 
-export async function designBoard({ sourcePack, layout = 'teacher_notebook_code', brief = null, call = runAgentChain }) {
+export async function designBoard({ sourcePack, layout = 'teacher_notebook_code', brief = null, domain = 'general', call = runAgentChain }) {
   const regions = LAYOUT_REGIONS[layout];
   if (!regions) throw new Error(`Unknown layout: ${layout}`);
   const imageIndex = buildImageIndex(sourcePack);
@@ -230,7 +230,28 @@ export async function designBoard({ sourcePack, layout = 'teacher_notebook_code'
     if (result.object) objects.push(result.object);
   }
 
-  // 3. VISION-GROUNDED annotations: the Board Director is a TEXT model — its annotation
+  // 3. The MANIPULATE beat (live-caught 2026-07-15: an ML lesson's "The Threshold is YOUR
+  //    Decision" scene shipped a static chart while the Pedagogy Critic objected "no parameter
+  //    adjustment required" — soft planner guidance lost to habit, exactly like figures did).
+  //    In a quantitative domain, when the scene's own directive IS a cause-effect idea, the
+  //    board gets a manipulable: the student drags the parameter and the curve recomputes.
+  const QUANT_DOMAINS = new Set(['ml_ai', 'math', 'physics', 'economics', 'business_finance']);
+  const CAUSE_EFFECT = /threshold|learning rate|steep|slope|coefficient|parameter|elasticity|shift|trade-?off|what happens (when|if)|as .{0,24}(increases|decreases|rises|falls|changes)/i;
+  const sceneIdea = `${brief?.title ?? ''} ${brief?.directive ?? ''}`;
+  if (QUANT_DOMAINS.has(domain) && CAUSE_EFFECT.test(sceneIdea) && !objects.some((o) => o.renderHint === 'manipulable')) {
+    const result = await produceObject({
+      stub: {
+        id: 'manipulate_it',
+        renderHint: 'manipulable',
+        region: fallbackRegion,
+        purpose: `The MANIPULATE beat for this scene's cause-effect idea: ${brief.directive} — pick the ONE parameter the student should change, choose a whitelisted formula that honestly models the relationship, set axes that hold the curve across the whole parameter range, and ALWAYS include the predict question (commit before reveal).`,
+      },
+      sourcePack, layout, brief, imageIndex, call,
+    });
+    if (result.object) objects.push(result.object);
+  }
+
+  // 4. VISION-GROUNDED annotations: the Board Director is a TEXT model — its annotation
   //    bboxes are guesses (live user report: marks landed on the wrong parts). Real boxes
   //    come from the Vision Grounding agent looking at the pixels; a mark it cannot locate
   //    is dropped, and if vision is unavailable the annotations go entirely — a wrong

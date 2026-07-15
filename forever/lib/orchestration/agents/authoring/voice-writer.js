@@ -9,9 +9,12 @@ import { validateVoiceLines, normalizeVoiceTargets, normalizeFocusRefs } from '.
 
 const VOICE_SCHEMA = z.object({
   voiceLines: z.array(z.object({
-    id: z.string(),
+    // coerce: a numeric id ("id": 1) is a mechanical slip, not a content failure — a Pipeline
+    // scene died for exactly this (live-caught 2026-07-15). Coercion keeps the contract
+    // (strings everywhere downstream) without wasting a retry on a formatting slip.
+    id: z.coerce.string(),
     text: z.string(),
-    targetObjectId: z.string(),
+    targetObjectId: z.coerce.string(),
     focusRef: z.union([z.string(), z.number()]).optional(),
     traceStep: z.number().int().optional(),
   })).min(1),

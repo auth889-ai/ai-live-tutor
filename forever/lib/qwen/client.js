@@ -63,6 +63,11 @@ export async function runAgentChain({
   env = process.env,
 }) {
   const { apiKey, baseUrl } = qwenConfig(env);
+  // DashScope hard rule with response_format json_object: the messages must contain the
+  // literal word "json" — a prompt without it 400s the whole call (live-caught 2026-07-15:
+  // the Arbiter's ruling prompt lacked it and a Training scene died for it). Guarded at the
+  // ONE door so no agent can ever hit this again.
+  if (!/json/i.test(system) && !/json/i.test(user)) system = `${system}\nOutput ONLY JSON.`;
   let lastError;
   // Retry transient failures (timeout/abort, network, 429/5xx) with backoff — the workspace
   // API is intermittently slow, and a whole lesson shouldn't die on one flaky call.
