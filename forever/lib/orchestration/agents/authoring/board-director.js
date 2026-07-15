@@ -237,8 +237,13 @@ export async function designBoard({ sourcePack, layout = 'teacher_notebook_code'
   //    board gets a manipulable: the student drags the parameter and the curve recomputes.
   const QUANT_DOMAINS = new Set(['ml_ai', 'math', 'physics', 'economics', 'business_finance']);
   const CAUSE_EFFECT = /threshold|learning rate|steep|slope|coefficient|parameter|elasticity|shift|trade-?off|what happens (when|if)|as .{0,24}(increases|decreases|rises|falls|changes)/i;
+  // Placement discipline (live round-2: 5 of 9 scenes got sliders, recap+practice duplicating
+  // the threshold one) — the guarantee fires only on CONTENT scenes where the cause-effect is
+  // being TAUGHT; recap/practice may still get one organically from the planner, never forced.
+  const MANIPULATE_ROLES = new Set(['intuition', 'mechanism', 'worked_example', 'dry_run', 'edge_cases', 'application', 'misconception']);
   const sceneIdea = `${brief?.title ?? ''} ${brief?.directive ?? ''}`;
-  if (QUANT_DOMAINS.has(domain) && CAUSE_EFFECT.test(sceneIdea) && !objects.some((o) => o.renderHint === 'manipulable')) {
+  if (QUANT_DOMAINS.has(domain) && MANIPULATE_ROLES.has(brief?.pedagogicalRole)
+    && CAUSE_EFFECT.test(sceneIdea) && !objects.some((o) => o.renderHint === 'manipulable')) {
     const result = await produceObject({
       stub: {
         id: 'manipulate_it',
