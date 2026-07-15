@@ -13,6 +13,8 @@ import { generateExecutedCode } from '../../orchestration/agents/coding/code-run
 import { traceExecution } from '../../orchestration/agents/coding/execution-tracer.js';
 import { isCodingDomain } from '../../orchestration/agents/planning/coding-instructor.js';
 import { compileProvisionalTimeline } from '../timeline/timeline-compiler.js';
+import { createSocietyMessage } from '../../orchestration/messages/society-messages.js';
+import { FOREVER_AGENT_ROLES } from '../../orchestration/roles/agent-roles.js';
 
 const CODE_ROLES = new Set(['worked_example', 'dry_run']);
 
@@ -29,7 +31,35 @@ export async function generateSceneFromSourcePack(
 
   // Board goes through the society's grounding review cycle (generate -> audit -> revise)
   // before it is allowed to be narrated. Ungrounded boards never reach the student.
-  const review = await reviewAgent({ sceneId: id, sourcePack, layout, brief, domain, onStep });
+  const dryRunCoding = brief?.pedagogicalRole === 'dry_run' && layout === 'teacher_notebook_code' && isCodingDomain(domain);
+  let review;
+  try {
+    review = await reviewAgent({ sceneId: id, sourcePack, layout, brief, domain, onStep });
+  } catch (error) {
+    // DRY-RUN FRAMING GUARANTEE (live-caught 3 rounds running on LC200: the framing board is
+    // 2-3 objects by design, so one critic kill leaves nothing and the scene died before the
+    // tracer ever RAN — while the trace is the scene's actual teachable core). When the framing
+    // board fails review, fall back to a minimal DETERMINISTIC framing (title + watch-for from
+    // the Teacher's own directive — no facts a critic could dispute) and proceed to the tracer.
+    // The hard rule stands downstream: no real trace, no scene.
+    if (!dryRunCoding) throw error;
+    console.error(`[scene] ${id}: dry-run framing board failed review (${String(error?.message).slice(0, 100)}) — minimal deterministic framing, the trace carries the teaching`);
+    review = {
+      objects: [
+        { id: 'obj_title', objectType: 'scene_title', renderHint: 'text', region: 'notebook_area', content: brief.title ?? 'Dry run', decorative: true },
+        { id: 'obj_watch', objectType: 'watch_for', renderHint: 'callout', region: 'notebook_area', grounding: 'analogy', content: { variant: 'checkpoint', title: 'Watch for', body: brief.directive ?? 'Follow each step of the real execution.' } },
+      ],
+      transcript: [createSocietyMessage({
+        id: `msg_framing_fallback_${id}`,
+        kind: 'proposal',
+        fromRole: FOREVER_AGENT_ROLES.boardDirector,
+        sceneId: id,
+        body: 'Framing board failed review — minimal deterministic framing shipped; the real execution trace carries this scene.',
+      })],
+      usages: [],
+      rounds: 0,
+    };
+  }
   const objects = [...review.objects];
 
   // DRY-RUN scenes get the ELITE path: the Execution Tracer runs the real algorithm and
