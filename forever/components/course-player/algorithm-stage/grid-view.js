@@ -31,6 +31,11 @@ export function GridView({ view, step, history = [] }) {
         <span>🟨 reads (deps)</span>
         <span>🟩 filled</span>
         <span style={{ color: '#8e44ad', fontWeight: 700 }}>◎ running max</span>
+        {s.rule ? (
+          <span style={{ marginLeft: 'auto', padding: '1px 10px', borderRadius: 999, background: '#fdeaa7', border: '1.5px solid #c9a227', color: '#7a5d0e', fontWeight: 800 }}>
+            rule: {s.rule}
+          </span>
+        ) : null}
       </div>
       <table style={{ borderCollapse: 'separate', borderSpacing: 4, fontFamily: 'ui-monospace, monospace', fontSize: 13 }}>
         <thead>

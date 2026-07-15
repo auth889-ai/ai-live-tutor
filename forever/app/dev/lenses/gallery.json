@@ -981,19 +981,19 @@
     "list": {
      "nodes": [
       {
-       "id": "4316402816"
+       "id": "4341322880"
       },
       {
-       "id": "4316401904"
+       "id": "4341321968"
       },
       {
-       "id": "4316057744"
+       "id": "4340977808"
       },
       {
-       "id": "4316068624"
+       "id": "4340988688"
       },
       {
-       "id": "4316580224"
+       "id": "4341500288"
       }
      ]
     }
@@ -1014,33 +1014,33 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316068624"
+        "next": "4340988688"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816"
+       "head": "4341322880"
       }
      },
      "variables": {}
@@ -1051,33 +1051,33 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316068624"
+        "next": "4340988688"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
+       "head": "4341322880",
        "prev": null
       }
      },
@@ -1089,34 +1089,34 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316068624"
+        "next": "4340988688"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316402816",
+       "head": "4341322880",
+       "curr": "4341322880",
        "prev": null
       }
      },
@@ -1128,35 +1128,35 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316068624"
+        "next": "4340988688"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316402816",
-       "nxt": "4316401904",
+       "head": "4341322880",
+       "curr": "4341322880",
+       "nxt": "4341321968",
        "prev": null
       }
      },
@@ -1168,36 +1168,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null,
         "rewired": true
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316068624"
+        "next": "4340988688"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316402816",
-       "nxt": "4316401904",
+       "head": "4341322880",
+       "curr": "4341322880",
+       "nxt": "4341321968",
        "prev": null
       }
      },
@@ -1209,36 +1209,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316068624"
+        "next": "4340988688"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316402816",
-       "nxt": "4316401904",
-       "prev": "4316402816"
+       "head": "4341322880",
+       "curr": "4341322880",
+       "nxt": "4341321968",
+       "prev": "4341322880"
       }
      },
      "variables": {}
@@ -1249,36 +1249,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316068624"
+        "next": "4340988688"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316401904",
-       "nxt": "4316401904",
-       "prev": "4316402816"
+       "head": "4341322880",
+       "curr": "4341321968",
+       "nxt": "4341321968",
+       "prev": "4341322880"
       }
      },
      "variables": {}
@@ -1289,36 +1289,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316068624"
+        "next": "4340988688"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316401904",
-       "nxt": "4316057744",
-       "prev": "4316402816"
+       "head": "4341322880",
+       "curr": "4341321968",
+       "nxt": "4340977808",
+       "prev": "4341322880"
       }
      },
      "variables": {}
@@ -1329,37 +1329,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816",
+        "next": "4341322880",
         "rewired": true
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316068624"
+        "next": "4340988688"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316401904",
-       "nxt": "4316057744",
-       "prev": "4316402816"
+       "head": "4341322880",
+       "curr": "4341321968",
+       "nxt": "4340977808",
+       "prev": "4341322880"
       }
      },
      "variables": {}
@@ -1370,36 +1370,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316068624"
+        "next": "4340988688"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316401904",
-       "nxt": "4316057744",
-       "prev": "4316401904"
+       "head": "4341322880",
+       "curr": "4341321968",
+       "nxt": "4340977808",
+       "prev": "4341321968"
       }
      },
      "variables": {}
@@ -1410,36 +1410,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316068624"
+        "next": "4340988688"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316057744",
-       "nxt": "4316057744",
-       "prev": "4316401904"
+       "head": "4341322880",
+       "curr": "4340977808",
+       "nxt": "4340977808",
+       "prev": "4341321968"
       }
      },
      "variables": {}
@@ -1450,36 +1450,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316068624"
+        "next": "4340988688"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316057744",
-       "nxt": "4316068624",
-       "prev": "4316401904"
+       "head": "4341322880",
+       "curr": "4340977808",
+       "nxt": "4340988688",
+       "prev": "4341321968"
       }
      },
      "variables": {}
@@ -1490,37 +1490,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316401904",
+        "next": "4341321968",
         "rewired": true
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316057744",
-       "nxt": "4316068624",
-       "prev": "4316401904"
+       "head": "4341322880",
+       "curr": "4340977808",
+       "nxt": "4340988688",
+       "prev": "4341321968"
       }
      },
      "variables": {}
@@ -1531,36 +1531,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316057744",
-       "nxt": "4316068624",
-       "prev": "4316057744"
+       "head": "4341322880",
+       "curr": "4340977808",
+       "nxt": "4340988688",
+       "prev": "4340977808"
       }
      },
      "variables": {}
@@ -1571,36 +1571,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316068624",
-       "nxt": "4316068624",
-       "prev": "4316057744"
+       "head": "4341322880",
+       "curr": "4340988688",
+       "nxt": "4340988688",
+       "prev": "4340977808"
       }
      },
      "variables": {}
@@ -1611,36 +1611,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316580224"
+        "next": "4341500288"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316068624",
-       "nxt": "4316580224",
-       "prev": "4316057744"
+       "head": "4341322880",
+       "curr": "4340988688",
+       "nxt": "4341500288",
+       "prev": "4340977808"
       }
      },
      "variables": {}
@@ -1651,37 +1651,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316057744",
+        "next": "4340977808",
         "rewired": true
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316068624",
-       "nxt": "4316580224",
-       "prev": "4316057744"
+       "head": "4341322880",
+       "curr": "4340988688",
+       "nxt": "4341500288",
+       "prev": "4340977808"
       }
      },
      "variables": {}
@@ -1692,36 +1692,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316068624",
-       "nxt": "4316580224",
-       "prev": "4316068624"
+       "head": "4341322880",
+       "curr": "4340988688",
+       "nxt": "4341500288",
+       "prev": "4340988688"
       }
      },
      "variables": {}
@@ -1732,36 +1732,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316580224",
-       "nxt": "4316580224",
-       "prev": "4316068624"
+       "head": "4341322880",
+       "curr": "4341500288",
+       "nxt": "4341500288",
+       "prev": "4340988688"
       }
      },
      "variables": {}
@@ -1772,36 +1772,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316580224",
+       "head": "4341322880",
+       "curr": "4341500288",
        "nxt": null,
-       "prev": "4316068624"
+       "prev": "4340988688"
       }
      },
      "variables": {}
@@ -1812,37 +1812,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
-        "next": "4316068624",
+        "next": "4340988688",
         "rewired": true
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316580224",
+       "head": "4341322880",
+       "curr": "4341500288",
        "nxt": null,
-       "prev": "4316068624"
+       "prev": "4340988688"
       }
      },
      "variables": {}
@@ -1853,36 +1853,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
-        "next": "4316068624"
+        "next": "4340988688"
        }
       ],
       "pointers": {
-       "head": "4316402816",
-       "curr": "4316580224",
+       "head": "4341322880",
+       "curr": "4341500288",
        "nxt": null,
-       "prev": "4316580224"
+       "prev": "4341500288"
       }
      },
      "variables": {}
@@ -1893,36 +1893,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
-        "next": "4316068624"
+        "next": "4340988688"
        }
       ],
       "pointers": {
-       "head": "4316402816",
+       "head": "4341322880",
        "curr": null,
        "nxt": null,
-       "prev": "4316580224"
+       "prev": "4341500288"
       }
      },
      "variables": {}
@@ -1933,36 +1933,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4316402816",
+        "id": "4341322880",
         "value": 1,
         "next": null
        },
        {
-        "id": "4316401904",
+        "id": "4341321968",
         "value": 2,
-        "next": "4316402816"
+        "next": "4341322880"
        },
        {
-        "id": "4316057744",
+        "id": "4340977808",
         "value": 3,
-        "next": "4316401904"
+        "next": "4341321968"
        },
        {
-        "id": "4316068624",
+        "id": "4340988688",
         "value": 4,
-        "next": "4316057744"
+        "next": "4340977808"
        },
        {
-        "id": "4316580224",
+        "id": "4341500288",
         "value": 5,
-        "next": "4316068624"
+        "next": "4340988688"
        }
       ],
       "pointers": {
-       "head": "4316402816",
+       "head": "4341322880",
        "curr": null,
        "nxt": null,
-       "prev": "4316580224"
+       "prev": "4341500288"
       }
      },
      "variables": {}
@@ -8752,7 +8752,7 @@
     },
     {
      "line": 5,
-     "explanation": "dp[1][1] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "explanation": "dp[1][1] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does. (rule: diagonal + 1)",
      "array2d": {
       "current": [
        1,
@@ -8770,7 +8770,14 @@
         1,
         1
        ]
-      ]
+      ],
+      "highlight": [
+       [
+        0,
+        0
+       ]
+      ],
+      "rule": "diagonal + 1"
      },
      "variables": {
       "a": "ace",
@@ -8998,7 +9005,7 @@
     },
     {
      "line": 5,
-     "explanation": "dp[2][2] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "explanation": "dp[2][2] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does. (rule: max(top, left))",
      "array2d": {
       "current": [
        2,
@@ -9040,7 +9047,18 @@
         2,
         2
        ]
-      ]
+      ],
+      "highlight": [
+       [
+        1,
+        2
+       ],
+       [
+        2,
+        1
+       ]
+      ],
+      "rule": "max(top, left)"
      },
      "variables": {
       "a": "ace",
@@ -9313,7 +9331,7 @@
     },
     {
      "line": 5,
-     "explanation": "dp[3][2] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "explanation": "dp[3][2] becomes 1 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does. (rule: max(top, left))",
      "array2d": {
       "current": [
        3,
@@ -9375,7 +9393,18 @@
         3,
         2
        ]
-      ]
+      ],
+      "highlight": [
+       [
+        2,
+        2
+       ],
+       [
+        3,
+        1
+       ]
+      ],
+      "rule": "max(top, left)"
      },
      "variables": {
       "a": "ace",
@@ -9467,7 +9496,7 @@
     },
     {
      "line": 5,
-     "explanation": "dp[3][4] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "explanation": "dp[3][4] becomes 2 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does. (rule: max(top, left))",
      "array2d": {
       "current": [
        3,
@@ -9537,7 +9566,18 @@
         3,
         4
        ]
-      ]
+      ],
+      "highlight": [
+       [
+        2,
+        4
+       ],
+       [
+        3,
+        3
+       ]
+      ],
+      "rule": "max(top, left)"
      },
      "variables": {
       "a": "ace",
@@ -9550,7 +9590,7 @@
     },
     {
      "line": 5,
-     "explanation": "dp[3][5] becomes 3 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.",
+     "explanation": "dp[3][5] becomes 3 (it was 0) — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does. (rule: diagonal + 1)",
      "array2d": {
       "current": [
        3,
@@ -9624,7 +9664,14 @@
         3,
         5
        ]
-      ]
+      ],
+      "highlight": [
+       [
+        2,
+        4
+       ]
+      ],
+      "rule": "diagonal + 1"
      },
      "variables": {
       "a": "ace",

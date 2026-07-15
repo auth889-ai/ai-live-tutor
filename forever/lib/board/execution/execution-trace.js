@@ -196,6 +196,7 @@ function validateArrayState(state, inBounds, at, arrayLen) {
   // Live per-step contents for in-place algorithms (sorting, partitioning): the REAL recorded
   // snapshot of the array at this step. Same length as the declared view — cells move, the
   // array never grows or shrinks mid-animation.
+  if (state.rule !== undefined && typeof state.rule !== 'string') throw new Error(`${at} array2d rule must be a string`);
   if (state.values !== undefined) {
     if (!Array.isArray(state.values) || state.values.length !== arrayLen) {
       throw new Error(`${at} array values must be an array with the same length as views.array.values`);
@@ -217,6 +218,7 @@ function validateGridState(state, grid, at) {
       for (const cell of state[key]) if (!cellIn(cell)) throw new Error(`${at} array2d ${key} cell out of bounds`);
     }
   }
+  if (state.rule !== undefined && typeof state.rule !== 'string') throw new Error(`${at} array2d rule must be a string`);
   if (state.values !== undefined) {
     if (!Array.isArray(state.values)) throw new Error(`${at} array2d values must be an array of [row,col,value]`);
     for (const v of state.values) {

@@ -5,7 +5,9 @@
 // with its actual old -> new values, and the terminal beat reads the answer out of the table.
 // A table the code grows row-by-row (dp.append) is handled: the view sizes to the FINAL
 // dimensions and cells simply appear when the run created them. Only observed writes are ever
-// shown — no invented dependency arrows, no guessed reads.
+// shown — and dependency highlights are PROVED, never guessed: a write's reads light up only
+// when exactly ONE arithmetic rule (diag+1 / top+left / max(top,left))
+// reproduces the written value from the prior table state; any ambiguity means no highlight.
 
 import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
@@ -70,6 +72,26 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
       continue;
     }
 
+    // PROVED-DEPENDENCY INFERENCE (the AlgoTutor-mockup arrows, honestly): single-cell,
+    // non-base writes only. Candidates from the PRE-write state; exactly one matching rule
+    // -> highlight those reads + name the rule; zero or several matches -> nothing.
+    let proved = null;
+    if (writes.length === 1) {
+      const [r, c] = writes[0];
+      if (r > 0 || c > 0) {
+        const val = ev.table[r]?.[c];
+        const top = r > 0 ? known.get(`${r - 1},${c}`) : undefined;
+        const left = c > 0 ? known.get(`${r},${c - 1}`) : undefined;
+        const diag = r > 0 && c > 0 ? known.get(`${r - 1},${c - 1}`) : undefined;
+        const nums = (...vs) => vs.every((v) => typeof v === 'number');
+        const matches = [];
+        if (nums(val, diag) && val === diag + 1) matches.push({ rule: 'diagonal + 1', reads: [[r - 1, c - 1]] });
+        if (nums(val, top, left) && val === top + left) matches.push({ rule: 'top + left', reads: [[r - 1, c], [r, c - 1]] });
+        if (nums(val, top, left) && val === Math.max(top, left)) matches.push({ rule: 'max(top, left)', reads: [[r - 1, c], [r, c - 1]] });
+        if (matches.length === 1) proved = matches[0];
+      }
+    }
+
     const parts = [];
     for (const [r, c, old] of writes.slice(0, 2)) {
       parts.push(narrateWrite({ r, c, value: known.get(`${r},${c}`), old, isBase: r === 0 || c === 0 }));
@@ -77,13 +99,18 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
     if (writes.length > 2) parts.push(narrateBatch({ count: writes.length - 2 }));
     for (const [r, c] of writes) filled.push([r, c]);
     lastWrite = writes[writes.length - 1];
-    steps.push(snap({
+    const stepObj = snap({
       line,
-      explanation: parts.join(' '),
+      explanation: proved ? `${parts.join(' ')} (rule: ${proved.rule})` : parts.join(' '),
       writes: writes.map(([r, c]) => [r, c]),
       current: [lastWrite[0], lastWrite[1]],
       variables: ev.locals ?? {},
-    }));
+    });
+    if (proved) {
+      stepObj.array2d.highlight = proved.reads;
+      stepObj.array2d.rule = proved.rule;
+    }
+    steps.push(stepObj);
   }
   if (steps.length === 0) throw new Error('dp-table tracker saw no table writes — the run never changed the dp variable');
 

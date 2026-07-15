@@ -68,3 +68,27 @@ test('honest failures: oversized table, missing dp variable, junk stdout', () =>
   assert.throws(() => assembleDpProgram({ code: 'x', entry: 'a()', dp: 'd p' }), /simple identifier/);
   assert.throws(() => assembleDpProgram({ code: 'x', entry: 'a();b()' }), /single expression/);
 });
+
+test('PROVED dependency highlights: exactly one arithmetic rule -> reads light up + rule named; ambiguity -> nothing', () => {
+  const events = [
+    { line: 3, table: [[0, 0], [0, 0]], locals: {} },                    // init scaffold
+    { line: 7, table: [[0, 0], [0, 1]], locals: { i: 1, j: 1 } },        // dp[1][1]=1: diag+1 UNIQUELY (top+left=0, max=0)
+    { line: 7, table: [[0, 1], [0, 1]], locals: { i: 0, j: 1 } },        // base-row write: no inference
+  ];
+  const trace = compileDpTable({ events, result: 1, code: 'a\nb\nc\nd\ne\nf\ndp[i][j] = ...', entry: null });
+  const provedStep = trace.steps.find((s) => s.array2d?.rule);
+  assert.ok(provedStep, 'the uniquely-proved write carries a rule');
+  assert.equal(provedStep.array2d.rule, 'diagonal + 1');
+  assert.deepEqual(provedStep.array2d.highlight, [[0, 0]], 'the diagonal READ cell highlights');
+  assert.match(provedStep.explanation, /rule: diagonal \+ 1/);
+
+  // Ambiguous case: value 2 where top=1,left=1,diag=1 satisfies BOTH top+left and diag+1.
+  const ambiguous = [
+    { line: 3, table: [[1, 1], [1, 0]], locals: {} },
+    { line: 7, table: [[1, 1], [1, 2]], locals: {} },
+  ];
+  const trace2 = compileDpTable({ events: ambiguous, result: 2, code: 'x\ny\nz\na\nb\nc\nd', entry: null });
+  const writeStep = trace2.steps.find((s) => s.array2d?.current);
+  assert.equal(writeStep.array2d.rule, undefined, 'two matching rules -> proved nothing -> no highlight (honesty)');
+  assert.equal(writeStep.array2d.highlight, undefined);
+});
