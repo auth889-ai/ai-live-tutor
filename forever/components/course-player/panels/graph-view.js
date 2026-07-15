@@ -287,7 +287,7 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
   const { fitView } = useReactFlow();
   useEffect(() => {
     if (!nodesInitialized || !flow || flow.nodes.length === 0) return undefined;
-    const fit = () => fitView({ padding: 0.2, duration: 200, maxZoom: 1.1, minZoom: 0.15 });
+    const fit = () => fitView({ padding: 0.2, duration: 200, maxZoom: 1.1, minZoom: 0.55 }); // zoom floor 0.55: a big graph PANS, it never shrinks to unreadable dots (live screenshot: 0.15 rendered 8px nodes)
     fit();
     const settle = setTimeout(fit, 420);
     return () => clearTimeout(settle);
@@ -322,7 +322,7 @@ function GraphViewInner({ content, progress = 1, activeNode = null, activeStep =
           fitView
           fitViewOptions={{ padding: 0.2, maxZoom: 1.1 }}
           minZoom={0.15}
-          onInit={(instance) => instance.fitView({ padding: 0.2, maxZoom: 1.1, minZoom: 0.15 })}
+          onInit={(instance) => instance.fitView({ padding: 0.2, maxZoom: 1.1, minZoom: 0.55 })}
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}

@@ -104,6 +104,19 @@ export function dryRunQualityIssue({ steps, directive, code }) {
   if (missingCollection) {
     return `The algorithm uses a ${missingCollection} but NO step carries "${missingCollection}" — every step must include the live ${missingCollection} contents (e.g. "${missingCollection}": ["2","3"]; use [] when empty) so the student watches it grow and shrink.`;
   }
+  // THIN-TRACE RULE (live-caught on LC200: a nested-closure flood fill shipped a 2-step
+  // "call -> returns" trace while the universal engine handles the SAME code at 11 grid-walk
+  // steps — the agent had picked a legacy mode whose recorder cannot see nested frames).
+  // Signature of the junk, not of a tight legit trace: almost no steps AND no evolving
+  // structure (no array/grid/table/data-queue; a one-node graph). Runs AFTER the collection
+  // rule so queue/stack algorithms get their own, more specific repair message first.
+  // The message PRESCRIBES auto mode so the retry lands on the universal engine.
+  const loopy = /\b(for|while)\s/.test(String(code ?? ''));
+  const structureless = !steps.some((s) => s.array || s.grid || s.table || Array.isArray(s.queue))
+    && new Set(steps.flatMap((s) => s.graph?.revealed ?? [])).size <= 1;
+  if (steps.length < 3 && loopy && structureless) {
+    return `Only ${steps.length} step(s) for an algorithm with loops/recursion — that is a summary, not a dry run. Output "auto": {"entry": "<one call expression invoking the code on the concrete example>"} instead of the mode you chose: the engine runs the code for REAL and records every step itself (it handles nested helper functions).`;
+  }
   const thin = steps.filter((s) => String(s.explanation ?? '').trim().length < 50);
   if (thin.length > Math.floor(steps.length / 2)) {
     return `${thin.length}/${steps.length} explanations are one-line stubs — every step's "explanation" must be 2-3 full sentences in a human tutor voice: the actual values involved, the decision taken, and why it matters for the next step.`;

@@ -219,3 +219,20 @@ test('malformed @@STEP lines are counted and repaired — a dry run never ships 
   assert.equal(result.fixes, 1);
   assert.match(prompts[1], /1 @@STEP line\(s\) were malformed JSON.*json\.dumps/s, 'the repair demand names the structural fix');
 });
+
+test('LC200 regression: a 2-step call->return junk trace for loopy code is rejected, steering to auto mode', () => {
+  // The exact junk shape that shipped: nested-closure flood fill, legacy mode, outer call only.
+  const junk = [
+    { line: 15, explanation: 'We start by calling numIslands on the grid. Watch the tree grow downward as recursive calls open.', graph: { current: '0', visited: ['0'], revealed: ['0'], pointers: { call: '0' } }, stack: ['numIslands(grid)'] },
+    { line: 16, explanation: 'After exploring every cell systematically, the algorithm reports back: exactly 2 islands were found in this grid.', graph: { current: '0', visited: ['0'], revealed: ['0'], returned: { 0: 2 }, pointers: { call: '0' } }, stack: [] },
+  ];
+  const code = 'def numIslands(grid):\n    for r in range(len(grid)):\n        for c in range(len(grid[0])):\n            pass';
+  const issue = dryRunQualityIssue({ steps: junk, directive: 'dry run: watch DFS sink island cell by cell', code });
+  assert.match(issue, /auto/, 'the repair message prescribes the universal auto mode');
+  // A tight legit 2-step ARRAY trace stays legal (the binary-search contract above).
+  const legal = [
+    { line: 4, explanation: 'We probe the middle: mid=2 holds 5, less than target 7, so low jumps to mid+1 and the left half is eliminated entirely.', array: { current: 2, pointers: { lo: 0, mid: 2, hi: 4 } } },
+    { line: 4, explanation: 'The new middle mid=3 holds exactly 7 — the target. The search ends and we return index 3 after two probes.', array: { current: 3, pointers: { lo: 3, mid: 3, hi: 4 } } },
+  ];
+  assert.equal(dryRunQualityIssue({ steps: legal, directive: 'binary search dry run', code }), null);
+});
