@@ -88,3 +88,19 @@ test('OpenMAIC-style speed: long runs are directed in PARALLEL segments, and a f
   assert.match(trace.steps[0].explanation, /warm retelling/);
   assert.match(trace.steps[6].explanation, /step 7 fact/, 'outage segment untouched');
 });
+
+test('FILLER GATE: a self-correction draft artifact keeps the guaranteed template (live-caught: "Actually, let me correct myself." shipped)', async () => {
+  const steps = [
+    { line: 1, explanation: 'We enqueue node A and mark it visited.', variables: {}, queue: ['A'] },
+    { line: 2, explanation: 'We dequeue A and enqueue B and D.', variables: {}, queue: ['B', 'D'] },
+  ];
+  const { trace } = await warmNarration({
+    trace: { steps, code: 'x', language: 'python' },
+    deps: { callQwenJson: async () => ({ json: { narrations: [
+      'Actually, let me correct myself. After sinking the second island we continue scanning onward now.',
+      'Here is a lovely warm rewrite: we take A out of the queue and invite B and D to wait in line.',
+    ] }, usage: null }) },
+  });
+  assert.equal(trace.steps[0].explanation, 'We enqueue node A and mark it visited.', 'filler rejected -> template kept');
+  assert.match(trace.steps[1].explanation, /invite B and D/, 'clean rewrite accepted');
+});

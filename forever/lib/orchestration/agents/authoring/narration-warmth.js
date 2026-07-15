@@ -47,6 +47,10 @@ Output ONLY JSON: {"narrations": ["...", ...]} with EXACTLY ${steps.length} entr
   const warmedSteps = steps.map((s, i) => {
     const candidate = typeof out[i] === 'string' ? out[i].trim() : '';
     if (!candidate || candidate.length < 25) return s; // too thin -> keep the guaranteed template
+    // FILLER GATE (live screenshot: 'Actually, let me correct myself.' shipped to a student —
+    // the model's mid-write self-correction became narration). Draft artifacts are not
+    // teaching; the step keeps its guaranteed template instead.
+    if (/actually,? let me correct|let me (re|correct)\b|wait[,—-]|i mean[, ]|correction[:,]|scratch that|oops|sorry[, ]/i.test(candidate)) return s;
     // THE VALIDATOR: every number in the rewrite must already exist in this step's facts.
     const allowed = new Set([
       ...numbersIn(s.explanation),
