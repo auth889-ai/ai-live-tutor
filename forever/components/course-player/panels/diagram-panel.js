@@ -11,6 +11,7 @@ import mermaid from 'mermaid';
 import { toMermaid } from '../../../lib/board/diagrams/to-mermaid.js';
 import { GraphView } from './graph-view.js';
 import { ArrayView } from './array-view.js';
+import { FlowchartView } from './flowchart-view.js';
 
 // Hand-drawn look (Mermaid v11, rough.js under the hood): evidence-backed teacherly feel
 // (Wood et al. 2012 — sketchy rendering raises engagement + invites annotation). Fixed
@@ -22,6 +23,12 @@ export function DiagramPanel({ content, progress = 1, activeNode = null, activeS
   if (content.diagramType === 'trace') return <TraceTable content={content} />;
   if (content.diagramType === 'array') return <ArrayView content={content} progress={progress} activeStep={activeStep} />; // array dry-run (binary search / two-pointer)
   if (content.diagramType === 'graph') return <GraphView content={content} progress={progress} activeNode={activeNode} activeStep={activeStep} />; // React Flow + dagre (+ voice-synced trace)
+  // Flowchart/cycle: React Flow + dagre with WRAPPING HTML nodes (live-reported cramped/cut
+  // diagrams: Mermaid clips long labels — a step carrying real math like "z = 1.5×4 + 1.0×2 − 4"
+  // was truncated inside its hand-drawn node). Mermaid stays for sequence/state/class/ER code.
+  if (content.diagramType === 'flowchart' || content.diagramType === 'cycle') {
+    return <FlowchartView content={content} progress={progress} />;
+  }
   return <MermaidDiagram content={content} progress={progress} />;
 }
 
