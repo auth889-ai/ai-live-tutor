@@ -45,3 +45,22 @@ export function toFractionalBbox(bbox2d, width, height) {
   if (!(cx2 > cx1) || !(cy2 > cy1)) return null;
   return { x: cx1, y: cy1, w: cx2 - cx1, h: cy2 - cy1 };
 }
+
+// Intersection-over-union of two fractional {x,y,w,h} boxes — the agreement test for
+// double-grounding: two independent vision passes must land on the same region or the mark
+// is dropped as unverifiable (drawn-wrong teaches worse than absent).
+export function bboxIoU(a, b) {
+  if (!a || !b) return 0;
+  const x1 = Math.max(a.x, b.x);
+  const y1 = Math.max(a.y, b.y);
+  const x2 = Math.min(a.x + a.w, b.x + b.w);
+  const y2 = Math.min(a.y + a.h, b.y + b.h);
+  const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+  const union = a.w * a.h + b.w * b.h - inter;
+  return union > 0 ? inter / union : 0;
+}
+
+// Average two agreeing boxes (the consensus mark).
+export function bboxMean(a, b) {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, w: (a.w + b.w) / 2, h: (a.h + b.h) / 2 };
+}

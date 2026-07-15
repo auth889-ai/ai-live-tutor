@@ -9,7 +9,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { callQwenVisionJson } from '../../../qwen/vision.js';
-import { imageDimensions, toFractionalBbox } from '../../../util/image-size.js';
+import { imageDimensions, toFractionalBbox, bboxIoU, bboxMean } from '../../../util/image-size.js';
 
 export async function groundAnnotations({ imagePath, imageBytes, mime = 'image/jpeg', annotations }) {
   if (!annotations?.length) return { annotations: [], usage: null };
@@ -29,29 +29,44 @@ export async function groundAnnotations({ imagePath, imageBytes, mime = 'image/j
   const system = `You are the Vision Grounding agent of an AI tutor. You are given an image and a list of
 teaching marks a teacher wants to draw on it. For EACH mark, locate the exact region in the image.
 ${sizeLine} (x1<x2, y1<y2, tight around the named part). Output ONLY JSON:
-{"marks":[{"index": <the mark's index from the input>, "bbox_2d": [x1,y1,x2,y2], "found": true|false}]}
+{"imageWidth": <the width in pixels of the image AS YOU SEE IT>, "imageHeight": <its height>,
+ "marks":[{"index": <the mark's index from the input>, "bbox_2d": [x1,y1,x2,y2], "found": true|false}]}
 Report "found": false for any mark whose target is NOT actually visible in the image — never guess a box.`;
 
   const user = JSON.stringify({
     marks: annotations.map((a, index) => ({ index, verb: a.verb, target: a.text ?? a.alt ?? '' })),
   });
 
-  const { json, usage } = await callQwenVisionJson({
-    agent: 'vision_ground',
-    system,
-    user,
-    images: [{ base64, mime }],
-  });
+  // DOUBLE-GROUNDING CONSENSUS (live user report: marks still circled the wrong parts on a
+  // dense PDF diagram). Two independent vision passes; a mark survives only when both passes
+  // land on the SAME region (IoU >= 0.35) and ships as their average. A box the model cannot
+  // reproduce is dropped — drawn-wrong teaches worse than absent. Each pass normalizes by the
+  // model's own PERCEIVED dimensions when plausible (DashScope may resize the image, making
+  // 'absolute pixels' mean the resized space), else by the real header dimensions.
+  const passOnce = async () => {
+    const { json, usage } = await callQwenVisionJson({
+      agent: 'vision_ground', system, user, images: [{ base64, mime }],
+    });
+    const perceivedW = Number(json.imageWidth);
+    const perceivedH = Number(json.imageHeight);
+    const plausible = perceivedW > 50 && perceivedH > 50;
+    const width = plausible ? perceivedW : (dims?.width ?? 1000);
+    const height = plausible ? perceivedH : (dims?.height ?? 1000);
+    const map = new Map();
+    for (const mark of Array.isArray(json.marks) ? json.marks : []) {
+      if (mark?.found !== true) continue;
+      const bbox = toFractionalBbox(mark.bbox_2d, width, height);
+      if (bbox) map.set(Number(mark.index), bbox);
+    }
+    return { map, usage };
+  };
 
-  // Normalize by the REAL dimensions when known; fall back to 0-1000 only when the header
-  // could not be read (legacy behaviour). toFractionalBbox accepts pixel OR fractional output.
-  const width = dims?.width ?? 1000;
-  const height = dims?.height ?? 1000;
+  const [passA, passB] = await Promise.all([passOnce(), passOnce()]);
+  const usage = passA.usage ?? passB.usage;
   const byIndex = new Map();
-  for (const mark of Array.isArray(json.marks) ? json.marks : []) {
-    if (mark?.found !== true) continue;
-    const bbox = toFractionalBbox(mark.bbox_2d, width, height);
-    if (bbox) byIndex.set(Number(mark.index), bbox);
+  for (const [index, boxA] of passA.map) {
+    const boxB = passB.map.get(index);
+    if (boxB && bboxIoU(boxA, boxB) >= 0.35) byIndex.set(index, bboxMean(boxA, boxB));
   }
 
   const grounded = [];

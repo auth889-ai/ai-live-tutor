@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { imageDimensions, toFractionalBbox } from '../../lib/util/image-size.js';
+import { imageDimensions, toFractionalBbox, bboxIoU, bboxMean } from '../../lib/util/image-size.js';
 
 test('reads PNG dimensions from the IHDR header', () => {
   // Minimal PNG: signature + IHDR chunk declaring 640x480.
@@ -32,4 +32,14 @@ test('a zero-area or malformed box returns null (drop the mark, never a fake poi
   assert.equal(toFractionalBbox([500, 400, 500, 600], 1000, 800), null); // x2==x1
   assert.equal(toFractionalBbox([1, 2, 3], 1000, 800), null);
   assert.equal(toFractionalBbox([500, 400, 750, 600], 0, 0), null);
+});
+
+test('bboxIoU + bboxMean: the double-grounding agreement math', () => {
+  const a = { x: 0.10, y: 0.10, w: 0.20, h: 0.20 };
+  const near = { x: 0.12, y: 0.11, w: 0.20, h: 0.20 };
+  const far = { x: 0.70, y: 0.70, w: 0.10, h: 0.10 };
+  assert.ok(bboxIoU(a, near) > 0.35, 'two passes on the same region agree');
+  assert.equal(bboxIoU(a, far), 0, 'disjoint boxes score zero — the mark drops');
+  const mean = bboxMean(a, near);
+  assert.ok(Math.abs(mean.x - 0.11) < 1e-9, 'consensus box is the average');
 });
