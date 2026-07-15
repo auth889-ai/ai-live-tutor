@@ -5,7 +5,10 @@ export const HINT_GUIDES = Object.freeze({
   text: 'content is a short STRING (a title or a compact note). A pure title/heading may add "decorative": true.',
   list: 'content is {"items": ["...", "..."]} — 2-5 short, concrete points.',
   callout: 'content is {"variant": one of mistake/checkpoint/recap/tip/analogy/insight, "title"?: "...", "body": "..." } — body is the teaching text.',
-  quiz: 'content is {"question": "...", "choices": ["...", "..."] (2-4), "answerIndex": <0-based>, "explanation": "why the answer is right"} — the quiz must test THIS scene\'s idea with concrete values.',
+  quiz: `content is ONE of three kinds — pick the kind that proves understanding for THIS scene:
+MCQ: {"question","choices":["...", "..."] (2-4),"answerIndex":<0-based>,"explanation":"why right"} — quick checkpoint with concrete values.
+DESCRIPTIVE: {"kind":"descriptive","question","scenario":"concrete situation with real values","modelAnswer":"detailed worked answer","rubricPoints":["...", "..."] (2-6)} — the student solves in their own words.
+TEACH-BACK: {"kind":"teach_back","question":"what to explain","audience":"who they teach (a younger sibling / a new teammate)","dimensions":["correctness","no unexplained jargon","gives a concrete example","says WHY it matters"] (2-5),"modelExplanation":"the rewritten teacher-grade explanation ≥80 chars"} — understanding proven by TEACHING; best on recap scenes and after the hardest idea.`,
   math: 'content is {"latex": "E = mc^2"} for one formula, or {"steps": [{"latex": "...", "note": "why this step"}]} for a derivation — real LaTeX, no prose inside latex.',
   table: 'content is {"columns": ["..."], "rows": [{"label": "...", "values": ["one per column"]}]} — the label column is implicit (never repeat the label as a column); EVERY cell filled with real text.',
   chart: `content is {"xAxis":{"label","min","max"},"yAxis":{"label","min","max"},"series":[{"id","label","points":[[x,y],...],"style"?:"solid|dashed|ghost|scatter"}],"annotations"?:[{"type":"point","x","y","label"}|{"type":"vline","x"}|{"type":"hline","y"}|{"type":"arrow","from":[x,y],"to":[x,y],"label"?}|{"type":"region","x1","x2","label"?}]}.

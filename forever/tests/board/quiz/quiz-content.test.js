@@ -43,3 +43,20 @@ test('descriptive scenario questions: scenario + detailed model answer + rubric 
   assert.throws(() => validateQuizContent({ kind: 'descriptive', question: 'q', modelAnswer: 'x'.repeat(100), rubricPoints: ['a', 'b'] }), /needs a "scenario"/);
   assert.throws(() => validateQuizContent({ kind: 'descriptive', question: 'q', scenario: 's', modelAnswer: 'x'.repeat(100), rubricPoints: ['only one'] }), /rubricPoints/);
 });
+
+test('teach_back: understanding proven by TEACHING — audience + named dimensions + model explanation', () => {
+  const good = {
+    kind: 'teach_back',
+    question: 'Explain why binary search needs a sorted array',
+    audience: 'a younger sibling',
+    dimensions: ['correctness', 'no unexplained jargon', 'gives a concrete example'],
+    modelExplanation: 'Imagine a dictionary: you can jump to the middle and know which half holds your word ONLY because the words are in order. If the pages were shuffled, checking the middle would tell you nothing about where to look next.',
+  };
+  validateQuizContent(good);
+  // Teaching TO someone is the point — no audience, no teach-back.
+  assert.throws(() => validateQuizContent({ ...good, audience: '' }), /audience/);
+  // Named dimensions are the grading contract (2-5).
+  assert.throws(() => validateQuizContent({ ...good, dimensions: ['one'] }), /dimensions/);
+  // The rewritten model explanation must be a real explanation, not a phrase.
+  assert.throws(() => validateQuizContent({ ...good, modelExplanation: 'Because sorted.' }), /modelExplanation/);
+});

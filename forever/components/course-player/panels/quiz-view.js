@@ -12,7 +12,80 @@ export function QuizView({ content, onAnswered, lessonId = null, sceneId = null 
   if (content.kind === 'descriptive') {
     return <DescriptiveQuestion content={content} onAnswered={onAnswered} lessonId={lessonId} sceneId={sceneId} />;
   }
+  if (content.kind === 'teach_back') {
+    return <TeachBack content={content} onAnswered={onAnswered} lessonId={lessonId} sceneId={sceneId} />;
+  }
   return <ChoiceQuiz content={content} onAnswered={onAnswered} />;
+}
+
+// TEACH-BACK — the Feynman checkpoint: the student teaches the concept to a named audience in
+// their own words; the tutor grades per named dimension; the rewritten model explanation lands
+// last so the student compares TEACHER-to-TEACHER, not answer-to-answer. Understanding is
+// proven by teaching (the spec's "learning by teaching", made a concrete checkpoint kind).
+function TeachBack({ content, onAnswered, lessonId, sceneId }) {
+  const [explanation, setExplanation] = useState('');
+  const [revealed, setRevealed] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function grade() {
+    setRevealed(true);
+    onAnswered?.(true);
+    if (lessonId && explanation.trim().length >= 30) {
+      setBusy(true);
+      try {
+        const response = await fetch(`/api/lessons/${lessonId}/ask`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sceneId,
+            question: `Grade my TEACHING of this concept, dimension by dimension, like a supportive mentor watching me teach. I was asked to explain "${content.question}" to ${content.audience}. GRADE EACH DIMENSION by name (met / partly / missed, one sentence each): ${content.dimensions.join('; ')}. Then say the ONE thing that would most improve my explanation. MY EXPLANATION: ${explanation.trim()}`,
+          }),
+        });
+        const data = await response.json();
+        if (response.ok) setFeedback(data.answer);
+      } catch { /* enrichment only — the model explanation below always shows */ }
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+      <div style={{ padding: '12px 16px', borderRadius: 10, background: '#f4eefb', border: '2px solid #b490cf', fontSize: 15, lineHeight: 1.6, color: '#5b2d78', marginBottom: 12 }}>
+        <strong>🧑‍🏫 Your turn to TEACH:</strong> Explain this to <strong>{content.audience}</strong> — in your own words, no jargon they wouldn't know.
+      </div>
+      <div style={{ fontSize: 19, fontWeight: 700, color: '#3a3327', marginBottom: 10 }}>{content.question}</div>
+      <div style={{ fontSize: 13, color: '#8a6d3b', marginBottom: 8 }}>
+        A strong explanation: {content.dimensions.join(' · ')}
+      </div>
+      <textarea
+        value={explanation}
+        onChange={(e) => setExplanation(e.target.value)}
+        disabled={revealed}
+        placeholder={`Teach it the way you'd say it out loud to ${content.audience}…`}
+        style={{ width: '100%', minHeight: 120, border: '2px solid #e6d8f0', borderRadius: 10, padding: 12, fontSize: 15, fontFamily: 'inherit', boxSizing: 'border-box', background: revealed ? '#faf7fc' : '#fff' }}
+      />
+      {!revealed && (
+        <button onClick={grade} className="forever-btn"
+          style={{ marginTop: 10, borderRadius: 10, padding: '10px 22px', fontSize: 14, fontWeight: 750, cursor: 'pointer' }}>
+          {explanation.trim().length >= 30 ? 'Grade my teaching' : 'Show the model explanation'}
+        </button>
+      )}
+      {revealed && (
+        <div style={{ marginTop: 14 }}>
+          {busy && <div style={{ fontSize: 13.5, color: '#8a6d3b', marginBottom: 8 }}>🧑‍🏫 The tutor is watching your lesson…</div>}
+          {feedback && (
+            <div style={{ padding: '12px 16px', borderRadius: 10, background: '#eef6fc', border: '2px solid #a9cdea', color: '#2d5f9e', fontSize: 15, lineHeight: 1.6, marginBottom: 10, whiteSpace: 'pre-wrap' }}>
+              <strong>🧑‍🏫 Dimension-by-dimension:</strong> {feedback}
+            </div>
+          )}
+          <div style={{ padding: '12px 16px', borderRadius: 10, background: '#eafaf0', border: '2px solid #7dcf9a', color: '#1e6b3c', fontSize: 15, lineHeight: 1.65 }}>
+            <strong>How a teacher might say it:</strong> {content.modelExplanation}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function DescriptiveQuestion({ content, onAnswered, lessonId, sceneId }) {
