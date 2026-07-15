@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { layoutFlow, estimateNodeHeight } from '../../../lib/board/diagrams/flow-layout.js';
+import { layoutFlow, layoutFlowGraph, isConceptGraph, estimateNodeHeight } from '../../../lib/board/diagrams/flow-layout.js';
 
 // The REAL flowchart that rendered cramped in Mermaid (ML lesson sc_02): steps carrying math.
 const REAL = {
