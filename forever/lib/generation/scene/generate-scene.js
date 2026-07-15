@@ -47,7 +47,9 @@ export async function generateSceneFromSourcePack(
     review = {
       objects: [
         { id: 'obj_title', objectType: 'scene_title', renderHint: 'text', region: 'notebook_area', content: brief.title ?? 'Dry run', decorative: true },
-        { id: 'obj_watch', objectType: 'watch_for', renderHint: 'callout', region: 'notebook_area', grounding: 'analogy', content: { variant: 'checkpoint', title: 'Watch for', body: brief.directive ?? 'Follow each step of the real execution.' } },
+        // Student-facing words ONLY — the Teacher's directive is backstage text (live-caught:
+        // the raw directive, 'expect 40+ trace steps…', rendered on the student's screen).
+        { id: 'obj_watch', objectType: 'watch_for', renderHint: 'callout', region: 'notebook_area', grounding: 'analogy', content: { variant: 'checkpoint', title: 'Watch for', body: 'Every step below comes from running the real code. Watch the current cell, the decision made there, and how the structures change — then try to predict each next step before it lands.' } },
       ],
       transcript: [createSocietyMessage({
         id: `msg_framing_fallback_${id}`,
