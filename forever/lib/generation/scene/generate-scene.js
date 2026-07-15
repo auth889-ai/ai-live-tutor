@@ -140,7 +140,12 @@ export async function generateSceneFromSourcePack(
   if (narratable.length) onStep('The Voice Writer is narrating the board');
   const voice = narratable.length ? await voiceAgent({ objects: narratable, sourcePack }) : { voiceLines: [], usage: null };
   const algoLines = algorithmObject ? voiceLinesForTrace(algorithmObject) : [];
-  const voiceLines = [...voice.voiceLines, ...algoLines];
+  // PACING (live-caught: 3.5 MINUTES of framing narration before the trace began — the
+  // beginner-depth rule lavished ~24 lines on a title and a callout while the scene's real
+  // teaching, the animated trace, waited off-screen). When a trace carries the scene, the
+  // framing gets a brief intro (3 lines max) and the cockpit enters fast.
+  const framingLines = algorithmObject ? voice.voiceLines.slice(0, 3) : voice.voiceLines;
+  const voiceLines = [...framingLines, ...algoLines];
   const { timeline, durationMs } = compileProvisionalTimeline({ sceneId: id, objects, voiceLines });
 
   return {
