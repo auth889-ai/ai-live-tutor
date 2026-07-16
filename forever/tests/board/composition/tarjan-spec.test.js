@@ -79,3 +79,31 @@ test('unreached nodes resolve MISSING (never a fake 0), call-stack binds to real
     }
   }
 });
+
+test('bridge_test: the compare op computes the bridge verdict from recorded disc/low — never authored', () => {
+  const frame = trace.steps.filter((s) => s.nodeState && s.frames).at(-1);
+  // low[1] (child side) > disc[0] (parent side)? With low[1]=0, disc[0]=0 -> NOT a bridge here.
+  const verdict = resolveBinding({
+    op: 'compare', operator: '>',
+    left: { op: 'lookup', collection: 'nodeState', key: '$child.id', field: 'low' },
+    right: { op: 'lookup', collection: 'nodeState', key: '$parent.id', field: 'disc' },
+  }, frame, { context: { child: { id: '1' }, parent: { id: '0' } } });
+  assert.equal(verdict.status, 'resolved');
+  assert.equal(verdict.value, false);
+  // The annotation gate: a "when" condition binds to typed events — bridge_confirmed only
+  // fires when such an event EXISTS on the frame; here none does, so the mark never draws.
+  const anyBridgeEvent = (frame.events ?? []).some((e) => e.semanticRole === 'bridge_confirmed');
+  assert.equal(anyBridgeEvent, false, 'no bridge event on this step — the teacher-circle stays off');
+});
+
+test('wrong-entity and runtime-literal rejections: the spec cannot reach outside the structure', () => {
+  const frame = trace.steps.filter((s) => s.nodeState && s.frames).at(-1);
+  // A binding keyed to an entity that is not a node of THIS graph resolves missing.
+  const alien = resolveBinding({ op: 'lookup', collection: 'nodeState', key: '99', field: 'low' }, frame);
+  assert.equal(alien.status, 'missing');
+  // A Director sentence carrying a runtime value as a literal is named by the classifier.
+  assert.deepEqual(
+    ungroundedNumbers('here low becomes 77', 'six servers, seven connections', { entityIds: ['0', '1', '2', '3'] }),
+    ['77'],
+  );
+});
