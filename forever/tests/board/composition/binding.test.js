@@ -62,3 +62,17 @@ test('literal classifier: numbers grounded in the source pass, ungrounded number
   assert.deepEqual(ungroundedNumbers('disc[3] = 42 here', src, { entityIds: ['0', '1', '2', '3', '4', '5'] }), ['42'], 'node ids are grounded by the structure; 42 is the hallucination class bindings exist to prevent');
   assert.deepEqual(ungroundedNumbers('disc[3] = 42 here', src), ['3', '42'], 'without structure grounding, both are named');
 });
+
+test('compare computes the verdict from two bindings (bridge_test); join renders lists as text', () => {
+  const cmp = resolveBinding({
+    op: 'compare', operator: '>',
+    left: { op: 'lookup', collection: 'nodeState', key: '1', field: 'low' },
+    right: { op: 'lookup', collection: 'nodeState', key: '0', field: 'disc' },
+  }, FRAME);
+  assert.equal(cmp.status, 'resolved');
+  assert.equal(cmp.value, false, 'low[1]=0 > disc[0]=0 is false — computed, never authored');
+  assert.ok(cmp.provenance.includes('>'));
+  assert.equal(resolveBinding({ op: 'compare', operator: 'eval', left: {}, right: {} }, FRAME).status, 'missing', 'operator whitelist');
+  const j = resolveBinding({ op: 'join', collection: 'frames', field: 'functionName', separator: ' → ' }, FRAME);
+  assert.equal(j.value, 'dfs → dfs');
+});

@@ -14,7 +14,7 @@
 // type_error{expected, received}. A missing binding NEVER silently renders — the caller
 // decides (hide the row, or reject the panel), but always knowingly.
 
-export const BINDING_OPS = Object.freeze(['lookup', 'select', 'count', 'exists', 'format']);
+export const BINDING_OPS = Object.freeze(['lookup', 'select', 'count', 'exists', 'format', 'join', 'compare']);
 
 // The channel whitelist: bindings may only read what the engine actually produces on a step.
 const COLLECTIONS = Object.freeze(['nodeState', 'variables', 'queue', 'stack', 'frames', 'traceRow', 'events', 'graph', 'lastReturn']);
@@ -56,6 +56,22 @@ export function resolveBinding(binding, frame, { context = {}, expect = null } =
     return resolved(value, Object.values(parts).map(String));
   }
 
+  if (binding.op === 'compare') {
+    // The Decision-column op (bridge_test: low[v] > disc[u]) — both sides are bindings,
+    // the operator is whitelisted, the verdict is computed here, never by the AI.
+    const OPS = { '>': (a, b) => a > b, '>=': (a, b) => a >= b, '<': (a, b) => a < b, '<=': (a, b) => a <= b, '==': (a, b) => a === b, '!=': (a, b) => a !== b };
+    if (!OPS[binding.operator]) return missing(`compare operator must be one of ${Object.keys(OPS).join(' ')}`);
+    const left = resolveBinding(binding.left, frame, { context, expect: 'scalar' });
+    if (left.status !== 'resolved') return left;
+    const right = resolveBinding(binding.right, frame, { context, expect: 'scalar' });
+    if (right.status !== 'resolved') return right;
+    return resolved(OPS[binding.operator](left.value, right.value), [...left.provenance, binding.operator, ...right.provenance]);
+  }
+  if (binding.op === 'join') {
+    const inner = resolveBinding({ ...binding, op: 'select' }, frame, { context });
+    if (inner.status !== 'resolved') return inner;
+    return resolved(inner.value.map(String).join(binding.separator ?? ', '), inner.provenance);
+  }
   if (!COLLECTIONS.includes(binding.collection)) {
     return missing(`unknown collection "${binding.collection}" — the engine produces: ${COLLECTIONS.join(', ')}`);
   }
