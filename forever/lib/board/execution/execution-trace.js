@@ -30,6 +30,7 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     }
     arrayLen = views.array.values.length;
   }
+  let graphEdgePairs = null;
   if (views.graph !== undefined) {
     if (!Array.isArray(views.graph.nodes) || views.graph.nodes.length === 0) throw new Error(`${context} views.graph needs nodes[]`);
     if (!Array.isArray(views.graph.edges)) throw new Error(`${context} views.graph needs edges[]`);
@@ -37,6 +38,12 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     for (const e of views.graph.edges) {
       if (!graphIds.has(String(e.from)) || !graphIds.has(String(e.to))) throw new Error(`${context} views.graph edge references a missing node`);
     }
+    // Membership is orientation-agnostic: walking BACK along a directed tree edge (a return
+    // from child to parent) is still that edge. What must be impossible is an edge between
+    // two nodes that share NO declared edge at all (the invented-edge class).
+    graphEdgePairs = new Set(views.graph.edges.flatMap((e) => [
+      `${String(e.from)}>${String(e.to)}`, `${String(e.to)}>${String(e.from)}`,
+    ]));
   }
   // Linked-list chain view: node ids in FIRST-APPEARANCE order (box positions are fixed for
   // the whole animation — only arrows and named pointers move between steps).
@@ -122,6 +129,12 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
       if (!Array.isArray(step.activeEdge) || step.activeEdge.length !== 2) throw new Error(`${at} activeEdge must be [fromId, toId]`);
       if (!graphIds) throw new Error(`${at} has activeEdge but no views.graph is declared`);
       for (const nid of step.activeEdge) if (!graphIds.has(String(nid))) throw new Error(`${at} activeEdge references a missing node`);
+      // MEMBERSHIP, not just node existence (external review: an INVENTED edge whose two
+      // endpoints happen to exist rendered as confidently as a real one — 3->1 on a graph
+      // with no such edge). The edge must be declared, respecting direction.
+      if (!graphEdgePairs.has(`${String(step.activeEdge[0])}>${String(step.activeEdge[1])}`)) {
+        throw new Error(`${at} activeEdge ${step.activeEdge[0]}->${step.activeEdge[1]} is not a declared edge of views.graph`);
+      }
     }
     if (step.traceRow !== undefined && (typeof step.traceRow !== 'object' || Array.isArray(step.traceRow))) {
       throw new Error(`${at} traceRow must be an object`);

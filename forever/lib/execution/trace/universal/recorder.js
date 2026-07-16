@@ -32,25 +32,49 @@ def _is_node(v):
         return False
     return any(a in v.__dict__ for a in _LINK_ATTRS) or any(a in v.__dict__ for a in _VALUE_ATTRS)
 
-def _safe(v, depth=0):
+def _safe(v, depth=0, cut=None):
+    # cut: a shared flag list — appended to whenever ANY collection is capped, so the caller
+    # can mark the variable as truncated (external review: silent 30-item cuts meant "every
+    # value copied exactly" was not fully true; now truncation is first-class per variable).
     if isinstance(v, bool) or v is None or isinstance(v, (int, str)):
         return v
     if isinstance(v, float):
         # non-finite floats make json.dumps emit INVALID JSON -> readable token instead
         return v if math.isfinite(v) else repr(v)
     if depth >= 4:
+        if cut is not None:
+            cut.append(True)
         return repr(v)[:40]
     if _is_node(v):
         return {'@ref': str(id(v))}
-    if v.__class__.__name__ == 'deque':
-        return [_safe(x, depth + 1) for x in list(v)[:30]]
-    if isinstance(v, (list, tuple)):
-        return [_safe(x, depth + 1) for x in list(v)[:30]]
+    if v.__class__.__name__ == 'deque' or isinstance(v, (list, tuple)):
+        if cut is not None and len(v) > 30:
+            cut.append(True)
+        return [_safe(x, depth + 1, cut) for x in list(v)[:30]]
     if isinstance(v, dict):
-        return {str(k): _safe(x, depth + 1) for k, x in list(v.items())[:30]}
+        if cut is not None and len(v) > 30:
+            cut.append(True)
+        return {str(k): _safe(x, depth + 1, cut) for k, x in list(v.items())[:30]}
     if isinstance(v, set):
-        return sorted([_safe(x, depth + 1) for x in list(v)[:30]], key=str)
+        if cut is not None and len(v) > 30:
+            cut.append(True)
+        return sorted([_safe(x, depth + 1, cut) for x in list(v)[:30]], key=str)
     return repr(v)[:40]
+
+def _locs(f_locals):
+    # Serialize a frame's locals; returns (locals_dict, cut_names) — cut_names lists every
+    # variable whose recorded value is INCOMPLETE, so downstream layers can refuse to build
+    # structure from a partial recording instead of trusting a 30-item prefix as the whole.
+    out = {}
+    cut_names = []
+    for k, v in f_locals.items():
+        if k.startswith('_'):
+            continue
+        flag = []
+        out[k] = _safe(v, 0, flag)
+        if flag:
+            cut_names.append(k)
+    return out, cut_names
 
 def _walk_heap(locs):
     # Bounded BFS over node objects reachable from the frame's locals: one record per object,
@@ -118,9 +142,11 @@ def _tracer(frame, event, arg):
         _push({'ev': 'call', 'fn': frame.f_code.co_name, 'line': frame.f_lineno,
                'depth': _depth[0], 'args': {n: _safe(frame.f_locals.get(n)) for n in names}})
     elif event == 'line':
-        loc = {k: _safe(v) for k, v in frame.f_locals.items() if not k.startswith('_')}
+        loc, cut = _locs(frame.f_locals)
         ev = {'ev': 'line', 'line': frame.f_lineno, 'fn': frame.f_code.co_name,
               'depth': _depth[0], 'locals': loc}
+        if cut:
+            ev['cut'] = cut
         heap = _walk_heap(frame.f_locals)
         if heap:
             blob = json.dumps(heap, sort_keys=True)
@@ -132,9 +158,12 @@ def _tracer(frame, event, arg):
         # locals AT RETURN are the frame's FINAL state — a mutation on a frame's last line
         # (arr[lo:hi] = tmp in merge sort) is visible nowhere else: line events fire BEFORE
         # each line runs, and after the last line there is no next event in that frame.
-        _push({'ev': 'return', 'fn': frame.f_code.co_name, 'line': frame.f_lineno,
-               'depth': _depth[0], 'value': _safe(arg),
-               'locals': {k: _safe(v) for k, v in frame.f_locals.items() if not k.startswith('_')}})
+        ret_loc, ret_cut = _locs(frame.f_locals)
+        ret_ev = {'ev': 'return', 'fn': frame.f_code.co_name, 'line': frame.f_lineno,
+                  'depth': _depth[0], 'value': _safe(arg), 'locals': ret_loc}
+        if ret_cut:
+            ret_ev['cut'] = ret_cut
+        _push(ret_ev)
         _depth[0] -= 1
     return _tracer
 `.trim();

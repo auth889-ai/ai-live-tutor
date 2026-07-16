@@ -22,6 +22,47 @@ import { detectNodeStateVars, createNodeStateTracker } from './node-state.js';
 
 export const GRAPH_LENS_ROLES = Object.freeze(['current', 'dist', 'visited', 'pq', 'queue', 'stack', 'parent', 'indegree']);
 
+// STRUCTURE-BUILD PHASE DETECTOR: the index of the LAST event at which an adjacency-shaped
+// local was still gaining members — everything up to it is BUILD_STRUCTURE, not algorithm.
+// Adjacency-shaped means: a dict whose keys are ALL node ids with array values, or a
+// list-of-lists whose row count equals the node count on EVERY sighting (rows fixed, members
+// grow). Frontiers/queues disqualify themselves by shrinking or by growing their row count
+// (a seen-list of (node,mask) tuples grows ROWS; an adjacency never does). A structure
+// mutated mid-walk would over-suppress — that run degrades honestly to the next lens.
+function structureBuildEnd(events, ids) {
+  const shapes = new Map(); // name -> {ok, isList, rows, prevCount}
+  let last = -1;
+  events.forEach((e, i) => {
+    const locals = e.locals && typeof e.locals === 'object' ? e.locals : {};
+    for (const [name, v] of Object.entries(locals)) {
+      let s = shapes.get(name);
+      if (s?.ok === false) continue;
+      let count = null;
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        const keys = Object.keys(v);
+        const vals = Object.values(v);
+        if (keys.length > 0 && keys.every((k) => ids.has(String(k))) && vals.every(Array.isArray)) {
+          count = vals.reduce((a, arr) => a + arr.length, 0);
+        }
+      } else if (Array.isArray(v) && v.length === ids.size && v.every(Array.isArray)) {
+        count = v.reduce((a, arr) => a + arr.length, 0);
+      }
+      if (count === null) {
+        if (v !== undefined && v !== null && s) shapes.set(name, { ok: false }); // shape broke mid-run
+        continue;
+      }
+      if (!s) s = { ok: true, prevCount: count };
+      else if (count < s.prevCount) s = { ok: false }; // shrank: a frontier, not a structure
+      else {
+        if (count > s.prevCount) last = i;
+        s.prevCount = count;
+      }
+      shapes.set(name, s);
+    }
+  });
+  return last;
+}
+
 // DECLARED-ROLE BEHAVIOR VALIDATION (live-caught on LC1192: the tracer declared
 // visited:"disc" and stack:"time" — disc is the discovery-time ARRAY, time a step counter.
 // Trusting the labels rendered a junk frontier panel and locked disc out of the nodeState
@@ -106,6 +147,12 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
   const lensNames = new Set(Object.values(roles));
 
   const ids = new Set(nodes.map((n) => String(n.id)));
+  // Orientation-agnostic membership (a relaxation can only light an edge that EXISTS between
+  // the two nodes — direction of travel may legitimately oppose a directed edge on returns).
+  const edgePairs = new Set(edges.flatMap((e) => [
+    `${String(e.from)}>${String(e.to)}`, `${String(e.to)}>${String(e.from)}`,
+  ]));
+  const edgeExists = (a, b) => edgePairs.has(`${String(a)}>${String(b)}`);
   const labelOf = new Map(nodes.map((n) => [String(n.id), String(n.label ?? n.id)]));
   const name = (id) => labelOf.get(String(id)) ?? String(id);
   const isNode = (v) => (typeof v === 'string' || typeof v === 'number') && ids.has(String(v));
@@ -130,6 +177,15 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     return items.map(displayItem);
   };
 
+  // EXECUTION PHASE SEGMENTATION (external review, verified live on HEAD: Dijkstra's and
+  // Tarjan's BUILD loops — `for u, v in edges: adj[u].append(v)` — were narrated as the
+  // traversal: "Now 3 is taken out of the frontier" while the frontier did not exist yet,
+  // because the build loop's u subscripts the adjacency exactly like the walk's u does).
+  // The structure-construction phase is detected from the recording itself: while any
+  // adjacency-shaped local is still GAINING members, the algorithm has not started. Events
+  // in that prefix feed the trackers (so init state is known) but claim NO teaching moments.
+  const buildEndIndex = structureBuildEnd(events, ids);
+
   // PER-NODE STATE (mockup parity, root-cause fix): any node-keyed local OUTSIDE the role
   // vocabulary (Tarjan's disc/low, union-find rank, BFS level) is detected generically and
   // ridden onto the drawing as labels under the nodes — the data the reference visualizers
@@ -139,6 +195,11 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
 
   const steps = [];
   let current = null;
+  // A take is only REAL once claimed post-build: the build loop leaves its iteration variable
+  // behind (u=3 after `for u,v in times`), and the first algorithm event must not narrate that
+  // leftover as "taken from the frontier" nor attribute relaxations "through" it.
+  let currentClaimed = false;
+  let seededAfterBuild = buildEndIndex < 0; // no build phase -> nothing stale to absorb
   const visitOrder = []; // finalize ORDER is ours to track — sets are unordered (research pitfall)
   let knownDist = {};
   let prevParent = null;
@@ -153,7 +214,9 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
   const snap = ({ line, explanation, activeEdge, frontier, variables }) => ({
     line,
     explanation,
-    graph: { current, visited: [...visitOrder], pointers: current ? { curr: current } : {} },
+    // The drawn pointer follows only a CLAIMED current — a stale build-loop value must not
+    // put the red ring on a node the algorithm has not actually taken.
+    graph: { current: currentClaimed ? current : null, visited: [...visitOrder], pointers: currentClaimed && current ? { curr: current } : {} },
     ...(frontier ? { [frontierKey]: frontier } : {}),
     ...(activeEdge ? { activeEdge } : {}),
     ...(roles.dist ? { traceRow: distRow() } : {}),
@@ -161,17 +224,47 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     variables: variables ?? {},
   });
 
-  for (const ev of events) {
+  for (let evIndex = 0; evIndex < events.length; evIndex += 1) {
+    const ev = events[evIndex];
     const line = Number(ev.line);
     if (!Number.isInteger(line) || line < 1 || line > lineCount) continue;
     const locals = ev.locals && typeof ev.locals === 'object' ? ev.locals : {};
+
+    // BUILD_STRUCTURE phase: the graph is still being assembled — no teaching moment may be
+    // claimed here (the build loop's u is NOT a traversal pointer). Trackers still absorb
+    // state silently so the first algorithm step starts from the true initial values.
+    if (evIndex <= buildEndIndex) {
+      const dist0 = plainObj(locals[roles.dist]);
+      if (dist0) knownDist = { ...knownDist, ...Object.fromEntries(Object.entries(dist0).filter(([k]) => isNode(k))) };
+      const parent0 = Array.isArray(locals[roles.parent])
+        ? Object.fromEntries(locals[roles.parent].map((v, i) => [i, v]))
+        : plainObj(locals[roles.parent]);
+      if (parent0) prevParent = { ...parent0 };
+      const indeg0 = Array.isArray(locals[roles.indegree])
+        ? Object.fromEntries(locals[roles.indegree].map((v, i) => [i, v]))
+        : plainObj(locals[roles.indegree]);
+      if (indeg0) prevIndegree = { ...indeg0 };
+      if (auxTracker) auxTracker.update(locals);
+      const frontierRaw0 = frontierRole ? locals[roles[frontierRole]] : null;
+      if (Array.isArray(frontierRaw0)) prevFrontier = JSON.stringify(displayFrontier(frontierRaw0));
+      continue;
+    }
+
     const parts = [];
     let activeEdge = null;
 
-    // TAKE: the processing pointer lands on a new node (extract-min / dequeue / pop).
+    // PHASE BOUNDARY: absorb the build loop's leftover iteration value silently — it is
+    // stale state, not the algorithm's first take.
     const curRaw = roles.current !== undefined ? locals[roles.current] : undefined;
+    if (!seededAfterBuild) {
+      seededAfterBuild = true;
+      if (isNode(curRaw)) current = String(curRaw);
+    }
+
+    // TAKE: the processing pointer lands on a new node (extract-min / dequeue / pop).
     if (isNode(curRaw) && String(curRaw) !== current) {
       current = String(curRaw);
+      currentClaimed = true;
       const distNow = plainObj(locals[roles.dist]);
       parts.push(narrateTake({ node: name(current), via: frontierRole === 'stack' ? 'stack' : frontierRole ? 'queue' : null, dist: distNow?.[curRaw] }));
     }
@@ -181,10 +274,15 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     if (dist) {
       const changes = Object.entries(dist).filter(([k, v]) => isNode(k) && JSON.stringify(knownDist[k]) !== JSON.stringify(v));
       for (const [k, v] of changes.slice(0, 3)) {
-        parts.push(narrateRelax({ from: current && String(k) !== current ? name(current) : null, to: name(k), oldValue: knownDist[k], newValue: v }));
+        // "Through X we reach Y" only when X is a CLAIMED take — a stale build-loop leftover
+        // must not be credited with relaxations (the dist init reads as the table starting).
+        parts.push(narrateRelax({ from: currentClaimed && current && String(k) !== current ? name(current) : null, to: name(k), oldValue: knownDist[k], newValue: v }));
       }
       if (changes.length > 3) parts.push(`…and ${changes.length - 3} more table updates land in this same moment — the table panel shows them all.`);
-      const firstEdge = changes.find(([k]) => current && String(k) !== current);
+      // The relaxed edge lights up ONLY when it is a real declared edge (external review:
+      // the validator checked node existence but not edge membership — an invented edge
+      // rendered as confidently as a real one).
+      const firstEdge = changes.find(([k]) => currentClaimed && current && String(k) !== current && edgeExists(current, String(k)));
       if (firstEdge) activeEdge = [current, String(firstEdge[0])];
       if (changes.length > 0) knownDist = { ...knownDist, ...Object.fromEntries(changes.filter(([k]) => isNode(k))) };
     }
@@ -196,6 +294,10 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
         if (isNode(m) && !visitOrder.includes(String(m))) {
           visitOrder.push(String(m));
           parts.push(narrateFinalize({ node: name(m) }));
+          // Finalization PROVES processing: when the stale-seeded current coincides with the
+          // algorithm's real first node (so no change-based take fired), the visited growth
+          // is the evidence that claims it — relaxations may now attribute and light edges.
+          if (!currentClaimed && current === String(m)) currentClaimed = true;
         }
       }
     }

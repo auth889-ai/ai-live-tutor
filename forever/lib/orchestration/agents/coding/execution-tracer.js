@@ -66,10 +66,14 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
       continue;
     }
     // The quality gate is a closure so a mode (line-sim's auto-upgrade) can also apply it to an
-    // intermediate candidate. Last attempt ships ungated — every earlier failure logged loudly.
+    // intermediate candidate. SEVERITY SPLIT (external review: "final retry must not bypass the
+    // gate"): truth-critical rules (junk traces, graph-stealing lies) hold on EVERY attempt —
+    // a lying trace never ships, the scene degrades honestly instead. Style rules (stub
+    // explanations, missing pointers) are waived only as a last resort: weak-but-true may ship.
     const gate = (trace) => {
-      if (attempt >= maxFixes) return;
-      const issue = dryRunQualityIssue({ steps: trace.steps, directive, code, tool: trace.meta?.tool });
+      const issue = dryRunQualityIssue({
+        steps: trace.steps, directive, code, tool: trace.meta?.tool, lastResort: attempt >= maxFixes,
+      });
       if (issue) throw new Error(`quality gate: ${issue}`);
     };
     try {
@@ -91,7 +95,7 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
 // THE ELITE-QUALITY GATE — one bar for EVERY mode. A trace that merely validates is not
 // automatically a lesson: pointers must ride the structure at every stateful step, a
 // stack/queue algorithm must SHOW its collection, and the words must teach — not caption.
-export function dryRunQualityIssue({ steps, directive, code, tool = null }) {
+export function dryRunQualityIssue({ steps, directive, code, tool = null, lastResort = false }) {
   // GRAPH-STEALING RULE (live-caught on LC1192: the agent picked recursion mode for Tarjan —
   // legitimate reading, dfs IS recursive — but that renders the CALL TREE while the lesson is
   // the NETWORK with per-node disc/low labels; the same build had chosen graphwalk a run
@@ -101,6 +105,18 @@ export function dryRunQualityIssue({ steps, directive, code, tool = null }) {
   if (tool === 'recursion' && /for\s+[\w,\s]+in\s+\w+\s*\[/.test(String(code ?? ''))) {
     return `This recursion WALKS A GRAPH (it iterates an adjacency: "for … in adj[…]"), so the network drawing with live per-node values is the lesson — the call tree alone is not. Output "auto": {"entry": "<one call expression invoking the code on the concrete example>"} instead: the engine runs the code for real and draws the graph walk with every per-node value recorded.`;
   }
+  // THIN-TRACE RULE (truth-critical, so also enforced at last resort): almost no steps +
+  // loops in the code + no evolving structure = a summary, not a dry run. Message computed
+  // here; in the NORMAL path it fires after the more specific collection rule below.
+  const loopy = /\b(for|while)\s/.test(String(code ?? ''));
+  const structureless = !steps.some((s) => s.array || s.grid || s.table || Array.isArray(s.queue))
+    && new Set(steps.flatMap((s) => s.graph?.revealed ?? [])).size <= 1;
+  const thinJunk = steps.length < 3 && loopy && structureless
+    ? `Only ${steps.length} step(s) for an algorithm with loops/recursion — that is a summary, not a dry run. Output "auto": {"entry": "<one call expression invoking the code on the concrete example>"} instead of the mode you chose: the engine runs the code for REAL and records every step itself (it handles nested helper functions).`
+    : null;
+  // Style rules below are waived at last resort: weak-but-TRUE may ship; lying may not.
+  if (lastResort) return thinJunk;
+
   const stateful = steps.filter((s) => s.array || s.graph);
   const withPointers = stateful.filter((s) => s.array?.pointers || s.graph?.pointers);
   if (stateful.length > 0 && withPointers.length < stateful.length) {
@@ -113,19 +129,9 @@ export function dryRunQualityIssue({ steps, directive, code, tool = null }) {
   if (missingCollection) {
     return `The algorithm uses a ${missingCollection} but NO step carries "${missingCollection}" — every step must include the live ${missingCollection} contents (e.g. "${missingCollection}": ["2","3"]; use [] when empty) so the student watches it grow and shrink.`;
   }
-  // THIN-TRACE RULE (live-caught on LC200: a nested-closure flood fill shipped a 2-step
-  // "call -> returns" trace while the universal engine handles the SAME code at 11 grid-walk
-  // steps — the agent had picked a legacy mode whose recorder cannot see nested frames).
-  // Signature of the junk, not of a tight legit trace: almost no steps AND no evolving
-  // structure (no array/grid/table/data-queue; a one-node graph). Runs AFTER the collection
-  // rule so queue/stack algorithms get their own, more specific repair message first.
-  // The message PRESCRIBES auto mode so the retry lands on the universal engine.
-  const loopy = /\b(for|while)\s/.test(String(code ?? ''));
-  const structureless = !steps.some((s) => s.array || s.grid || s.table || Array.isArray(s.queue))
-    && new Set(steps.flatMap((s) => s.graph?.revealed ?? [])).size <= 1;
-  if (steps.length < 3 && loopy && structureless) {
-    return `Only ${steps.length} step(s) for an algorithm with loops/recursion — that is a summary, not a dry run. Output "auto": {"entry": "<one call expression invoking the code on the concrete example>"} instead of the mode you chose: the engine runs the code for REAL and records every step itself (it handles nested helper functions).`;
-  }
+  // Runs AFTER the collection rule so queue/stack algorithms get their own, more specific
+  // repair message first; the auto prescription is the general fallback.
+  if (thinJunk) return thinJunk;
   const thin = steps.filter((s) => String(s.explanation ?? '').trim().length < 50);
   if (thin.length > Math.floor(steps.length / 2)) {
     return `${thin.length}/${steps.length} explanations are one-line stubs — every step's "explanation" must be 2-3 full sentences in a human tutor voice: the actual values involved, the decision taken, and why it matters for the next step.`;
