@@ -28,6 +28,21 @@ export function channelInventory(trace) {
   };
 }
 
+// The composition CACHE KEY (reviewer contract): a spec may be reused only while the
+// channel signature holds — same algorithm family + same channels + same structure kind.
+// A different implementation of the same problem (heap Dijkstra vs O(V^2) scan) changes the
+// signature, so a cached spec can never be blindly reused on a run that lacks its channels.
+export function channelSignature(inventory) {
+  return [
+    inventory.structure ?? 'none',
+    `ns:${[...(inventory.nodeStateKeys ?? [])].sort().join('+') || '-'}`,
+    inventory.hasFrames ? 'frames' : '-',
+    inventory.hasQueue ? 'queue' : '-',
+    inventory.hasStack ? 'stack' : '-',
+    inventory.hasDistTable ? 'dist' : '-',
+  ].join('|');
+}
+
 const SYSTEM = `You are the Semantic Visual Director of an AI tutor. Given a problem, its solution code and
 the INVENTORY of channels a real recorded execution produced, design the teaching screen. Output ONLY JSON:
 {"algorithmFamily": "<kebab-case>", "layoutIntent": "auto|hierarchical|force|grid|linear",
