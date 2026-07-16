@@ -91,10 +91,12 @@ test('honest failures: no lens, no events, lens names that never match', () => {
     () => compileGraphWalk({ events: [], result: 1, code: CODE, graph: GRAPH, lens: { current: 'u' } }),
     /no events/,
   );
+  // A lens var that never appears now fails EARLIER, at behavior validation, with a repair
+  // message that prescribes auto — strictly better than the old vague "no state change".
   assert.throws(
     () => compileGraphWalk({
       events: [{ line: 2, locals: { x: 1 } }], result: 1, code: 'a\nb', graph: GRAPH, lens: { current: 'nope' },
     }),
-    /no lensed state change/,
+    /declared lens roles match the recorded behavior.*"auto"/s,
   );
 });

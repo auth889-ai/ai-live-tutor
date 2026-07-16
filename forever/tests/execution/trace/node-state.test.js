@@ -97,3 +97,33 @@ test('resolveTraceStep exposes nodeState and the previous step map for change-fl
   assert.deepEqual(state.nodeState, { 0: { low: 0 } });
   assert.deepEqual(state.prevNodeState, { 0: { low: 2 } });
 });
+
+test('mis-declared roles are dropped by behavior: visited:"disc" and stack:"time" (LC1192 live case)', () => {
+  const events = [
+    { line: 2, locals: { u: 0, disc: [0, -1, -1], low: [0, -1, -1], time: [1] } },
+    { line: 3, locals: { u: 1, disc: [0, 1, -1], low: [0, 1, -1], time: [2] } },
+    { line: 3, locals: { u: 2, disc: [0, 1, 2], low: [0, 1, 2], time: [3] } },
+    { line: 4, locals: { u: 2, disc: [0, 1, 2], low: [0, 1, 0], time: [3] } },
+    { line: 4, locals: { u: 1, disc: [0, 1, 2], low: [0, 0, 0], time: [3] } },
+  ];
+  const trace = compileGraphWalk({
+    events,
+    result: [[1, 2]],
+    code: 'def f(adj):\n    a\n    b\n    c\n    return 1',
+    graph: { nodes: [{ id: '0' }, { id: '1' }, { id: '2' }], edges: [{ from: '0', to: '1' }, { from: '1', to: '2' }], directed: false },
+    lens: { current: 'u', visited: 'disc', stack: 'time' },
+  });
+  // disc was freed from the bogus visited role and lands in nodeState next to low.
+  const last = trace.steps.filter((s) => s.nodeState).at(-1).nodeState;
+  assert.deepEqual(last['1'], { disc: 1, low: 0 }, 'disc reaches the drawing despite the mis-declaration');
+  // time was freed from the bogus stack role — no junk frontier panel ships.
+  assert.ok(!trace.steps.some((s) => Array.isArray(s.stack)), 'no counter-as-stack panel');
+  // All roles bogus -> honest error prescribing auto, never a silent junk trace.
+  assert.throws(() => compileGraphWalk({
+    events,
+    result: 1,
+    code: 'a\nb\nc\nd\ne',
+    graph: { nodes: [{ id: '0' }, { id: '1' }, { id: '2' }], edges: [], directed: false },
+    lens: { visited: 'disc', stack: 'time' },
+  }), /declared lens roles match the recorded behavior.*auto/s);
+});

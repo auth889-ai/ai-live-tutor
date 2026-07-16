@@ -22,6 +22,69 @@ import { detectNodeStateVars, createNodeStateTracker } from './node-state.js';
 
 export const GRAPH_LENS_ROLES = Object.freeze(['current', 'dist', 'visited', 'pq', 'queue', 'stack', 'parent', 'indegree']);
 
+// DECLARED-ROLE BEHAVIOR VALIDATION (live-caught on LC1192: the tracer declared
+// visited:"disc" and stack:"time" — disc is the discovery-time ARRAY, time a step counter.
+// Trusting the labels rendered a junk frontier panel and locked disc out of the nodeState
+// channel, because lens vars are excluded from aux detection). A declared role must BEHAVE
+// like its role in the recording or it is dropped; the freed variable then falls through to
+// the aux nodeState detector, which reads behavior, not names. Same tests the universal
+// graph-adjacency detector applies — declared and derived paths now share one truth bar.
+function dropMisdeclaredRoles(roles, events, graph) {
+  const ids = new Set((graph?.nodes ?? []).map((n) => String(n.id)));
+  const isNodeVal = (v) => (typeof v === 'string' || typeof v === 'number') && ids.has(String(v));
+  const snapsOf = (name) => events
+    .map((e) => (e.locals && typeof e.locals === 'object' ? e.locals[name] : undefined))
+    .filter((v) => v !== undefined && v !== null);
+
+  const behaves = {
+    current(snaps) {
+      const scalars = snaps.filter((v) => typeof v === 'string' || typeof v === 'number');
+      return scalars.length > 0 && scalars.every(isNodeVal);
+    },
+    visited(snaps) {
+      const arrays = snaps.filter(Array.isArray);
+      if (arrays.length < 2) return false;
+      if (!arrays.every((s) => s.every(isNodeVal))) return false; // disc's -1 scaffold fails here
+      return arrays.every((s, i) => i === 0 || s.length >= arrays[i - 1].length);
+    },
+    frontier(snaps) {
+      const arrays = snaps.filter(Array.isArray);
+      if (arrays.length < 2) return false;
+      if (!arrays.every((s) => s.every((m) => isNodeVal(m) || (Array.isArray(m) && m.some(isNodeVal))))) return false;
+      let grew = false;
+      let shrank = false;
+      for (let i = 1; i < arrays.length; i += 1) {
+        if (arrays[i].length > arrays[i - 1].length) grew = true;
+        if (arrays[i].length < arrays[i - 1].length) shrank = true;
+      }
+      return grew && shrank; // a counter like time=[0..] only grows — dropped
+    },
+    dist(snaps) {
+      const dicts = snaps.filter((v) => v && typeof v === 'object' && !Array.isArray(v));
+      if (dicts.length < 2) return false;
+      const final = dicts.at(-1);
+      return Object.keys(final).length > 0
+        && Object.entries(final).every(([k, v]) => ids.has(String(k)) && typeof v === 'number');
+    },
+    indegree(snaps) {
+      const lists = snaps.filter((v) => Array.isArray(v) && v.every((x) => Number.isInteger(x)));
+      return lists.length >= 2 && lists.every((v) => v.every((x) => x >= 0));
+    },
+    parent(snaps) {
+      const last = snaps.at(-1);
+      if (Array.isArray(last)) return last.some(isNodeVal);
+      if (last && typeof last === 'object') return Object.values(last).some(isNodeVal);
+      return false;
+    },
+  };
+
+  for (const [role, varName] of Object.entries(roles)) {
+    const check = role === 'pq' || role === 'queue' || role === 'stack' ? behaves.frontier : behaves[role];
+    if (!check) continue;
+    if (!check(snapsOf(varName))) delete roles[role];
+  }
+}
+
 // compileGraphWalk({ events, result, code, entry?, graph, lens, language })
 // events/result: from parseLineEvents (line-simulator run). graph: the declared views.graph
 // (node ids MUST equal the node keys the student's code uses). lens: role -> variable name.
@@ -36,6 +99,10 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     Object.entries(lens).filter(([role, varName]) => GRAPH_LENS_ROLES.includes(role) && typeof varName === 'string' && varName),
   );
   if (Object.keys(roles).length === 0) throw new Error(`graph walk needs a lens: at least one of ${GRAPH_LENS_ROLES.join(', ')}`);
+  dropMisdeclaredRoles(roles, events, graph);
+  if (Object.keys(roles).length === 0) {
+    throw new Error('none of the declared lens roles match the recorded behavior (a visited set must grow with node members; a frontier must grow AND shrink; a dist table must be a node-keyed dict) — output "auto": {"entry": ...} instead and let the engine derive the roles from the run itself');
+  }
   const lensNames = new Set(Object.values(roles));
 
   const ids = new Set(nodes.map((n) => String(n.id)));
