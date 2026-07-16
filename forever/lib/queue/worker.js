@@ -4,11 +4,24 @@
 // It consumes JOB_NAME jobs, runs the agent society via the shared processor, and reports live
 // progress with job.updateProgress() so the browser can render a real progress bar over SSE.
 
+import { execSync } from 'node:child_process';
+
 import { Worker } from 'bullmq';
 import IORedis from 'ioredis';
 
 import { JOB_NAME, WORKER_HEARTBEAT_KEY } from './job-contract.js';
 import { processLessonJob } from './lesson-processor.js';
+
+// VERSION GATE (measured 2026-07-16: a long-lived worker silently built lessons with WEEKS-old
+// modules — three rebuilds shipped without the fixes they were meant to verify; one job was even
+// finished by a dying worker's drain window seconds after a "fresh" restart). A worker pins the
+// repo commit it was STARTED on; if the repo has moved when a job arrives, it refuses loudly —
+// the job stays queued for a current worker instead of silently building on stale code.
+const repoHead = () => {
+  try { return execSync('git rev-parse HEAD', { cwd: new URL('.', import.meta.url).pathname, encoding: 'utf8' }).trim(); }
+  catch { return 'unknown'; }
+};
+const workerBuildCommit = repoHead();
 
 const redisUrl = process.env.REDIS_URL;
 if (!redisUrl) {
@@ -21,7 +34,13 @@ const concurrency = Number(process.env.WORKER_CONCURRENCY || 2);
 
 const worker = new Worker(
   JOB_NAME,
-  async (job) => processLessonJob(job.data, { report: (progress) => job.updateProgress(progress) }),
+  async (job) => {
+    const nowHead = repoHead();
+    if (workerBuildCommit !== 'unknown' && nowHead !== 'unknown' && nowHead !== workerBuildCommit) {
+      throw new Error(`worker is STALE: started on ${workerBuildCommit.slice(0, 7)}, repo is now at ${nowHead.slice(0, 7)} — restart the worker (npm run worker); job left for a current worker`);
+    }
+    return processLessonJob(job.data, { report: (progress) => job.updateProgress(progress) });
+  },
   {
     connection,
     concurrency,
