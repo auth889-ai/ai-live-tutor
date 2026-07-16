@@ -8,6 +8,8 @@
 // GraphView already render), collections (stack/queue), scalar variables, and a plain-English
 // explanation. The player maps clock -> stepIndex and lights up all panels for that step.
 
+import { validateStepEvents } from '../../execution/trace/events/taxonomy.js';
+
 export const TRACE_LANGUAGES = Object.freeze(['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go', 'sql']);
 
 export function validateExecutionTrace(trace, context = 'execution trace') {
@@ -138,6 +140,15 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     }
     if (step.traceRow !== undefined && (typeof step.traceRow !== 'object' || Array.isArray(step.traceRow))) {
       throw new Error(`${at} traceRow must be an object`);
+    }
+    // Typed events (B2): universal-verb vocabulary enforced; a graphNode target must exist.
+    if (step.events !== undefined) {
+      validateStepEvents(step.events, at);
+      for (const e of step.events) {
+        if (e.target?.entityType === 'graphNode' && graphIds && !graphIds.has(String(e.target.entityId))) {
+          throw new Error(`${at} event targets missing graphNode "${e.target.entityId}"`);
+        }
+      }
     }
     // Per-node state labels (disc/low/rank/level) riding on the drawing: {nodeId: {var: scalar}},
     // every node id real — a label pointing at a node that does not exist is a lie, so it throws.

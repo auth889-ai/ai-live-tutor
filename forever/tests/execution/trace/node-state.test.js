@@ -127,3 +127,29 @@ test('mis-declared roles are dropped by behavior: visited:"disc" and stack:"time
     lens: { visited: 'disc', stack: 'time' },
   }), /declared lens roles match the recorded behavior.*auto/s);
 });
+
+test('B2: typed events ride the steps — visit/relax/finalize/state_write with recorded before/after', () => {
+  const trace = compileGraphWalk({
+    events: [
+      { line: 2, locals: { u: 0, disc: [0, -1, -1], low: [0, -1, -1], dist: { 0: 0 }, visited: [] } },
+      { line: 3, locals: { u: 1, disc: [0, 1, -1], low: [0, 1, -1], dist: { 0: 0, 1: 4 }, visited: ['0'] } },
+      { line: 4, locals: { u: 1, disc: [0, 1, -1], low: [0, 0, -1], dist: { 0: 0, 1: 3 }, visited: ['0'] } },
+    ],
+    result: 3,
+    code: 'a\nb\nc\nd',
+    graph: { nodes: [{ id: '0' }, { id: '1' }, { id: '2' }], edges: [{ from: '0', to: '1' }, { from: '1', to: '2' }], directed: true },
+    lens: { current: 'u', dist: 'dist', visited: 'visited' },
+  });
+  const all = trace.steps.flatMap((s) => s.events ?? []);
+  const visit = all.find((e) => e.eventType === 'visit');
+  assert.ok(visit && visit.semanticRole === 'take' && visit.target.entityId === '0', 'take emits a visit event');
+  const improve = all.find((e) => e.eventType === 'relax' && e.semanticRole === 'improvement');
+  assert.ok(improve, 'the 4 -> 3 relaxation emits an improvement event');
+  assert.equal(improve.before, 4);
+  assert.equal(improve.after, 3);
+  const write = all.find((e) => e.eventType === 'write' && e.semanticRole === 'state_write' && e.target.field === 'low');
+  assert.ok(write, 'nodeState writes emit typed write events');
+  assert.ok(all.some((e) => e.eventType === 'finalize' && e.target.entityId === '0'), 'finalize emitted');
+  assert.equal(trace.steps.at(-1).events.at(-1).eventType, 'solution_emit', 'terminal step emits the solution');
+  assert.ok(all.every((e) => e.eventType !== 'solution_emit' ? Number.isInteger(e.provenance?.eventIndex) : true), 'provenance carries the recording index');
+});

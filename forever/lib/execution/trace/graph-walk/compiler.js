@@ -211,7 +211,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     for (const [k, v] of Object.entries(knownDist)) if (isNode(k)) row[name(k)] = v;
     return row;
   };
-  const snap = ({ line, explanation, activeEdge, frontier, variables }) => ({
+  const snap = ({ line, explanation, activeEdge, frontier, variables, events: stepEvents }) => ({
     line,
     explanation,
     // The drawn pointer follows only a CLAIMED current — a stale build-loop value must not
@@ -221,6 +221,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     ...(activeEdge ? { activeEdge } : {}),
     ...(roles.dist ? { traceRow: distRow() } : {}),
     ...(auxTracker ? { nodeState: auxTracker.snapshot() } : {}),
+    ...(stepEvents?.length ? { events: stepEvents } : {}),
     variables: variables ?? {},
   });
 
@@ -251,6 +252,11 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     }
 
     const parts = [];
+    // TYPED EVENTS (B2): each narrated moment also emits a universal-verb event with a typed
+    // target and recorded before/after — the channel the Decision column and the Director's
+    // when-annotations read. Same facts as the prose, machine-readable.
+    const stepEvents = [];
+    const emit = (eventType, over = {}) => stepEvents.push({ eventType, provenance: { eventIndex: evIndex }, ...over });
     let activeEdge = null;
 
     // PHASE BOUNDARY: absorb the build loop's leftover iteration value silently — it is
@@ -265,6 +271,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     if (isNode(curRaw) && String(curRaw) !== current) {
       current = String(curRaw);
       currentClaimed = true;
+      emit('visit', { semanticRole: 'take', target: { entityType: 'graphNode', entityId: current } });
       const distNow = plainObj(locals[roles.dist]);
       parts.push(narrateTake({ node: name(current), via: frontierRole === 'stack' ? 'stack' : frontierRole ? 'queue' : null, dist: distNow?.[curRaw] }));
     }
@@ -277,6 +284,11 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
         // "Through X we reach Y" only when X is a CLAIMED take — a stale build-loop leftover
         // must not be credited with relaxations (the dist init reads as the table starting).
         parts.push(narrateRelax({ from: currentClaimed && current && String(k) !== current ? name(current) : null, to: name(k), oldValue: knownDist[k], newValue: v }));
+        emit('relax', {
+          semanticRole: knownDist[k] === undefined ? 'first_discovery' : 'improvement',
+          target: { entityType: 'graphNode', entityId: String(k), field: roles.dist },
+          before: knownDist[k], after: v,
+        });
       }
       if (changes.length > 3) parts.push(`…and ${changes.length - 3} more table updates land in this same moment — the table panel shows them all.`);
       // The relaxed edge lights up ONLY when it is a real declared edge (external review:
@@ -294,6 +306,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
         if (isNode(m) && !visitOrder.includes(String(m))) {
           visitOrder.push(String(m));
           parts.push(narrateFinalize({ node: name(m) }));
+          emit('finalize', { target: { entityType: 'graphNode', entityId: String(m) } });
           // Finalization PROVES processing: when the stale-seeded current coincides with the
           // algorithm's real first node (so no change-based take fired), the visited growth
           // is the evidence that claims it — relaxations may now attribute and light edges.
@@ -308,7 +321,10 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
       : plainObj(locals[roles.parent]);
     if (parentRaw) {
       const changes = Object.entries(parentRaw).filter(([k, v]) => JSON.stringify(prevParent?.[k]) !== JSON.stringify(v));
-      for (const [k, v] of changes.slice(0, 3)) parts.push(narrateUnion({ child: name(k), root: name(v) }));
+      for (const [k, v] of changes.slice(0, 3)) {
+        parts.push(narrateUnion({ child: name(k), root: name(v) }));
+        emit('union', { target: { entityType: 'graphNode', entityId: String(k), field: roles.parent }, before: prevParent?.[k], after: v });
+      }
       prevParent = { ...parentRaw };
     }
 
@@ -318,7 +334,10 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
       : plainObj(locals[roles.indegree]);
     if (indegRaw && prevIndegree) {
       const drops = Object.entries(indegRaw).filter(([k, v]) => isNode(k) && Number(v) < Number(prevIndegree[k] ?? Infinity));
-      for (const [k, v] of drops.slice(0, 3)) parts.push(narrateIndegree({ node: name(k), value: v }));
+      for (const [k, v] of drops.slice(0, 3)) {
+        parts.push(narrateIndegree({ node: name(k), value: v }));
+        emit('write', { semanticRole: 'indegree_drop', target: { entityType: 'graphNode', entityId: String(k), field: roles.indegree }, before: prevIndegree[k], after: v });
+      }
     }
     if (indegRaw) prevIndegree = { ...indegRaw };
 
@@ -328,6 +347,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
       const writes = auxTracker.update(locals);
       for (const w of writes.slice(0, 3)) {
         parts.push(narrateNodeState({ varName: w.varName, node: name(w.node), oldValue: w.oldValue, newValue: w.newValue }));
+        emit('write', { semanticRole: 'state_write', target: { entityType: 'graphNode', entityId: String(w.node), field: w.varName }, before: w.oldValue, after: w.newValue });
       }
       if (writes.length > 3) parts.push(`…and ${writes.length - 3} more per-node labels rewrite in this same moment — read them straight off the drawing.`);
     }
@@ -338,7 +358,10 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     if (Array.isArray(frontierRaw)) {
       frontier = displayFrontier(frontierRaw);
       const key = JSON.stringify(frontier);
-      if (parts.length === 0 && key !== prevFrontier) parts.push(narrateCollection({ kind: frontierRole === 'stack' ? 'stack' : 'queue', items: frontier }));
+      if (parts.length === 0 && key !== prevFrontier) {
+        parts.push(narrateCollection({ kind: frontierRole === 'stack' ? 'stack' : 'queue', items: frontier }));
+        emit('collection_change', { target: { entityType: 'collection', entityId: frontierRole }, after: frontier });
+      }
       prevFrontier = key;
     }
 
@@ -351,7 +374,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
         // (prefix-only match: the recorder truncates long strings, so the closing ">" may be cut)
         && !(typeof v === 'string' && v.startsWith('<') && /function|object|module|method|class '| at 0x[0-9a-f]/.test(v))),
     );
-    steps.push(snap({ line, explanation: parts.join(' '), activeEdge, frontier, variables }));
+    steps.push(snap({ line, explanation: parts.join(' '), activeEdge, frontier, variables, events: stepEvents }));
   }
   if (steps.length === 0) throw new Error('graph walk saw no lensed state change — check the lens variable names against the code');
 
@@ -370,6 +393,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     explanation: narrateDone({ result, orderNames: visitOrder.map(name), truncated }),
     frontier: null,
     variables: {},
+    events: [{ eventType: 'solution_emit', after: result }],
   }));
 
   return validateExecutionTrace({
