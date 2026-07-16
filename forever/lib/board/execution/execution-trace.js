@@ -150,6 +150,16 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
         }
       }
     }
+    // CallFrame channel (B3): the live call stack per step — light shape check.
+    if (step.frames !== undefined) {
+      if (!Array.isArray(step.frames)) throw new Error(`${at} frames must be an array`);
+      for (const f of step.frames) {
+        if (!f || typeof f.frameId !== 'string' || typeof f.functionName !== 'string'
+          || !['active', 'waiting', 'returned', 'threw'].includes(f.status)) {
+          throw new Error(`${at} frames entries need {frameId, functionName, status: active|waiting|returned|threw}`);
+        }
+      }
+    }
     // Per-node state labels (disc/low/rank/level) riding on the drawing: {nodeId: {var: scalar}},
     // every node id real — a label pointing at a node that does not exist is a lie, so it throws.
     if (step.nodeState !== undefined) {

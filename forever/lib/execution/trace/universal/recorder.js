@@ -154,6 +154,15 @@ def _tracer(frame, event, arg):
                 ev['heap'] = heap
                 _last_heap[0] = blob
         _push(ev)
+    elif event == 'exception':
+        # First-class exception event (B3): without it a frame unwound by an exception is
+        # indistinguishable from a normal return (CPython fires 'return' on unwind too) —
+        # the CallFrame panel could never show "threw".
+        try:
+            _push({'ev': 'exception', 'fn': frame.f_code.co_name, 'line': frame.f_lineno,
+                   'depth': _depth[0], 'type': arg[0].__name__, 'message': str(arg[1])[:80]})
+        except Exception:
+            pass
     elif event == 'return':
         # locals AT RETURN are the frame's FINAL state — a mutation on a frame's last line
         # (arr[lo:hi] = tmp in merge sort) is visible nowhere else: line events fire BEFORE
@@ -197,7 +206,7 @@ export function validateUniversalRecording(payload) {
     const at = `event ${i}`;
     if (!e || typeof e !== 'object') throw new Error(`${at} must be an object`);
     if (e.truncated === true) return;
-    if (!['line', 'call', 'return'].includes(e.ev)) throw new Error(`${at}: ev must be line|call|return (got ${JSON.stringify(e.ev)})`);
+    if (!['line', 'call', 'return', 'exception'].includes(e.ev)) throw new Error(`${at}: ev must be line|call|return|exception (got ${JSON.stringify(e.ev)})`);
     if (!Number.isInteger(e.line) || e.line < 1) throw new Error(`${at}: needs a positive integer line`);
     if (typeof e.fn !== 'string' || !e.fn) throw new Error(`${at}: needs the function name`);
     if (!Number.isInteger(e.depth) || e.depth < 0) throw new Error(`${at}: needs an integer call depth`);

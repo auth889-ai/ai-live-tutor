@@ -374,7 +374,13 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
         // (prefix-only match: the recorder truncates long strings, so the closing ">" may be cut)
         && !(typeof v === 'string' && v.startsWith('<') && /function|object|module|method|class '| at 0x[0-9a-f]/.test(v))),
     );
-    steps.push(snap({ line, explanation: parts.join(' '), activeEdge, frontier, variables, events: stepEvents }));
+    const stepOut = snap({ line, explanation: parts.join(' '), activeEdge, frontier, variables, events: stepEvents });
+    // CallFrame channel passthrough (B3): the live stack + the most recent completed frame.
+    if (Array.isArray(ev.frames) && ev.frames.length) {
+      stepOut.frames = ev.frames;
+      if (ev.lastReturn) stepOut.lastReturn = ev.lastReturn;
+    }
+    steps.push(stepOut);
   }
   if (steps.length === 0) throw new Error('graph walk saw no lensed state change — check the lens variable names against the code');
 

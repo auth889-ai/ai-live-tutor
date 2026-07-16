@@ -27,6 +27,7 @@
 //   indegree  = an int list with per-index DECREASES (Kahn's countdown)
 
 import { compileGraphWalk } from '../../graph-walk/compiler.js';
+import { buildFrameTimeline } from '../frames.js';
 
 const isPlainObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 
@@ -220,7 +221,20 @@ function adjFromLists(final, snaps) {
 // Adapt the recording to the proven graph-walk compiler: its events ARE our line events.
 export function compileGraphAdjacency({ recording, plan, code, entry = null, language = 'python' }) {
   if (!plan || plan.lens !== 'graph-adjacency') throw new Error('compileGraphAdjacency needs a plan from detectGraphAdjacency');
-  const events = (recording?.events ?? []).filter((e) => e.ev === 'line').map((e) => ({ line: e.line, locals: e.locals }));
+  // CallFrame channel (B3): recursion-driven walks (Tarjan, graph DFS) carry the live call
+  // stack per step — the mockups' "Recursion Stack: Active/Waiting/Done -> returns" panel.
+  // Single-frame runs (Dijkstra's one function) attach nothing: a one-row panel is noise.
+  const all = recording?.events ?? [];
+  const timeline = buildFrameTimeline(all);
+  const recursive = timeline.frames.length > 1;
+  const events = all
+    .map((e, i) => ({ e, i }))
+    .filter(({ e }) => e.ev === 'line')
+    .map(({ e, i }) => ({
+      line: e.line,
+      locals: e.locals,
+      ...(recursive ? { frames: timeline.stackAt(i), lastReturn: timeline.finishedBefore(i) } : {}),
+    }));
   if (recording?.events?.at(-1)?.truncated === true) events.push({ truncated: true });
   const trace = compileGraphWalk({
     events,
