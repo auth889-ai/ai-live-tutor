@@ -79,6 +79,15 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
     try {
       const trace = await mode.run({ ...ctx, gate });
       gate(trace);
+      // C4 SHADOW MODE: the Semantic Visual Director composes a spec for this trace and its
+      // verdict is LOGGED — users keep seeing the deterministic cockpit until C7 flips it on.
+      // Fire-and-forget: a Director failure can never touch the lesson.
+      if (process.env.COCKPIT_DIRECTOR === 'shadow') {
+        import('../authoring/cockpit-director.js')
+          .then(({ directCockpit }) => directCockpit({ problemText: sourceText, directive, trace }))
+          .then(({ spec, verdict }) => console.log(`[cockpit-director shadow] ${verdict}${spec ? ` — ${spec.panels.length} panels (${spec.panels.map((p) => p.type).join(', ')})` : ''}`))
+          .catch((e) => console.log(`[cockpit-director shadow] error: ${String(e?.message).slice(0, 120)}`));
+      }
       return { trace, usage, fixes: attempt };
     } catch (error) {
       lastError = `${mode.label} failed: ${error.message}`;
