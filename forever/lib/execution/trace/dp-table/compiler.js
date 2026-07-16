@@ -110,6 +110,23 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
       stepObj.array2d.highlight = proved.reads;
       stepObj.array2d.rule = proved.rule;
     }
+    // Typed events (B2): every cell write is a cell_update with recorded before/after; a
+    // PROVED dependency additionally emits dependency_read events for the cells the rule
+    // read — the machine-readable form of the mockups' arrows + formula column.
+    stepObj.events = [
+      ...writes.map(([r, c, old]) => ({
+        eventType: 'cell_update',
+        ...(proved ? { semanticRole: proved.rule } : {}),
+        target: { entityType: 'gridCell', entityId: `${r}:${c}` },
+        before: old,
+        after: known.get(`${r},${c}`),
+      })),
+      ...(proved ? proved.reads.map(([r, c]) => ({
+        eventType: 'dependency_read',
+        target: { entityType: 'gridCell', entityId: `${r}:${c}` },
+        after: known.get(`${r},${c}`),
+      })) : []),
+    ];
     steps.push(stepObj);
   }
   if (steps.length === 0) throw new Error('dp-table tracker saw no table writes — the run never changed the dp variable');
