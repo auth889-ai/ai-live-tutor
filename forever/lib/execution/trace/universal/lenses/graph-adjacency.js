@@ -156,6 +156,29 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
 
   if (!roles.current && !roles.pq && !roles.queue && !roles.stack) return null; // a graph nobody walks is data, not a lesson
 
+  // BITMASK ENRICHMENT (D2, lens COMPOSITION per the 20-lens law — the bitmask panel rides
+  // ON the graph walk, it never fights it): state-compression walks (LC847-class) carry a
+  // scalar mask local — an int that always stays within [0, 2^n) for the graph's n nodes —
+  // and bitwise operators in the code. Detected behaviorally; rendered as the mask panel.
+  let mask = null;
+  if (/<<|\||&/.test(code)) {
+    const n = adj.ids.size;
+    const target = (1 << n) - 1;
+    for (const name of new Set(lines.flatMap((e) => Object.keys(e.locals)))) {
+      if (name === adj.name || Object.values(roles).includes(name)) continue;
+      const vals = lines.map((e) => e.locals[name]).filter((v) => Number.isInteger(v));
+      if (vals.length < 3) continue;
+      if (!vals.every((v) => v >= 0 && v <= target)) continue;
+      const distinct = new Set(vals).size;
+      // A mask VARIES (many states) and at some point covers more than one bit — a plain
+      // node-id counter or loop index rarely passes both.
+      if (distinct >= 3 && vals.some((v) => (v & (v - 1)) !== 0) && new RegExp(`\\b${name}\\b\\s*\\|`).test(code)) {
+        mask = { name, bits: n, target };
+        break;
+      }
+    }
+  }
+
   const edgeSet = new Set(adj.edges.map(([a, b]) => `${a}>${b}`));
   const directed = !adj.edges.every(([a, b]) => edgeSet.has(`${b}>${a}`));
   return {
@@ -168,6 +191,7 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
       directed,
     },
     roles,
+    ...(mask ? { mask } : {}),
   };
 }
 
@@ -244,6 +268,7 @@ export function compileGraphAdjacency({ recording, plan, code, entry = null, lan
     language,
     graph: plan.graph,
     lens: plan.roles,
+    mask: plan.mask ?? null,
   });
   if (!plan.roles.visited) synthesizeVisitedFromTakes(trace);
   return trace;

@@ -152,6 +152,7 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
             ⚗️ your own run — step through it; “resume voice” returns to the lesson’s example
           </div>
         ) : null}
+        {trace.views?.bitmask && step.maskState ? <MaskPanel maskState={step.maskState} bitmask={trace.views.bitmask} /> : null}
         <Caption index={index} total={trace.steps.length} text={step.explanation} />
         <Vars step={step} />
         <Collections step={step} />
@@ -197,6 +198,34 @@ function StepControls({ index, total, exploring, onStep, onJump, onFollow }) {
       ) : (
         <span style={{ fontSize: 11.5, color: '#b3a889' }}>following voice — step to explore</span>
       )}
+    </div>
+  );
+}
+
+// Bitmask panel (D2, mockup: "Bitmask Legend / Current Expanded State"): the current state's
+// mask as per-bit chips (filled = node covered by this path) + binary + target readout.
+function MaskPanel({ maskState, bitmask }) {
+  const covered = new Set(maskState.visited ?? []);
+  return (
+    <div style={{ border: '1px solid #f0dcd5', borderRadius: 10, background: '#fffcfa', padding: 10 }}>
+      <div style={{ fontSize: 11, color: '#8e44ad', fontWeight: 700, marginBottom: 6, fontFamily: 'ui-monospace, monospace' }}>
+        state mask · {maskState.binary} ({maskState.mask}) · target {(bitmask.target ?? 0).toString(2).padStart(bitmask.bits, '0')}
+      </div>
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+        {Array.from({ length: bitmask.bits }, (_, b) => String(b)).map((b) => (
+          <span key={b} style={{
+            minWidth: 30, textAlign: 'center', padding: '4px 8px', borderRadius: 6,
+            border: `2px solid ${covered.has(b) ? '#6f3391' : '#e0d5bf'}`,
+            background: covered.has(b) ? '#8e44ad' : '#fff', color: covered.has(b) ? '#fff' : '#9a9182',
+            fontFamily: 'ui-monospace, monospace', fontWeight: 800, fontSize: 13,
+          }}>
+            {b}
+          </span>
+        ))}
+      </div>
+      {maskState.mask === bitmask.target ? (
+        <div style={{ marginTop: 6, fontSize: 12, fontWeight: 800, color: '#20794a' }}>✓ every node covered — target state reached</div>
+      ) : null}
     </div>
   );
 }

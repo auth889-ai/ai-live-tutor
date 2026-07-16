@@ -129,7 +129,7 @@ function dropMisdeclaredRoles(roles, events, graph) {
 // compileGraphWalk({ events, result, code, entry?, graph, lens, language })
 // events/result: from parseLineEvents (line-simulator run). graph: the declared views.graph
 // (node ids MUST equal the node keys the student's code uses). lens: role -> variable name.
-export function compileGraphWalk({ events, result, code, entry = null, graph, lens = {}, language = 'python' } = {}) {
+export function compileGraphWalk({ events, result, code, entry = null, graph, lens = {}, mask = null, language = 'python' } = {}) {
   if (!Array.isArray(events) || events.length === 0) throw new Error('graph walk recorded no events');
   const truncated = events[events.length - 1]?.truncated === true;
   if (truncated) events = events.slice(0, -1);
@@ -194,6 +194,8 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
   const auxTracker = auxVars.length ? createNodeStateTracker(auxVars, ids) : null;
 
   const steps = [];
+  let maskNow = null; // latest recorded mask value (state-compression walks)
+  const maskBitsOf = (m, bits) => Array.from({ length: bits }, (_, b) => b).filter((b) => (m >> b) & 1).map(String);
   let current = null;
   // A take is only REAL once claimed post-build: the build loop leaves its iteration variable
   // behind (u=3 after `for u,v in times`), and the first algorithm event must not narrate that
@@ -221,6 +223,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     ...(activeEdge ? { activeEdge } : {}),
     ...(roles.dist ? { traceRow: distRow() } : {}),
     ...(auxTracker ? { nodeState: auxTracker.snapshot() } : {}),
+    ...(maskNow !== null ? { maskState: { mask: maskNow, bits: mask.bits, binary: maskNow.toString(2).padStart(mask.bits, '0'), visited: maskBitsOf(maskNow, mask.bits) } } : {}),
     ...(stepEvents?.length ? { events: stepEvents } : {}),
     variables: variables ?? {},
   });
@@ -352,6 +355,18 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
       if (writes.length > 3) parts.push(`…and ${writes.length - 3} more per-node labels rewrite in this same moment — read them straight off the drawing.`);
     }
 
+    // MASK (state-compression): the latest recorded mask rides the step; a CHANGED mask is
+    // narrated with its meaning — the mockups' "mask 01101 -> visited {0,2,3}" readout.
+    if (mask && Number.isInteger(locals[mask.name])) {
+      const m = locals[mask.name];
+      if (m !== maskNow) {
+        maskNow = m;
+        const bits = maskBitsOf(m, mask.bits);
+        parts.push(`The state mask is now ${m.toString(2).padStart(mask.bits, '0')} (${m}) — nodes {${bits.join(', ')}} are covered by this path${m === mask.target ? '; that is EVERY node, the target mask, so this state is the answer' : ''}.`);
+        emit('state_transition', { semanticRole: 'mask_update', target: { entityId: `collection:mask` }, after: m });
+      }
+    }
+
     // FRONTIER: always shown when declared; a pure frontier change is still a visible moment.
     let frontier = null;
     const frontierRaw = frontierRole ? locals[roles[frontierRole]] : null;
@@ -405,7 +420,10 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
   return validateExecutionTrace({
     language,
     code: String(code ?? ''),
-    views: { graph: { nodes, edges, directed: graph.directed !== false } },
+    views: {
+      graph: { nodes, edges, directed: graph.directed !== false },
+      ...(mask ? { bitmask: { bits: mask.bits, target: mask.target } } : {}),
+    },
     steps,
   }, 'graph-walk trace');
 }

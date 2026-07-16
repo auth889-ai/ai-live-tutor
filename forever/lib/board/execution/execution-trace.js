@@ -81,6 +81,11 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     grid = { rows, cols };
   }
 
+  if (views.bitmask !== undefined) {
+    if (!Number.isInteger(views.bitmask.bits) || views.bitmask.bits < 1 || views.bitmask.bits > 20) {
+      throw new Error(`${context} views.bitmask needs integer bits in 1..20`);
+    }
+  }
   if (!Array.isArray(trace.steps) || trace.steps.length === 0) throw new Error(`${context} needs a non-empty steps[]`);
   const arrIn = (i) => Number.isInteger(i) && i >= 0 && i < arrayLen;
   trace.steps.forEach((step, s) => {
@@ -149,6 +154,11 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
         if (typeof id === 'string' && id.startsWith('graphNode:') && graphIds && !graphIds.has(id.slice('graphNode:'.length))) {
           throw new Error(`${at} event targets missing ${id}`);
         }
+      }
+    }
+    if (step.maskState !== undefined) {
+      if (!Number.isInteger(step.maskState.mask) || typeof step.maskState.binary !== 'string') {
+        throw new Error(`${at} maskState needs {mask:int, binary:string}`);
       }
     }
     // CallFrame channel (B3): the live call stack per step — light shape check.
