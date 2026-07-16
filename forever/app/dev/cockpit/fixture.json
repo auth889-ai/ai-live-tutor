@@ -1,0 +1,2962 @@
+{
+ "spec": {
+  "algorithmFamily": "tarjan-bridges",
+  "layoutIntent": "force",
+  "panels": [
+   {
+    "type": "graph",
+    "title": "Network — Discovery and Low-Link Values"
+   },
+   {
+    "type": "call-stack",
+    "title": "DFS Call Stack"
+   },
+   {
+    "type": "state-table",
+    "title": "Discovery / Low Values",
+    "columns": [
+     {
+      "label": "disc",
+      "binding": {
+       "op": "lookup",
+       "collection": "nodeState",
+       "key": "$node.id",
+       "field": "disc"
+      }
+     },
+     {
+      "label": "low",
+      "binding": {
+       "op": "lookup",
+       "collection": "nodeState",
+       "key": "$node.id",
+       "field": "low"
+      }
+     }
+    ]
+   },
+   {
+    "type": "concept-card",
+    "title": "Bridge Rule",
+    "content": "An edge u–v is a bridge when low[v] > disc[u]: nothing in v's subtree can reach back above u."
+   }
+  ]
+ },
+ "trace": {
+  "language": "python",
+  "code": "def critical_connections(n, connections):\n    adj = {i: [] for i in range(n)}\n    for u, v in connections:\n        adj[u].append(v)\n        adj[v].append(u)\n    disc = [-1] * n\n    low = [-1] * n\n    bridges = []\n    time = [0]\n    def dfs(u, parent):\n        disc[u] = low[u] = time[0]\n        time[0] += 1\n        for v in adj[u]:\n            if disc[v] == -1:\n                dfs(v, u)\n                low[u] = min(low[u], low[v])\n                if low[v] > disc[u]:\n                    bridges.append([u, v])\n            elif v != parent:\n                low[u] = min(low[u], disc[v])\n    dfs(0, -1)\n    return bridges",
+  "views": {
+   "graph": {
+    "nodes": [
+     {
+      "id": "0",
+      "label": "0"
+     },
+     {
+      "id": "1",
+      "label": "1"
+     },
+     {
+      "id": "2",
+      "label": "2"
+     },
+     {
+      "id": "3",
+      "label": "3"
+     },
+     {
+      "id": "4",
+      "label": "4"
+     },
+     {
+      "id": "5",
+      "label": "5"
+     }
+    ],
+    "edges": [
+     {
+      "from": "0",
+      "to": "1"
+     },
+     {
+      "from": "0",
+      "to": "2"
+     },
+     {
+      "from": "1",
+      "to": "0"
+     },
+     {
+      "from": "1",
+      "to": "2"
+     },
+     {
+      "from": "1",
+      "to": "3"
+     },
+     {
+      "from": "2",
+      "to": "1"
+     },
+     {
+      "from": "2",
+      "to": "0"
+     },
+     {
+      "from": "3",
+      "to": "1"
+     },
+     {
+      "from": "3",
+      "to": "4"
+     },
+     {
+      "from": "3",
+      "to": "5"
+     },
+     {
+      "from": "4",
+      "to": "3"
+     },
+     {
+      "from": "4",
+      "to": "5"
+     },
+     {
+      "from": "5",
+      "to": "4"
+     },
+     {
+      "from": "5",
+      "to": "3"
+     }
+    ],
+    "directed": false
+   }
+  },
+  "steps": [
+   {
+    "line": 11,
+    "explanation": "We run critical_connections(6, [[0,1],[1,2],[2,0],[1,3],[3,4],[4,5],[5,3]]) on this exact graph and watch the algorithm's own variables — the node being processed, the distance table, the frontier. Every value below was recorded from the real run; the picture can never disagree with the code.",
+    "graph": {
+     "current": null,
+     "visited": [],
+     "pointers": {}
+    },
+    "variables": {}
+   },
+   {
+    "line": 11,
+    "explanation": "Now 0 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 0's edges.",
+    "graph": {
+     "current": "0",
+     "visited": [],
+     "pointers": {
+      "curr": "0"
+     }
+    },
+    "nodeState": {},
+    "events": [
+     {
+      "eventType": "visit",
+      "provenance": {
+       "eventIndex": 35
+      },
+      "semanticRole": "frontier_take",
+      "target": {
+       "entityId": "graphNode:0"
+      }
+     }
+    ],
+    "variables": {
+     "parent": -1
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "active"
+     }
+    ]
+   },
+   {
+    "line": 12,
+    "explanation": "low[0] gets its first value: 0 — it now rides under 0 on the drawing, and the algorithm will read it back later, so keep half an eye on it. disc[0] gets its first value: 0 — it now rides under 0 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+    "graph": {
+     "current": "0",
+     "visited": [],
+     "pointers": {
+      "curr": "0"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     }
+    },
+    "events": [
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 36
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:0",
+       "field": "low"
+      },
+      "after": 0
+     },
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 36
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:0",
+       "field": "disc"
+      },
+      "after": 0
+     }
+    ],
+    "variables": {
+     "parent": -1
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "active"
+     }
+    ]
+   },
+   {
+    "line": 11,
+    "explanation": "Now 1 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
+    "graph": {
+     "current": "1",
+     "visited": [
+      "0"
+     ],
+     "pointers": {
+      "curr": "1"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     }
+    },
+    "events": [
+     {
+      "eventType": "visit",
+      "provenance": {
+       "eventIndex": 40
+      },
+      "semanticRole": "frontier_take",
+      "target": {
+       "entityId": "graphNode:1"
+      }
+     }
+    ],
+    "variables": {
+     "parent": 0
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "active"
+     }
+    ]
+   },
+   {
+    "line": 12,
+    "explanation": "low[1] gets its first value: 1 — it now rides under 1 on the drawing, and the algorithm will read it back later, so keep half an eye on it. disc[1] gets its first value: 1 — it now rides under 1 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+    "graph": {
+     "current": "1",
+     "visited": [
+      "0"
+     ],
+     "pointers": {
+      "curr": "1"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 1,
+      "disc": 1
+     }
+    },
+    "events": [
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 41
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:1",
+       "field": "low"
+      },
+      "after": 1
+     },
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 41
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:1",
+       "field": "disc"
+      },
+      "after": 1
+     }
+    ],
+    "variables": {
+     "parent": 0
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "active"
+     }
+    ]
+   },
+   {
+    "line": 11,
+    "explanation": "Now 2 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 2's edges.",
+    "graph": {
+     "current": "2",
+     "visited": [
+      "0",
+      "1"
+     ],
+     "pointers": {
+      "curr": "2"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 1,
+      "disc": 1
+     }
+    },
+    "events": [
+     {
+      "eventType": "visit",
+      "provenance": {
+       "eventIndex": 48
+      },
+      "semanticRole": "frontier_take",
+      "target": {
+       "entityId": "graphNode:2"
+      }
+     }
+    ],
+    "variables": {
+     "parent": 1
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f3",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 2,
+       "parent": 1
+      },
+      "status": "active"
+     }
+    ]
+   },
+   {
+    "line": 12,
+    "explanation": "low[2] gets its first value: 2 — it now rides under 2 on the drawing, and the algorithm will read it back later, so keep half an eye on it. disc[2] gets its first value: 2 — it now rides under 2 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+    "graph": {
+     "current": "2",
+     "visited": [
+      "0",
+      "1"
+     ],
+     "pointers": {
+      "curr": "2"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 1,
+      "disc": 1
+     },
+     "2": {
+      "low": 2,
+      "disc": 2
+     }
+    },
+    "events": [
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 49
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:2",
+       "field": "low"
+      },
+      "after": 2
+     },
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 49
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:2",
+       "field": "disc"
+      },
+      "after": 2
+     }
+    ],
+    "variables": {
+     "parent": 1
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f3",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 2,
+       "parent": 1
+      },
+      "status": "active"
+     }
+    ]
+   },
+   {
+    "line": 13,
+    "explanation": "low[2] rewrites 2 → 0 — watch the label under 2 update: this rewrite is the algorithm learning something it did not know a step ago.",
+    "graph": {
+     "current": "2",
+     "visited": [
+      "0",
+      "1"
+     ],
+     "pointers": {
+      "curr": "2"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 1,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     }
+    },
+    "events": [
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 57
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:2",
+       "field": "low"
+      },
+      "before": 2,
+      "after": 0
+     }
+    ],
+    "variables": {
+     "parent": 1,
+     "v": 0
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f3",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 2,
+       "parent": 1
+      },
+      "status": "active"
+     }
+    ]
+   },
+   {
+    "line": 16,
+    "explanation": "Now 1 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
+    "graph": {
+     "current": "1",
+     "visited": [
+      "0",
+      "1",
+      "2"
+     ],
+     "pointers": {
+      "curr": "1"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 1,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     }
+    },
+    "events": [
+     {
+      "eventType": "visit",
+      "provenance": {
+       "eventIndex": 58
+      },
+      "semanticRole": "frontier_take",
+      "target": {
+       "entityId": "graphNode:1"
+      }
+     }
+    ],
+    "variables": {
+     "parent": 0,
+     "v": 2
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f3",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 2,
+      "parent": 1
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 17,
+    "explanation": "low[1] rewrites 1 → 0 — watch the label under 1 update: this rewrite is the algorithm learning something it did not know a step ago.",
+    "graph": {
+     "current": "1",
+     "visited": [
+      "0",
+      "1",
+      "2"
+     ],
+     "pointers": {
+      "curr": "1"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     }
+    },
+    "events": [
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 59
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:1",
+       "field": "low"
+      },
+      "before": 1,
+      "after": 0
+     }
+    ],
+    "variables": {
+     "parent": 0,
+     "v": 2
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f3",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 2,
+      "parent": 1
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 11,
+    "explanation": "Now 3 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 3's edges.",
+    "graph": {
+     "current": "3",
+     "visited": [
+      "0",
+      "1",
+      "2"
+     ],
+     "pointers": {
+      "curr": "3"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     }
+    },
+    "events": [
+     {
+      "eventType": "visit",
+      "provenance": {
+       "eventIndex": 63
+      },
+      "semanticRole": "frontier_take",
+      "target": {
+       "entityId": "graphNode:3"
+      }
+     }
+    ],
+    "variables": {
+     "parent": 1
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f4",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 3,
+       "parent": 1
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f3",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 2,
+      "parent": 1
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 12,
+    "explanation": "low[3] gets its first value: 3 — it now rides under 3 on the drawing, and the algorithm will read it back later, so keep half an eye on it. disc[3] gets its first value: 3 — it now rides under 3 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+    "graph": {
+     "current": "3",
+     "visited": [
+      "0",
+      "1",
+      "2"
+     ],
+     "pointers": {
+      "curr": "3"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     }
+    },
+    "events": [
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 64
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:3",
+       "field": "low"
+      },
+      "after": 3
+     },
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 64
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:3",
+       "field": "disc"
+      },
+      "after": 3
+     }
+    ],
+    "variables": {
+     "parent": 1
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f4",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 3,
+       "parent": 1
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f3",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 2,
+      "parent": 1
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 11,
+    "explanation": "Now 4 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 4's edges.",
+    "graph": {
+     "current": "4",
+     "visited": [
+      "0",
+      "1",
+      "2",
+      "3"
+     ],
+     "pointers": {
+      "curr": "4"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     }
+    },
+    "events": [
+     {
+      "eventType": "visit",
+      "provenance": {
+       "eventIndex": 71
+      },
+      "semanticRole": "frontier_take",
+      "target": {
+       "entityId": "graphNode:4"
+      }
+     }
+    ],
+    "variables": {
+     "parent": 3
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f4",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 3,
+       "parent": 1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f5",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 4,
+       "parent": 3
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f3",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 2,
+      "parent": 1
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 12,
+    "explanation": "low[4] gets its first value: 4 — it now rides under 4 on the drawing, and the algorithm will read it back later, so keep half an eye on it. disc[4] gets its first value: 4 — it now rides under 4 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+    "graph": {
+     "current": "4",
+     "visited": [
+      "0",
+      "1",
+      "2",
+      "3"
+     ],
+     "pointers": {
+      "curr": "4"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     },
+     "4": {
+      "low": 4,
+      "disc": 4
+     }
+    },
+    "events": [
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 72
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:4",
+       "field": "low"
+      },
+      "after": 4
+     },
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 72
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:4",
+       "field": "disc"
+      },
+      "after": 4
+     }
+    ],
+    "variables": {
+     "parent": 3
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f4",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 3,
+       "parent": 1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f5",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 4,
+       "parent": 3
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f3",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 2,
+      "parent": 1
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 11,
+    "explanation": "Now 5 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 5's edges.",
+    "graph": {
+     "current": "5",
+     "visited": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4"
+     ],
+     "pointers": {
+      "curr": "5"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     },
+     "4": {
+      "low": 4,
+      "disc": 4
+     }
+    },
+    "events": [
+     {
+      "eventType": "visit",
+      "provenance": {
+       "eventIndex": 79
+      },
+      "semanticRole": "frontier_take",
+      "target": {
+       "entityId": "graphNode:5"
+      }
+     }
+    ],
+    "variables": {
+     "parent": 4
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f4",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 3,
+       "parent": 1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f5",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 4,
+       "parent": 3
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f6",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 5,
+       "parent": 4
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f3",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 2,
+      "parent": 1
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 12,
+    "explanation": "low[5] gets its first value: 5 — it now rides under 5 on the drawing, and the algorithm will read it back later, so keep half an eye on it. disc[5] gets its first value: 5 — it now rides under 5 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+    "graph": {
+     "current": "5",
+     "visited": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4"
+     ],
+     "pointers": {
+      "curr": "5"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     },
+     "4": {
+      "low": 4,
+      "disc": 4
+     },
+     "5": {
+      "low": 5,
+      "disc": 5
+     }
+    },
+    "events": [
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 80
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:5",
+       "field": "low"
+      },
+      "after": 5
+     },
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 80
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:5",
+       "field": "disc"
+      },
+      "after": 5
+     }
+    ],
+    "variables": {
+     "parent": 4
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f4",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 3,
+       "parent": 1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f5",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 4,
+       "parent": 3
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f6",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 5,
+       "parent": 4
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f3",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 2,
+      "parent": 1
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 13,
+    "explanation": "low[5] rewrites 5 → 3 — watch the label under 5 update: this rewrite is the algorithm learning something it did not know a step ago.",
+    "graph": {
+     "current": "5",
+     "visited": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4"
+     ],
+     "pointers": {
+      "curr": "5"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     },
+     "4": {
+      "low": 4,
+      "disc": 4
+     },
+     "5": {
+      "low": 3,
+      "disc": 5
+     }
+    },
+    "events": [
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 88
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:5",
+       "field": "low"
+      },
+      "before": 5,
+      "after": 3
+     }
+    ],
+    "variables": {
+     "parent": 4,
+     "v": 3
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f4",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 3,
+       "parent": 1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f5",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 4,
+       "parent": 3
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f6",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 5,
+       "parent": 4
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f3",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 2,
+      "parent": 1
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 16,
+    "explanation": "Now 4 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 4's edges.",
+    "graph": {
+     "current": "4",
+     "visited": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+     ],
+     "pointers": {
+      "curr": "4"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     },
+     "4": {
+      "low": 4,
+      "disc": 4
+     },
+     "5": {
+      "low": 3,
+      "disc": 5
+     }
+    },
+    "events": [
+     {
+      "eventType": "visit",
+      "provenance": {
+       "eventIndex": 89
+      },
+      "semanticRole": "frontier_take",
+      "target": {
+       "entityId": "graphNode:4"
+      }
+     }
+    ],
+    "variables": {
+     "parent": 3,
+     "v": 5
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f4",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 3,
+       "parent": 1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f5",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 4,
+       "parent": 3
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f6",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 5,
+      "parent": 4
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 17,
+    "explanation": "low[4] rewrites 4 → 3 — watch the label under 4 update: this rewrite is the algorithm learning something it did not know a step ago.",
+    "graph": {
+     "current": "4",
+     "visited": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+     ],
+     "pointers": {
+      "curr": "4"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     },
+     "4": {
+      "low": 3,
+      "disc": 4
+     },
+     "5": {
+      "low": 3,
+      "disc": 5
+     }
+    },
+    "events": [
+     {
+      "eventType": "write",
+      "provenance": {
+       "eventIndex": 90
+      },
+      "semanticRole": "state_write",
+      "target": {
+       "entityId": "graphNode:4",
+       "field": "low"
+      },
+      "before": 4,
+      "after": 3
+     }
+    ],
+    "variables": {
+     "parent": 3,
+     "v": 5
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f4",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 3,
+       "parent": 1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f5",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 4,
+       "parent": 3
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f6",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 5,
+      "parent": 4
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 16,
+    "explanation": "Now 3 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 3's edges.",
+    "graph": {
+     "current": "3",
+     "visited": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+     ],
+     "pointers": {
+      "curr": "3"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     },
+     "4": {
+      "low": 3,
+      "disc": 4
+     },
+     "5": {
+      "low": 3,
+      "disc": 5
+     }
+    },
+    "events": [
+     {
+      "eventType": "visit",
+      "provenance": {
+       "eventIndex": 92
+      },
+      "semanticRole": "frontier_take",
+      "target": {
+       "entityId": "graphNode:3"
+      }
+     }
+    ],
+    "variables": {
+     "parent": 1,
+     "v": 4
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f4",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 3,
+       "parent": 1
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f5",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 4,
+      "parent": 3
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 16,
+    "explanation": "Now 1 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
+    "graph": {
+     "current": "1",
+     "visited": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+     ],
+     "pointers": {
+      "curr": "1"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     },
+     "4": {
+      "low": 3,
+      "disc": 4
+     },
+     "5": {
+      "low": 3,
+      "disc": 5
+     }
+    },
+    "events": [
+     {
+      "eventType": "visit",
+      "provenance": {
+       "eventIndex": 99
+      },
+      "semanticRole": "frontier_take",
+      "target": {
+       "entityId": "graphNode:1"
+      }
+     }
+    ],
+    "variables": {
+     "parent": 0,
+     "v": 3
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f4",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 3,
+      "parent": 1
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 16,
+    "explanation": "Now 0 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 0's edges.",
+    "graph": {
+     "current": "0",
+     "visited": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+     ],
+     "pointers": {
+      "curr": "0"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     },
+     "4": {
+      "low": 3,
+      "disc": 4
+     },
+     "5": {
+      "low": 3,
+      "disc": 5
+     }
+    },
+    "events": [
+     {
+      "eventType": "visit",
+      "provenance": {
+       "eventIndex": 103
+      },
+      "semanticRole": "frontier_take",
+      "target": {
+       "entityId": "graphNode:0"
+      }
+     }
+    ],
+    "variables": {
+     "parent": -1,
+     "v": 1
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "waiting"
+     },
+     {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f2",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 1,
+      "parent": 0
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 22,
+    "explanation": "Now 5 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 5's edges.",
+    "graph": {
+     "current": "5",
+     "visited": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+     ],
+     "pointers": {
+      "curr": "5"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     },
+     "4": {
+      "low": 3,
+      "disc": 4
+     },
+     "5": {
+      "low": 3,
+      "disc": 5
+     }
+    },
+    "events": [
+     {
+      "eventType": "visit",
+      "provenance": {
+       "eventIndex": 110
+      },
+      "semanticRole": "frontier_take",
+      "target": {
+       "entityId": "graphNode:5"
+      }
+     }
+    ],
+    "variables": {
+     "n": 6,
+     "v": 3
+    },
+    "frames": [
+     {
+      "frameId": "f0",
+      "functionName": "critical_connections",
+      "arguments": {
+       "n": 6,
+       "connections": [
+        [
+         0,
+         1
+        ],
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         1,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         4,
+         5
+        ],
+        [
+         5,
+         3
+        ]
+       ]
+      },
+      "status": "active"
+     }
+    ],
+    "lastReturn": {
+     "frameId": "f1",
+     "functionName": "dfs",
+     "arguments": {
+      "u": 0,
+      "parent": -1
+     },
+     "status": "returned",
+     "returnValue": null
+    }
+   },
+   {
+    "line": 22,
+    "explanation": "The walk is complete and the call returns [[1,3]]. Every number in the final table was earned by a relaxation you watched happen — that is the whole proof, performed in front of you.",
+    "graph": {
+     "current": "5",
+     "visited": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+     ],
+     "pointers": {
+      "curr": "5"
+     }
+    },
+    "nodeState": {
+     "0": {
+      "low": 0,
+      "disc": 0
+     },
+     "1": {
+      "low": 0,
+      "disc": 1
+     },
+     "2": {
+      "low": 0,
+      "disc": 2
+     },
+     "3": {
+      "low": 3,
+      "disc": 3
+     },
+     "4": {
+      "low": 3,
+      "disc": 4
+     },
+     "5": {
+      "low": 3,
+      "disc": 5
+     }
+    },
+    "events": [
+     {
+      "eventType": "solution_emit",
+      "after": [
+       [
+        1,
+        3
+       ]
+      ]
+     }
+    ],
+    "variables": {}
+   }
+  ]
+ }
+}
