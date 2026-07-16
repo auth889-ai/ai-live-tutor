@@ -145,8 +145,9 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     if (step.events !== undefined) {
       validateStepEvents(step.events, at);
       for (const e of step.events) {
-        if (e.target?.entityType === 'graphNode' && graphIds && !graphIds.has(String(e.target.entityId))) {
-          throw new Error(`${at} event targets missing graphNode "${e.target.entityId}"`);
+        const id = e.target?.entityId;
+        if (typeof id === 'string' && id.startsWith('graphNode:') && graphIds && !graphIds.has(id.slice('graphNode:'.length))) {
+          throw new Error(`${at} event targets missing ${id}`);
         }
       }
     }

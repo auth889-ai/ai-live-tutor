@@ -271,7 +271,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     if (isNode(curRaw) && String(curRaw) !== current) {
       current = String(curRaw);
       currentClaimed = true;
-      emit('visit', { semanticRole: 'take', target: { entityType: 'graphNode', entityId: current } });
+      emit('visit', { semanticRole: 'frontier_take', target: { entityId: `graphNode:${current}` } });
       const distNow = plainObj(locals[roles.dist]);
       parts.push(narrateTake({ node: name(current), via: frontierRole === 'stack' ? 'stack' : frontierRole ? 'queue' : null, dist: distNow?.[curRaw] }));
     }
@@ -286,7 +286,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
         parts.push(narrateRelax({ from: currentClaimed && current && String(k) !== current ? name(current) : null, to: name(k), oldValue: knownDist[k], newValue: v }));
         emit('relax', {
           semanticRole: knownDist[k] === undefined ? 'first_discovery' : 'improvement',
-          target: { entityType: 'graphNode', entityId: String(k), field: roles.dist },
+          target: { entityId: `graphNode:${String(k)}`, field: roles.dist },
           before: knownDist[k], after: v,
         });
       }
@@ -306,7 +306,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
         if (isNode(m) && !visitOrder.includes(String(m))) {
           visitOrder.push(String(m));
           parts.push(narrateFinalize({ node: name(m) }));
-          emit('finalize', { target: { entityType: 'graphNode', entityId: String(m) } });
+          emit('finalize', { target: { entityId: `graphNode:${String(m)}` } });
           // Finalization PROVES processing: when the stale-seeded current coincides with the
           // algorithm's real first node (so no change-based take fired), the visited growth
           // is the evidence that claims it — relaxations may now attribute and light edges.
@@ -323,7 +323,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
       const changes = Object.entries(parentRaw).filter(([k, v]) => JSON.stringify(prevParent?.[k]) !== JSON.stringify(v));
       for (const [k, v] of changes.slice(0, 3)) {
         parts.push(narrateUnion({ child: name(k), root: name(v) }));
-        emit('union', { target: { entityType: 'graphNode', entityId: String(k), field: roles.parent }, before: prevParent?.[k], after: v });
+        emit('union', { target: { entityId: `graphNode:${String(k)}`, field: roles.parent }, before: prevParent?.[k], after: v });
       }
       prevParent = { ...parentRaw };
     }
@@ -336,7 +336,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
       const drops = Object.entries(indegRaw).filter(([k, v]) => isNode(k) && Number(v) < Number(prevIndegree[k] ?? Infinity));
       for (const [k, v] of drops.slice(0, 3)) {
         parts.push(narrateIndegree({ node: name(k), value: v }));
-        emit('write', { semanticRole: 'indegree_drop', target: { entityType: 'graphNode', entityId: String(k), field: roles.indegree }, before: prevIndegree[k], after: v });
+        emit('write', { semanticRole: 'indegree_drop', target: { entityId: `graphNode:${String(k)}`, field: roles.indegree }, before: prevIndegree[k], after: v });
       }
     }
     if (indegRaw) prevIndegree = { ...indegRaw };
@@ -347,7 +347,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
       const writes = auxTracker.update(locals);
       for (const w of writes.slice(0, 3)) {
         parts.push(narrateNodeState({ varName: w.varName, node: name(w.node), oldValue: w.oldValue, newValue: w.newValue }));
-        emit('write', { semanticRole: 'state_write', target: { entityType: 'graphNode', entityId: String(w.node), field: w.varName }, before: w.oldValue, after: w.newValue });
+        emit('write', { semanticRole: 'state_write', target: { entityId: `graphNode:${String(w.node)}`, field: w.varName }, before: w.oldValue, after: w.newValue });
       }
       if (writes.length > 3) parts.push(`…and ${writes.length - 3} more per-node labels rewrite in this same moment — read them straight off the drawing.`);
     }
@@ -360,7 +360,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
       const key = JSON.stringify(frontier);
       if (parts.length === 0 && key !== prevFrontier) {
         parts.push(narrateCollection({ kind: frontierRole === 'stack' ? 'stack' : 'queue', items: frontier }));
-        emit('collection_change', { target: { entityType: 'collection', entityId: frontierRole }, after: frontier });
+        emit('collection_change', { target: { entityId: `collection:${frontierRole}` }, after: frontier });
       }
       prevFrontier = key;
     }

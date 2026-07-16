@@ -113,17 +113,23 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
     // Typed events (B2): every cell write is a cell_update with recorded before/after; a
     // PROVED dependency additionally emits dependency_read events for the cells the rule
     // read — the machine-readable form of the mockups' arrows + formula column.
+    // Stable role + STRUCTURED formula (reviewer rule: "top + left" is formula text, not a
+    // semantic role) — operands reference canonical gridCell ids the resolver can prove.
+    const FORMULA_OPS = { 'diagonal + 1': 'add_one', 'top + left': 'add', 'max(top, left)': 'max' };
     stepObj.events = [
       ...writes.map(([r, c, old]) => ({
         eventType: 'cell_update',
-        ...(proved ? { semanticRole: proved.rule } : {}),
-        target: { entityType: 'gridCell', entityId: `${r}:${c}` },
+        ...(proved ? {
+          semanticRole: 'dp_recurrence_update',
+          formula: { operator: FORMULA_OPS[proved.rule] ?? proved.rule, operands: proved.reads.map(([rr, cc]) => ({ ref: `gridCell:${rr}:${cc}` })), text: proved.rule },
+        } : {}),
+        target: { entityId: `gridCell:${r}:${c}` },
         before: old,
         after: known.get(`${r},${c}`),
       })),
       ...(proved ? proved.reads.map(([r, c]) => ({
         eventType: 'dependency_read',
-        target: { entityType: 'gridCell', entityId: `${r}:${c}` },
+        target: { entityId: `gridCell:${r}:${c}` },
         after: known.get(`${r},${c}`),
       })) : []),
     ];

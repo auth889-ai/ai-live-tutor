@@ -142,14 +142,14 @@ test('B2: typed events ride the steps — visit/relax/finalize/state_write with 
   });
   const all = trace.steps.flatMap((s) => s.events ?? []);
   const visit = all.find((e) => e.eventType === 'visit');
-  assert.ok(visit && visit.semanticRole === 'take' && visit.target.entityId === '0', 'take emits a visit event');
+  assert.ok(visit && visit.semanticRole === 'frontier_take' && visit.target.entityId === 'graphNode:0', 'take emits a canonical visit event');
   const improve = all.find((e) => e.eventType === 'relax' && e.semanticRole === 'improvement');
   assert.ok(improve, 'the 4 -> 3 relaxation emits an improvement event');
   assert.equal(improve.before, 4);
   assert.equal(improve.after, 3);
-  const write = all.find((e) => e.eventType === 'write' && e.semanticRole === 'state_write' && e.target.field === 'low');
+  const write = all.find((e) => e.eventType === 'write' && e.semanticRole === 'state_write' && e.target.field === 'low' && e.target.entityId.startsWith('graphNode:'));
   assert.ok(write, 'nodeState writes emit typed write events');
-  assert.ok(all.some((e) => e.eventType === 'finalize' && e.target.entityId === '0'), 'finalize emitted');
+  assert.ok(all.some((e) => e.eventType === 'finalize' && e.target.entityId === 'graphNode:0'), 'finalize emitted');
   assert.equal(trace.steps.at(-1).events.at(-1).eventType, 'solution_emit', 'terminal step emits the solution');
   assert.ok(all.every((e) => e.eventType !== 'solution_emit' ? Number.isInteger(e.provenance?.eventIndex) : true), 'provenance carries the recording index');
 });

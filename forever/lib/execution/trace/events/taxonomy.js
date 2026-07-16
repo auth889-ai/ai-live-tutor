@@ -28,8 +28,10 @@ export function validateStepEvents(events, at) {
     if (!TYPES.has(e.eventType)) throw new Error(`${at} unknown eventType "${e.eventType}" — use the universal vocabulary (${EVENT_TYPES.join(', ')})`);
     if (e.semanticRole !== undefined && typeof e.semanticRole !== 'string') throw new Error(`${at} semanticRole must be a string`);
     if (e.target !== undefined) {
-      if (!e.target || typeof e.target !== 'object' || typeof e.target.entityType !== 'string' || e.target.entityId === undefined) {
-        throw new Error(`${at} event target needs {entityType, entityId}`);
+      // Canonical B1 identity: ONE typed string ("graphNode:0", "gridCell:1:2") — parallel
+      // identity systems make the resolver and StructureSpec validator diverge (reviewer).
+      if (!e.target || typeof e.target !== 'object' || typeof e.target.entityId !== 'string' || !e.target.entityId.includes(':')) {
+        throw new Error(`${at} event target needs a canonical entityId string like "graphNode:0"`);
       }
     }
   }
