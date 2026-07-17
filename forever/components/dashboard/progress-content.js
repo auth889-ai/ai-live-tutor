@@ -85,6 +85,7 @@ export function ProgressContent() {
   const data = useStudyLive();
   const [sort, setSort] = useState('recent');
   const [toast, setToast] = useState(null);
+  const [tab, setTab] = useState('overview'); // hooks stay ABOVE the early return (Rules of Hooks)
   useEffect(() => {
     if (!data?.badges) return;
     const earned = data.badges.filter((b) => b.earned).map((b) => b.label);
@@ -107,6 +108,13 @@ export function ProgressContent() {
   const rec = data.recommended;
   const know = data.knowledge ?? [];
   const STATUS_COLOR = { New: '#9b8465', Learning: '#c98f2d', Developing: '#4477aa', Strong: '#2f7d4a', 'Review due': '#c0522d' };
+  const TabBtn = ({ id, children }) => (
+    <button onClick={() => setTab(id)} style={{
+      border: 'none', borderBottom: tab === id ? `2.5px solid ${T.accent}` : '2.5px solid transparent',
+      background: 'transparent', color: tab === id ? '#2b211a' : '#9b8465', cursor: 'pointer',
+      fontWeight: 800, fontSize: 13.5, padding: '9px 2px', marginRight: 22,
+    }}>{children}</button>
+  );
 
   return (
     <div style={{ maxWidth: 1080 }}>
@@ -133,132 +141,106 @@ export function ProgressContent() {
         {data.streak ? <span style={{ ...T.body, fontWeight: 800, color: '#c0522d' }}>🔥 {data.streak}-day streak <span style={{ ...T.cap, fontWeight: 400 }}>· best {data.bestStreak}</span></span> : null}
       </div>
 
-      {/* ===== hero: recommended next (ONE primary action, ONE gradient) ===== */}
-      {rec ? (
-        <a href={`/course/${rec.lessonId}?t=${rec.tMs}&scene=${rec.sceneIndex}`} className="pcard"
-          style={{ ...T.card, display: 'flex', gap: 0, marginTop: 20, textDecoration: 'none', overflow: 'hidden' }}>
-          <div style={{ width: 6, background: T.accent }} />
-          <div style={{ padding: T.pad, flex: 1 }}>
-            <div style={{ ...T.cap, fontWeight: 800, letterSpacing: 0.4, color: '#c0522d' }}>RECOMMENDED NEXT{rec.minutes ? ` · ~${rec.minutes} MIN` : ''}</div>
-            <div style={{ ...T.body, fontWeight: 800, fontSize: 17, marginTop: 5 }}>{rec.lessonTitle}</div>
-            {rec.nextSceneTitle ? <div style={{ ...T.body, color: '#6b563d', marginTop: 2 }}>Scene {rec.sceneIndex + 1} · {rec.nextSceneTitle}</div> : null}
-            <div style={{ ...T.cap, marginTop: 6 }}>Why: {rec.reason}</div>
+      {/* ===== tabs (progressive disclosure: one dose per view) ===== */}
+      <div style={{ borderBottom: '1px solid #f2e3d5', marginTop: 18 }}>
+        <TabBtn id="overview">Overview</TabBtn>
+        <TabBtn id="lessons">Lessons{inProgress.length ? ` · ${inProgress.length}` : ''}</TabBtn>
+        <TabBtn id="memory">Memory{(data.dueCount ?? 0) ? ` · ${data.dueCount} due` : ''}</TabBtn>
+        <TabBtn id="awards">Awards</TabBtn>
+      </div>
+
+      {tab === 'overview' ? (
+        <div style={{ maxWidth: 640 }}>
+          {rec ? (
+            <a href={`/course/${rec.lessonId}?t=${rec.tMs}&scene=${rec.sceneIndex}`} className="pcard"
+              style={{ ...T.card, display: 'flex', marginTop: 24, textDecoration: 'none', overflow: 'hidden' }}>
+              <div style={{ width: 6, background: T.accent }} />
+              <div style={{ padding: T.pad, flex: 1 }}>
+                <div style={{ ...T.cap, fontWeight: 800, letterSpacing: 0.4, color: '#c0522d' }}>UP NEXT{rec.minutes ? ` · ~${rec.minutes} MIN` : ''}</div>
+                <div style={{ ...T.body, fontWeight: 800, fontSize: 17, marginTop: 5 }}>{rec.lessonTitle}</div>
+                {rec.nextSceneTitle ? <div style={{ ...T.body, color: '#6b563d', marginTop: 2 }}>Scene {rec.sceneIndex + 1} · {rec.nextSceneTitle}</div> : null}
+                <div style={{ marginTop: 12 }}><span style={{ background: T.accent, color: '#fff', borderRadius: 999, padding: '8px 20px', fontWeight: 800, fontSize: 13 }}>Continue ▸</span></div>
+              </div>
+            </a>
+          ) : <EmptyCard />}
+
+          <div style={{ ...T.card, padding: T.pad, marginTop: T.gap, display: 'flex', gap: 26, flexWrap: 'wrap' }}>
+            {[[t.scenes ?? 0, 'scenes today'], [t.checkpoints ?? 0, 'checkpoints ✓'], [t.reviews ?? 0, 'reviews'], [t.minutes ?? 0, 'focused min']].map(([n, l]) => (
+              <div key={l}><div style={{ fontSize: 22, fontWeight: 800, color: '#2b211a', lineHeight: 1 }}>{n}</div><div style={{ ...T.cap, marginTop: 3 }}>{l}</div></div>
+            ))}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', paddingRight: T.pad }}>
-            <span style={{ background: T.accent, color: '#fff', borderRadius: 999, padding: '9px 20px', fontWeight: 800, fontSize: 13.5, whiteSpace: 'nowrap' }}>Continue ▸</span>
+
+          <div style={{ ...T.card, padding: T.pad, marginTop: T.gap }}>
+            <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>WEEKLY TARGET</div>
+            <WeeklyTarget total={data.weekTotal ?? 0} goal={data.weekGoal ?? 10} actions={data.weekActions ?? {}} pace={data.pace ?? ''} bare />
           </div>
-        </a>
+
+          {(data.dueCount ?? 0) > 0 ? (
+            <a href="/bookmarks" style={{ ...T.card, display: 'block', padding: T.pad, marginTop: T.gap, textDecoration: 'none' }}>
+              <span style={{ ...T.body, fontWeight: 800 }}>🧠 {data.dueCount} review{data.dueCount === 1 ? '' : 's'} due</span>
+              <span style={{ ...T.cap, marginLeft: 8 }}>~4 min — start now →</span>
+            </a>
+          ) : null}
+        </div>
       ) : null}
 
-      {/* ===== two-column dashboard ===== */}
-      <div className="twocol" style={{ marginTop: 20 }}>
-        {/* ---- MAIN ---- */}
-        <div>
-          <Section title="Continue learning" sub={`${inProgress.length} lesson${inProgress.length === 1 ? '' : 's'}`} style={{ marginTop: 0 }}>
-            {inProgress.length ? (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 14 }}>
-                  {inProgress.map((p) => <LessonCard key={p._id} p={p} />)}
-                </div>
-                {inProgress.length > 2 ? (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-                    <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ ...T.cap, border: T.card.border, borderRadius: 8, background: '#fff', padding: '4px 8px' }}>
-                      <option value="recent">Recently active</option>
-                      <option value="percent">Most complete</option>
-                      <option value="alpha">A → Z</option>
-                    </select>
-                  </div>
-                ) : null}
-              </>
-            ) : <EmptyCard />}
-          </Section>
-
+      {tab === 'lessons' ? (
+        <div style={{ marginTop: 24 }}>
+          {inProgress.length ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
+              {inProgress.map((p) => <LessonCard key={p._id} p={p} />)}
+            </div>
+          ) : <EmptyCard />}
           {know.length ? (
             <Section title="Knowledge" sub="evidence: checkpoints · reviews · recency">
               <div style={{ ...T.card }}>
                 {know.map((k, i) => (
-                  <div key={k.lessonId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 18px', borderTop: i ? T.card.border : 'none' }}>
+                  <div key={k.lessonId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 18px', borderTop: i ? '1px solid #f2e3d5' : 'none' }}>
                     <span style={{ ...T.body, fontWeight: 700 }}>{k.lessonTitle}</span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       {k.checkpointsPassed > 0 ? <span style={T.cap}>{k.checkpointsPassed} ✓</span> : null}
-                      <span style={{ fontSize: 12, fontWeight: 800, color: STATUS_COLOR[k.status] ?? T.cap.color, background: `${STATUS_COLOR[k.status] ?? '#9b8465'}14`, borderRadius: 999, padding: '3px 11px' }}>{k.status}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: STATUS_COLOR[k.status] ?? '#9b8465', background: `${STATUS_COLOR[k.status] ?? '#9b8465'}14`, borderRadius: 999, padding: '3px 11px' }}>{k.status}</span>
                     </span>
                   </div>
                 ))}
               </div>
             </Section>
           ) : null}
-
-          <Section title="Activity" sub="real learning actions only">
-            <Heatmap days={data.heatmap ?? []} />
-          </Section>
-
-          <details style={{ marginTop: T.sectionGap }}>
-            <summary style={{ cursor: 'pointer', ...T.h2 }}>Achievements · {(data.badges ?? []).filter((b) => b.earned).length} of {(data.badges ?? []).length}</summary>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: 10, marginTop: 12 }}>
-              {(data.badges ?? []).map((b) => (
-                <div key={b.label} title={b.label} style={{ ...T.card, padding: '12px 6px', textAlign: 'center', borderColor: b.earned ? '#f0c39a' : '#f2e3d5' }}>
-                  <div style={{ fontSize: 22, filter: b.earned ? 'none' : 'grayscale(1) opacity(0.35)' }}>{b.icon}</div>
-                  <div style={{ fontSize: 9.5, color: b.earned ? '#8a3a12' : '#c9bda1', marginTop: 4, lineHeight: 1.2, fontWeight: 700 }}>{b.label}</div>
-                </div>
-              ))}
-            </div>
-          </details>
         </div>
+      ) : null}
 
-        {/* ---- RAIL ---- */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: T.gap }}>
+      {tab === 'memory' ? (
+        <div style={{ marginTop: 24, maxWidth: 640, display: 'flex', flexDirection: 'column', gap: T.gap }}>
           <div style={{ ...T.card, padding: T.pad }}>
-            <div style={{ ...T.cap, fontWeight: 800, marginBottom: 10 }}>TODAY</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {[[t.scenes ?? 0, 'scenes'], [t.checkpoints ?? 0, 'checkpoints ✓'], [t.reviews ?? 0, 'reviews'], [t.minutes ?? 0, 'focused min']].map(([n, l]) => (
-                <div key={l}><div style={{ fontSize: 20, fontWeight: 800, color: '#2b211a', lineHeight: 1 }}>{n}</div><div style={{ ...T.cap, marginTop: 2 }}>{l}</div></div>
+            <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>{(data.dueCount ?? 0) > 0 ? `DUE TODAY · ${data.dueCount}` : 'NOTHING DUE TODAY'}</div>
+            {(data.dueCount ?? 0) > 0 ? (
+              <a href="/bookmarks" style={{ display: 'inline-block', background: T.accent, color: '#fff', borderRadius: 999, padding: '7px 16px', fontWeight: 800, fontSize: 12.5, textDecoration: 'none' }}>Start review</a>
+            ) : (data.upcoming ?? []).length ? (data.upcoming ?? []).map((u) => (
+              <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, padding: '4px 0' }}>
+                <span style={{ color: '#2b211a' }}>{u.label}</span><span style={T.cap}>{new Date(u.due).toLocaleDateString('en', { weekday: 'short' })}</span>
+              </div>
+            )) : <div style={{ ...T.cap, lineHeight: 1.5 }}>Your first review appears after a bookmark or checkpoint.</div>}
+          </div>
+          {(data.weak ?? []).length ? (
+            <div style={{ ...T.card, padding: T.pad }}>
+              <div style={{ ...T.cap, fontWeight: 800, marginBottom: 6, color: '#c0522d' }}>NEEDS REINFORCEMENT</div>
+              {(data.weak ?? []).map((w) => (
+                <a key={w.id} href={`/course/${w.lessonId}?scene=${encodeURIComponent(w.sceneId ?? '')}&t=${w.tMs}`} style={{ display: 'block', fontSize: 12.5, color: '#c0522d', padding: '3px 0', textDecoration: 'none' }}>▶ {w.label}</a>
               ))}
             </div>
-            <div style={{ ...T.cap, marginTop: 12, paddingTop: 10, borderTop: T.card.border, lineHeight: 1.5 }}>
-              {(t.checkpoints ?? 0) === 0 ? 'Complete a checkpoint after your next scene to start verifying what you learned.' : (data.dueCount ?? 0) > 0 ? `${data.dueCount} review${data.dueCount === 1 ? '' : 's'} waiting — 4 minutes well spent.` : 'Verified learning today. Reviews return on schedule.'}
-            </div>
-          </div>
-
+          ) : null}
           <div style={{ ...T.card, padding: T.pad }}>
-            <div style={{ ...T.cap, fontWeight: 800, marginBottom: 10 }}>LEARNING HEALTH</div>
+            <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>LEARNING HEALTH</div>
             {[['Progress', `${data.stats?.totalScenes ?? 0} scenes · ${data.stats?.lessonsDone ?? 0} lessons`, true],
               ['Recall', (data.stats?.totalReviews ?? 0) >= 3 ? `${data.stats.totalReviews} reviews` : 'Not enough data', (data.stats?.totalReviews ?? 0) >= 3],
-              ['Verified', (data.stats?.totalCheckpoints ?? 0) > 0 ? `${data.stats.totalCheckpoints} checkpoints` : 'Not measured yet', (data.stats?.totalCheckpoints ?? 0) > 0],
-              ['Reviews', (data.dueCount ?? 0) > 0 ? `${data.dueCount} due today` : 'On track', (data.dueCount ?? 0) === 0]].map(([l, v, ok]) => (
+              ['Verified', (data.stats?.totalCheckpoints ?? 0) > 0 ? `${data.stats.totalCheckpoints} checkpoints` : 'Not measured yet', (data.stats?.totalCheckpoints ?? 0) > 0]].map(([l, v, ok]) => (
               <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: 12.5 }}>
                 <span style={{ color: '#9b8465' }}>{l}</span>
                 <span style={{ color: ok ? '#2b211a' : '#b3a889', fontWeight: 700 }}>{v}</span>
               </div>
             ))}
           </div>
-
-          <div style={{ ...T.card, padding: T.pad }}>
-            <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>WEEKLY TARGET</div>
-            <WeeklyTarget total={data.weekTotal ?? 0} goal={data.weekGoal ?? 10} actions={data.weekActions ?? {}} pace={data.pace ?? ''} bare />
-          </div>
-
-          <div style={{ ...T.card, padding: T.pad }}>
-            <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>REVIEWS & MEMORY</div>
-            {(data.dueCount ?? 0) > 0 ? (
-              <a href="/bookmarks" style={{ display: 'inline-block', background: T.accent, color: '#fff', borderRadius: 999, padding: '7px 16px', fontWeight: 800, fontSize: 12.5, textDecoration: 'none' }}>Start review · {data.dueCount}</a>
-            ) : (data.upcoming ?? []).length ? (data.upcoming ?? []).map((u) => (
-              <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, padding: '4px 0' }}>
-                <span style={{ color: '#2b211a' }}>{u.label}</span><span style={T.cap}>{new Date(u.due).toLocaleDateString('en', { weekday: 'short' })}</span>
-              </div>
-            )) : <div style={{ ...T.cap, lineHeight: 1.5 }}>Nothing due. Your first review appears after a bookmark or checkpoint.</div>}
-            {(data.weak ?? []).length ? (
-              <div style={{ marginTop: 10, paddingTop: 8, borderTop: T.card.border }}>
-                <div style={{ ...T.cap, fontWeight: 800, marginBottom: 4 }}>NEEDS REINFORCEMENT</div>
-                {(data.weak ?? []).map((w) => (
-                  <a key={w.id} href={`/course/${w.lessonId}?scene=${encodeURIComponent(w.sceneId ?? '')}&t=${w.tMs}`} style={{ display: 'block', fontSize: 12.5, color: '#c0522d', padding: '3px 0', textDecoration: 'none' }}>▶ {w.label}</a>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
           <Reflection saved={t.reflection} bare />
-
           {(data.tomorrow?.review || data.tomorrow?.continueTitle) ? (
             <div style={{ ...T.card, padding: T.pad, fontSize: 12.5, color: '#9b8465', lineHeight: 1.55 }}>
               <div style={{ ...T.cap, fontWeight: 800, marginBottom: 6 }}>TOMORROW'S FIRST BLOCK</div>
@@ -267,7 +249,21 @@ export function ProgressContent() {
             </div>
           ) : null}
         </div>
-      </div>
+      ) : null}
+
+      {tab === 'awards' ? (
+        <div style={{ marginTop: 24, maxWidth: 720 }}>
+          <Heatmap days={data.heatmap ?? []} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: 10, marginTop: T.gap }}>
+            {(data.badges ?? []).map((b) => (
+              <div key={b.label} title={b.label} style={{ ...T.card, padding: '12px 6px', textAlign: 'center', borderColor: b.earned ? '#f0c39a' : '#f2e3d5' }}>
+                <div style={{ fontSize: 22, filter: b.earned ? 'none' : 'grayscale(1) opacity(0.35)' }}>{b.icon}</div>
+                <div style={{ fontSize: 9.5, color: b.earned ? '#8a3a12' : '#c9bda1', marginTop: 4, lineHeight: 1.2, fontWeight: 700 }}>{b.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
