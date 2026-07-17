@@ -12,12 +12,12 @@ export function DashboardSidebar({ email, active = 'home' }) {
     { key: 'home', icon: '🏠', label: 'Home', href: '/dashboard' },
     { key: 'studio', icon: '✨', label: 'New course', href: '/studio' },
     { key: 'courses', icon: '📚', label: 'My Courses', href: '/courses' },
+    { key: 'progress', icon: '📊', label: 'Progress', href: '/progress' },
+    { key: 'bookmarks', icon: '🔖', label: 'Bookmarks', href: '/bookmarks' },
   ];
   const soon = [
     ['📓', 'Notebook'],
     ['🧠', 'Quizzes'],
-    ['📊', 'Progress'],
-    ['🔖', 'Bookmarks'],
   ];
   const name = (email || '').split('@')[0].replace(/[._-]+/g, ' ');
 

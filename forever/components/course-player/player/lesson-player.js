@@ -46,6 +46,30 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
     } catch { /* corrupted store -> start fresh */ }
   }, [progressKey]);
 
+  // SERVER PROGRESS (bookmarks/progress feature, competitor-harvest "first five minutes"
+  // law): the resume point syncs to /api/study every few seconds of change — a signed-in
+  // student returning to this lesson lands where they left off, on any device.
+  const lastSync = useRef(0);
+  useEffect(() => {
+    if (!lessonId) return;
+    const now = Date.now();
+    if (now - lastSync.current < 5000) return;
+    lastSync.current = now;
+    fetch('/api/study', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'progress', lessonId, lessonTitle: lesson.lessonTitle, sceneIndex, sceneCount: lesson.scenes.length, tMs: Math.round(tMs), completed: completed.size >= lesson.scenes.length }),
+    }).catch(() => {});
+  }, [lessonId, sceneIndex, Math.floor(tMs / 5000)]);
+
+  const [marked, setMarked] = useState(false);
+  const bookmarkNow = () => {
+    if (!lessonId) return;
+    fetch('/api/study', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'bookmark', lessonId, lessonTitle: lesson.lessonTitle, sceneId: scene.sceneId, sceneTitle: scene.title, tMs: Math.round(tMs) }),
+    }).then(() => { setMarked(true); setTimeout(() => setMarked(false), 1600); }).catch(() => {});
+  };
+
   // A scene watched to its end is complete — the checkmark is EARNED, not decorative.
   useEffect(() => {
     if (tMs < durationMs - 120 || completed.has(scene.sceneId)) return;
@@ -209,6 +233,13 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
               <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12.5, color: 'rgba(247,233,227,.75)', whiteSpace: 'nowrap' }}>
                 {fmt(tMs)} / {fmt(durationMs)}
               </span>
+              <button
+                onClick={bookmarkNow}
+                title="Bookmark this moment"
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 16, padding: '0 6px', opacity: marked ? 1 : 0.75 }}
+              >
+                {marked ? '✅' : '🔖'}
+              </button>
               <input
                 type="range" min="0" max={durationMs || 1} value={Math.min(tMs, durationMs)}
                 onChange={(e) => player.seek(Number(e.target.value))}

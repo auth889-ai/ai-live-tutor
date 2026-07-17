@@ -39,6 +39,12 @@ export async function lessonsCollection(env = process.env) {
   return (await getDb(env)).collection('lessons');
 }
 
+export async function studyCollection(env = process.env) {
+  // bookmarks + resume-progress records (competitor-harvest law: winners win the first five
+  // demo minutes — resuming where you left off and keeping moments is that polish).
+  return (await getDb(env))?.collection('study');
+}
+
 export async function coursesCollection(env = process.env) {
   return (await getDb(env)).collection('courses');
 }
