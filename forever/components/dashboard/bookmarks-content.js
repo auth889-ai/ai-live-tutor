@@ -20,7 +20,15 @@ const ago = (iso) => {
 export function BookmarksContent() {
   const [data, setData] = useState(null);
   const [q, setQ] = useState('');
-  useEffect(() => { fetch('/api/study').then((r) => r.json()).then(setData).catch(() => setData({ signedIn: false, bookmarks: [] })); }, []);
+  useEffect(() => {
+    let dead = false;
+    const load = () => fetch('/api/study').then((r) => r.json()).then((d) => { if (!dead) setData(d); }).catch(() => { if (!dead) setData({ signedIn: false, bookmarks: [] }); });
+    load();
+    const t = setInterval(load, 25000);
+    const onFocus = () => load();
+    window.addEventListener('focus', onFocus);
+    return () => { dead = true; clearInterval(t); window.removeEventListener('focus', onFocus); };
+  }, []);
   const remove = (id) => fetch(`/api/study?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
     .then(() => setData((d) => ({ ...d, bookmarks: d.bookmarks.filter((x) => x._id !== id) })));
   const review = (id, grade) => fetch('/api/study', {
@@ -173,7 +181,7 @@ function Forecast({ f }) {
 function RecallCard({ b, onGood, onAgain }) {
   const [revealed, setRevealed] = useState(false);
   return (
-    <div className="bmcard" style={{ border: '1px solid #f5e6d9', borderRadius: 14, background: '#fff', padding: '13px 15px', marginBottom: 8 }}>
+    <div className="bmcard recall" style={{ border: '1px solid #f5e6d9', borderRadius: 14, background: '#fff', padding: '13px 15px', marginBottom: 8 }}>
       <div style={{ fontSize: 11, fontWeight: 800, color: '#8e44ad', marginBottom: 6 }}>RECALL — what was being taught here?</div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
         <span style={{ fontWeight: 800 }}>{b.lessonTitle}</span>
@@ -228,7 +236,11 @@ function Card({ b, onRemove, onGood, onAgain, due = false }) {
 function Shell({ children, count = 0, dueCount = 0 }) {
   return (
     <div>
-      <style>{`.bmcard{transition:transform .15s, box-shadow .15s} .bmcard:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(58,46,34,0.12)}`}</style>
+      <style>{`
+        .bmcard{transition:transform .15s, box-shadow .15s} .bmcard:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(58,46,34,0.12)}
+        @keyframes cardIn{from{transform:translateX(26px);opacity:0}to{transform:translateX(0);opacity:1}}
+        .recall{animation:cardIn .3s ease-out}
+      `}</style>
       <div style={{ maxWidth: 820 }}>
       <h1 style={{ fontSize: 24, color: '#2b211a', marginBottom: 4, fontFamily: 'var(--font-newsreader), Georgia, serif' }}>Bookmarks</h1>
       <p style={{ color: '#8a6d3b', fontSize: 13.5, marginBottom: 18 }}>
