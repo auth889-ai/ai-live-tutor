@@ -61,6 +61,20 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
     }).catch(() => {});
   }, [lessonId, sceneIndex, Math.floor(tMs / 5000)]);
 
+  // RESUME CONSUMPTION: /progress and /bookmarks links carry ?scene=&t= — land exactly there.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const q = new URLSearchParams(window.location.search);
+    const sceneQ = q.get('scene');
+    const tQ = Number(q.get('t'));
+    if (sceneQ !== null && sceneQ !== '') {
+      const byId = lesson.scenes.findIndex((sc) => sc.sceneId === sceneQ);
+      const idx = byId >= 0 ? byId : Number(sceneQ);
+      if (Number.isInteger(idx) && idx >= 0 && idx < lesson.scenes.length) player.goToScene(idx);
+    }
+    if (Number.isFinite(tQ) && tQ > 0) setTimeout(() => player.seek(tQ), 400);
+  }, []);
+
   const [marked, setMarked] = useState(false);
   const bookmarkNow = () => {
     if (!lessonId) return;
