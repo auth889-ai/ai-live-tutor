@@ -136,6 +136,15 @@ export function ProgressContent() {
     : 'press B in any lesson — that moment returns tomorrow as a recall prompt';
   const scheduled = bms.filter((b) => b.reviewDue && new Date(b.reviewDue).getTime() > Date.now());
   const farthest = scheduled.reduce((m, b) => Math.max(m, new Date(b.reviewDue).getTime()), 0);
+  const focusBk = dueBk ?? nextBk ?? bms.find((b) => b.reviewDue) ?? null;
+  const dueDays = Array.from({ length: 14 }, (_, i) => {
+    const dt = new Date(Date.now() + i * 24 * 3600 * 1000);
+    const key = dt.toISOString().slice(0, 10);
+    const n = bms.filter((b) => b.reviewDue && (i === 0
+      ? (new Date(b.reviewDue).getTime() <= Date.now() || String(b.reviewDue).slice(0, 10) === key)
+      : String(b.reviewDue).slice(0, 10) === key)).length;
+    return { key, label: i === 0 ? 'now' : dt.toLocaleDateString('en', { weekday: 'narrow' }), n };
+  });
   const forecastCap = scheduled.length
     ? `${scheduled.length} return${scheduled.length === 1 ? '' : 's'} on the calendar · farthest ${new Date(farthest).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`
     : bms.length ? 'grade a recall and its next return lands here' : 'bookmarks build this calendar — none saved yet';
@@ -382,12 +391,13 @@ export function ProgressContent() {
                 <div style={{ ...T.cap, marginTop: 12, lineHeight: 1.5 }}>{nextUp ? `clear until ${wk(nextUp.due)} — a good recall then stretches its gap to ${nextGap(nextBk)} day${nextGap(nextBk) === 1 ? '' : 's'}` : <>press <b style={{ color: '#2b211a' }}>B</b> in a lesson to save your first moment</>}</div>
               )}
             </div>
-            <ForecastCard f={data.forecast ?? {}} caption={forecastCap} />
+            <ForecastCard days={dueDays} caption={forecastCap} />
             <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
               <div style={{ ...T.cap, fontWeight: 800 }}>MEMORY BANK</div>
               {[['moments saved', (data.bookmarks ?? []).length],
                 ['recalls done', data.stats?.totalReviews ?? 0],
-                ['held on last recall', (data.bookmarks ?? []).filter((bk) => bk.lastGrade === 'good').length]].map(([l, n]) => (
+                ['held on last recall', (data.bookmarks ?? []).filter((bk) => bk.lastGrade === 'good').length],
+                ['mature · 21d+ gap', (data.bookmarks ?? []).filter((bk) => (bk.reviewInterval ?? 1) >= 21).length]].map(([l, n]) => (
                 <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', marginTop: 2 }}>
                   <span style={{ fontSize: 12.5, color: '#9b8465' }}>{l}</span>
                   <span style={{ fontSize: 15, fontWeight: 800, color: n > 0 ? '#2b211a' : '#cbbfa8', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
@@ -396,17 +406,25 @@ export function ProgressContent() {
             </div>
           </div>
 
+          {focusBk ? <ForgettingCurve bk={focusBk} /> : null}
+
           <div className="eqcol">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
           {(data.upcoming ?? []).length ? (
             <div style={{ ...T.card, padding: T.pad }}>
               <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>COMING BACK</div>
-              {(data.upcoming ?? []).map((u) => (
-                <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5, padding: '5px 0' }}>
-                  <span style={{ color: '#2b211a', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.label}</span>
-                  <span style={{ ...T.cap, fontWeight: 700, whiteSpace: 'nowrap' }}>{new Date(u.due).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                </div>
-              ))}
+              {(data.upcoming ?? []).map((u) => {
+                const ub = bms.find((b) => String(b._id ?? b.id) === String(u.id));
+                const iv = Math.round(ub?.reviewInterval ?? 1);
+                const [st, sc] = iv >= 21 ? ['Mature', '#2f7d4a'] : iv >= 2 ? ['Sprout', '#c98f2d'] : ['Seed', '#9b8465'];
+                return (
+                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5, padding: '6px 0' }}>
+                    <span style={{ color: '#2b211a', minWidth: 0, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.label}</span>
+                    <span title={`current gap: ${iv} day${iv === 1 ? '' : 's'} — grows toward Mature at 21+ days`} style={{ fontSize: 10.5, fontWeight: 800, color: sc, background: `${sc}14`, borderRadius: 999, padding: '2px 8px', whiteSpace: 'nowrap' }}>{st} · {iv}d</span>
+                    <span style={{ ...T.cap, fontWeight: 700, whiteSpace: 'nowrap' }}>{new Date(u.due).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                  </div>
+                );
+              })}
             </div>
           ) : null}
           {(data.weak ?? []).length ? (
@@ -661,25 +679,68 @@ function MiniHeat({ days }) {
   );
 }
 
-// Due-load ahead as honest bars — counts come straight from each bookmark's reviewDue.
-function ForecastCard({ f, caption }) {
-  const rows = [['today', f.today ?? 0, '#e8604c'], ['tomorrow', f.tomorrow ?? 0, '#eb9a3d'], ['next 7 days', f.week ?? 0, '#b3a889']];
-  const max = Math.max(1, ...rows.map((r) => r[1]));
+// Anki-style future-due chart: one column per day for two weeks, straight from each
+// bookmark's reviewDue. Today red, tomorrow amber, later green — urgency fades to growth.
+function ForecastCard({ days, caption }) {
+  const max = Math.max(1, ...days.map((d) => d.n));
   return (
     <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
-      <div style={{ ...T.cap, fontWeight: 800 }}>REVIEWS AHEAD</div>
-      <div style={{ marginTop: 10 }}>
-        {rows.map(([l, n, col]) => (
-          <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '4px 0' }}>
-            <span style={{ width: 74, fontSize: 11.5, color: '#9b8465', flexShrink: 0 }}>{l}</span>
-            <div style={{ flex: 1, height: 8, borderRadius: 99, background: '#f6ede1', overflow: 'hidden' }}>
-              <div style={{ width: `${(n / max) * 100}%`, minWidth: n > 0 ? 8 : 0, height: '100%', borderRadius: 99, background: col, transition: 'width .7s' }} />
-            </div>
-            <span style={{ width: 18, textAlign: 'right', fontSize: 12.5, fontWeight: 800, color: n > 0 ? '#2b211a' : '#cbbfa8', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+      <div style={{ ...T.cap, fontWeight: 800 }}>REVIEWS AHEAD · 14 DAYS</div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 76, marginTop: 12 }}>
+        {days.map((d, i) => (
+          <div key={d.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 3, minWidth: 0, height: '100%' }}>
+            {d.n > 0 ? <span style={{ fontSize: 9.5, fontWeight: 800, color: '#2b211a' }}>{d.n}</span> : null}
+            <div title={`${d.key}: ${d.n} due`} style={{ width: '100%', borderRadius: 4, height: d.n > 0 ? `${Math.max(14, (d.n / max) * 48)}px` : '4px', background: d.n === 0 ? '#f0e8db' : i === 0 ? '#e8604c' : i === 1 ? '#eb9a3d' : '#8ccf8a' }} />
+            <span style={{ fontSize: 8.5, color: i === 0 ? '#2b211a' : '#b3a889', fontWeight: i === 0 ? 800 : 400 }}>{d.label}</span>
           </div>
         ))}
       </div>
       <div style={{ ...T.cap, marginTop: 8 }}>{caption}</div>
+    </div>
+  );
+}
+
+// Ebbinghaus curve for ONE moment: modeled recall decays from the last touch toward the
+// scheduled return, which lands at the classic ~35% review point. The % is a model estimate
+// (labeled as such); the dates and the schedule are real records.
+function ForgettingCurve({ bk }) {
+  const start = new Date(bk.lastReviewed ?? bk.createdAt ?? Date.now()).getTime();
+  const end = new Date(bk.reviewDue).getTime();
+  const now = Date.now();
+  const span = Math.max(1, end - start);
+  const tau = span / 1.05; // S(end) = e^-1.05 ≈ 0.35
+  const S = (t) => Math.exp(-Math.max(0, t - start) / tau);
+  const W = 560, H = 122, pad = 14;
+  const x = (t) => pad + ((t - start) / (span * 1.25)) * (W - 2 * pad);
+  const y = (v) => 16 + (1 - v) * (H - 44);
+  const pts = Array.from({ length: 48 }, (_, i) => {
+    const t = start + (i / 47) * span * 1.25;
+    return `${x(t).toFixed(1)},${y(S(t)).toFixed(1)}`;
+  });
+  const solid = pts.slice(0, 39).join(' ');
+  const after = pts.slice(38).join(' ');
+  const nowT = Math.min(Math.max(now, start), end);
+  const nowPct = Math.round(S(nowT) * 100);
+  const label = String(bk.note || bk.context || 'this moment').slice(0, 30);
+  return (
+    <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 6 }}>
+        <span style={{ ...T.cap, fontWeight: 800 }}>FORGETTING CURVE · “{label}”</span>
+        <span style={T.cap}>modeled recall now ≈ <b style={{ color: nowPct > 60 ? '#2f7d4a' : '#c0522d' }}>{nowPct}%</b></span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', marginTop: 8, display: 'block' }}>
+        <line x1={pad} y1={y(1)} x2={W - pad} y2={y(1)} stroke="#f2e3d5" strokeDasharray="3 4" />
+        <line x1={pad} y1={y(0.35)} x2={W - pad} y2={y(0.35)} stroke="#f2e3d5" strokeDasharray="3 4" />
+        <text x={W - pad} y={y(1) - 4} textAnchor="end" fontSize="8.5" fill="#b3a889">100%</text>
+        <text x={W - pad} y={y(0.35) - 4} textAnchor="end" fontSize="8.5" fill="#b3a889">35% — the review lands here</text>
+        <polyline points={after} fill="none" stroke="#d8cbb6" strokeWidth="2" strokeDasharray="4 5" />
+        <polyline points={solid} fill="none" stroke="#e8604c" strokeWidth="2.5" strokeLinecap="round" />
+        <line x1={x(nowT)} y1={14} x2={x(nowT)} y2={H - 24} stroke="#2b211a" strokeDasharray="2 3" opacity="0.5" />
+        <text x={Math.min(x(nowT) + 4, W - 40)} y={24} fontSize="9" fontWeight="700" fill="#2b211a">now</text>
+        <circle cx={x(end)} cy={y(S(end))} r="5" fill="#2f9e5f" />
+        <text x={x(end)} y={Math.min(y(S(end)) + 17, H - 10)} textAnchor="middle" fontSize="9" fontWeight="800" fill="#2f7d4a">{new Date(end).toLocaleDateString('en', { weekday: 'short' })}</text>
+      </svg>
+      <div style={{ ...T.cap, marginTop: 4 }}>memory decays along the Ebbinghaus curve — the return on {new Date(end).toLocaleDateString('en', { weekday: 'long' })} resets it to full, then the gap stretches</div>
     </div>
   );
 }
