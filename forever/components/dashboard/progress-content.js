@@ -217,46 +217,68 @@ export function ProgressContent() {
                 ))}
               </div>
 
-              {/* JUMP BACK IN — every in-flight lesson one click away, live percent bars */}
+              {/* JUMP BACK IN — media tiles, not rows: cover forward, live bar under each */}
               {inProgress.length ? (
-                <div style={{ ...T.card, borderRadius: 20 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '15px 18px 2px' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '2px 2px 8px' }}>
                     <span style={{ ...T.cap, fontWeight: 800 }}>JUMP BACK IN</span>
                     <button onClick={() => setTab('lessons')} style={{ border: 'none', background: 'transparent', color: T.accent, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>All lessons →</button>
                   </div>
-                  {inProgress.slice(0, 3).map((p, i) => (
-                    <a key={p._id} className="pcard" href={`/course/${p.lessonId}?t=${p.tMs}&scene=${p.sceneIndex}`} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '12px 18px', borderTop: i ? '1px solid #f8efe6' : 'none', textDecoration: 'none' }}>
-                      <img src={coverFor(p.lessonId)} alt="" style={{ width: 62, height: 44, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ ...T.body, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.lessonTitle || p.lessonId}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 6 }}>
-                          <div style={{ flex: 1, height: 5, borderRadius: 99, background: '#f4e9dc', overflow: 'hidden' }}>
-                            <div style={{ width: `${Math.max(2, p.percent ?? 0)}%`, height: '100%', borderRadius: 99, background: T.accent, transition: 'width .8s' }} />
+                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(3, Math.max(1, inProgress.length))}, 1fr)`, gap: 12 }}>
+                    {inProgress.slice(0, 3).map((p) => {
+                      const watching = Date.now() - new Date(p.updatedAt).getTime() < 3 * 60 * 1000;
+                      return (
+                        <a key={p._id} className="pcard" href={`/course/${p.lessonId}?t=${p.tMs}&scene=${p.sceneIndex}`} style={{ ...T.card, borderRadius: 16, overflow: 'hidden', textDecoration: 'none', color: '#2b211a', display: 'block' }}>
+                          <div style={{ position: 'relative', aspectRatio: '16/9' }}>
+                            <img src={coverFor(p.lessonId)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(43,33,26,0.65))' }} />
+                            <div style={{ position: 'absolute', left: 9, bottom: 7, color: '#fff', fontSize: 10.5, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 5, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+                              {watching ? <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#e8604c', animation: 'pulseDot 1.6s infinite' }} /> : null}
+                              {(p.completedCount ?? 0)}/{p.sceneCount} SCENES
+                            </div>
+                            <span style={{ position: 'absolute', right: 8, top: 8, background: 'rgba(43,33,26,0.55)', color: '#fff', borderRadius: 999, padding: '3px 9px', fontSize: 10, fontWeight: 800 }}>{(p.percent ?? 0) > 0 ? `${p.percent}%` : 'NEW'}</span>
                           </div>
-                          <span style={{ ...T.cap, whiteSpace: 'nowrap' }}>
-                            {(p.scenePercent ?? 0) > 0 ? `scene ${p.sceneIndex + 1} · ${p.scenePercent}% watched` : (p.completedCount ?? 0) > 0 ? `${p.completedCount}/${p.sceneCount} scenes` : 'ready to start'}
-                          </span>
-                        </div>
-                      </div>
-                      <span style={{ color: T.accent, fontWeight: 800, fontSize: 15 }}>▶</span>
-                    </a>
-                  ))}
+                          <div style={{ padding: '10px 12px 12px' }}>
+                            <div style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.35, minHeight: 34, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.lessonTitle || p.lessonId}</div>
+                            <div style={{ marginTop: 8, height: 4, borderRadius: 99, background: '#f4e9dc', overflow: 'hidden' }}>
+                              <div style={{ width: `${Math.max(2, p.percent ?? 0)}%`, height: '100%', background: T.accent, transition: 'width .8s' }} />
+                            </div>
+                            <div style={{ ...T.cap, marginTop: 6 }}>{(p.scenePercent ?? 0) > 0 ? `scene ${p.sceneIndex + 1} · ${p.scenePercent}% watched` : (p.completedCount ?? 0) > 0 ? `resume scene ${p.sceneIndex + 1}` : `${p.sceneCount} scenes · ~${Math.max(5, (p.sceneCount ?? 0) * 2)} min`}</div>
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : null}
 
-              {/* KNOWLEDGE — status chips per lesson, full evidence lives on Lessons */}
+              {/* KNOWLEDGE — the distribution, not a list: one stacked bar + the single next move */}
               {know.length ? (
-                <div style={{ ...T.card, borderRadius: 20 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '15px 18px 4px' }}>
-                    <span style={{ ...T.cap, fontWeight: 800 }}>KNOWLEDGE</span>
+                <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ ...T.cap, fontWeight: 800 }}>KNOWLEDGE · {know.length} LESSON{know.length === 1 ? '' : 'S'}</span>
                     <button onClick={() => setTab('lessons')} style={{ border: 'none', background: 'transparent', color: T.accent, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>Evidence →</button>
                   </div>
-                  {know.slice(0, 4).map((k, i) => (
-                    <div key={k.lessonId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9px 18px', borderTop: i ? '1px solid #f8efe6' : 'none' }}>
-                      <span style={{ ...T.body, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.lessonTitle}</span>
-                      <span style={{ fontSize: 11.5, fontWeight: 800, whiteSpace: 'nowrap', color: STATUS_COLOR[k.status] ?? '#9b8465', background: `${STATUS_COLOR[k.status] ?? '#9b8465'}14`, borderRadius: 999, padding: '3px 10px' }}>{k.status}</span>
-                    </div>
-                  ))}
+                  {(() => {
+                    const order = ['Strong', 'Developing', 'Learning', 'Review due', 'New'];
+                    const distr = order.map((st) => [st, know.filter((kk) => kk.status === st).length]).filter(([, n]) => n > 0);
+                    const nextK = know.find((kk) => kk.status !== 'Strong');
+                    return (
+                      <>
+                        <div style={{ display: 'flex', height: 10, borderRadius: 99, overflow: 'hidden', marginTop: 12, gap: 2 }}>
+                          {distr.map(([st, n]) => (
+                            <span key={st} style={{ flex: n, background: STATUS_COLOR[st] ?? '#9b8465', opacity: st === 'New' ? 0.3 : 1 }} />
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 10 }}>
+                          {distr.map(([st, n]) => (
+                            <span key={st} style={{ fontSize: 11.5, fontWeight: 800, color: STATUS_COLOR[st], background: `${STATUS_COLOR[st]}12`, borderRadius: 999, padding: '3px 10px' }}>{n} {st}</span>
+                          ))}
+                        </div>
+                        {nextK ? <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: T.accent, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>next: {nextK.next} — {nextK.lessonTitle}</div> : null}
+                      </>
+                    );
+                  })()}
                 </div>
               ) : null}
             </div>
