@@ -1,16 +1,21 @@
 import { chromium } from 'playwright';
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1500, height: 1100 } });
-await page.goto('http://localhost:3000/course/lesson_spb7f51058f4c3', { waitUntil: 'networkidle', timeout: 90000 }).catch(() => {});
+const page = await browser.newPage({ viewport: { width: 1500, height: 1250 } });
+await page.goto('http://localhost:3000/dev/lenses', { waitUntil: 'networkidle', timeout: 90000 }).catch(() => {});
 await page.waitForTimeout(3500);
-const dry = page.locator('text=Dry Run').first();
-if (await dry.count()) { await dry.click(); await page.waitForTimeout(2000); }
-await page.keyboard.press('Space').catch(() => {});
-const plus = page.locator('button', { hasText: '+10s' }).first();
-for (let i = 0; i < 18; i += 1) { await plus.click().catch(() => {}); await page.waitForTimeout(120); }
-await page.waitForTimeout(2000);
-const toggle = page.locator('button', { hasText: 'AI-composed cockpit' }).first();
-if (await toggle.count()) { await toggle.click(); await page.waitForTimeout(2500); console.log('toggle clicked'); } else { console.log('TOGGLE NOT FOUND'); }
-await page.screenshot({ path: '/tmp/shot-c7.png' });
-console.log('c7 shot saved');
+const cards = page.locator('section');
+const n = await cards.count();
+for (let i = 0; i < n; i += 1) {
+  const txt = await cards.nth(i).locator('h2').innerText().catch(() => '');
+  if (txt.includes('tarjan')) {
+    const slider = cards.nth(i).locator('input').first();
+    await slider.focus();
+    for (let k = 0; k < 30; k += 1) await page.keyboard.press('ArrowLeft');
+    for (let k = 0; k < 11; k += 1) { await page.keyboard.press('ArrowRight'); await page.waitForTimeout(50); }
+    await page.waitForTimeout(1500);
+    await cards.nth(i).screenshot({ path: '/tmp/shot-stage-frames.png' });
+    console.log('saved');
+    break;
+  }
+}
 await browser.close();

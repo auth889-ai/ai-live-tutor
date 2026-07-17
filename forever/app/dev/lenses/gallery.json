@@ -86,6 +86,20 @@
        "color": 0
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 4
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:A",
+        "field": "color"
+       },
+       "after": 0
+      }
+     ],
      "variables": {
       "start": "A"
      }
@@ -106,6 +120,20 @@
        "color": 0
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 5
+       },
+       "target": {
+        "entityId": "collection:queue"
+       },
+       "after": [
+        "A"
+       ]
+      }
+     ],
      "variables": {
       "start": "A"
      }
@@ -126,6 +154,18 @@
        "color": 0
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 7
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:A"
+       }
+      }
+     ],
      "variables": {
       "start": "A"
      }
@@ -149,6 +189,20 @@
        "color": 1
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 10
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:B",
+        "field": "color"
+       },
+       "after": 1
+      }
+     ],
      "variables": {
       "start": "A",
       "v": "B"
@@ -175,6 +229,20 @@
        "color": 1
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 11
+       },
+       "target": {
+        "entityId": "collection:queue"
+       },
+       "after": [
+        "B"
+       ]
+      }
+     ],
      "variables": {
       "start": "A",
       "v": "B"
@@ -204,6 +272,20 @@
        "color": 1
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 14
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:D",
+        "field": "color"
+       },
+       "after": 1
+      }
+     ],
      "variables": {
       "start": "A",
       "v": "D"
@@ -234,6 +316,21 @@
        "color": 1
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 15
+       },
+       "target": {
+        "entityId": "collection:queue"
+       },
+       "after": [
+        "B",
+        "D"
+       ]
+      }
+     ],
      "variables": {
       "start": "A",
       "v": "D"
@@ -265,6 +362,18 @@
        "color": 1
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 18
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:B"
+       }
+      }
+     ],
      "variables": {
       "start": "A",
       "v": "D"
@@ -299,6 +408,20 @@
        "color": 0
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 24
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:C",
+        "field": "color"
+       },
+       "after": 0
+      }
+     ],
      "variables": {
       "start": "A",
       "v": "C"
@@ -334,6 +457,21 @@
        "color": 0
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 25
+       },
+       "target": {
+        "entityId": "collection:queue"
+       },
+       "after": [
+        "D",
+        "C"
+       ]
+      }
+     ],
      "variables": {
       "start": "A",
       "v": "C"
@@ -369,6 +507,18 @@
        "color": 0
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 28
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:D"
+       }
+      }
+     ],
      "variables": {
       "start": "A",
       "v": "C"
@@ -403,6 +553,18 @@
        "color": 0
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 37
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:C"
+       }
+      }
+     ],
      "variables": {
       "start": "A",
       "v": "C"
@@ -437,6 +599,12 @@
        "color": 0
       }
      },
+     "events": [
+      {
+       "eventType": "solution_emit",
+       "after": true
+      }
+     ],
      "variables": {}
     }
    ]
@@ -549,7 +717,7 @@
    },
    "steps": [
     {
-     "line": 5,
+     "line": 10,
      "explanation": "We run prim(5, [[0,1,2],[0,3,6],[1,2,3],[1,3,8],[1,4,5],[2,4,7],[3,4,9]]) on this exact graph and watch the algorithm's own variables — the node being processed, the distance table, the frontier. Every value below was recorded from the real run; the picture can never disagree with the code.",
      "graph": {
       "current": null,
@@ -559,101 +727,32 @@
      "variables": {}
     },
     {
-     "line": 5,
-     "explanation": "Now 0 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 0's edges.",
-     "graph": {
-      "current": "0",
-      "visited": [],
-      "pointers": {
-       "curr": "0"
-      }
-     },
-     "nodeState": {},
-     "variables": {
-      "n": 5,
-      "v": 1,
-      "w": 2
-     }
-    },
-    {
-     "line": 5,
-     "explanation": "Now 1 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
-     "graph": {
-      "current": "1",
-      "visited": [
-       "0"
-      ],
-      "pointers": {
-       "curr": "1"
-      }
-     },
-     "nodeState": {},
-     "variables": {
-      "n": 5,
-      "v": 2,
-      "w": 3
-     }
-    },
-    {
-     "line": 5,
-     "explanation": "Now 2 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 2's edges.",
-     "graph": {
-      "current": "2",
-      "visited": [
-       "0",
-       "1"
-      ],
-      "pointers": {
-       "curr": "2"
-      }
-     },
-     "nodeState": {},
-     "variables": {
-      "n": 5,
-      "v": 4,
-      "w": 7
-     }
-    },
-    {
-     "line": 5,
-     "explanation": "Now 3 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 3's edges.",
-     "graph": {
-      "current": "3",
-      "visited": [
-       "0",
-       "1",
-       "2"
-      ],
-      "pointers": {
-       "curr": "3"
-      }
-     },
-     "nodeState": {},
-     "variables": {
-      "n": 5,
-      "v": 4,
-      "w": 9
-     }
-    },
-    {
      "line": 10,
      "explanation": "key[0] gets its first value: 0 — it now rides under 0 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
      "graph": {
-      "current": "3",
-      "visited": [
-       "0",
-       "1",
-       "2"
-      ],
-      "pointers": {
-       "curr": "3"
-      }
+      "current": null,
+      "visited": [],
+      "pointers": {}
      },
      "nodeState": {
       "0": {
        "key": 0
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 31
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:0",
+        "field": "key"
+       },
+       "after": 0
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 4,
@@ -664,15 +763,9 @@
      "line": 11,
      "explanation": "The queue now holds 0:0 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
      "graph": {
-      "current": "3",
-      "visited": [
-       "0",
-       "1",
-       "2"
-      ],
-      "pointers": {
-       "curr": "3"
-      }
+      "current": null,
+      "visited": [],
+      "pointers": {}
      },
      "queue": [
       "0:0"
@@ -682,6 +775,20 @@
        "key": 0
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 32
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": [
+        "0:0"
+       ]
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 4,
@@ -693,12 +800,7 @@
      "explanation": "Now 0 is taken out of the frontier and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 0's edges.",
      "graph": {
       "current": "0",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
-      ],
+      "visited": [],
       "pointers": {
        "curr": "0"
       }
@@ -709,6 +811,18 @@
        "key": 0
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 35
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:0"
+       }
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 4,
@@ -722,12 +836,7 @@
      "explanation": "in_mst[0] gets its first value: 1 — it now rides under 0 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
      "graph": {
       "current": "0",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
-      ],
+      "visited": [],
       "pointers": {
        "curr": "0"
       }
@@ -739,6 +848,20 @@
        "key": 0
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 37
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:0",
+        "field": "in_mst"
+       },
+       "after": 1
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 4,
@@ -752,12 +875,7 @@
      "explanation": "key[1] gets its first value: 2 — it now rides under 1 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
      "graph": {
       "current": "0",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
-      ],
+      "visited": [],
       "pointers": {
        "curr": "0"
       }
@@ -772,6 +890,20 @@
        "key": 2
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 41
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:1",
+        "field": "key"
+       },
+       "after": 2
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 1,
@@ -785,12 +917,7 @@
      "explanation": "The queue now holds 2:1 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
      "graph": {
       "current": "0",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
-      ],
+      "visited": [],
       "pointers": {
        "curr": "0"
       }
@@ -807,6 +934,20 @@
        "key": 2
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 42
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": [
+        "2:1"
+       ]
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 1,
@@ -820,12 +961,7 @@
      "explanation": "key[3] gets its first value: 6 — it now rides under 3 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
      "graph": {
       "current": "0",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
-      ],
+      "visited": [],
       "pointers": {
        "curr": "0"
       }
@@ -845,6 +981,20 @@
        "key": 6
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 45
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:3",
+        "field": "key"
+       },
+       "after": 6
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 3,
@@ -858,12 +1008,7 @@
      "explanation": "The queue now holds 2:1, 6:3 — these are the candidates still waiting for their turn; everything the algorithm will do next comes out of this list.",
      "graph": {
       "current": "0",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
-      ],
+      "visited": [],
       "pointers": {
        "curr": "0"
       }
@@ -884,6 +1029,21 @@
        "key": 6
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 46
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": [
+        "2:1",
+        "6:3"
+       ]
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 3,
@@ -898,10 +1058,7 @@
      "graph": {
       "current": "1",
       "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
+       "0"
       ],
       "pointers": {
        "curr": "1"
@@ -922,6 +1079,18 @@
        "key": 6
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 49
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:1"
+       }
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 3,
@@ -936,10 +1105,7 @@
      "graph": {
       "current": "1",
       "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
+       "0"
       ],
       "pointers": {
        "curr": "1"
@@ -961,6 +1127,20 @@
        "key": 6
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 51
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:1",
+        "field": "in_mst"
+       },
+       "after": 1
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 3,
@@ -975,10 +1155,7 @@
      "graph": {
       "current": "1",
       "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
+       "0"
       ],
       "pointers": {
        "curr": "1"
@@ -1003,6 +1180,20 @@
        "key": 6
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 57
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:2",
+        "field": "key"
+       },
+       "after": 3
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 2,
@@ -1017,10 +1208,7 @@
      "graph": {
       "current": "1",
       "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
+       "0"
       ],
       "pointers": {
        "curr": "1"
@@ -1046,6 +1234,21 @@
        "key": 6
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 58
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": [
+        "3:2",
+        "6:3"
+       ]
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 2,
@@ -1060,10 +1263,7 @@
      "graph": {
       "current": "1",
       "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
+       "0"
       ],
       "pointers": {
        "curr": "1"
@@ -1092,6 +1292,20 @@
        "key": 5
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 63
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:4",
+        "field": "key"
+       },
+       "after": 5
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 4,
@@ -1106,10 +1320,7 @@
      "graph": {
       "current": "1",
       "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
+       "0"
       ],
       "pointers": {
        "curr": "1"
@@ -1139,6 +1350,22 @@
        "key": 5
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 64
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": [
+        "3:2",
+        "5:4",
+        "6:3"
+       ]
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 4,
@@ -1154,9 +1381,7 @@
       "current": "2",
       "visited": [
        "0",
-       "1",
-       "2",
-       "3"
+       "1"
       ],
       "pointers": {
        "curr": "2"
@@ -1185,6 +1410,18 @@
        "key": 5
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 67
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:2"
+       }
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 4,
@@ -1200,9 +1437,7 @@
       "current": "2",
       "visited": [
        "0",
-       "1",
-       "2",
-       "3"
+       "1"
       ],
       "pointers": {
        "curr": "2"
@@ -1232,6 +1467,20 @@
        "key": 5
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 69
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:2",
+        "field": "in_mst"
+       },
+       "after": 1
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 4,
@@ -1248,8 +1497,7 @@
       "visited": [
        "0",
        "1",
-       "2",
-       "3"
+       "2"
       ],
       "pointers": {
        "curr": "4"
@@ -1278,6 +1526,18 @@
        "key": 5
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 77
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:4"
+       }
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 4,
@@ -1294,8 +1554,7 @@
       "visited": [
        "0",
        "1",
-       "2",
-       "3"
+       "2"
       ],
       "pointers": {
        "curr": "4"
@@ -1325,6 +1584,20 @@
        "key": 5
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 79
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:4",
+        "field": "in_mst"
+       },
+       "after": 1
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 4,
@@ -1342,7 +1615,6 @@
        "0",
        "1",
        "2",
-       "3",
        "4"
       ],
       "pointers": {
@@ -1371,6 +1643,18 @@
        "key": 5
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 89
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:3"
+       }
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 3,
@@ -1388,7 +1672,6 @@
        "0",
        "1",
        "2",
-       "3",
        "4"
       ],
       "pointers": {
@@ -1418,6 +1701,20 @@
        "key": 5
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 91
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:3",
+        "field": "in_mst"
+       },
+       "after": 1
+      }
+     ],
      "variables": {
       "n": 5,
       "v": 3,
@@ -1435,8 +1732,8 @@
        "0",
        "1",
        "2",
-       "3",
-       "4"
+       "4",
+       "3"
       ],
       "pointers": {
        "curr": "3"
@@ -1464,6 +1761,12 @@
        "key": 5
       }
      },
+     "events": [
+      {
+       "eventType": "solution_emit",
+       "after": 16
+      }
+     ],
      "variables": {}
     }
    ]
@@ -1610,7 +1913,17 @@
       "n": 3,
       "m": 3,
       "i": 1
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:1:0"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 4,
@@ -1644,7 +1957,17 @@
       "n": 3,
       "m": 3,
       "i": 2
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:2:0"
+       },
+       "before": 0,
+       "after": 2
+      }
+     ]
     },
     {
      "line": 4,
@@ -1682,7 +2005,17 @@
       "n": 3,
       "m": 3,
       "i": 3
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:3:0"
+       },
+       "before": 0,
+       "after": 3
+      }
+     ]
     },
     {
      "line": 6,
@@ -1725,7 +2058,17 @@
       "m": 3,
       "i": 3,
       "j": 1
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:0:1"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 6,
@@ -1772,7 +2115,17 @@
       "m": 3,
       "i": 3,
       "j": 2
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:0:2"
+       },
+       "before": 0,
+       "after": 2
+      }
+     ]
     },
     {
      "line": 6,
@@ -1823,7 +2176,17 @@
       "m": 3,
       "i": 3,
       "j": 3
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:0:3"
+       },
+       "before": 0,
+       "after": 3
+      }
+     ]
     },
     {
      "line": 9,
@@ -1878,7 +2241,17 @@
       "m": 3,
       "i": 1,
       "j": 2
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:1:2"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 9,
@@ -1937,7 +2310,17 @@
       "m": 3,
       "i": 1,
       "j": 3
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:1:3"
+       },
+       "before": 0,
+       "after": 2
+      }
+     ]
     },
     {
      "line": 9,
@@ -2000,7 +2383,17 @@
       "m": 3,
       "i": 2,
       "j": 1
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:2:1"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 9,
@@ -2067,7 +2460,17 @@
       "m": 3,
       "i": 2,
       "j": 2
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:2:2"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 9,
@@ -2138,7 +2541,17 @@
       "m": 3,
       "i": 2,
       "j": 3
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:2:3"
+       },
+       "before": 0,
+       "after": 2
+      }
+     ]
     },
     {
      "line": 9,
@@ -2213,7 +2626,17 @@
       "m": 3,
       "i": 3,
       "j": 1
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:3:1"
+       },
+       "before": 0,
+       "after": 2
+      }
+     ]
     },
     {
      "line": 9,
@@ -2292,7 +2715,17 @@
       "m": 3,
       "i": 3,
       "j": 2
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:3:2"
+       },
+       "before": 0,
+       "after": 2
+      }
+     ]
     },
     {
      "line": 9,
@@ -2375,7 +2808,17 @@
       "m": 3,
       "i": 3,
       "j": 3
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:3:3"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 9,
@@ -2567,7 +3010,17 @@
       "n": 4,
       "i": 1,
       "j": 1
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:1:1"
+       },
+       "before": 1,
+       "after": 2
+      }
+     ]
     },
     {
      "line": 4,
@@ -2611,7 +3064,44 @@
       "n": 4,
       "i": 1,
       "j": 2
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "semanticRole": "dp_recurrence_update",
+       "formula": {
+        "operator": "add",
+        "operands": [
+         {
+          "ref": "gridCell:0:2"
+         },
+         {
+          "ref": "gridCell:1:1"
+         }
+        ],
+        "text": "top + left"
+       },
+       "target": {
+        "entityId": "gridCell:1:2"
+       },
+       "before": 1,
+       "after": 3
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:0:2"
+       },
+       "after": 1
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:1:1"
+       },
+       "after": 2
+      }
+     ]
     },
     {
      "line": 4,
@@ -2659,7 +3149,44 @@
       "n": 4,
       "i": 1,
       "j": 3
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "semanticRole": "dp_recurrence_update",
+       "formula": {
+        "operator": "add",
+        "operands": [
+         {
+          "ref": "gridCell:0:3"
+         },
+         {
+          "ref": "gridCell:1:2"
+         }
+        ],
+        "text": "top + left"
+       },
+       "target": {
+        "entityId": "gridCell:1:3"
+       },
+       "before": 1,
+       "after": 4
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:0:3"
+       },
+       "after": 1
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:1:2"
+       },
+       "after": 3
+      }
+     ]
     },
     {
      "line": 4,
@@ -2711,7 +3238,44 @@
       "n": 4,
       "i": 2,
       "j": 1
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "semanticRole": "dp_recurrence_update",
+       "formula": {
+        "operator": "add",
+        "operands": [
+         {
+          "ref": "gridCell:1:1"
+         },
+         {
+          "ref": "gridCell:2:0"
+         }
+        ],
+        "text": "top + left"
+       },
+       "target": {
+        "entityId": "gridCell:2:1"
+       },
+       "before": 1,
+       "after": 3
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:1:1"
+       },
+       "after": 2
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:2:0"
+       },
+       "after": 1
+      }
+     ]
     },
     {
      "line": 4,
@@ -2767,7 +3331,44 @@
       "n": 4,
       "i": 2,
       "j": 2
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "semanticRole": "dp_recurrence_update",
+       "formula": {
+        "operator": "add",
+        "operands": [
+         {
+          "ref": "gridCell:1:2"
+         },
+         {
+          "ref": "gridCell:2:1"
+         }
+        ],
+        "text": "top + left"
+       },
+       "target": {
+        "entityId": "gridCell:2:2"
+       },
+       "before": 1,
+       "after": 6
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:1:2"
+       },
+       "after": 3
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:2:1"
+       },
+       "after": 3
+      }
+     ]
     },
     {
      "line": 4,
@@ -2827,7 +3428,44 @@
       "n": 4,
       "i": 2,
       "j": 3
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "semanticRole": "dp_recurrence_update",
+       "formula": {
+        "operator": "add",
+        "operands": [
+         {
+          "ref": "gridCell:1:3"
+         },
+         {
+          "ref": "gridCell:2:2"
+         }
+        ],
+        "text": "top + left"
+       },
+       "target": {
+        "entityId": "gridCell:2:3"
+       },
+       "before": 1,
+       "after": 10
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:1:3"
+       },
+       "after": 4
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:2:2"
+       },
+       "after": 6
+      }
+     ]
     },
     {
      "line": 4,
@@ -2966,7 +3604,7 @@
    },
    "steps": [
     {
-     "line": 4,
+     "line": 11,
      "explanation": "We run critical_connections(6, [[0,1],[1,2],[2,0],[1,3],[3,4],[4,5],[5,3]]) on this exact graph and watch the algorithm's own variables — the node being processed, the distance table, the frontier. Every value below was recorded from the real run; the picture can never disagree with the code.",
      "graph": {
       "current": null,
@@ -2976,7 +3614,7 @@
      "variables": {}
     },
     {
-     "line": 4,
+     "line": 11,
      "explanation": "Now 0 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 0's edges.",
      "graph": {
       "current": "0",
@@ -2986,13 +3624,168 @@
       }
      },
      "nodeState": {},
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 35
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:0"
+       }
+      }
+     ],
      "variables": {
-      "n": 6,
-      "v": 1
-     }
+      "parent": -1
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "active"
+      }
+     ]
     },
     {
-     "line": 4,
+     "line": 12,
+     "explanation": "low[0] gets its first value: 0 — it now rides under 0 on the drawing, and the algorithm will read it back later, so keep half an eye on it. disc[0] gets its first value: 0 — it now rides under 0 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "0",
+      "visited": [],
+      "pointers": {
+       "curr": "0"
+      }
+     },
+     "nodeState": {
+      "0": {
+       "low": 0,
+       "disc": 0
+      }
+     },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 36
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:0",
+        "field": "low"
+       },
+       "after": 0
+      },
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 36
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:0",
+        "field": "disc"
+       },
+       "after": 0
+      }
+     ],
+     "variables": {
+      "parent": -1
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "active"
+      }
+     ]
+    },
+    {
+     "line": 11,
      "explanation": "Now 1 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
      "graph": {
       "current": "1",
@@ -3003,14 +3796,198 @@
        "curr": "1"
       }
      },
-     "nodeState": {},
+     "nodeState": {
+      "0": {
+       "low": 0,
+       "disc": 0
+      }
+     },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 40
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:1"
+       }
+      }
+     ],
      "variables": {
-      "n": 6,
-      "v": 2
-     }
+      "parent": 0
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "active"
+      }
+     ]
     },
     {
-     "line": 4,
+     "line": 12,
+     "explanation": "low[1] gets its first value: 1 — it now rides under 1 on the drawing, and the algorithm will read it back later, so keep half an eye on it. disc[1] gets its first value: 1 — it now rides under 1 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
+     "graph": {
+      "current": "1",
+      "visited": [
+       "0"
+      ],
+      "pointers": {
+       "curr": "1"
+      }
+     },
+     "nodeState": {
+      "0": {
+       "low": 0,
+       "disc": 0
+      },
+      "1": {
+       "low": 1,
+       "disc": 1
+      }
+     },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 41
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:1",
+        "field": "low"
+       },
+       "after": 1
+      },
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 41
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:1",
+        "field": "disc"
+       },
+       "after": 1
+      }
+     ],
+     "variables": {
+      "parent": 0
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "active"
+      }
+     ]
+    },
+    {
+     "line": 11,
      "explanation": "Now 2 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 2's edges.",
      "graph": {
       "current": "2",
@@ -3022,188 +3999,6 @@
        "curr": "2"
       }
      },
-     "nodeState": {},
-     "variables": {
-      "n": 6,
-      "v": 0
-     }
-    },
-    {
-     "line": 4,
-     "explanation": "Now 1 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
-     "graph": {
-      "current": "1",
-      "visited": [
-       "0",
-       "1",
-       "2"
-      ],
-      "pointers": {
-       "curr": "1"
-      }
-     },
-     "nodeState": {},
-     "variables": {
-      "n": 6,
-      "v": 3
-     }
-    },
-    {
-     "line": 4,
-     "explanation": "Now 3 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 3's edges.",
-     "graph": {
-      "current": "3",
-      "visited": [
-       "0",
-       "1",
-       "2"
-      ],
-      "pointers": {
-       "curr": "3"
-      }
-     },
-     "nodeState": {},
-     "variables": {
-      "n": 6,
-      "v": 4
-     }
-    },
-    {
-     "line": 4,
-     "explanation": "Now 4 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 4's edges.",
-     "graph": {
-      "current": "4",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3"
-      ],
-      "pointers": {
-       "curr": "4"
-      }
-     },
-     "nodeState": {},
-     "variables": {
-      "n": 6,
-      "v": 5
-     }
-    },
-    {
-     "line": 4,
-     "explanation": "Now 5 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 5's edges.",
-     "graph": {
-      "current": "5",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3",
-       "4"
-      ],
-      "pointers": {
-       "curr": "5"
-      }
-     },
-     "nodeState": {},
-     "variables": {
-      "n": 6,
-      "v": 3
-     }
-    },
-    {
-     "line": 11,
-     "explanation": "Now 0 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 0's edges.",
-     "graph": {
-      "current": "0",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3",
-       "4",
-       "5"
-      ],
-      "pointers": {
-       "curr": "0"
-      }
-     },
-     "nodeState": {},
-     "variables": {
-      "parent": -1
-     }
-    },
-    {
-     "line": 12,
-     "explanation": "low[0] gets its first value: 0 — it now rides under 0 on the drawing, and the algorithm will read it back later, so keep half an eye on it. disc[0] gets its first value: 0 — it now rides under 0 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
-     "graph": {
-      "current": "0",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3",
-       "4",
-       "5"
-      ],
-      "pointers": {
-       "curr": "0"
-      }
-     },
-     "nodeState": {
-      "0": {
-       "low": 0,
-       "disc": 0
-      }
-     },
-     "variables": {
-      "parent": -1
-     }
-    },
-    {
-     "line": 11,
-     "explanation": "Now 1 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 1's edges.",
-     "graph": {
-      "current": "1",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3",
-       "4",
-       "5"
-      ],
-      "pointers": {
-       "curr": "1"
-      }
-     },
-     "nodeState": {
-      "0": {
-       "low": 0,
-       "disc": 0
-      }
-     },
-     "variables": {
-      "parent": 0
-     }
-    },
-    {
-     "line": 12,
-     "explanation": "low[1] gets its first value: 1 — it now rides under 1 on the drawing, and the algorithm will read it back later, so keep half an eye on it. disc[1] gets its first value: 1 — it now rides under 1 on the drawing, and the algorithm will read it back later, so keep half an eye on it.",
-     "graph": {
-      "current": "1",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3",
-       "4",
-       "5"
-      ],
-      "pointers": {
-       "curr": "1"
-      }
-     },
      "nodeState": {
       "0": {
        "low": 0,
@@ -3214,40 +4009,88 @@
        "disc": 1
       }
      },
-     "variables": {
-      "parent": 0
-     }
-    },
-    {
-     "line": 11,
-     "explanation": "Now 2 is taken up next and becomes the node under the pointer. Whatever we learn in this moment, we learn by looking along 2's edges.",
-     "graph": {
-      "current": "2",
-      "visited": [
-       "0",
-       "1",
-       "2",
-       "3",
-       "4",
-       "5"
-      ],
-      "pointers": {
-       "curr": "2"
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 48
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:2"
+       }
       }
-     },
-     "nodeState": {
-      "0": {
-       "low": 0,
-       "disc": 0
-      },
-      "1": {
-       "low": 1,
-       "disc": 1
-      }
-     },
+     ],
      "variables": {
       "parent": 1
-     }
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f3",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 2,
+        "parent": 1
+       },
+       "status": "active"
+      }
+     ]
     },
     {
      "line": 12,
@@ -3256,11 +4099,7 @@
       "current": "2",
       "visited": [
        "0",
-       "1",
-       "2",
-       "3",
-       "4",
-       "5"
+       "1"
       ],
       "pointers": {
        "curr": "2"
@@ -3280,9 +4119,102 @@
        "disc": 2
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 49
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:2",
+        "field": "low"
+       },
+       "after": 2
+      },
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 49
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:2",
+        "field": "disc"
+       },
+       "after": 2
+      }
+     ],
      "variables": {
       "parent": 1
-     }
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f3",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 2,
+        "parent": 1
+       },
+       "status": "active"
+      }
+     ]
     },
     {
      "line": 13,
@@ -3291,11 +4223,7 @@
       "current": "2",
       "visited": [
        "0",
-       "1",
-       "2",
-       "3",
-       "4",
-       "5"
+       "1"
       ],
       "pointers": {
        "curr": "2"
@@ -3315,10 +4243,92 @@
        "disc": 2
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 57
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:2",
+        "field": "low"
+       },
+       "before": 2,
+       "after": 0
+      }
+     ],
      "variables": {
       "parent": 1,
       "v": 0
-     }
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f3",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 2,
+        "parent": 1
+       },
+       "status": "active"
+      }
+     ]
     },
     {
      "line": 16,
@@ -3328,10 +4338,7 @@
       "visited": [
        "0",
        "1",
-       "2",
-       "3",
-       "4",
-       "5"
+       "2"
       ],
       "pointers": {
        "curr": "1"
@@ -3351,9 +4358,89 @@
        "disc": 2
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 58
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:1"
+       }
+      }
+     ],
      "variables": {
       "parent": 0,
       "v": 2
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f3",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 2,
+       "parent": 1
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3364,10 +4451,7 @@
       "visited": [
        "0",
        "1",
-       "2",
-       "3",
-       "4",
-       "5"
+       "2"
       ],
       "pointers": {
        "curr": "1"
@@ -3387,9 +4471,92 @@
        "disc": 2
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 59
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:1",
+        "field": "low"
+       },
+       "before": 1,
+       "after": 0
+      }
+     ],
      "variables": {
       "parent": 0,
       "v": 2
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f3",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 2,
+       "parent": 1
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3400,10 +4567,7 @@
       "visited": [
        "0",
        "1",
-       "2",
-       "3",
-       "4",
-       "5"
+       "2"
       ],
       "pointers": {
        "curr": "3"
@@ -3423,8 +4587,97 @@
        "disc": 2
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 63
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:3"
+       }
+      }
+     ],
      "variables": {
       "parent": 1
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f4",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 3,
+        "parent": 1
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f3",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 2,
+       "parent": 1
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3435,10 +4688,7 @@
       "visited": [
        "0",
        "1",
-       "2",
-       "3",
-       "4",
-       "5"
+       "2"
       ],
       "pointers": {
        "curr": "3"
@@ -3462,8 +4712,111 @@
        "disc": 3
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 64
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:3",
+        "field": "low"
+       },
+       "after": 3
+      },
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 64
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:3",
+        "field": "disc"
+       },
+       "after": 3
+      }
+     ],
      "variables": {
       "parent": 1
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f4",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 3,
+        "parent": 1
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f3",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 2,
+       "parent": 1
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3475,9 +4828,7 @@
        "0",
        "1",
        "2",
-       "3",
-       "4",
-       "5"
+       "3"
       ],
       "pointers": {
        "curr": "4"
@@ -3501,8 +4852,106 @@
        "disc": 3
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 71
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:4"
+       }
+      }
+     ],
      "variables": {
       "parent": 3
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f4",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 3,
+        "parent": 1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f5",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 4,
+        "parent": 3
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f3",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 2,
+       "parent": 1
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3514,9 +4963,7 @@
        "0",
        "1",
        "2",
-       "3",
-       "4",
-       "5"
+       "3"
       ],
       "pointers": {
        "curr": "4"
@@ -3544,8 +4991,120 @@
        "disc": 4
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 72
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:4",
+        "field": "low"
+       },
+       "after": 4
+      },
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 72
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:4",
+        "field": "disc"
+       },
+       "after": 4
+      }
+     ],
      "variables": {
       "parent": 3
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f4",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 3,
+        "parent": 1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f5",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 4,
+        "parent": 3
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f3",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 2,
+       "parent": 1
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3558,8 +5117,7 @@
        "1",
        "2",
        "3",
-       "4",
-       "5"
+       "4"
       ],
       "pointers": {
        "curr": "5"
@@ -3587,8 +5145,115 @@
        "disc": 4
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 79
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:5"
+       }
+      }
+     ],
      "variables": {
       "parent": 4
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f4",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 3,
+        "parent": 1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f5",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 4,
+        "parent": 3
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f6",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 5,
+        "parent": 4
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f3",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 2,
+       "parent": 1
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3601,8 +5266,7 @@
        "1",
        "2",
        "3",
-       "4",
-       "5"
+       "4"
       ],
       "pointers": {
        "curr": "5"
@@ -3634,8 +5298,129 @@
        "disc": 5
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 80
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:5",
+        "field": "low"
+       },
+       "after": 5
+      },
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 80
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:5",
+        "field": "disc"
+       },
+       "after": 5
+      }
+     ],
      "variables": {
       "parent": 4
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f4",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 3,
+        "parent": 1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f5",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 4,
+        "parent": 3
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f6",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 5,
+        "parent": 4
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f3",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 2,
+       "parent": 1
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3648,8 +5433,7 @@
        "1",
        "2",
        "3",
-       "4",
-       "5"
+       "4"
       ],
       "pointers": {
        "curr": "5"
@@ -3681,9 +5465,119 @@
        "disc": 5
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 88
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:5",
+        "field": "low"
+       },
+       "before": 5,
+       "after": 3
+      }
+     ],
      "variables": {
       "parent": 4,
       "v": 3
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f4",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 3,
+        "parent": 1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f5",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 4,
+        "parent": 3
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f6",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 5,
+        "parent": 4
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f3",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 2,
+       "parent": 1
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3729,9 +5623,107 @@
        "disc": 5
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 89
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:4"
+       }
+      }
+     ],
      "variables": {
       "parent": 3,
       "v": 5
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f4",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 3,
+        "parent": 1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f5",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 4,
+        "parent": 3
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f6",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 5,
+       "parent": 4
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3777,9 +5769,110 @@
        "disc": 5
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 90
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:4",
+        "field": "low"
+       },
+       "before": 4,
+       "after": 3
+      }
+     ],
      "variables": {
       "parent": 3,
       "v": 5
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f4",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 3,
+        "parent": 1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f5",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 4,
+        "parent": 3
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f6",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 5,
+       "parent": 4
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3825,9 +5918,98 @@
        "disc": 5
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 92
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:3"
+       }
+      }
+     ],
      "variables": {
       "parent": 1,
       "v": 4
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f4",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 3,
+        "parent": 1
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f5",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 4,
+       "parent": 3
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3873,9 +6055,89 @@
        "disc": 5
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 99
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:1"
+       }
+      }
+     ],
      "variables": {
       "parent": 0,
       "v": 3
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f2",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 1,
+        "parent": 0
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f4",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 3,
+       "parent": 1
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3921,9 +6183,80 @@
        "disc": 5
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 103
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:0"
+       }
+      }
+     ],
      "variables": {
       "parent": -1,
       "v": 1
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "waiting"
+      },
+      {
+       "frameId": "f1",
+       "functionName": "dfs",
+       "arguments": {
+        "u": 0,
+        "parent": -1
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f2",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 1,
+       "parent": 0
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -3969,9 +6302,71 @@
        "disc": 5
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 110
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:5"
+       }
+      }
+     ],
      "variables": {
       "n": 6,
       "v": 3
+     },
+     "frames": [
+      {
+       "frameId": "f0",
+       "functionName": "critical_connections",
+       "arguments": {
+        "n": 6,
+        "connections": [
+         [
+          0,
+          1
+         ],
+         [
+          1,
+          2
+         ],
+         [
+          2,
+          0
+         ],
+         [
+          1,
+          3
+         ],
+         [
+          3,
+          4
+         ],
+         [
+          4,
+          5
+         ],
+         [
+          5,
+          3
+         ]
+        ]
+       },
+       "status": "active"
+      }
+     ],
+     "lastReturn": {
+      "frameId": "f1",
+      "functionName": "dfs",
+      "arguments": {
+       "u": 0,
+       "parent": -1
+      },
+      "status": "returned",
+      "returnValue": null
      }
     },
     {
@@ -4017,6 +6412,17 @@
        "disc": 5
       }
      },
+     "events": [
+      {
+       "eventType": "solution_emit",
+       "after": [
+        [
+         1,
+         3
+        ]
+       ]
+      }
+     ],
      "variables": {}
     }
    ]
@@ -4323,7 +6729,17 @@
      },
      "variables": {
       "n": 8
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:0:0"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 5,
@@ -4353,7 +6769,17 @@
      },
      "variables": {
       "n": 8
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:0:1"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 5,
@@ -4388,7 +6814,17 @@
      "variables": {
       "n": 8,
       "i": 2
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:0:2"
+       },
+       "before": 0,
+       "after": 2
+      }
+     ]
     },
     {
      "line": 5,
@@ -4427,7 +6863,17 @@
      "variables": {
       "n": 8,
       "i": 3
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:0:3"
+       },
+       "before": 0,
+       "after": 3
+      }
+     ]
     },
     {
      "line": 5,
@@ -4470,7 +6916,17 @@
      "variables": {
       "n": 8,
       "i": 4
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:0:4"
+       },
+       "before": 0,
+       "after": 5
+      }
+     ]
     },
     {
      "line": 5,
@@ -4517,7 +6973,17 @@
      "variables": {
       "n": 8,
       "i": 5
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:0:5"
+       },
+       "before": 0,
+       "after": 8
+      }
+     ]
     },
     {
      "line": 5,
@@ -4568,7 +7034,17 @@
      "variables": {
       "n": 8,
       "i": 6
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:0:6"
+       },
+       "before": 0,
+       "after": 13
+      }
+     ]
     },
     {
      "line": 5,
@@ -4623,7 +7099,17 @@
      "variables": {
       "n": 8,
       "i": 7
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:0:7"
+       },
+       "before": 0,
+       "after": 21
+      }
+     ]
     },
     {
      "line": 5,
@@ -4682,7 +7168,17 @@
      "variables": {
       "n": 8,
       "i": 8
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:0:8"
+       },
+       "before": 0,
+       "after": 34
+      }
+     ]
     },
     {
      "line": 5,
@@ -5004,19 +7500,19 @@
     "list": {
      "nodes": [
       {
-       "id": "4341355648"
+       "id": "4377941120"
       },
       {
-       "id": "4341354736"
+       "id": "4377940208"
       },
       {
-       "id": "4341010576"
+       "id": "4377596048"
       },
       {
-       "id": "4341021456"
+       "id": "4377606928"
       },
       {
-       "id": "4341516672"
+       "id": "4378134912"
       }
      ]
     }
@@ -5037,33 +7533,33 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341021456"
+        "next": "4377606928"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648"
+       "head": "4377941120"
       }
      },
      "variables": {}
@@ -5074,33 +7570,33 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341021456"
+        "next": "4377606928"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
+       "head": "4377941120",
        "prev": null
       }
      },
@@ -5112,34 +7608,34 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341021456"
+        "next": "4377606928"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341355648",
+       "head": "4377941120",
+       "curr": "4377941120",
        "prev": null
       }
      },
@@ -5151,35 +7647,35 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341021456"
+        "next": "4377606928"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341355648",
-       "nxt": "4341354736",
+       "head": "4377941120",
+       "curr": "4377941120",
+       "nxt": "4377940208",
        "prev": null
       }
      },
@@ -5191,36 +7687,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null,
         "rewired": true
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341021456"
+        "next": "4377606928"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341355648",
-       "nxt": "4341354736",
+       "head": "4377941120",
+       "curr": "4377941120",
+       "nxt": "4377940208",
        "prev": null
       }
      },
@@ -5232,36 +7728,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341021456"
+        "next": "4377606928"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341355648",
-       "nxt": "4341354736",
-       "prev": "4341355648"
+       "head": "4377941120",
+       "curr": "4377941120",
+       "nxt": "4377940208",
+       "prev": "4377941120"
       }
      },
      "variables": {}
@@ -5272,36 +7768,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341021456"
+        "next": "4377606928"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341354736",
-       "nxt": "4341354736",
-       "prev": "4341355648"
+       "head": "4377941120",
+       "curr": "4377940208",
+       "nxt": "4377940208",
+       "prev": "4377941120"
       }
      },
      "variables": {}
@@ -5312,36 +7808,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341021456"
+        "next": "4377606928"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341354736",
-       "nxt": "4341010576",
-       "prev": "4341355648"
+       "head": "4377941120",
+       "curr": "4377940208",
+       "nxt": "4377596048",
+       "prev": "4377941120"
       }
      },
      "variables": {}
@@ -5352,37 +7848,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648",
+        "next": "4377941120",
         "rewired": true
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341021456"
+        "next": "4377606928"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341354736",
-       "nxt": "4341010576",
-       "prev": "4341355648"
+       "head": "4377941120",
+       "curr": "4377940208",
+       "nxt": "4377596048",
+       "prev": "4377941120"
       }
      },
      "variables": {}
@@ -5393,36 +7889,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341021456"
+        "next": "4377606928"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341354736",
-       "nxt": "4341010576",
-       "prev": "4341354736"
+       "head": "4377941120",
+       "curr": "4377940208",
+       "nxt": "4377596048",
+       "prev": "4377940208"
       }
      },
      "variables": {}
@@ -5433,36 +7929,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341021456"
+        "next": "4377606928"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341010576",
-       "nxt": "4341010576",
-       "prev": "4341354736"
+       "head": "4377941120",
+       "curr": "4377596048",
+       "nxt": "4377596048",
+       "prev": "4377940208"
       }
      },
      "variables": {}
@@ -5473,36 +7969,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341021456"
+        "next": "4377606928"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341010576",
-       "nxt": "4341021456",
-       "prev": "4341354736"
+       "head": "4377941120",
+       "curr": "4377596048",
+       "nxt": "4377606928",
+       "prev": "4377940208"
       }
      },
      "variables": {}
@@ -5513,37 +8009,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341354736",
+        "next": "4377940208",
         "rewired": true
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341010576",
-       "nxt": "4341021456",
-       "prev": "4341354736"
+       "head": "4377941120",
+       "curr": "4377596048",
+       "nxt": "4377606928",
+       "prev": "4377940208"
       }
      },
      "variables": {}
@@ -5554,36 +8050,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341010576",
-       "nxt": "4341021456",
-       "prev": "4341010576"
+       "head": "4377941120",
+       "curr": "4377596048",
+       "nxt": "4377606928",
+       "prev": "4377596048"
       }
      },
      "variables": {}
@@ -5594,36 +8090,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341021456",
-       "nxt": "4341021456",
-       "prev": "4341010576"
+       "head": "4377941120",
+       "curr": "4377606928",
+       "nxt": "4377606928",
+       "prev": "4377596048"
       }
      },
      "variables": {}
@@ -5634,36 +8130,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341516672"
+        "next": "4378134912"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341021456",
-       "nxt": "4341516672",
-       "prev": "4341010576"
+       "head": "4377941120",
+       "curr": "4377606928",
+       "nxt": "4378134912",
+       "prev": "4377596048"
       }
      },
      "variables": {}
@@ -5674,37 +8170,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341010576",
+        "next": "4377596048",
         "rewired": true
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341021456",
-       "nxt": "4341516672",
-       "prev": "4341010576"
+       "head": "4377941120",
+       "curr": "4377606928",
+       "nxt": "4378134912",
+       "prev": "4377596048"
       }
      },
      "variables": {}
@@ -5715,36 +8211,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341021456",
-       "nxt": "4341516672",
-       "prev": "4341021456"
+       "head": "4377941120",
+       "curr": "4377606928",
+       "nxt": "4378134912",
+       "prev": "4377606928"
       }
      },
      "variables": {}
@@ -5755,36 +8251,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341516672",
-       "nxt": "4341516672",
-       "prev": "4341021456"
+       "head": "4377941120",
+       "curr": "4378134912",
+       "nxt": "4378134912",
+       "prev": "4377606928"
       }
      },
      "variables": {}
@@ -5795,36 +8291,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
         "next": null
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341516672",
+       "head": "4377941120",
+       "curr": "4378134912",
        "nxt": null,
-       "prev": "4341021456"
+       "prev": "4377606928"
       }
      },
      "variables": {}
@@ -5835,37 +8331,37 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
-        "next": "4341021456",
+        "next": "4377606928",
         "rewired": true
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341516672",
+       "head": "4377941120",
+       "curr": "4378134912",
        "nxt": null,
-       "prev": "4341021456"
+       "prev": "4377606928"
       }
      },
      "variables": {}
@@ -5876,36 +8372,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
-        "next": "4341021456"
+        "next": "4377606928"
        }
       ],
       "pointers": {
-       "head": "4341355648",
-       "curr": "4341516672",
+       "head": "4377941120",
+       "curr": "4378134912",
        "nxt": null,
-       "prev": "4341516672"
+       "prev": "4378134912"
       }
      },
      "variables": {}
@@ -5916,36 +8412,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
-        "next": "4341021456"
+        "next": "4377606928"
        }
       ],
       "pointers": {
-       "head": "4341355648",
+       "head": "4377941120",
        "curr": null,
        "nxt": null,
-       "prev": "4341516672"
+       "prev": "4378134912"
       }
      },
      "variables": {}
@@ -5956,36 +8452,36 @@
      "list": {
       "nodes": [
        {
-        "id": "4341355648",
+        "id": "4377941120",
         "value": 1,
         "next": null
        },
        {
-        "id": "4341354736",
+        "id": "4377940208",
         "value": 2,
-        "next": "4341355648"
+        "next": "4377941120"
        },
        {
-        "id": "4341010576",
+        "id": "4377596048",
         "value": 3,
-        "next": "4341354736"
+        "next": "4377940208"
        },
        {
-        "id": "4341021456",
+        "id": "4377606928",
         "value": 4,
-        "next": "4341010576"
+        "next": "4377596048"
        },
        {
-        "id": "4341516672",
+        "id": "4378134912",
         "value": 5,
-        "next": "4341021456"
+        "next": "4377606928"
        }
       ],
       "pointers": {
-       "head": "4341355648",
+       "head": "4377941120",
        "curr": null,
        "nxt": null,
-       "prev": "4341516672"
+       "prev": "4378134912"
       }
      },
      "variables": {}
@@ -11813,6 +14309,41 @@
       "visited": [],
       "pointers": {}
      },
+     "events": [
+      {
+       "eventType": "union",
+       "provenance": {
+        "eventIndex": 1
+       },
+       "target": {
+        "entityId": "graphNode:0",
+        "field": "parent"
+       },
+       "after": 0
+      },
+      {
+       "eventType": "union",
+       "provenance": {
+        "eventIndex": 1
+       },
+       "target": {
+        "entityId": "graphNode:1",
+        "field": "parent"
+       },
+       "after": 1
+      },
+      {
+       "eventType": "union",
+       "provenance": {
+        "eventIndex": 1
+       },
+       "target": {
+        "entityId": "graphNode:2",
+        "field": "parent"
+       },
+       "after": 2
+      }
+     ],
      "variables": {
       "n": 5
      }
@@ -11827,6 +14358,18 @@
        "curr": "0"
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 4
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:0"
+       }
+      }
+     ],
      "variables": {}
     },
     {
@@ -11841,6 +14384,18 @@
        "curr": "1"
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 6
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:1"
+       }
+      }
+     ],
      "variables": {}
     },
     {
@@ -11855,6 +14410,20 @@
        "curr": "1"
       }
      },
+     "events": [
+      {
+       "eventType": "union",
+       "provenance": {
+        "eventIndex": 10
+       },
+       "target": {
+        "entityId": "graphNode:0",
+        "field": "parent"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ],
      "variables": {
       "n": 5,
       "count": 5,
@@ -11877,6 +14446,18 @@
        "curr": "2"
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 15
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:2"
+       }
+      }
+     ],
      "variables": {}
     },
     {
@@ -11892,6 +14473,20 @@
        "curr": "2"
       }
      },
+     "events": [
+      {
+       "eventType": "union",
+       "provenance": {
+        "eventIndex": 19
+       },
+       "target": {
+        "entityId": "graphNode:1",
+        "field": "parent"
+       },
+       "before": 1,
+       "after": 2
+      }
+     ],
      "variables": {
       "n": 5,
       "count": 4,
@@ -11915,6 +14510,18 @@
        "curr": "3"
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 22
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:3"
+       }
+      }
+     ],
      "variables": {}
     },
     {
@@ -11932,6 +14539,18 @@
        "curr": "4"
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 24
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:4"
+       }
+      }
+     ],
      "variables": {}
     },
     {
@@ -11949,6 +14568,20 @@
        "curr": "4"
       }
      },
+     "events": [
+      {
+       "eventType": "union",
+       "provenance": {
+        "eventIndex": 28
+       },
+       "target": {
+        "entityId": "graphNode:3",
+        "field": "parent"
+       },
+       "before": 3,
+       "after": 4
+      }
+     ],
      "variables": {
       "n": 5,
       "count": 3,
@@ -11974,6 +14607,12 @@
        "curr": "4"
       }
      },
+     "events": [
+      {
+       "eventType": "solution_emit",
+       "after": 2
+      }
+     ],
      "variables": {}
     }
    ]
@@ -12064,6 +14703,44 @@
       "C": "inf",
       "D": "inf"
      },
+     "events": [
+      {
+       "eventType": "relax",
+       "provenance": {
+        "eventIndex": 5
+       },
+       "semanticRole": "first_discovery",
+       "target": {
+        "entityId": "graphNode:A",
+        "field": "dist"
+       },
+       "after": "inf"
+      },
+      {
+       "eventType": "relax",
+       "provenance": {
+        "eventIndex": 5
+       },
+       "semanticRole": "first_discovery",
+       "target": {
+        "entityId": "graphNode:B",
+        "field": "dist"
+       },
+       "after": "inf"
+      },
+      {
+       "eventType": "relax",
+       "provenance": {
+        "eventIndex": 5
+       },
+       "semanticRole": "first_discovery",
+       "target": {
+        "entityId": "graphNode:C",
+        "field": "dist"
+       },
+       "after": "inf"
+      }
+     ],
      "variables": {
       "src": "A"
      }
@@ -12083,6 +14760,21 @@
       "C": "inf",
       "D": "inf"
      },
+     "events": [
+      {
+       "eventType": "relax",
+       "provenance": {
+        "eventIndex": 6
+       },
+       "semanticRole": "improvement",
+       "target": {
+        "entityId": "graphNode:A",
+        "field": "dist"
+       },
+       "before": "inf",
+       "after": 0
+      }
+     ],
      "variables": {
       "src": "A"
      }
@@ -12105,6 +14797,20 @@
       "C": "inf",
       "D": "inf"
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 7
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": [
+        "0:A"
+       ]
+      }
+     ],
      "variables": {
       "src": "A"
      }
@@ -12127,6 +14833,18 @@
       "C": "inf",
       "D": "inf"
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 9
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:A"
+       }
+      }
+     ],
      "variables": {
       "src": "A",
       "d": 0
@@ -12154,6 +14872,21 @@
       "C": "inf",
       "D": "inf"
      },
+     "events": [
+      {
+       "eventType": "relax",
+       "provenance": {
+        "eventIndex": 13
+       },
+       "semanticRole": "improvement",
+       "target": {
+        "entityId": "graphNode:B",
+        "field": "dist"
+       },
+       "before": "inf",
+       "after": 4
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "B",
@@ -12181,6 +14914,20 @@
       "C": "inf",
       "D": "inf"
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 14
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": [
+        "4:B"
+       ]
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "B",
@@ -12212,6 +14959,21 @@
       "C": 1,
       "D": "inf"
      },
+     "events": [
+      {
+       "eventType": "relax",
+       "provenance": {
+        "eventIndex": 17
+       },
+       "semanticRole": "improvement",
+       "target": {
+        "entityId": "graphNode:C",
+        "field": "dist"
+       },
+       "before": "inf",
+       "after": 1
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "C",
@@ -12240,6 +15002,21 @@
       "C": 1,
       "D": "inf"
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 18
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": [
+        "1:C",
+        "4:B"
+       ]
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "C",
@@ -12269,6 +15046,18 @@
       "C": 1,
       "D": "inf"
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 21
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:C"
+       }
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "C",
@@ -12302,6 +15091,21 @@
       "C": 1,
       "D": "inf"
      },
+     "events": [
+      {
+       "eventType": "relax",
+       "provenance": {
+        "eventIndex": 25
+       },
+       "semanticRole": "improvement",
+       "target": {
+        "entityId": "graphNode:B",
+        "field": "dist"
+       },
+       "before": 4,
+       "after": 3
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "B",
@@ -12332,6 +15136,21 @@
       "C": 1,
       "D": "inf"
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 26
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": [
+        "3:B",
+        "4:B"
+       ]
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "B",
@@ -12366,6 +15185,21 @@
       "C": 1,
       "D": 6
      },
+     "events": [
+      {
+       "eventType": "relax",
+       "provenance": {
+        "eventIndex": 29
+       },
+       "semanticRole": "improvement",
+       "target": {
+        "entityId": "graphNode:D",
+        "field": "dist"
+       },
+       "before": "inf",
+       "after": 6
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "D",
@@ -12397,6 +15231,22 @@
       "C": 1,
       "D": 6
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 30
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": [
+        "3:B",
+        "4:B",
+        "6:D"
+       ]
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "D",
@@ -12428,6 +15278,18 @@
       "C": 1,
       "D": 6
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 33
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:B"
+       }
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "D",
@@ -12463,6 +15325,21 @@
       "C": 1,
       "D": 4
      },
+     "events": [
+      {
+       "eventType": "relax",
+       "provenance": {
+        "eventIndex": 37
+       },
+       "semanticRole": "improvement",
+       "target": {
+        "entityId": "graphNode:D",
+        "field": "dist"
+       },
+       "before": 6,
+       "after": 4
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "D",
@@ -12495,6 +15372,22 @@
       "C": 1,
       "D": 4
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 38
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": [
+        "4:B",
+        "4:D",
+        "6:D"
+       ]
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "D",
@@ -12526,6 +15419,21 @@
       "C": 1,
       "D": 4
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 41
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": [
+        "4:D",
+        "6:D"
+       ]
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "D",
@@ -12557,6 +15465,18 @@
       "C": 1,
       "D": 4
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 45
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:D"
+       }
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "D",
@@ -12586,6 +15506,18 @@
       "C": 1,
       "D": 4
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 49
+       },
+       "target": {
+        "entityId": "collection:pq"
+       },
+       "after": []
+      }
+     ],
      "variables": {
       "src": "A",
       "v": "D",
@@ -12615,6 +15547,17 @@
       "C": 1,
       "D": 4
      },
+     "events": [
+      {
+       "eventType": "solution_emit",
+       "after": {
+        "A": 0,
+        "B": 3,
+        "C": 1,
+        "D": 4
+       }
+      }
+     ],
      "variables": {}
     }
    ]
@@ -12809,7 +15752,34 @@
       "n": 5,
       "i": 1,
       "j": 1
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "semanticRole": "dp_recurrence_update",
+       "formula": {
+        "operator": "add_one",
+        "operands": [
+         {
+          "ref": "gridCell:0:0"
+         }
+        ],
+        "text": "diagonal + 1"
+       },
+       "target": {
+        "entityId": "gridCell:1:1"
+       },
+       "before": 0,
+       "after": 1
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:0:0"
+       },
+       "after": 0
+      }
+     ]
     },
     {
      "line": 5,
@@ -12844,7 +15814,17 @@
       "n": 5,
       "i": 1,
       "j": 2
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:1:2"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 5,
@@ -12883,7 +15863,17 @@
       "n": 5,
       "i": 1,
       "j": 3
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:1:3"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 5,
@@ -12926,7 +15916,17 @@
       "n": 5,
       "i": 1,
       "j": 4
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:1:4"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 5,
@@ -12973,7 +15973,17 @@
       "n": 5,
       "i": 1,
       "j": 5
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:1:5"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 5,
@@ -13024,7 +16034,17 @@
       "n": 5,
       "i": 2,
       "j": 1
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:2:1"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 5,
@@ -13090,7 +16110,44 @@
       "n": 5,
       "i": 2,
       "j": 2
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "semanticRole": "dp_recurrence_update",
+       "formula": {
+        "operator": "max",
+        "operands": [
+         {
+          "ref": "gridCell:1:2"
+         },
+         {
+          "ref": "gridCell:2:1"
+         }
+        ],
+        "text": "max(top, left)"
+       },
+       "target": {
+        "entityId": "gridCell:2:2"
+       },
+       "before": 0,
+       "after": 1
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:1:2"
+       },
+       "after": 1
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:2:1"
+       },
+       "after": 1
+      }
+     ]
     },
     {
      "line": 5,
@@ -13149,7 +16206,17 @@
       "n": 5,
       "i": 2,
       "j": 3
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:2:3"
+       },
+       "before": 0,
+       "after": 2
+      }
+     ]
     },
     {
      "line": 5,
@@ -13212,7 +16279,17 @@
       "n": 5,
       "i": 2,
       "j": 4
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:2:4"
+       },
+       "before": 0,
+       "after": 2
+      }
+     ]
     },
     {
      "line": 5,
@@ -13279,7 +16356,17 @@
       "n": 5,
       "i": 2,
       "j": 5
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:2:5"
+       },
+       "before": 0,
+       "after": 2
+      }
+     ]
     },
     {
      "line": 5,
@@ -13350,7 +16437,17 @@
       "n": 5,
       "i": 3,
       "j": 1
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:3:1"
+       },
+       "before": 0,
+       "after": 1
+      }
+     ]
     },
     {
      "line": 5,
@@ -13436,7 +16533,44 @@
       "n": 5,
       "i": 3,
       "j": 2
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "semanticRole": "dp_recurrence_update",
+       "formula": {
+        "operator": "max",
+        "operands": [
+         {
+          "ref": "gridCell:2:2"
+         },
+         {
+          "ref": "gridCell:3:1"
+         }
+        ],
+        "text": "max(top, left)"
+       },
+       "target": {
+        "entityId": "gridCell:3:2"
+       },
+       "before": 0,
+       "after": 1
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:2:2"
+       },
+       "after": 1
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:3:1"
+       },
+       "after": 1
+      }
+     ]
     },
     {
      "line": 5,
@@ -13515,7 +16649,17 @@
       "n": 5,
       "i": 3,
       "j": 3
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "target": {
+        "entityId": "gridCell:3:3"
+       },
+       "before": 0,
+       "after": 2
+      }
+     ]
     },
     {
      "line": 5,
@@ -13609,7 +16753,44 @@
       "n": 5,
       "i": 3,
       "j": 4
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "semanticRole": "dp_recurrence_update",
+       "formula": {
+        "operator": "max",
+        "operands": [
+         {
+          "ref": "gridCell:2:4"
+         },
+         {
+          "ref": "gridCell:3:3"
+         }
+        ],
+        "text": "max(top, left)"
+       },
+       "target": {
+        "entityId": "gridCell:3:4"
+       },
+       "before": 0,
+       "after": 2
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:2:4"
+       },
+       "after": 2
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:3:3"
+       },
+       "after": 2
+      }
+     ]
     },
     {
      "line": 5,
@@ -13703,7 +16884,34 @@
       "n": 5,
       "i": 3,
       "j": 5
-     }
+     },
+     "events": [
+      {
+       "eventType": "cell_update",
+       "semanticRole": "dp_recurrence_update",
+       "formula": {
+        "operator": "add_one",
+        "operands": [
+         {
+          "ref": "gridCell:2:4"
+         }
+        ],
+        "text": "diagonal + 1"
+       },
+       "target": {
+        "entityId": "gridCell:3:5"
+       },
+       "before": 0,
+       "after": 3
+      },
+      {
+       "eventType": "dependency_read",
+       "target": {
+        "entityId": "gridCell:2:4"
+       },
+       "after": 2
+      }
+     ]
     },
     {
      "line": 5,
@@ -15831,6 +19039,20 @@
        "dist": 0
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 2
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:0",
+        "field": "dist"
+       },
+       "after": 0
+      }
+     ],
      "variables": {
       "src": 0,
       "n": 4
@@ -15852,6 +19074,20 @@
        "dist": 0
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 3
+       },
+       "target": {
+        "entityId": "collection:queue"
+       },
+       "after": [
+        "0"
+       ]
+      }
+     ],
      "variables": {
       "src": 0,
       "n": 4
@@ -15873,6 +19109,18 @@
        "dist": 0
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 5
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:0"
+       }
+      }
+     ],
      "variables": {
       "src": 0,
       "n": 4
@@ -15897,6 +19145,20 @@
        "dist": 0
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 8
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:1",
+        "field": "dist"
+       },
+       "after": 0
+      }
+     ],
      "variables": {
       "src": 0,
       "n": 4,
@@ -15925,6 +19187,20 @@
        "dist": 0
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 9
+       },
+       "target": {
+        "entityId": "collection:queue"
+       },
+       "after": [
+        "1"
+       ]
+      }
+     ],
      "variables": {
       "src": 0,
       "n": 4,
@@ -15956,6 +19232,20 @@
        "dist": 1
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 12
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:2",
+        "field": "dist"
+       },
+       "after": 1
+      }
+     ],
      "variables": {
       "src": 0,
       "n": 4,
@@ -15988,6 +19278,21 @@
        "dist": 1
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 14
+       },
+       "target": {
+        "entityId": "collection:queue"
+       },
+       "after": [
+        "1",
+        "2"
+       ]
+      }
+     ],
      "variables": {
       "src": 0,
       "n": 4,
@@ -16021,6 +19326,18 @@
        "dist": 1
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 17
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:1"
+       }
+      }
+     ],
      "variables": {
       "src": 0,
       "n": 4,
@@ -16057,6 +19374,20 @@
        "dist": 1
       }
      },
+     "events": [
+      {
+       "eventType": "write",
+       "provenance": {
+        "eventIndex": 20
+       },
+       "semanticRole": "state_write",
+       "target": {
+        "entityId": "graphNode:3",
+        "field": "dist"
+       },
+       "after": 1
+      }
+     ],
      "variables": {
       "src": 0,
       "n": 4,
@@ -16094,6 +19425,21 @@
        "dist": 1
       }
      },
+     "events": [
+      {
+       "eventType": "collection_change",
+       "provenance": {
+        "eventIndex": 22
+       },
+       "target": {
+        "entityId": "collection:queue"
+       },
+       "after": [
+        "2",
+        "3"
+       ]
+      }
+     ],
      "variables": {
       "src": 0,
       "n": 4,
@@ -16131,6 +19477,18 @@
        "dist": 1
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 25
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:2"
+       }
+      }
+     ],
      "variables": {
       "src": 0,
       "n": 4,
@@ -16167,6 +19525,18 @@
        "dist": 1
       }
      },
+     "events": [
+      {
+       "eventType": "visit",
+       "provenance": {
+        "eventIndex": 30
+       },
+       "semanticRole": "frontier_take",
+       "target": {
+        "entityId": "graphNode:3"
+       }
+      }
+     ],
      "variables": {
       "src": 0,
       "n": 4,
@@ -16203,6 +19573,17 @@
        "dist": 1
       }
      },
+     "events": [
+      {
+       "eventType": "solution_emit",
+       "after": [
+        0,
+        0,
+        1,
+        1
+       ]
+      }
+     ],
      "variables": {}
     }
    ]

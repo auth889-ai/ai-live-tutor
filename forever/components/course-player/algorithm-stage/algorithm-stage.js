@@ -21,6 +21,7 @@ import { GridView } from './grid-view.js';
 import { IntervalsView } from '../panels/intervals-view.js';
 import { TraceTable } from './trace-table.js';
 import { CompositionCockpit } from '../panels/composition-cockpit.js';
+import { CallStackPanel } from '../panels/call-stack-panel.js';
 
 export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, stepIndex = null, setHold }) {
   // LIVE INSTRUMENT: the student can re-run the engine on their own input (RetracePanel);
@@ -175,6 +176,9 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
         ) : null}
         <Caption index={index} total={trace.steps.length} text={step.explanation} />
         <Vars step={step} />
+        {/* The recursion stack (mockup: diameter(1) Active / diameter(2) Waiting / Done -> returns):
+            rendered by DEFAULT whenever the trace carries frames — assembly, not a new channel. */}
+        {step.frames?.length ? <CallStackPanel frames={step.frames} lastReturn={step.lastReturn} title="Call Stack" /> : null}
         <Collections step={step} />
       </div>
       </div>
