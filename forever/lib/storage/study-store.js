@@ -20,6 +20,45 @@ async function bumpDay(userId, field, by = 1) {
   );
 }
 
+// CHECKPOINT RESULTS — the unlock that separates "watched" from "learned": a concept only
+// counts as verified when a quiz/checkpoint was answered correctly (reviewer principle:
+// scene completion is not learning).
+export async function recordCheckpoint({ userId, lessonId, quizId, correct }) {
+  const col = await studyCollection();
+  if (!col || !userId || !lessonId) return null;
+  await bumpDay(userId, correct ? 'checkpoints' : 'checkpointMisses');
+  await col.updateOne(
+    { _id: `pr_${userId}_${lessonId}`, kind: 'progress' },
+    { $inc: correct ? { checkpointsPassed: 1 } : { checkpointsMissed: 1 } },
+  );
+  await col.updateOne(
+    { _id: `ck_${userId}_${lessonId}_${quizId ?? 'q'}` },
+    { $set: { kind: 'checkpoint', userId, lessonId, quizId: quizId ?? null, correct: Boolean(correct), at: new Date().toISOString() } },
+    { upsert: true },
+  );
+  return true;
+}
+
+export async function saveReflection({ userId, choice }) {
+  const col = await studyCollection();
+  if (!col || !userId) return null;
+  await col.updateOne({ _id: dayId(userId) }, { $set: { reflection: String(choice).slice(0, 120) } }, { upsert: true });
+  return true;
+}
+
+export async function setWeekGoal(userId, goal) {
+  const col = await studyCollection();
+  if (!col || !userId) return null;
+  await col.updateOne({ _id: `set_${userId}` }, { $set: { kind: 'settings', userId, weekGoal: Math.max(3, Math.min(50, Number(goal) || 10)) } }, { upsert: true });
+  return true;
+}
+
+export async function getSettings(userId) {
+  const col = await studyCollection();
+  if (!col || !userId) return null;
+  return col.findOne({ _id: `set_${userId}` });
+}
+
 export async function listDays(userId, daysBack = 120) {
   const col = await studyCollection();
   if (!col || !userId) return [];
@@ -70,6 +109,7 @@ export async function reviewBookmark(userId, id, grade) {
   if (!doc) return null;
   await bumpDay(userId, 'reviews');
   const interval = grade === 'good' ? Math.min(60, Math.max(2.5, (doc.reviewInterval ?? 1) * 2.5)) : 1;
+  await col.updateOne({ _id: id }, { $set: { lastGrade: grade } });
   const due = grade === 'good'
     ? new Date(Date.now() + interval * 24 * 3600 * 1000).toISOString()
     : new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -92,7 +132,7 @@ export async function removeBookmark(userId, id) {
 }
 
 // Progress: ONE record per (user, lesson) — the resume point plus scene completion.
-export async function saveProgress({ userId, lessonId, lessonTitle = '', sceneIndex = 0, sceneCount = 0, tMs = 0, completedCount = 0, completed = false }) {
+export async function saveProgress({ userId, lessonId, lessonTitle = '', sceneIndex = 0, sceneCount = 0, tMs = 0, completedCount = 0, completed = false, watchedMs = 0 }) {
   if (!userId || !lessonId) return null;
   const col = await studyCollection();
   if (!col) return null;
@@ -100,9 +140,14 @@ export async function saveProgress({ userId, lessonId, lessonTitle = '', sceneIn
   const prev = await col.findOne({ _id: `pr_${userId}_${lessonId}` });
   const delta = Math.max(0, (completedCount ?? 0) - (prev?.completedCount ?? 0));
   if (delta > 0) await bumpDay(userId, 'scenes', delta);
+  // Focused minutes: the player reports real watched wall-time since its last sync (capped
+  // per beat so a stuck tab cannot farm minutes).
+  const secs = Math.min(30, Math.round((watchedMs ?? 0) / 1000));
+  if (secs > 0) await bumpDay(userId, 'seconds', secs);
   const doc = {
     _id: `pr_${userId}_${lessonId}`, kind: 'progress', userId, lessonId, lessonTitle,
     sceneIndex, sceneCount, tMs, completedCount, completed,
+    checkpointsPassed: prev?.checkpointsPassed ?? 0, checkpointsMissed: prev?.checkpointsMissed ?? 0,
     // The bar is EARNED: scenes watched to their end count; the scene you are inside adds
     // nothing until finished (same law as the player's checkmarks).
     percent: completed ? 100 : sceneCount > 0 ? Math.min(99, Math.round((completedCount / sceneCount) * 100)) : 0,

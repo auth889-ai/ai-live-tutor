@@ -55,10 +55,11 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
     if (!lessonId) return;
     const now = Date.now();
     if (now - lastSync.current < 5000) return;
+    const watchedMs = playing ? Math.min(30000, now - lastSync.current) : 0;
     lastSync.current = now;
     fetch('/api/study', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'progress', lessonId, lessonTitle: lesson.lessonTitle, sceneIndex, sceneCount: lesson.scenes.length, tMs: Math.round(tMs), completedCount: completed.size, completed: completed.size >= lesson.scenes.length }),
+      body: JSON.stringify({ type: 'progress', lessonId, lessonTitle: lesson.lessonTitle, sceneIndex, sceneCount: lesson.scenes.length, tMs: Math.round(tMs), completedCount: completed.size, completed: completed.size >= lesson.scenes.length, watchedMs }),
     }).catch(() => {});
   }, [lessonId, sceneIndex, Math.floor(tMs / 5000)]);
 

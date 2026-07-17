@@ -1,6 +1,7 @@
 // /api/study — bookmarks + progress, session-scoped like every data route.
 import { sessionFromRequest } from '../../../lib/auth/session.js';
-import { addBookmark, listBookmarks, listLessonBookmarks, removeBookmark, reviewBookmark, saveProgress, getProgress, listProgress, listDays, computeBadges } from '../../../lib/storage/study-store.js';
+import { addBookmark, listBookmarks, listLessonBookmarks, removeBookmark, reviewBookmark, saveProgress, getProgress, listProgress, listDays, computeBadges, recordCheckpoint, saveReflection, setWeekGoal, getSettings } from '../../../lib/storage/study-store.js';
+import { loadLesson } from '../../../lib/storage/lesson-store.js';
 
 export async function GET(request) {
   const session = sessionFromRequest(request);
@@ -56,9 +57,81 @@ export async function GET(request) {
     tomorrow: dues.filter((t) => t > now && t <= in24).length,
     week: dues.filter((t) => t > in24 && t <= in7d).length,
   };
+  // TODAY (learning actions, not just activity): scenes + checkpoints + reviews + minutes.
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayDoc = dayDocs.find((d) => d.date === todayKey) ?? {};
+  const today = {
+    scenes: todayDoc.scenes ?? 0, checkpoints: todayDoc.checkpoints ?? 0,
+    reviews: todayDoc.reviews ?? 0, minutes: Math.round((todayDoc.seconds ?? 0) / 60),
+    reflection: todayDoc.reflection ?? null,
+  };
+
+  // RECOMMENDED NEXT (deterministic, reason visible): most recently active incomplete lesson;
+  // remaining minutes are REAL — summed from the lesson's own scene durations, never invented.
+  const nextUp = progress.find((p) => !p.completed) ?? null;
+  let recommended = null;
+  if (nextUp) {
+    let minutes = null;
+    let nextSceneTitle = null;
+    try {
+      const lesson = await loadLesson(nextUp.lessonId, {});
+      const remaining = (lesson?.scenes ?? []).slice(nextUp.sceneIndex);
+      const ms = remaining.reduce((a, sc) => a + (sc.durationMs ?? 0), 0);
+      if (ms > 0) minutes = Math.max(1, Math.round(ms / 60000));
+      nextSceneTitle = lesson?.scenes?.[nextUp.sceneIndex]?.title ?? null;
+    } catch { /* estimate stays honest-null */ }
+    recommended = {
+      lessonId: nextUp.lessonId, lessonTitle: nextUp.lessonTitle, sceneIndex: nextUp.sceneIndex,
+      tMs: nextUp.tMs, nextSceneTitle, minutes,
+      reason: `most recently active · ${nextUp.sceneCount - (nextUp.completedCount ?? 0)} scenes left${(nextUp.checkpointsPassed ?? 0) === 0 ? ' · no checkpoint verified yet' : ''}`,
+    };
+  }
+
+  // KNOWLEDGE STATUS per lesson (evidence-based labels, never invented percentages):
+  // New -> Learning (scenes done) -> Developing (>=1 checkpoint passed) -> Strong
+  // (checkpoints + >=2 good reviews) · 'Review due' overrides when its moments are due.
+  const dueByLesson = new Set(bookmarks.filter((b) => b.reviewDue && new Date(b.reviewDue).getTime() <= now).map((b) => b.lessonId));
+  const knowledge = progress.map((p) => {
+    const goodReviews = bookmarks.filter((b) => b.lessonId === p.lessonId && b.lastGrade === 'good').length;
+    let status = 'New';
+    if ((p.completedCount ?? 0) > 0) status = 'Learning';
+    if ((p.checkpointsPassed ?? 0) >= 1) status = 'Developing';
+    if ((p.checkpointsPassed ?? 0) >= 2 && goodReviews >= 2) status = 'Strong';
+    if (dueByLesson.has(p.lessonId)) status = 'Review due';
+    return { lessonId: p.lessonId, lessonTitle: p.lessonTitle, status, checkpointsPassed: p.checkpointsPassed ?? 0 };
+  });
+
+  // WEEKLY: verified learning actions (scenes + checkpoints + reviews) vs an editable goal.
+  const settings = await getSettings(session.userId);
+  const weekGoal = settings?.weekGoal ?? 10;
+  const weekDays = heatmap.filter((d) => d.date >= weekKey);
+  const weekActions = {
+    scenes: weekDays.reduce((a, d) => a + d.scenes, 0),
+    checkpoints: dayDocs.filter((d) => d.date >= weekKey).reduce((a, d) => a + (d.checkpoints ?? 0), 0),
+    reviews: weekDays.reduce((a, d) => a + d.reviews, 0),
+  };
+  const weekTotal = weekActions.scenes + weekActions.checkpoints + weekActions.reviews;
+  const daysLeft = 7 - ((new Date().getDay() + 6) % 7);
+  const pace = weekTotal >= weekGoal ? 'goal hit' : `${weekGoal - weekTotal} to go · ~${Math.ceil((weekGoal - weekTotal) / Math.max(1, daysLeft))} per day keeps you on track`;
+
+  // Upcoming reviews + weak concepts (graded Again recently = needs reinforcement).
+  const upcoming = bookmarks
+    .filter((b) => b.reviewDue && new Date(b.reviewDue).getTime() > now)
+    .sort((a, b) => new Date(a.reviewDue) - new Date(b.reviewDue)).slice(0, 3)
+    .map((b) => ({ id: b._id, label: b.note || b.sceneTitle || b.lessonTitle, due: b.reviewDue, lessonId: b.lessonId, sceneId: b.sceneId, tMs: b.tMs }));
+  const weak = bookmarks.filter((b) => b.lastGrade === 'again').slice(0, 3)
+    .map((b) => ({ id: b._id, label: b.note || b.sceneTitle || b.lessonTitle, lessonId: b.lessonId, sceneId: b.sceneId, tMs: b.tMs }));
+
+  const tomorrow = {
+    review: (forecast.tomorrow > 0 && upcoming[0]) ? upcoming[0].label : null,
+    continueTitle: recommended?.lessonTitle ?? null,
+  };
+
   return Response.json({
-    signedIn: true, bookmarks, progress, streak, bestStreak, dueCount, heatmap, weekScenes, weekGoal: 10, badges, forecast,
-    stats: { totalScenes, totalReviews, totalBookmarks: bookmarks.length, lessonsDone: progress.filter((p) => p.completed).length },
+    signedIn: true, bookmarks, progress, streak, bestStreak, dueCount, heatmap, weekScenes, weekGoal, badges, forecast,
+    today, recommended, knowledge, weekActions, weekTotal, pace, upcoming, weak, tomorrow,
+    stats: { totalScenes, totalReviews, totalBookmarks: bookmarks.length, lessonsDone: progress.filter((p) => p.completed).length,
+      totalCheckpoints: dayDocs.reduce((a, d) => a + (d.checkpoints ?? 0), 0) },
   });
 }
 
@@ -69,6 +142,15 @@ export async function POST(request) {
   if (body.type === 'bookmark') {
     const doc = await addBookmark({ ...body, userId: session.userId });
     return Response.json({ bookmark: doc });
+  }
+  if (body.type === 'checkpoint') {
+    return Response.json({ ok: await recordCheckpoint({ userId: session.userId, lessonId: body.lessonId, quizId: body.quizId, correct: body.correct }) });
+  }
+  if (body.type === 'reflection') {
+    return Response.json({ ok: await saveReflection({ userId: session.userId, choice: body.choice }) });
+  }
+  if (body.type === 'goal') {
+    return Response.json({ ok: await setWeekGoal(session.userId, body.weekGoal) });
   }
   if (body.type === 'note') {
     const { updateBookmarkNote } = await import('../../../lib/storage/study-store.js');

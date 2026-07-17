@@ -8,6 +8,17 @@
 
 import { useState } from 'react';
 
+// Checkpoint telemetry (the learned-vs-watched unlock): every quiz answer is recorded —
+// correct answers verify concepts on the Progress page; misses mark reinforcement needs.
+function recordCheckpoint(lessonId, quizId, correct) {
+  const lid = lessonId || (typeof window !== 'undefined' ? window.location.pathname.split('/course/')[1]?.split('?')[0] : null);
+  if (!lid) return;
+  fetch('/api/study', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'checkpoint', lessonId: lid, quizId, correct: Boolean(correct) }),
+  }).catch(() => {});
+}
+
 export function QuizView({ content, onAnswered, lessonId = null, sceneId = null }) {
   if (content.kind === 'descriptive') {
     return <DescriptiveQuestion content={content} onAnswered={onAnswered} lessonId={lessonId} sceneId={sceneId} />;
@@ -167,7 +178,9 @@ function ChoiceQuiz({ content, onAnswered }) {
   function choose(i) {
     if (answered) return;
     setPicked(i);
-    onAnswered?.(i === content.answerIndex);
+    const correct = i === content.answerIndex;
+    recordCheckpoint(null, content.question?.slice(0, 40), correct);
+    onAnswered?.(correct);
   }
 
   return (

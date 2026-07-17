@@ -62,7 +62,6 @@ const SectionTitle = ({ children, sub }) => (
 export function ProgressContent() {
   const data = useStudyLive();
   const [sort, setSort] = useState('recent');
-  // Badge toast: celebrate the moment a badge flips to earned (compared to last visit).
   const [toast, setToast] = useState(null);
   useEffect(() => {
     if (!data?.badges) return;
@@ -83,14 +82,16 @@ export function ProgressContent() {
   if (data === null) return <Skeleton />;
   const inProgress = items.filter((p) => !p.completed);
   const doneItems = items.filter((p) => p.completed);
-  const st = data.stats ?? {};
+  const t = data.today ?? {};
+  const rec = data.recommended;
+  const know = data.knowledge ?? [];
+  const STATUS_COLOR = { 'New': '#b3a889', 'Learning': '#d9a441', 'Developing': '#2980b9', 'Strong': '#2f9e5f', 'Review due': '#c0522d' };
 
   return (
     <div style={{ maxWidth: 940 }}>
       <style>{`
         .pcard{transition:transform .18s, box-shadow .18s} .pcard:hover{transform:translateY(-3px); box-shadow:0 10px 26px rgba(58,46,34,0.14)!important}
         .ringArc{transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1)}
-        .dotcell{transition:background .5s}
         @keyframes pulseDot{0%,100%{box-shadow:0 0 0 0 rgba(232,96,76,.5)}50%{box-shadow:0 0 0 6px rgba(232,96,76,0)}}
         @keyframes toastIn{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes cellIn{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
@@ -98,33 +99,74 @@ export function ProgressContent() {
         @media (prefers-reduced-motion: no-preference){ .hmcell{animation:cellIn .4s ease-out both} }
         @media (prefers-reduced-motion: reduce){ .pcard,.ringArc,.hmcell{transition:none!important;animation:none!important} }
       `}</style>
-      {toast ? (
-        <div style={{ position: 'fixed', bottom: 22, right: 22, zIndex: 60, background: '#2b211a', color: '#fff', borderRadius: 14, padding: '12px 18px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', animation: 'toastIn .35s ease-out', fontSize: 14 }}>
-          🎉 Badge earned: <b>{toast}</b>
-        </div>
-      ) : null}
+      {toast ? <div style={{ position: 'fixed', bottom: 22, right: 22, zIndex: 60, background: '#2b211a', color: '#fff', borderRadius: 14, padding: '12px 18px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', animation: 'toastIn .35s ease-out', fontSize: 14 }}>🎉 Badge earned: <b>{toast}</b></div> : null}
+
       <h1 style={{ fontSize: 26, color: UI.text, margin: '0 0 3px', fontFamily: 'var(--font-newsreader), Georgia, serif' }}>Progress</h1>
-      <p style={{ color: UI.muted, fontSize: 13, margin: '0 0 18px' }}>Every number below is earned — scenes finished, moments reviewed, days shown up.</p>
+      <p style={{ color: UI.muted, fontSize: 13, margin: '0 0 16px' }}>What you learned, what you may forget, and the best next step.</p>
 
-      {/* 1 · stat tiles */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <Tile big={`🔥 ${data.streak ?? 0}`} label="day streak" sub={`best ${data.bestStreak ?? 0}`} />
-        <Tile big={st.totalScenes ?? 0} label="scenes finished" sub="all time" />
-        <Tile big={st.totalReviews ?? 0} label="reviews done" sub={`${data.forecast?.today ?? 0} due today`} accent={(data.forecast?.today ?? 0) > 0} />
-        <Tile big={st.lessonsDone ?? 0} label="lessons completed" sub={`${inProgress.length} in progress`} />
-      </div>
-
-      {/* 2 · activity band */}
-      <SectionTitle sub="shows up in every card below">This week</SectionTitle>
+      {/* 1 · TODAY */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <WeeklyRing scenes={data.weekScenes ?? 0} goal={data.weekGoal ?? 10} />
-        <Heatmap days={data.heatmap ?? []} />
+        <div style={{ flex: '1.1 1 300px', border: `1px solid ${UI.border}`, borderRadius: 16, background: '#fff', padding: '14px 16px', boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: UI.text, marginBottom: 8 }}>Today {data.streak ? <span style={{ color: '#d35400', fontWeight: 700 }}>· 🔥 {data.streak}-day streak</span> : null}</div>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 13, color: UI.text }}>
+            <span><b style={{ fontSize: 17 }}>{t.scenes ?? 0}</b> <span style={{ color: UI.muted }}>scenes</span></span>
+            <span><b style={{ fontSize: 17, color: (t.checkpoints ?? 0) > 0 ? '#2f9e5f' : UI.text }}>{t.checkpoints ?? 0}</b> <span style={{ color: UI.muted }}>checkpoints ✓</span></span>
+            <span><b style={{ fontSize: 17 }}>{t.reviews ?? 0}</b> <span style={{ color: UI.muted }}>reviews</span></span>
+            <span><b style={{ fontSize: 17 }}>{t.minutes ?? 0}</b> <span style={{ color: UI.muted }}>focused min</span></span>
+          </div>
+          <div style={{ marginTop: 10, fontSize: 12, color: UI.muted, borderTop: `1px solid ${UI.border}`, paddingTop: 8 }}>
+            {(t.checkpoints ?? 0) === 0
+              ? 'Complete a checkpoint after your next scene to start verifying what you learned.'
+              : (data.dueCount ?? 0) > 0
+                ? `Nice — ${t.checkpoints} verified today. ${data.dueCount} review${data.dueCount === 1 ? '' : 's'} waiting.`
+                : 'Verified learning today — reviews will return on their schedule.'}
+          </div>
+        </div>
+
+        {/* 2 · RECOMMENDED NEXT */}
+        {rec ? (
+          <a href={`/course/${rec.lessonId}?t=${rec.tMs}&scene=${rec.sceneIndex}`} className="pcard"
+            style={{ flex: '1.4 1 320px', textDecoration: 'none', border: '1.5px solid #f0c39a', borderRadius: 16, background: 'linear-gradient(180deg,#fffdf9,#fff5ec)', padding: '14px 16px', boxShadow: '0 2px 10px rgba(211,84,0,0.10)' }}>
+            <div style={{ fontSize: 11.5, fontWeight: 800, color: '#8a3a12', marginBottom: 5 }}>★ RECOMMENDED NEXT{rec.minutes ? ` · ~${rec.minutes} MIN` : ''}</div>
+            <div style={{ fontWeight: 800, color: UI.text, fontSize: 15.5 }}>{rec.lessonTitle}</div>
+            {rec.nextSceneTitle ? <div style={{ fontSize: 13, color: '#8a3a12', marginTop: 2 }}>Scene {rec.sceneIndex + 1} — {rec.nextSceneTitle}</div> : null}
+            <div style={{ fontSize: 12, color: UI.muted, marginTop: 6 }}>Why: {rec.reason}</div>
+            <div style={{ marginTop: 10 }}><span style={{ background: '#e8604c', color: '#fff', borderRadius: 999, padding: '7px 16px', fontWeight: 800, fontSize: 13 }}>Continue learning</span></div>
+          </a>
+        ) : null}
       </div>
 
-      {/* 3 · jump back in */}
+      {/* 4 · LEARNING HEALTH (honest, data-gated) */}
+      <SectionTitle sub="no invented scores — each line unlocks with evidence">Learning health</SectionTitle>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
+        <Health label="Progress" value={`${data.stats?.totalScenes ?? 0} scenes · ${data.stats?.lessonsDone ?? 0} lessons done`} good />
+        <Health label="Recall" value={(data.stats?.totalReviews ?? 0) >= 3 ? `${data.stats.totalReviews} reviews done` : 'Not enough data'} note={(data.stats?.totalReviews ?? 0) >= 3 ? null : 'complete 3 reviews to unlock'} good={(data.stats?.totalReviews ?? 0) >= 3} />
+        <Health label="Verified concepts" value={(data.stats?.totalCheckpoints ?? 0) > 0 ? `${data.stats.totalCheckpoints} checkpoints ✓` : 'Not measured yet'} note={(data.stats?.totalCheckpoints ?? 0) > 0 ? null : 'answer a quiz in any lesson'} good={(data.stats?.totalCheckpoints ?? 0) > 0} />
+        <Health label="Review status" value={(data.dueCount ?? 0) > 0 ? `${data.dueCount} due — start today` : 'On track'} good={(data.dueCount ?? 0) === 0} />
+      </div>
+
+      {/* 5 · KNOWLEDGE */}
+      {know.length > 0 ? (
+        <>
+          <SectionTitle sub="evidence-based: checkpoints, reviews, recency">Knowledge progress</SectionTitle>
+          <div style={{ border: `1px solid ${UI.border}`, borderRadius: 16, background: '#fff', overflow: 'hidden' }}>
+            {know.map((k, i) => (
+              <div key={k.lessonId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderTop: i ? `1px solid ${UI.border}` : 'none', fontSize: 13.5 }}>
+                <span style={{ color: UI.text, fontWeight: 700 }}>{k.lessonTitle}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {k.checkpointsPassed > 0 ? <span style={{ fontSize: 11.5, color: UI.muted }}>{k.checkpointsPassed} ✓</span> : null}
+                  <span style={{ color: STATUS_COLOR[k.status] ?? UI.muted, fontWeight: 800, fontSize: 12.5 }}>{k.status}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      {/* 6 · CONTINUE LEARNING */}
       {inProgress.length > 0 ? (
         <>
-          <SectionTitle sub={`${inProgress.length} lesson${inProgress.length === 1 ? '' : 's'}`}>Jump back in</SectionTitle>
+          <SectionTitle sub={`${inProgress.length} lesson${inProgress.length === 1 ? '' : 's'}`}>Continue learning</SectionTitle>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
             <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ border: `1px solid ${UI.border}`, borderRadius: 8, background: '#fff', color: UI.muted, fontSize: 12, padding: '4px 8px' }}>
               <option value="recent">Recently active</option>
@@ -136,42 +178,127 @@ export function ProgressContent() {
             {inProgress.map((p) => <LessonCard key={p._id} p={p} />)}
           </div>
         </>
-      ) : (
-        <EmptyCard />
-      )}
+      ) : <EmptyCard />}
 
-      {/* 4 · completed */}
-      {doneItems.length > 0 ? (
-        <>
-          <SectionTitle sub="rewatch any time">Completed</SectionTitle>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 16 }}>
-            {doneItems.map((p) => <LessonCard key={p._id} p={p} />)}
+      {/* 7 · REVIEWS & WEAK */}
+      <SectionTitle sub="memory, scheduled honestly">Reviews & memory</SectionTitle>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 280px', border: `1px solid ${UI.border}`, borderRadius: 16, background: '#fff', padding: '13px 16px' }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: UI.text, marginBottom: 8 }}>{(data.dueCount ?? 0) > 0 ? `Due today · ${data.dueCount}` : 'Nothing due today'}</div>
+          {(data.dueCount ?? 0) > 0 ? (
+            <a href="/bookmarks" style={{ display: 'inline-block', background: '#8e44ad', color: '#fff', borderRadius: 999, padding: '6px 16px', fontWeight: 800, fontSize: 12.5, textDecoration: 'none' }}>Start review</a>
+          ) : (data.upcoming ?? []).length > 0 ? (
+            (data.upcoming ?? []).map((u) => (
+              <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: UI.muted, padding: '4px 0' }}>
+                <span style={{ color: UI.text }}>{u.label}</span>
+                <span>{new Date(u.due).toLocaleDateString('en', { weekday: 'short' })}</span>
+              </div>
+            ))
+          ) : (
+            <div style={{ fontSize: 12.5, color: UI.muted }}>Your first review appears after you bookmark a moment or pass a checkpoint.</div>
+          )}
+        </div>
+        {(data.weak ?? []).length > 0 ? (
+          <div style={{ flex: '1 1 280px', border: '1.5px solid #f0c39a', borderRadius: 16, background: 'linear-gradient(180deg,#fffdf9,#fff5ec)', padding: '13px 16px' }}>
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: '#8a3a12', marginBottom: 8 }}>Needs reinforcement</div>
+            {(data.weak ?? []).map((w) => (
+              <a key={w.id} href={`/course/${w.lessonId}?scene=${encodeURIComponent(w.sceneId ?? '')}&t=${w.tMs}`} style={{ display: 'block', fontSize: 12.5, color: '#c0522d', padding: '4px 0', textDecoration: 'none' }}>▶ {w.label}</a>
+            ))}
           </div>
-        </>
+        ) : null}
+      </div>
+
+      {/* 8 · REFLECTION */}
+      <Reflection saved={t.reflection} />
+
+      {/* 9 · TOMORROW */}
+      {(data.tomorrow?.review || data.tomorrow?.continueTitle) ? (
+        <div style={{ marginTop: 14, border: `1px solid ${UI.border}`, borderRadius: 16, background: '#fff', padding: '13px 16px', fontSize: 13, color: UI.muted }}>
+          <b style={{ color: UI.text }}>Tomorrow's first block:</b>{' '}
+          {data.tomorrow.review ? <>review “{data.tomorrow.review}”{data.tomorrow.continueTitle ? ', then ' : ''}</> : null}
+          {data.tomorrow.continueTitle ? <>continue <b style={{ color: UI.text }}>{data.tomorrow.continueTitle}</b></> : null}
+        </div>
       ) : null}
 
-      {/* 5 · badge case */}
-      <SectionTitle sub={`${(data.badges ?? []).filter((b) => b.earned).length} of ${(data.badges ?? []).length} earned`}>Badge case</SectionTitle>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 10 }}>
-        {(data.badges ?? []).map((b) => (
-          <div key={b.label} title={b.label} style={{ border: `1px solid ${b.earned ? '#f0c39a' : UI.border}`, borderRadius: 14, background: b.earned ? 'linear-gradient(180deg,#fffdf9,#fff5ec)' : '#fff', padding: '12px 6px', textAlign: 'center', boxShadow: b.earned ? '0 2px 8px rgba(211,84,0,0.10)' : 'none' }}>
-            <div style={{ fontSize: 24, filter: b.earned ? 'none' : 'grayscale(1) opacity(0.35)' }}>{b.icon}</div>
-            <div style={{ fontSize: 10, color: b.earned ? '#8a3a12' : '#c9bda1', marginTop: 4, lineHeight: 1.2, fontWeight: 700 }}>{b.label}</div>
-          </div>
-        ))}
-      </div>
+      {/* 10 · WEEKLY TARGET */}
+      <SectionTitle sub="scenes + checkpoints + reviews all count">Weekly learning target</SectionTitle>
+      <WeeklyTarget total={data.weekTotal ?? 0} goal={data.weekGoal ?? 10} actions={data.weekActions ?? {}} pace={data.pace ?? ''} />
+
+      {/* 11 · HEATMAP */}
+      <SectionTitle sub="real learning actions only — opening the app counts for nothing">Activity</SectionTitle>
+      <Heatmap days={data.heatmap ?? []} />
+
+      {/* 12 · ACHIEVEMENTS (collapsed) */}
+      <details style={{ marginTop: 22 }}>
+        <summary style={{ cursor: 'pointer', fontSize: 15, color: UI.text, fontFamily: 'var(--font-newsreader), Georgia, serif' }}>
+          Achievements · {(data.badges ?? []).filter((b) => b.earned).length} of {(data.badges ?? []).length}
+        </summary>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 10, marginTop: 12 }}>
+          {(data.badges ?? []).map((b) => (
+            <div key={b.label} title={b.label} style={{ border: `1px solid ${b.earned ? '#f0c39a' : UI.border}`, borderRadius: 14, background: b.earned ? 'linear-gradient(180deg,#fffdf9,#fff5ec)' : '#fff', padding: '12px 6px', textAlign: 'center' }}>
+              <div style={{ fontSize: 24, filter: b.earned ? 'none' : 'grayscale(1) opacity(0.35)' }}>{b.icon}</div>
+              <div style={{ fontSize: 10, color: b.earned ? '#8a3a12' : '#c9bda1', marginTop: 4, lineHeight: 1.2, fontWeight: 700 }}>{b.label}</div>
+            </div>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }
 
-function Tile({ big, label, sub, accent = false }) {
-  const numeric = typeof big === 'number';
-  const shown = useCountUp(numeric ? big : 0);
+function Health({ label, value, note, good = false }) {
   return (
-    <div style={{ border: `1px solid ${accent ? '#f0c39a' : UI.border}`, borderRadius: 16, background: accent ? 'linear-gradient(180deg,#fffdf9,#fff5ec)' : '#fff', padding: '14px 16px', boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
-      <div style={{ fontSize: 24, fontWeight: 800, color: UI.text, lineHeight: 1 }}>{numeric ? shown : big}</div>
-      <div style={{ fontSize: 12.5, color: UI.muted, marginTop: 5, fontWeight: 700 }}>{label}</div>
-      <div style={{ fontSize: 11, color: accent ? '#c0522d' : '#b3a889', marginTop: 1 }}>{sub}</div>
+    <div style={{ border: `1px solid ${UI.border}`, borderRadius: 14, background: '#fff', padding: '11px 14px' }}>
+      <div style={{ fontSize: 11.5, fontWeight: 800, color: UI.muted }}>{label}</div>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: good ? UI.text : '#b3a889', marginTop: 3 }}>{value}</div>
+      {note ? <div style={{ fontSize: 11, color: '#c9bda1', marginTop: 2 }}>{note}</div> : null}
+    </div>
+  );
+}
+
+function Reflection({ saved }) {
+  const [sent, setSent] = useState(null);
+  const choose = (c) => {
+    setSent(c);
+    fetch('/api/study', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'reflection', choice: c }) }).catch(() => {});
+  };
+  const chosen = sent ?? saved;
+  return (
+    <div style={{ marginTop: 14, border: `1px solid ${UI.border}`, borderRadius: 16, background: '#fff', padding: '13px 16px' }}>
+      <div style={{ fontSize: 12.5, fontWeight: 800, color: UI.text, marginBottom: 8 }}>What felt unclear today?</div>
+      {chosen ? (
+        <div style={{ fontSize: 12.5, color: '#2f9e5f' }}>Noted: “{chosen}” — your tutor will lean into this next session.</div>
+      ) : (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {['The core idea', 'The dry run steps', 'The code', 'Everything was clear'].map((c) => (
+            <button key={c} onClick={() => choose(c)} style={{ border: `1.5px solid ${UI.border}`, borderRadius: 999, background: '#fff', color: UI.muted, fontSize: 12, fontWeight: 700, padding: '5px 13px', cursor: 'pointer' }}>{c}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WeeklyTarget({ total, goal, actions, pace }) {
+  const [saving, setSaving] = useState(false);
+  const setGoal = (g) => { setSaving(true); fetch('/api/study', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'goal', weekGoal: g }) }).finally(() => setSaving(false)); };
+  const pct = Math.min(100, Math.round((total / goal) * 100));
+  return (
+    <div style={{ border: `1px solid ${UI.border}`, borderRadius: 16, background: '#fff', padding: '14px 16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: UI.text }}>{total} of {goal} verified learning actions</div>
+        <select disabled={saving} defaultValue={goal} onChange={(e) => setGoal(Number(e.target.value))} style={{ border: `1px solid ${UI.border}`, borderRadius: 8, background: '#fff', color: UI.muted, fontSize: 12, padding: '3px 8px' }}>
+          {[5, 10, 15, 20, 30].map((g) => <option key={g} value={g}>goal: {g}/week</option>)}
+        </select>
+      </div>
+      <div style={{ marginTop: 9, height: 8, borderRadius: 5, background: '#f2e8dc', overflow: 'hidden' }}>
+        <div style={{ width: `${Math.max(2, pct)}%`, height: '100%', background: pct >= 100 ? '#2f9e5f' : 'linear-gradient(90deg,#e8604c,#d35400)', transition: 'width .6s' }} />
+      </div>
+      <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 12, color: UI.muted, flexWrap: 'wrap' }}>
+        <span>scenes+checkpoints <b style={{ color: UI.text }}>{(actions.scenes ?? 0) + (actions.checkpoints ?? 0)}</b></span>
+        <span>reviews <b style={{ color: UI.text }}>{actions.reviews ?? 0}</b></span>
+        <span style={{ color: pct >= 100 ? '#2f9e5f' : '#c0522d' }}>{pace}</span>
+      </div>
     </div>
   );
 }
