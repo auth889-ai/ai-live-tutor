@@ -1,8 +1,9 @@
 'use client';
 
-// 📊 Progress — the app's own card language: study-photo covers, ring overlays, earned
-// scene dots. Same palette/grid as CourseGrid (one visual system, no drift).
-import { useEffect, useState } from 'react';
+// 📊 Progress — structured like a real learning dashboard (research: Duolingo/Khan/GitHub):
+//   1. stat tiles (numbers first)   2. activity band (ring + heatmap)
+//   3. "Jump back in" cards         4. Completed          5. badge case
+import { useEffect, useMemo, useState } from 'react';
 
 const UI = { text: '#2b211a', muted: '#8a6d3b', border: '#f5e6d9', card: '#fff', bgSoft: '#fdf1ea' };
 const COVERS = ['/images/study-29.png', '/images/study-30.png', '/images/study-31.png', '/images/study-32.png', '/images/study-33.png', '/images/study-34.png', '/images/study-35.png', '/images/study-36.png', '/images/study-37.png', '/images/study-38.png'];
@@ -13,6 +14,132 @@ const ago = (iso) => {
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
 };
+
+const SectionTitle = ({ children, sub }) => (
+  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '26px 0 12px' }}>
+    <h2 style={{ fontSize: 17, color: UI.text, margin: 0, fontFamily: 'var(--font-newsreader), Georgia, serif' }}>{children}</h2>
+    {sub ? <span style={{ fontSize: 12, color: UI.muted }}>{sub}</span> : null}
+  </div>
+);
+
+export function ProgressContent() {
+  const [data, setData] = useState(null);
+  const [sort, setSort] = useState('recent');
+  useEffect(() => { fetch('/api/study').then((r) => r.json()).then(setData).catch(() => setData({ progress: [] })); }, []);
+  const items = useMemo(() => {
+    const xs = [...(data?.progress ?? [])];
+    if (sort === 'percent') xs.sort((a, b) => b.percent - a.percent);
+    if (sort === 'alpha') xs.sort((a, b) => String(a.lessonTitle).localeCompare(String(b.lessonTitle)));
+    return xs;
+  }, [data, sort]);
+  if (data === null) return <Skeleton />;
+  const inProgress = items.filter((p) => !p.completed);
+  const doneItems = items.filter((p) => p.completed);
+  const st = data.stats ?? {};
+
+  return (
+    <div style={{ maxWidth: 940 }}>
+      <style>{`.pcard{transition:transform .18s, box-shadow .18s} .pcard:hover{transform:translateY(-3px); box-shadow:0 10px 26px rgba(58,46,34,0.14)!important}`}</style>
+      <h1 style={{ fontSize: 26, color: UI.text, margin: '0 0 3px', fontFamily: 'var(--font-newsreader), Georgia, serif' }}>Progress</h1>
+      <p style={{ color: UI.muted, fontSize: 13, margin: '0 0 18px' }}>Every number below is earned — scenes finished, moments reviewed, days shown up.</p>
+
+      {/* 1 · stat tiles */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+        <Tile big={`🔥 ${data.streak ?? 0}`} label="day streak" sub={`best ${data.bestStreak ?? 0}`} />
+        <Tile big={st.totalScenes ?? 0} label="scenes finished" sub="all time" />
+        <Tile big={st.totalReviews ?? 0} label="reviews done" sub={`${data.forecast?.today ?? 0} due today`} accent={(data.forecast?.today ?? 0) > 0} />
+        <Tile big={st.lessonsDone ?? 0} label="lessons completed" sub={`${inProgress.length} in progress`} />
+      </div>
+
+      {/* 2 · activity band */}
+      <SectionTitle sub="shows up in every card below">This week</SectionTitle>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <WeeklyRing scenes={data.weekScenes ?? 0} goal={data.weekGoal ?? 10} />
+        <Heatmap days={data.heatmap ?? []} />
+      </div>
+
+      {/* 3 · jump back in */}
+      {inProgress.length > 0 ? (
+        <>
+          <SectionTitle sub={`${inProgress.length} lesson${inProgress.length === 1 ? '' : 's'}`}>Jump back in</SectionTitle>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ border: `1px solid ${UI.border}`, borderRadius: 8, background: '#fff', color: UI.muted, fontSize: 12, padding: '4px 8px' }}>
+              <option value="recent">Recently active</option>
+              <option value="percent">Most complete</option>
+              <option value="alpha">A → Z</option>
+            </select>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 16 }}>
+            {inProgress.map((p) => <LessonCard key={p._id} p={p} />)}
+          </div>
+        </>
+      ) : (
+        <EmptyCard />
+      )}
+
+      {/* 4 · completed */}
+      {doneItems.length > 0 ? (
+        <>
+          <SectionTitle sub="rewatch any time">Completed</SectionTitle>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 16 }}>
+            {doneItems.map((p) => <LessonCard key={p._id} p={p} />)}
+          </div>
+        </>
+      ) : null}
+
+      {/* 5 · badge case */}
+      <SectionTitle sub={`${(data.badges ?? []).filter((b) => b.earned).length} of ${(data.badges ?? []).length} earned`}>Badge case</SectionTitle>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 10 }}>
+        {(data.badges ?? []).map((b) => (
+          <div key={b.label} title={b.label} style={{ border: `1px solid ${b.earned ? '#f0c39a' : UI.border}`, borderRadius: 14, background: b.earned ? 'linear-gradient(180deg,#fffdf9,#fff5ec)' : '#fff', padding: '12px 6px', textAlign: 'center', boxShadow: b.earned ? '0 2px 8px rgba(211,84,0,0.10)' : 'none' }}>
+            <div style={{ fontSize: 24, filter: b.earned ? 'none' : 'grayscale(1) opacity(0.35)' }}>{b.icon}</div>
+            <div style={{ fontSize: 10, color: b.earned ? '#8a3a12' : '#c9bda1', marginTop: 4, lineHeight: 1.2, fontWeight: 700 }}>{b.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Tile({ big, label, sub, accent = false }) {
+  return (
+    <div style={{ border: `1px solid ${accent ? '#f0c39a' : UI.border}`, borderRadius: 16, background: accent ? 'linear-gradient(180deg,#fffdf9,#fff5ec)' : '#fff', padding: '14px 16px', boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
+      <div style={{ fontSize: 24, fontWeight: 800, color: UI.text, lineHeight: 1 }}>{big}</div>
+      <div style={{ fontSize: 12.5, color: UI.muted, marginTop: 5, fontWeight: 700 }}>{label}</div>
+      <div style={{ fontSize: 11, color: accent ? '#c0522d' : '#b3a889', marginTop: 1 }}>{sub}</div>
+    </div>
+  );
+}
+
+function LessonCard({ p }) {
+  return (
+    <a className="pcard" href={`/course/${p.lessonId}?t=${p.tMs}&scene=${p.sceneIndex}`}
+      style={{ border: `1px solid ${UI.border}`, borderRadius: 18, overflow: 'hidden', background: UI.card, textDecoration: 'none', color: UI.text, boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
+      <div style={{ position: 'relative', height: 108, overflow: 'hidden' }}>
+        <img src={coverFor(p.lessonId)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(43,33,26,0.55))' }} />
+        <div style={{ position: 'absolute', right: 10, bottom: -14 }}><Ring percent={p.percent} done={p.completed} /></div>
+        <div style={{ position: 'absolute', left: 12, bottom: 8, color: '#fff', fontSize: 11.5, fontWeight: 800, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+          {p.completed ? 'COMPLETED ✓' : `▶ RESUME · SCENE ${p.sceneIndex + 1}`}
+        </div>
+      </div>
+      <div style={{ padding: '16px 14px 13px' }}>
+        <div style={{ fontWeight: 800, fontSize: 14.5, lineHeight: 1.3, minHeight: 38 }}>{p.lessonTitle || p.lessonId}</div>
+        {p.sceneCount > 0 && p.sceneCount <= 24 ? (
+          <div style={{ display: 'flex', gap: 3, margin: '9px 0 7px' }}>
+            {Array.from({ length: p.sceneCount }, (_, i) => (
+              <span key={i} style={{ flex: 1, maxWidth: 14, height: 9, borderRadius: 3, background: i < (p.completedCount ?? 0) ? '#2f9e5f' : i === p.sceneIndex && !p.completed ? '#f47368' : '#f2e8dc' }} />
+            ))}
+          </div>
+        ) : null}
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: UI.muted }}>
+          <span>{p.completedCount ?? 0}/{p.sceneCount} scenes</span>
+          <span>{ago(p.updatedAt)}</span>
+        </div>
+      </div>
+    </a>
+  );
+}
 
 function Ring({ percent, done }) {
   const r = 24; const c = 2 * Math.PI * r;
@@ -27,83 +154,11 @@ function Ring({ percent, done }) {
   );
 }
 
-export function ProgressContent() {
-  const [data, setData] = useState(null);
-  useEffect(() => { fetch('/api/study').then((r) => r.json()).then(setData).catch(() => setData({ progress: [] })); }, []);
-  if (data === null) return <Skeleton />;
-  const items = data.progress ?? [];
-  const done = items.filter((p) => p.completed).length;
-  return (
-    <div>
-      <style>{`.pcard{transition:transform .18s, box-shadow .18s} .pcard:hover{transform:translateY(-3px); box-shadow:0 10px 26px rgba(58,46,34,0.14)!important}`}</style>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
-        <h1 style={{ fontSize: 24, color: UI.text, margin: 0, fontFamily: 'var(--font-newsreader), Georgia, serif' }}>Progress</h1>
-        {data.streak ? <span style={{ fontSize: 13, fontWeight: 800, color: '#d35400' }}>🔥 {data.streak}-day streak</span> : null}
-      </div>
-      <p style={{ color: UI.muted, fontSize: 13.5, margin: '4px 0 18px' }}>
-        {items.length ? `${items.length - done} in progress · ${done} completed — every bar is earned by finishing scenes.` : 'Every bar is earned by finishing scenes, not by opening them.'}
-      </p>
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 18 }}>
-        <WeeklyRing scenes={data.weekScenes ?? 0} goal={data.weekGoal ?? 10} />
-        <Heatmap days={data.heatmap ?? []} />
-        <Badges badges={data.badges ?? []} />
-      </div>
-      {items.length === 0 ? (
-        <a href="/courses" style={{ display: 'block', border: `2px dashed ${UI.border}`, borderRadius: 18, padding: '48px 20px', textAlign: 'center', textDecoration: 'none', color: UI.muted, background: UI.bgSoft }}>
-          <div style={{ fontSize: 34, marginBottom: 8 }}>📊</div>
-          <div style={{ fontWeight: 700, color: UI.text }}>Open any lesson and it starts tracking here</div>
-          <div style={{ fontSize: 13 }}>resume points · earned bars · streaks</div>
-        </a>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 16 }}>
-          {items.map((p) => (
-            <a key={p._id} className="pcard" href={`/course/${p.lessonId}?t=${p.tMs}&scene=${p.sceneIndex}`}
-              style={{ border: `1px solid ${UI.border}`, borderRadius: 18, overflow: 'hidden', background: UI.card, textDecoration: 'none', color: UI.text, boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
-              <div style={{ position: 'relative', height: 108, overflow: 'hidden' }}>
-                <img src={coverFor(p.lessonId)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(43,33,26,0.55))' }} />
-                <div style={{ position: 'absolute', right: 10, bottom: -14 }}><Ring percent={p.percent} done={p.completed} /></div>
-                <div style={{ position: 'absolute', left: 12, bottom: 8, color: '#fff', fontSize: 11.5, fontWeight: 800, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
-                  {p.completed ? 'COMPLETED' : `▶ RESUME · SCENE ${p.sceneIndex + 1}`}
-                </div>
-              </div>
-              <div style={{ padding: '16px 14px 13px' }}>
-                <div style={{ fontWeight: 800, fontSize: 14.5, lineHeight: 1.3, minHeight: 38 }}>{p.lessonTitle || p.lessonId}</div>
-                {p.sceneCount > 0 && p.sceneCount <= 24 ? (
-                  <div style={{ display: 'flex', gap: 3, margin: '9px 0 7px' }}>
-                    {Array.from({ length: p.sceneCount }, (_, i) => (
-                      <span key={i} style={{ flex: 1, maxWidth: 14, height: 9, borderRadius: 3, background: i < (p.completedCount ?? 0) ? '#2f9e5f' : i === p.sceneIndex && !p.completed ? '#f47368' : '#f2e8dc' }} />
-                    ))}
-                  </div>
-                ) : null}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: UI.muted }}>
-                  <span>{p.completedCount ?? 0}/{p.sceneCount} scenes</span>
-                  <span>{ago(p.updatedAt)}</span>
-                </div>
-              </div>
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Skeleton() {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 16 }}>
-      {[0, 1, 2].map((i) => <div key={i} style={{ height: 210, borderRadius: 18, background: 'linear-gradient(100deg,#fdf1ea,#fff,#fdf1ea)', border: '1px solid #f5e6d9' }} />)}
-    </div>
-  );
-}
-
-
-// Apple-ring weekly goal (Duolingo weekly targets): scenes finished this week vs goal.
 function WeeklyRing({ scenes, goal }) {
   const pct = Math.min(100, Math.round((scenes / goal) * 100));
   const r = 30; const c = 2 * Math.PI * r;
   return (
-    <div style={{ border: '1px solid #f5e6d9', borderRadius: 16, background: '#fff', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
+    <div style={{ border: `1px solid ${UI.border}`, borderRadius: 16, background: '#fff', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
       <svg width="74" height="74" viewBox="0 0 74 74">
         <circle cx="37" cy="37" r={r} fill="none" stroke="#f2e8dc" strokeWidth="7" />
         <circle cx="37" cy="37" r={r} fill="none" stroke={pct >= 100 ? '#2f9e5f' : '#f47368'} strokeWidth="7" strokeLinecap="round"
@@ -111,12 +166,11 @@ function WeeklyRing({ scenes, goal }) {
         <text x="37" y="34" textAnchor="middle" fontSize="15" fontWeight="800" fill="#2b211a">{scenes}</text>
         <text x="37" y="48" textAnchor="middle" fontSize="9" fill="#8a6d3b">of {goal}</text>
       </svg>
-      <div style={{ fontSize: 12.5, color: '#8a6d3b', maxWidth: 110 }}><b style={{ color: '#2b211a' }}>This week</b><br />scenes finished{pct >= 100 ? ' — goal hit! 🎉' : ''}</div>
+      <div style={{ fontSize: 12.5, color: UI.muted, maxWidth: 110 }}><b style={{ color: UI.text }}>Weekly goal</b><br />{pct >= 100 ? 'hit — keep going 🎉' : `${goal - scenes} scenes to go`}</div>
     </div>
   );
 }
 
-// GitHub-style activity heatmap: 16 weeks, intensity = scenes + reviews that day.
 function Heatmap({ days }) {
   const byDate = new Map(days.map((d) => [d.date, d.scenes + d.reviews]));
   const weeks = [];
@@ -134,12 +188,12 @@ function Heatmap({ days }) {
   }
   const shade = (n) => (n === 0 ? '#f4ece2' : n < 2 ? '#f8c9ad' : n < 4 ? '#f4936b' : n < 7 ? '#e8604c' : '#b93c2b');
   return (
-    <div style={{ border: '1px solid #f5e6d9', borderRadius: 16, background: '#fff', padding: '12px 16px', boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
-      <div style={{ fontSize: 12.5, fontWeight: 800, color: '#2b211a', marginBottom: 8 }}>Activity <span style={{ color: '#8a6d3b', fontWeight: 400 }}>· last 16 weeks</span></div>
+    <div style={{ border: `1px solid ${UI.border}`, borderRadius: 16, background: '#fff', padding: '12px 16px', boxShadow: '0 2px 10px rgba(58,46,34,0.06)', flex: 1 }}>
+      <div style={{ fontSize: 12.5, fontWeight: 800, color: UI.text, marginBottom: 8 }}>Activity <span style={{ color: UI.muted, fontWeight: 400 }}>· last 16 weeks · darker = more scenes + reviews</span></div>
       <div style={{ display: 'flex', gap: 3 }}>
         {weeks.map((col, i) => (
           <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {col.map((c) => <span key={c.key} title={`${c.key}: ${c.n} scene/review${c.n === 1 ? '' : 's'}`} style={{ width: 11, height: 11, borderRadius: 3, background: shade(c.n) }} />)}
+            {col.map((c) => <span key={c.key} title={`${c.key}: ${c.n}`} style={{ width: 12, height: 12, borderRadius: 3, background: shade(c.n) }} />)}
           </div>
         ))}
       </div>
@@ -147,20 +201,20 @@ function Heatmap({ days }) {
   );
 }
 
-// Khan-style badge wall: earned in color, locked greyed with the target visible.
-function Badges({ badges }) {
-  const earned = badges.filter((b) => b.earned).length;
+function EmptyCard() {
   return (
-    <div style={{ border: '1px solid #f5e6d9', borderRadius: 16, background: '#fff', padding: '12px 16px', boxShadow: '0 2px 10px rgba(58,46,34,0.06)', flex: '1 1 220px' }}>
-      <div style={{ fontSize: 12.5, fontWeight: 800, color: '#2b211a', marginBottom: 8 }}>Badges <span style={{ color: '#8a6d3b', fontWeight: 400 }}>· {earned}/{badges.length}</span></div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {badges.map((b) => (
-          <span key={b.label} title={b.label} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', width: 54 }}>
-            <span style={{ fontSize: 20, filter: b.earned ? 'none' : 'grayscale(1) opacity(0.4)' }}>{b.icon}</span>
-            <span style={{ fontSize: 8.5, color: b.earned ? '#5a4a2a' : '#c9bda1', textAlign: 'center', lineHeight: 1.15 }}>{b.label}</span>
-          </span>
-        ))}
-      </div>
+    <a href="/courses" style={{ display: 'block', border: `2px dashed ${UI.border}`, borderRadius: 18, padding: '42px 20px', textAlign: 'center', textDecoration: 'none', color: UI.muted, background: UI.bgSoft, marginTop: 18 }}>
+      <div style={{ fontSize: 34, marginBottom: 8 }}>📊</div>
+      <div style={{ fontWeight: 700, color: UI.text }}>Open any lesson and it starts tracking here</div>
+      <div style={{ fontSize: 13 }}>resume points · earned bars · streaks</div>
+    </a>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 16 }}>
+      {[0, 1, 2].map((i) => <div key={i} style={{ height: 210, borderRadius: 18, background: 'linear-gradient(100deg,#fdf1ea,#fff,#fdf1ea)', border: '1px solid #f5e6d9' }} />)}
     </div>
   );
 }

@@ -77,6 +77,13 @@ export async function reviewBookmark(userId, id, grade) {
   return { id, reviewInterval: interval, reviewDue: due };
 }
 
+export async function updateBookmarkNote(userId, id, note) {
+  const col = await studyCollection();
+  if (!col || !userId) return false;
+  const r = await col.updateOne({ _id: id, userId, kind: 'bookmark' }, { $set: { note: String(note ?? '').slice(0, 500) } });
+  return r.matchedCount === 1;
+}
+
 export async function removeBookmark(userId, id) {
   const col = await studyCollection();
   if (!col || !userId) return false;

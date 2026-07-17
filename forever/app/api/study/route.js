@@ -30,10 +30,36 @@ export async function GET(request) {
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7)); // Monday
   const weekKey = weekStart.toISOString().slice(0, 10);
   const weekScenes = heatmap.filter((d) => d.date >= weekKey).reduce((a, d) => a + d.scenes, 0);
-  const totalScenes = heatmap.reduce((a, d) => a + d.scenes, 0);
+  // True all-time earned total: the sum of per-lesson completed scenes (day counters only
+  // exist since the feature shipped; the progress records carry the full history).
+  const totalScenes = Math.max(
+    heatmap.reduce((a, d) => a + d.scenes, 0),
+    progress.reduce((a, p) => a + (p.completedCount ?? 0), 0),
+  );
   const totalReviews = heatmap.reduce((a, d) => a + d.reviews, 0);
   const badges = computeBadges({ progress, bookmarks, streak, totalScenes, totalReviews });
-  return Response.json({ signedIn: true, bookmarks, progress, streak, dueCount, heatmap, weekScenes, weekGoal: 10, badges });
+  // Best streak ever (from day docs) + Anki-style due forecast.
+  const dateSet = new Set(heatmap.filter((d) => d.scenes + d.reviews + d.bookmarks > 0).map((d) => d.date));
+  let bestStreak = streak;
+  let run = 0;
+  for (let i = 120; i >= 0; i -= 1) {
+    const d = new Date(Date.now() - i * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    run = dateSet.has(d) ? run + 1 : 0;
+    if (run > bestStreak) bestStreak = run;
+  }
+  const now = Date.now();
+  const in24 = now + 24 * 3600 * 1000;
+  const in7d = now + 7 * 24 * 3600 * 1000;
+  const dues = bookmarks.map((b) => b.reviewDue && new Date(b.reviewDue).getTime()).filter(Boolean);
+  const forecast = {
+    today: dues.filter((t) => t <= now).length,
+    tomorrow: dues.filter((t) => t > now && t <= in24).length,
+    week: dues.filter((t) => t > in24 && t <= in7d).length,
+  };
+  return Response.json({
+    signedIn: true, bookmarks, progress, streak, bestStreak, dueCount, heatmap, weekScenes, weekGoal: 10, badges, forecast,
+    stats: { totalScenes, totalReviews, totalBookmarks: bookmarks.length, lessonsDone: progress.filter((p) => p.completed).length },
+  });
 }
 
 export async function POST(request) {
@@ -43,6 +69,10 @@ export async function POST(request) {
   if (body.type === 'bookmark') {
     const doc = await addBookmark({ ...body, userId: session.userId });
     return Response.json({ bookmark: doc });
+  }
+  if (body.type === 'note') {
+    const { updateBookmarkNote } = await import('../../../lib/storage/study-store.js');
+    return Response.json({ updated: await updateBookmarkNote(session.userId, body.id, body.note) });
   }
   if (body.type === 'review') {
     return Response.json({ review: await reviewBookmark(session.userId, body.id, body.grade === 'good' ? 'good' : 'again') });

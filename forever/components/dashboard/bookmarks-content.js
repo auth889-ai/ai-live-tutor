@@ -30,6 +30,8 @@ export function BookmarksContent() {
     if (rv) setData((d) => ({ ...d, bookmarks: d.bookmarks.map((b) => (b._id === id ? { ...b, ...rv, reviewDue: rv.reviewDue } : b)) }));
   });
 
+  const [tab, setTab] = useState('library'); // 'review' | 'library'
+  const [reviewIdx, setReviewIdx] = useState(0);
   const [tag, setTag] = useState('');
   const tags = useMemo(() => {
     const t = new Set();
@@ -70,7 +72,7 @@ export function BookmarksContent() {
   if (data.signedIn === false) return <Shell><CTA text="Sign in and every moment you press 🔖 in a lesson lands here — with the exact teaching line, your notes, and a review schedule." /></Shell>;
 
   const now = Date.now();
-  const due = filtered.filter((b) => b.reviewDue && new Date(b.reviewDue).getTime() <= now);
+  const due = (data.bookmarks ?? []).filter((b) => b.reviewDue && new Date(b.reviewDue).getTime() <= now);
   const groups = new Map();
   for (const b of filtered) {
     if (!groups.has(b.lessonId)) groups.set(b.lessonId, { title: b.lessonTitle || b.lessonId, items: [] });
@@ -96,16 +98,36 @@ export function BookmarksContent() {
           ))}
         </div>
       ) : null}
-      {due.length > 0 ? (
-        <section style={{ marginBottom: 22, border: '1.5px solid #f0c39a', borderRadius: 14, background: 'linear-gradient(180deg,#fffdf9,#fff5ec)', padding: '12px 14px' }}>
-          <h2 style={{ fontSize: 14.5, color: '#8a3a12', margin: '0 0 10px' }}>🧠 Due for review — recall first, then reveal and grade yourself honestly</h2>
-          {due.map((b) => (
-            <RecallCard key={`due-${b._id}`} b={b}
-              onGood={() => review(b._id, 'good')} onAgain={() => review(b._id, 'again')} />
-          ))}
-        </section>
-      ) : null}
-      {groups.size === 0 ? (
+      <div style={{ display: 'flex', gap: 8, margin: '0 0 16px' }}>
+        <TabBtn active={tab === 'review'} onClick={() => { setTab('review'); setReviewIdx(0); }}>
+          🧠 Review{due.length ? ` · ${due.length} due` : ''}
+        </TabBtn>
+        <TabBtn active={tab === 'library'} onClick={() => setTab('library')}>🔖 Library · {(data.bookmarks ?? []).length}</TabBtn>
+      </div>
+
+      {tab === 'review' ? (
+        <div>
+          <Forecast f={data.forecast ?? {}} />
+          {due.length === 0 ? (
+            <div style={{ border: '1.5px dashed #e8d5c8', borderRadius: 14, padding: '34px 22px', textAlign: 'center', color: '#8a6d3b' }}>
+              <div style={{ fontSize: 30, marginBottom: 8 }}>🎉</div>
+              <div>Nothing due right now — reviews return on their schedule.</div>
+            </div>
+          ) : reviewIdx >= due.length ? (
+            <div style={{ border: '1.5px solid #cfe8d6', borderRadius: 14, padding: '34px 22px', textAlign: 'center', color: '#20794a', background: '#f2faf4' }}>
+              <div style={{ fontSize: 30, marginBottom: 8 }}>✅</div>
+              <div style={{ fontWeight: 800 }}>Session done — {due.length} moment{due.length === 1 ? '' : 's'} reviewed.</div>
+            </div>
+          ) : (
+            <div style={{ maxWidth: 560, margin: '0 auto' }}>
+              <div style={{ fontSize: 12, color: '#8a6d3b', textAlign: 'center', marginBottom: 8 }}>card {reviewIdx + 1} of {due.length}</div>
+              <RecallCard key={due[reviewIdx]._id} b={due[reviewIdx]}
+                onGood={() => { review(due[reviewIdx]._id, 'good'); setReviewIdx((i) => i + 1); }}
+                onAgain={() => { review(due[reviewIdx]._id, 'again'); setReviewIdx((i) => i + 1); }} />
+            </div>
+          )}
+        </div>
+      ) : groups.size === 0 ? (
         <CTA text={q ? 'Nothing matches that search.' : 'No bookmarks yet — press 🔖 at a moment worth keeping; the teaching line is captured with it.'} />
       ) : [...groups.entries()].map(([lessonId, g]) => (
         <section key={lessonId} style={{ marginBottom: 24 }}>
@@ -120,6 +142,29 @@ export function BookmarksContent() {
         </section>
       ))}
     </Shell>
+  );
+}
+
+function TabBtn({ active, onClick, children }) {
+  return (
+    <button onClick={onClick} style={{
+      border: `1.5px solid ${active ? '#d35400' : '#f5e6d9'}`, borderRadius: 999, cursor: 'pointer',
+      background: active ? 'linear-gradient(180deg,#fffdf9,#fff5ec)' : '#fff', color: active ? '#8a3a12' : '#8a6d3b',
+      fontWeight: 800, fontSize: 13, padding: '7px 18px', boxShadow: active ? '0 2px 8px rgba(211,84,0,0.12)' : 'none',
+    }}>{children}</button>
+  );
+}
+
+// Anki-style due forecast: what's coming keeps the habit honest.
+function Forecast({ f }) {
+  return (
+    <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+      {[['today', f.today ?? 0, '#c0522d'], ['tomorrow', f.tomorrow ?? 0, '#8a6d3b'], ['this week', f.week ?? 0, '#8a6d3b']].map(([label, n, color]) => (
+        <div key={label} style={{ border: '1px solid #f5e6d9', borderRadius: 12, background: '#fff', padding: '8px 14px', fontSize: 12.5 }}>
+          <b style={{ color, fontSize: 16 }}>{n}</b> <span style={{ color: '#8a6d3b' }}>{label}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
