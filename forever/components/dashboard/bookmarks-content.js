@@ -98,9 +98,9 @@ export function BookmarksContent() {
       ) : null}
       {due.length > 0 ? (
         <section style={{ marginBottom: 22, border: '1.5px solid #f0c39a', borderRadius: 14, background: 'linear-gradient(180deg,#fffdf9,#fff5ec)', padding: '12px 14px' }}>
-          <h2 style={{ fontSize: 14.5, color: '#8a3a12', margin: '0 0 10px' }}>🧠 Due for review — re-read, then grade yourself honestly</h2>
+          <h2 style={{ fontSize: 14.5, color: '#8a3a12', margin: '0 0 10px' }}>🧠 Due for review — recall first, then reveal and grade yourself honestly</h2>
           {due.map((b) => (
-            <Card key={`due-${b._id}`} b={b} onRemove={remove} due
+            <RecallCard key={`due-${b._id}`} b={b}
               onGood={() => review(b._id, 'good')} onAgain={() => review(b._id, 'again')} />
           ))}
         </section>
@@ -120,6 +120,36 @@ export function BookmarksContent() {
         </section>
       ))}
     </Shell>
+  );
+}
+
+// ACTIVE RECALL (Anki law: retrieve BEFORE re-reading): due cards hide the teaching line;
+// the student recalls, presses Reveal (or Space), then grades honestly.
+function RecallCard({ b, onGood, onAgain }) {
+  const [revealed, setRevealed] = useState(false);
+  return (
+    <div className="bmcard" style={{ border: '1px solid #f5e6d9', borderRadius: 14, background: '#fff', padding: '13px 15px', marginBottom: 8 }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color: '#8e44ad', marginBottom: 6 }}>RECALL — what was being taught here?</div>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 800 }}>{b.lessonTitle}</span>
+        <span style={{ color: '#8a6d3b', fontSize: 13 }}>· {b.sceneTitle} · {fmtT(b.tMs)}</span>
+      </div>
+      {b.note ? <div style={{ marginTop: 4, fontSize: 12.5, color: '#8a3a12', fontStyle: 'italic' }}>📝 {b.note}</div> : null}
+      {revealed ? (
+        <>
+          {b.context ? <div style={{ marginTop: 8, fontSize: 13, color: '#5a4a2a', borderLeft: '3px solid #f0c39a', paddingLeft: 8, lineHeight: 1.45 }}>{b.context}</div> : <div style={{ marginTop: 8, fontSize: 12.5, color: '#b3a889' }}>No captured line — <a href={`/course/${b.lessonId}?scene=${encodeURIComponent(b.sceneId ?? '')}&t=${b.tMs}`} style={{ color: '#c0522d' }}>re-watch the moment</a>.</div>}
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+            <button onClick={onGood} style={{ border: 'none', borderRadius: 999, background: '#2f9e5f', color: '#fff', fontWeight: 800, fontSize: 12, padding: '6px 16px', cursor: 'pointer' }}>Got it</button>
+            <button onClick={onAgain} style={{ border: '1.5px solid #e8604c', borderRadius: 999, background: '#fff', color: '#c0522d', fontWeight: 800, fontSize: 12, padding: '6px 16px', cursor: 'pointer' }}>Again · 10 min</button>
+            <a href={`/course/${b.lessonId}?scene=${encodeURIComponent(b.sceneId ?? '')}&t=${b.tMs}`} style={{ fontSize: 12, color: '#8a6d3b' }}>▶ re-watch</a>
+          </div>
+        </>
+      ) : (
+        <button onClick={() => setRevealed(true)} style={{ marginTop: 10, border: '1.5px solid #f0c39a', borderRadius: 999, background: 'linear-gradient(180deg,#fffdf9,#fff5ec)', color: '#8a3a12', fontWeight: 800, fontSize: 12.5, padding: '6px 18px', cursor: 'pointer' }}>
+        Reveal the teaching line
+        </button>
+      )}
+    </div>
   );
 }
 

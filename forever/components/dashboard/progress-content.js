@@ -43,6 +43,11 @@ export function ProgressContent() {
       <p style={{ color: UI.muted, fontSize: 13.5, margin: '4px 0 18px' }}>
         {items.length ? `${items.length - done} in progress · ${done} completed — every bar is earned by finishing scenes.` : 'Every bar is earned by finishing scenes, not by opening them.'}
       </p>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 18 }}>
+        <WeeklyRing scenes={data.weekScenes ?? 0} goal={data.weekGoal ?? 10} />
+        <Heatmap days={data.heatmap ?? []} />
+        <Badges badges={data.badges ?? []} />
+      </div>
       {items.length === 0 ? (
         <a href="/courses" style={{ display: 'block', border: `2px dashed ${UI.border}`, borderRadius: 18, padding: '48px 20px', textAlign: 'center', textDecoration: 'none', color: UI.muted, background: UI.bgSoft }}>
           <div style={{ fontSize: 34, marginBottom: 8 }}>📊</div>
@@ -88,6 +93,74 @@ function Skeleton() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 16 }}>
       {[0, 1, 2].map((i) => <div key={i} style={{ height: 210, borderRadius: 18, background: 'linear-gradient(100deg,#fdf1ea,#fff,#fdf1ea)', border: '1px solid #f5e6d9' }} />)}
+    </div>
+  );
+}
+
+
+// Apple-ring weekly goal (Duolingo weekly targets): scenes finished this week vs goal.
+function WeeklyRing({ scenes, goal }) {
+  const pct = Math.min(100, Math.round((scenes / goal) * 100));
+  const r = 30; const c = 2 * Math.PI * r;
+  return (
+    <div style={{ border: '1px solid #f5e6d9', borderRadius: 16, background: '#fff', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
+      <svg width="74" height="74" viewBox="0 0 74 74">
+        <circle cx="37" cy="37" r={r} fill="none" stroke="#f2e8dc" strokeWidth="7" />
+        <circle cx="37" cy="37" r={r} fill="none" stroke={pct >= 100 ? '#2f9e5f' : '#f47368'} strokeWidth="7" strokeLinecap="round"
+          strokeDasharray={`${(pct / 100) * c} ${c}`} transform="rotate(-90 37 37)" />
+        <text x="37" y="34" textAnchor="middle" fontSize="15" fontWeight="800" fill="#2b211a">{scenes}</text>
+        <text x="37" y="48" textAnchor="middle" fontSize="9" fill="#8a6d3b">of {goal}</text>
+      </svg>
+      <div style={{ fontSize: 12.5, color: '#8a6d3b', maxWidth: 110 }}><b style={{ color: '#2b211a' }}>This week</b><br />scenes finished{pct >= 100 ? ' — goal hit! 🎉' : ''}</div>
+    </div>
+  );
+}
+
+// GitHub-style activity heatmap: 16 weeks, intensity = scenes + reviews that day.
+function Heatmap({ days }) {
+  const byDate = new Map(days.map((d) => [d.date, d.scenes + d.reviews]));
+  const weeks = [];
+  const end = new Date();
+  const start = new Date(end); start.setDate(end.getDate() - (16 * 7 - 1) - ((end.getDay() + 6) % 7));
+  for (let w = 0; w < 16; w += 1) {
+    const col = [];
+    for (let d = 0; d < 7; d += 1) {
+      const dt = new Date(start); dt.setDate(start.getDate() + w * 7 + d);
+      if (dt > end) break;
+      const key = dt.toISOString().slice(0, 10);
+      col.push({ key, n: byDate.get(key) ?? 0 });
+    }
+    weeks.push(col);
+  }
+  const shade = (n) => (n === 0 ? '#f4ece2' : n < 2 ? '#f8c9ad' : n < 4 ? '#f4936b' : n < 7 ? '#e8604c' : '#b93c2b');
+  return (
+    <div style={{ border: '1px solid #f5e6d9', borderRadius: 16, background: '#fff', padding: '12px 16px', boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
+      <div style={{ fontSize: 12.5, fontWeight: 800, color: '#2b211a', marginBottom: 8 }}>Activity <span style={{ color: '#8a6d3b', fontWeight: 400 }}>· last 16 weeks</span></div>
+      <div style={{ display: 'flex', gap: 3 }}>
+        {weeks.map((col, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {col.map((c) => <span key={c.key} title={`${c.key}: ${c.n} scene/review${c.n === 1 ? '' : 's'}`} style={{ width: 11, height: 11, borderRadius: 3, background: shade(c.n) }} />)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Khan-style badge wall: earned in color, locked greyed with the target visible.
+function Badges({ badges }) {
+  const earned = badges.filter((b) => b.earned).length;
+  return (
+    <div style={{ border: '1px solid #f5e6d9', borderRadius: 16, background: '#fff', padding: '12px 16px', boxShadow: '0 2px 10px rgba(58,46,34,0.06)', flex: '1 1 220px' }}>
+      <div style={{ fontSize: 12.5, fontWeight: 800, color: '#2b211a', marginBottom: 8 }}>Badges <span style={{ color: '#8a6d3b', fontWeight: 400 }}>· {earned}/{badges.length}</span></div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {badges.map((b) => (
+          <span key={b.label} title={b.label} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', width: 54 }}>
+            <span style={{ fontSize: 20, filter: b.earned ? 'none' : 'grayscale(1) opacity(0.4)' }}>{b.icon}</span>
+            <span style={{ fontSize: 8.5, color: b.earned ? '#5a4a2a' : '#c9bda1', textAlign: 'center', lineHeight: 1.15 }}>{b.label}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

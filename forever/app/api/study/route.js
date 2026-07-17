@@ -1,13 +1,16 @@
 // /api/study — bookmarks + progress, session-scoped like every data route.
 import { sessionFromRequest } from '../../../lib/auth/session.js';
-import { addBookmark, listBookmarks, removeBookmark, reviewBookmark, saveProgress, getProgress, listProgress } from '../../../lib/storage/study-store.js';
+import { addBookmark, listBookmarks, listLessonBookmarks, removeBookmark, reviewBookmark, saveProgress, getProgress, listProgress, listDays, computeBadges } from '../../../lib/storage/study-store.js';
 
 export async function GET(request) {
   const session = sessionFromRequest(request);
   if (!session?.userId) return Response.json({ signedIn: false, bookmarks: [], progress: [] });
   const url = new URL(request.url);
   const lessonId = url.searchParams.get('lessonId');
-  if (lessonId) return Response.json({ progress: await getProgress(session.userId, lessonId) });
+  if (lessonId) {
+    const [progress, marks] = await Promise.all([getProgress(session.userId, lessonId), listLessonBookmarks(session.userId, lessonId)]);
+    return Response.json({ progress, marks: marks.map((b) => ({ id: b._id, sceneId: b.sceneId, tMs: b.tMs, note: b.note })) });
+  }
   const [bookmarks, progress] = await Promise.all([listBookmarks(session.userId), listProgress(session.userId)]);
   // STREAK (Duolingo pattern, deterministic): consecutive days with any learning activity —
   // progress updates, bookmark saves, or reviews all count as showing up.
@@ -22,7 +25,15 @@ export async function GET(request) {
     else break;
   }
   const dueCount = bookmarks.filter((b) => b.reviewDue && new Date(b.reviewDue).getTime() <= Date.now()).length;
-  return Response.json({ signedIn: true, bookmarks, progress, streak, dueCount });
+  const dayDocs = await listDays(session.userId);
+  const heatmap = dayDocs.map((d) => ({ date: d.date, scenes: d.scenes ?? 0, reviews: d.reviews ?? 0, bookmarks: d.bookmarks ?? 0 }));
+  const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7)); // Monday
+  const weekKey = weekStart.toISOString().slice(0, 10);
+  const weekScenes = heatmap.filter((d) => d.date >= weekKey).reduce((a, d) => a + d.scenes, 0);
+  const totalScenes = heatmap.reduce((a, d) => a + d.scenes, 0);
+  const totalReviews = heatmap.reduce((a, d) => a + d.reviews, 0);
+  const badges = computeBadges({ progress, bookmarks, streak, totalScenes, totalReviews });
+  return Response.json({ signedIn: true, bookmarks, progress, streak, dueCount, heatmap, weekScenes, weekGoal: 10, badges });
 }
 
 export async function POST(request) {

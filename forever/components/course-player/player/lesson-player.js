@@ -77,6 +77,16 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
   }, []);
 
   const [marked, setMarked] = useState(''); // '' | 'saving' | 'saved' | 'note' | 'signin'
+  // Seek-bar markers (YouTube chapter-dot pattern): this lesson's kept moments as amber
+  // ticks on the timeline — click one to jump straight to the moment.
+  const [marks, setMarks] = useState([]);
+  useEffect(() => {
+    if (!lessonId) return;
+    fetch(`/api/study?lessonId=${encodeURIComponent(lessonId)}`).then((r) => r.json())
+      .then((d) => setMarks((d.marks ?? []).filter((m) => m.sceneId)))
+      .catch(() => {});
+  }, [lessonId, marked === 'saved']);
+  const sceneMarks = marks.filter((m) => m.sceneId === scene.sceneId);
   const [noteDraft, setNoteDraft] = useState('');
   const bookmarkNow = (note = '') => {
     if (!lessonId) return;
@@ -293,11 +303,17 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
                   </span>
                 ) : null}
               </span>
+              <span style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+              {sceneMarks.map((m) => (
+                <span key={m.id} title={m.note || 'bookmark'} onClick={() => player.seek(m.tMs)}
+                  style={{ position: 'absolute', left: `${Math.min(99, (m.tMs / (durationMs || 1)) * 100)}%`, top: -3, width: 7, height: 7, borderRadius: '50%', background: '#f0a12e', border: '1.5px solid #fff', cursor: 'pointer', zIndex: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+              ))}
               <input
                 type="range" min="0" max={durationMs || 1} value={Math.min(tMs, durationMs)}
                 onChange={(e) => player.seek(Number(e.target.value))}
                 style={{ flex: 1, accentColor: V('--coral') }}
               />
+              </span>
               <button
                 onClick={() => player.setRate(SPEEDS[(SPEEDS.indexOf(player.rate) + 1) % SPEEDS.length])}
                 title="Playback speed" style={theaterChip({ minWidth: 50, fontVariantNumeric: 'tabular-nums' })}>
