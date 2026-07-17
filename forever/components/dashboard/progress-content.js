@@ -355,63 +355,54 @@ function WeeklyRing({ scenes, goal }) {
 function Heatmap({ days }) {
   const byDate = new Map(days.map((d) => [d.date, d]));
   const todayKey = new Date().toISOString().slice(0, 10);
-  const today = byDate.get(todayKey) ?? { scenes: 0, reviews: 0, bookmarks: 0 };
+  const today = byDate.get(todayKey) ?? { scenes: 0, reviews: 0 };
   const todayTotal = useCountUp((today.scenes ?? 0) + (today.reviews ?? 0));
-  const weeks = [];
+  // FULL GRID (GitHub-style): 52 complete weeks ending this week — every column has all 7
+  // cells; days after today render as faint placeholders so the rectangle is never ragged.
+  const WEEKS = 52;
   const end = new Date();
-  const start = new Date(end); start.setDate(end.getDate() - (16 * 7 - 1) - ((end.getDay() + 6) % 7));
-  const monthMarks = [];
-  for (let w = 0; w < 16; w += 1) {
-    const col = [];
+  const start = new Date(end); start.setDate(end.getDate() - ((end.getDay() + 6) % 7) - (WEEKS - 1) * 7);
+  const cells = [];
+  const monthRow = [];
+  let lastMonth = '';
+  for (let w = 0; w < WEEKS; w += 1) {
+    const colDate = new Date(start); colDate.setDate(start.getDate() + w * 7);
+    const m = colDate.toLocaleString('en', { month: 'short' });
+    monthRow.push(m !== lastMonth ? m : '');
+    lastMonth = m;
     for (let d = 0; d < 7; d += 1) {
       const dt = new Date(start); dt.setDate(start.getDate() + w * 7 + d);
-      if (dt > end) break;
       const key = dt.toISOString().slice(0, 10);
       const rec = byDate.get(key);
-      col.push({ key, n: (rec?.scenes ?? 0) + (rec?.reviews ?? 0) });
-      if (d === 0) {
-        const label = dt.toLocaleString('en', { month: 'short' });
-        monthMarks.push({ w, label: label === monthMarks.lastLabel ? '' : label });
-        monthMarks.lastLabel = label;
-      }
+      cells.push({ key, w, d, future: dt > end, n: (rec?.scenes ?? 0) + (rec?.reviews ?? 0) });
     }
-    weeks.push(col);
   }
   const shade = (n) => (n === 0 ? '#f4ece2' : n < 2 ? '#f8c9ad' : n < 4 ? '#f4936b' : n < 7 ? '#e8604c' : '#b93c2b');
   return (
-    <div style={{ border: `1px solid ${UI.border}`, borderRadius: 16, background: '#fff', padding: '12px 16px', boxShadow: '0 2px 10px rgba(58,46,34,0.06)', flex: 1, minWidth: 300 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, gap: 10, flexWrap: 'wrap' }}>
-        <div style={{ fontSize: 12.5, fontWeight: 800, color: UI.text }}>Activity <span style={{ color: UI.muted, fontWeight: 400 }}>· last 16 weeks</span></div>
-        <div style={{ fontSize: 12, color: today.scenes + today.reviews > 0 ? '#c0522d' : UI.muted, fontWeight: 700 }}>
-          today: {todayTotal} {today.scenes + today.reviews === 1 ? 'action' : 'actions'}{today.scenes ? ` · ${today.scenes} scene${today.scenes === 1 ? '' : 's'}` : ''}{today.reviews ? ` · ${today.reviews} review${today.reviews === 1 ? '' : 's'}` : ''}
+    <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10, gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 12.5, fontWeight: 800, color: '#2b211a' }}>Activity <span style={{ color: '#9b8465', fontWeight: 400 }}>· last 12 months</span></div>
+        <div style={{ fontSize: 12, color: today.scenes + today.reviews > 0 ? '#c0522d' : '#9b8465', fontWeight: 700 }}>
+          today: {todayTotal} action{todayTotal === 1 ? '' : 's'}
         </div>
       </div>
-      {/* month axis */}
-      <div style={{ display: 'flex', gap: 3, marginLeft: 20, marginBottom: 3 }}>
-        {monthMarks.map((m, i) => (
-          <span key={i} style={{ width: 12, fontSize: 8.5, color: UI.muted, overflow: 'visible', whiteSpace: 'nowrap' }}>{m.label}</span>
+      {/* month axis spans the SAME grid as the cells — labels align with their columns */}
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${WEEKS}, 1fr)`, gap: 3, marginBottom: 4 }}>
+        {monthRow.map((m, i) => <span key={i} style={{ fontSize: 8.5, color: '#9b8465', overflow: 'visible', whiteSpace: 'nowrap' }}>{m}</span>)}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${WEEKS}, 1fr)`, gridTemplateRows: 'repeat(7, 1fr)', gridAutoFlow: 'column', gap: 3 }}>
+        {cells.map((c) => (
+          <span key={c.key} className="hmcell" title={c.future ? '' : `${c.key}: ${c.n} action${c.n === 1 ? '' : 's'}`}
+            style={{
+              aspectRatio: '1', borderRadius: 2.5, minWidth: 0,
+              background: c.future ? 'transparent' : shade(c.n),
+              border: c.future ? '1px dashed #f2e3d5' : 'none',
+              outline: c.key === todayKey ? '1.5px solid #b93c2b' : 'none', outlineOffset: 1,
+              animationDelay: `${(c.w * 7 + c.d) * 1.5}ms`,
+            }} />
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 3 }}>
-        {/* weekday axis */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, width: 17 }}>
-          {['M', '', 'W', '', 'F', '', ''].map((l, i) => <span key={i} style={{ height: 12, fontSize: 8.5, color: UI.muted, lineHeight: '12px' }}>{l}</span>)}
-        </div>
-        {weeks.map((col, i) => (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {col.map((c, j) => (
-              <span key={c.key} className="hmcell" title={`${c.key}: ${c.n} action${c.n === 1 ? '' : 's'}`}
-                style={{
-                  width: 12, height: 12, borderRadius: 3, background: shade(c.n),
-                  outline: c.key === todayKey ? '1.5px solid #b93c2b' : 'none', outlineOffset: 1,
-                  animationDelay: `${(i * 7 + j) * 6}ms`,
-                }} />
-            ))}
-          </div>
-        ))}
-      </div>
-      {/* legend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', marginTop: 8, fontSize: 9.5, color: UI.muted }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', marginTop: 9, fontSize: 9.5, color: '#9b8465' }}>
         less {[0, 1, 3, 5, 8].map((n) => <span key={n} style={{ width: 10, height: 10, borderRadius: 2, background: shade(n) }} />)} more
       </div>
     </div>

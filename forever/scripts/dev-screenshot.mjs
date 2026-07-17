@@ -6,7 +6,7 @@ const page = await ctx.newPage();
 for (const [path, out] of [['/progress', '/tmp/shot-progress.png']]) {
   await page.goto('http://localhost:3000' + path, { waitUntil: 'networkidle', timeout: 60000 }).catch(() => {});
   await page.waitForTimeout(2000);
-  const lessonsTab = page.locator('button', { hasText: 'Lessons' }).first();
+  const lessonsTab = page.locator('button', { hasText: 'Awards' }).first();
   if (await lessonsTab.count()) { await lessonsTab.click(); await page.waitForTimeout(1200); }
   await page.screenshot({ path: out });
   console.log('shot', path);
