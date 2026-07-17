@@ -93,6 +93,10 @@ export function ProgressContent() {
         .dotcell{transition:background .5s}
         @keyframes pulseDot{0%,100%{box-shadow:0 0 0 0 rgba(232,96,76,.5)}50%{box-shadow:0 0 0 6px rgba(232,96,76,0)}}
         @keyframes toastIn{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+        @keyframes cellIn{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+        .hmcell{transition:background .6s, outline .3s}
+        @media (prefers-reduced-motion: no-preference){ .hmcell{animation:cellIn .4s ease-out both} }
+        @media (prefers-reduced-motion: reduce){ .pcard,.ringArc,.hmcell{transition:none!important;animation:none!important} }
       `}</style>
       {toast ? (
         <div style={{ position: 'fixed', bottom: 22, right: 22, zIndex: 60, background: '#2b211a', color: '#fff', borderRadius: 14, padding: '12px 18px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', animation: 'toastIn .35s ease-out', fontSize: 14 }}>
@@ -240,30 +244,66 @@ function WeeklyRing({ scenes, goal }) {
 }
 
 function Heatmap({ days }) {
-  const byDate = new Map(days.map((d) => [d.date, d.scenes + d.reviews]));
+  const byDate = new Map(days.map((d) => [d.date, d]));
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const today = byDate.get(todayKey) ?? { scenes: 0, reviews: 0, bookmarks: 0 };
+  const todayTotal = useCountUp((today.scenes ?? 0) + (today.reviews ?? 0));
   const weeks = [];
   const end = new Date();
   const start = new Date(end); start.setDate(end.getDate() - (16 * 7 - 1) - ((end.getDay() + 6) % 7));
+  const monthMarks = [];
   for (let w = 0; w < 16; w += 1) {
     const col = [];
     for (let d = 0; d < 7; d += 1) {
       const dt = new Date(start); dt.setDate(start.getDate() + w * 7 + d);
       if (dt > end) break;
       const key = dt.toISOString().slice(0, 10);
-      col.push({ key, n: byDate.get(key) ?? 0 });
+      const rec = byDate.get(key);
+      col.push({ key, n: (rec?.scenes ?? 0) + (rec?.reviews ?? 0) });
+      if (d === 0) {
+        const label = dt.toLocaleString('en', { month: 'short' });
+        monthMarks.push({ w, label: label === monthMarks.lastLabel ? '' : label });
+        monthMarks.lastLabel = label;
+      }
     }
     weeks.push(col);
   }
   const shade = (n) => (n === 0 ? '#f4ece2' : n < 2 ? '#f8c9ad' : n < 4 ? '#f4936b' : n < 7 ? '#e8604c' : '#b93c2b');
   return (
-    <div style={{ border: `1px solid ${UI.border}`, borderRadius: 16, background: '#fff', padding: '12px 16px', boxShadow: '0 2px 10px rgba(58,46,34,0.06)', flex: 1 }}>
-      <div style={{ fontSize: 12.5, fontWeight: 800, color: UI.text, marginBottom: 8 }}>Activity <span style={{ color: UI.muted, fontWeight: 400 }}>· last 16 weeks · darker = more scenes + reviews</span></div>
+    <div style={{ border: `1px solid ${UI.border}`, borderRadius: 16, background: '#fff', padding: '12px 16px', boxShadow: '0 2px 10px rgba(58,46,34,0.06)', flex: 1, minWidth: 300 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 12.5, fontWeight: 800, color: UI.text }}>Activity <span style={{ color: UI.muted, fontWeight: 400 }}>· last 16 weeks</span></div>
+        <div style={{ fontSize: 12, color: today.scenes + today.reviews > 0 ? '#c0522d' : UI.muted, fontWeight: 700 }}>
+          today: {todayTotal} {today.scenes + today.reviews === 1 ? 'action' : 'actions'}{today.scenes ? ` · ${today.scenes} scene${today.scenes === 1 ? '' : 's'}` : ''}{today.reviews ? ` · ${today.reviews} review${today.reviews === 1 ? '' : 's'}` : ''}
+        </div>
+      </div>
+      {/* month axis */}
+      <div style={{ display: 'flex', gap: 3, marginLeft: 20, marginBottom: 3 }}>
+        {monthMarks.map((m, i) => (
+          <span key={i} style={{ width: 12, fontSize: 8.5, color: UI.muted, overflow: 'visible', whiteSpace: 'nowrap' }}>{m.label}</span>
+        ))}
+      </div>
       <div style={{ display: 'flex', gap: 3 }}>
+        {/* weekday axis */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, width: 17 }}>
+          {['M', '', 'W', '', 'F', '', ''].map((l, i) => <span key={i} style={{ height: 12, fontSize: 8.5, color: UI.muted, lineHeight: '12px' }}>{l}</span>)}
+        </div>
         {weeks.map((col, i) => (
           <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {col.map((c) => <span key={c.key} title={`${c.key}: ${c.n}`} style={{ width: 12, height: 12, borderRadius: 3, background: shade(c.n) }} />)}
+            {col.map((c, j) => (
+              <span key={c.key} className="hmcell" title={`${c.key}: ${c.n} action${c.n === 1 ? '' : 's'}`}
+                style={{
+                  width: 12, height: 12, borderRadius: 3, background: shade(c.n),
+                  outline: c.key === todayKey ? '1.5px solid #b93c2b' : 'none', outlineOffset: 1,
+                  animationDelay: `${(i * 7 + j) * 6}ms`,
+                }} />
+            ))}
           </div>
         ))}
+      </div>
+      {/* legend */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', marginTop: 8, fontSize: 9.5, color: UI.muted }}>
+        less {[0, 1, 3, 5, 8].map((n) => <span key={n} style={{ width: 10, height: 10, borderRadius: 2, background: shade(n) }} />)} more
       </div>
     </div>
   );
