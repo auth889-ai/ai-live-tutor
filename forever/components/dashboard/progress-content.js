@@ -150,35 +150,45 @@ export function ProgressContent() {
       </div>
 
       {tab === 'overview' ? (
-        <div style={{ maxWidth: 640 }}>
+        <div style={{ marginTop: 22, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          {/* HERO — the biggest element on screen (research: the primary KPI dominates), with
+              the lesson's own cover imagery. One CTA on the whole view. */}
           {rec ? (
             <a href={`/course/${rec.lessonId}?t=${rec.tMs}&scene=${rec.sceneIndex}`} className="pcard"
-              style={{ ...T.card, display: 'flex', marginTop: 24, textDecoration: 'none', overflow: 'hidden' }}>
-              <div style={{ width: 6, background: T.accent }} />
-              <div style={{ padding: T.pad, flex: 1 }}>
-                <div style={{ ...T.cap, fontWeight: 800, letterSpacing: 0.4, color: '#c0522d' }}>UP NEXT{rec.minutes ? ` · ~${rec.minutes} MIN` : ''}</div>
-                <div style={{ ...T.body, fontWeight: 800, fontSize: 17, marginTop: 5 }}>{rec.lessonTitle}</div>
-                {rec.nextSceneTitle ? <div style={{ ...T.body, color: '#6b563d', marginTop: 2 }}>Scene {rec.sceneIndex + 1} · {rec.nextSceneTitle}</div> : null}
-                <div style={{ marginTop: 12 }}><span style={{ background: T.accent, color: '#fff', borderRadius: 999, padding: '8px 20px', fontWeight: 800, fontSize: 13 }}>Continue ▸</span></div>
+              style={{ gridColumn: '1 / -1', position: 'relative', borderRadius: 20, overflow: 'hidden', textDecoration: 'none', minHeight: 210, display: 'flex', alignItems: 'flex-end', boxShadow: '0 6px 24px rgba(58,46,34,0.12)' }}>
+              <img src={coverFor(rec.lessonId)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(43,33,26,0.05) 20%, rgba(43,33,26,0.78))' }} />
+              <div style={{ position: 'relative', padding: '22px 24px', width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: 1, color: '#ffd9c9' }}>UP NEXT{rec.minutes ? ` · ~${rec.minutes} MIN` : ''}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginTop: 4, textShadow: '0 1px 6px rgba(0,0,0,0.4)', fontFamily: 'var(--font-newsreader), Georgia, serif' }}>{rec.lessonTitle}</div>
+                  {rec.nextSceneTitle ? <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.85)', marginTop: 3 }}>Scene {rec.sceneIndex + 1} · {rec.nextSceneTitle}</div> : null}
+                </div>
+                <span style={{ background: T.accent, color: '#fff', borderRadius: 999, padding: '11px 26px', fontWeight: 800, fontSize: 14.5, boxShadow: '0 4px 14px rgba(232,96,76,0.45)', whiteSpace: 'nowrap' }}>Continue ▸</span>
               </div>
             </a>
-          ) : <EmptyCard />}
+          ) : <div style={{ gridColumn: '1 / -1' }}><EmptyCard /></div>}
 
-          <div style={{ ...T.card, padding: T.pad, marginTop: T.gap, display: 'flex', gap: 26, flexWrap: 'wrap' }}>
-            {[[t.scenes ?? 0, 'scenes today'], [t.checkpoints ?? 0, 'checkpoints ✓'], [t.reviews ?? 0, 'reviews'], [t.minutes ?? 0, 'focused min']].map(([n, l]) => (
-              <div key={l}><div style={{ fontSize: 22, fontWeight: 800, color: '#2b211a', lineHeight: 1 }}>{n}</div><div style={{ ...T.cap, marginTop: 3 }}>{l}</div></div>
+          {/* KPI METRIC STRIP — segmented, dividers, tabular numerals (research pattern) */}
+          <div style={{ gridColumn: '1 / 3', ...T.card, borderRadius: 20, display: 'flex', alignItems: 'stretch' }}>
+            {[[t.scenes ?? 0, 'scenes today'], [t.checkpoints ?? 0, 'checkpoints ✓'], [t.reviews ?? 0, 'reviews'], [t.minutes ?? 0, 'focused min']].map(([n, l], i) => (
+              <div key={l} style={{ flex: 1, padding: '18px 8px', textAlign: 'center', borderLeft: i ? '1px solid #f2e3d5' : 'none' }}>
+                <div style={{ fontSize: 30, fontWeight: 800, color: n > 0 ? '#2b211a' : '#cbbfa8', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{n}</div>
+                <div style={{ ...T.cap, marginTop: 7 }}>{l}</div>
+              </div>
             ))}
           </div>
 
-          <div style={{ ...T.card, padding: T.pad, marginTop: T.gap }}>
+          {/* WEEKLY — ring card completing the bento row */}
+          <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>WEEKLY TARGET</div>
             <WeeklyTarget total={data.weekTotal ?? 0} goal={data.weekGoal ?? 10} actions={data.weekActions ?? {}} pace={data.pace ?? ''} bare />
           </div>
 
           {(data.dueCount ?? 0) > 0 ? (
-            <a href="/bookmarks" style={{ ...T.card, display: 'block', padding: T.pad, marginTop: T.gap, textDecoration: 'none' }}>
-              <span style={{ ...T.body, fontWeight: 800 }}>🧠 {data.dueCount} review{data.dueCount === 1 ? '' : 's'} due</span>
-              <span style={{ ...T.cap, marginLeft: 8 }}>~4 min — start now →</span>
+            <a href="/bookmarks" className="pcard" style={{ gridColumn: '1 / -1', ...T.card, borderRadius: 20, padding: '15px 20px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ ...T.body, fontWeight: 800 }}>🧠 {data.dueCount} review{data.dueCount === 1 ? '' : 's'} due — about 4 minutes</span>
+              <span style={{ color: '#c0522d', fontWeight: 800, fontSize: 13 }}>Start →</span>
             </a>
           ) : null}
         </div>
@@ -413,8 +423,13 @@ function EmptyCard() {
 
 function Skeleton() {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 16 }}>
-      {[0, 1, 2].map((i) => <div key={i} style={{ height: 210, borderRadius: 18, background: 'linear-gradient(100deg,#fdf1ea,#fff,#fdf1ea)', border: '1px solid #f5e6d9' }} />)}
+    <div>
+      <style>{`@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}} .sk{background:linear-gradient(100deg,#fdf1ea 30%,#fff 50%,#fdf1ea 70%); background-size:800px 100%; animation:shimmer 1.4s infinite linear; border:1px solid #f5e6d9; border-radius:20px}`}</style>
+      <div className="sk" style={{ height: 210, marginBottom: 14 }} />
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
+        <div className="sk" style={{ height: 110 }} />
+        <div className="sk" style={{ height: 110 }} />
+      </div>
     </div>
   );
 }
