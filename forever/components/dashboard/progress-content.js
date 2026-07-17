@@ -102,12 +102,37 @@ export function ProgressContent() {
     if (sort === 'alpha') xs.sort((a, b) => String(a.lessonTitle).localeCompare(String(b.lessonTitle)));
     return xs;
   }, [data, sort]);
+  const dueN = useCountUp(data?.dueCount ?? 0);
+  const savedN = useCountUp((data?.bookmarks ?? []).length);
   if (data === null) return <Skeleton />;
   const inProgress = items.filter((p) => !p.completed);
   const t = data.today ?? {};
   const rec = data.recommended;
   const know = data.knowledge ?? [];
   const STATUS_COLOR = { New: '#9b8465', Learning: '#c98f2d', Developing: '#4477aa', Strong: '#2f7d4a', 'Review due': '#c0522d' };
+  // MEMORY copy is COMPUTED from the bank's real state — no sentence renders the same for two
+  // different learners. Gap math mirrors the store's SM-2 (good: ×2.5, capped 60 days).
+  const bms = data.bookmarks ?? [];
+  const nextUp = (data.upcoming ?? [])[0] ?? null;
+  const nextBk = nextUp ? bms.find((b) => String(b._id ?? b.id) === String(nextUp.id)) : null;
+  const wk = (d) => new Date(d).toLocaleDateString('en', { weekday: 'long' });
+  const nextGap = (bk) => Math.min(60, Math.max(1, Math.round((bk?.reviewInterval ?? 1) * 2.5)));
+  const dueBk = bms.find((b) => b.reviewDue && new Date(b.reviewDue).getTime() <= Date.now()) ?? null;
+  const memHead = (data.dueCount ?? 0) > 0
+    ? `${data.dueCount} ${data.dueCount === 1 ? 'memory is' : 'memories are'} fading right now`
+    : nextUp ? 'Nothing due — your memory holds'
+    : bms.length ? 'Every moment reviewed — bank at rest'
+    : 'Plant your first memory';
+  const memSub = (data.dueCount ?? 0) > 0 && dueBk
+    ? `recall “${String(dueBk.note || dueBk.context || 'it').slice(0, 34)}” today and its gap stretches to ${nextGap(dueBk)} days`
+    : nextUp ? `“${String(nextUp.label).slice(0, 38)}” returns ${wk(nextUp.due)} — right before you'd forget it`
+    : bms.length ? 'new bookmarks join the schedule the moment you save them'
+    : 'press B in any lesson — that moment returns tomorrow as a recall prompt';
+  const scheduled = bms.filter((b) => b.reviewDue && new Date(b.reviewDue).getTime() > Date.now());
+  const farthest = scheduled.reduce((m, b) => Math.max(m, new Date(b.reviewDue).getTime()), 0);
+  const forecastCap = scheduled.length
+    ? `${scheduled.length} return${scheduled.length === 1 ? '' : 's'} on the calendar · farthest ${new Date(farthest).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`
+    : bms.length ? 'grade a recall and its next return lands here' : 'bookmarks build this calendar — none saved yet';
   const TabBtn = ({ id, children }) => (
     <button onClick={() => setTab(id)} style={{
       border: 'none', borderBottom: tab === id ? `2.5px solid ${T.accent}` : '2.5px solid transparent',
@@ -123,6 +148,7 @@ export function ProgressContent() {
         .ringArc{transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1)}
         @keyframes pulseDot{0%,100%{box-shadow:0 0 0 0 rgba(232,96,76,.5)}50%{box-shadow:0 0 0 6px rgba(232,96,76,0)}}
         @keyframes toastIn{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+        @keyframes blinkDot{50%{opacity:.3}}
         @keyframes cellIn{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
         .hmcell{transition:background .6s, outline .3s}
         @media (prefers-reduced-motion: no-preference){ .hmcell{animation:cellIn .4s ease-out both} }
@@ -138,7 +164,7 @@ export function ProgressContent() {
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div>
           <h1 style={{ ...T.h1, margin: 0 }}>Progress</h1>
-          <p style={{ ...T.cap, margin: '4px 0 0' }}>What you learned, what you may forget, and the best next step.</p>
+          <p style={{ ...T.cap, margin: '4px 0 0' }}>What you learned, what you may forget, and the best next step. <span title="auto-refreshes every 20 seconds" style={{ color: '#2f9e5f', fontWeight: 700, whiteSpace: 'nowrap' }}><span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#2f9e5f', marginRight: 4, animation: 'blinkDot 2s infinite' }} />live</span></p>
         </div>
         {data.streak ? <span style={{ ...T.body, fontWeight: 800, color: '#c0522d' }}>🔥 {data.streak}-day streak <span style={{ ...T.cap, fontWeight: 400 }}>· best {data.bestStreak}</span></span> : null}
       </div>
@@ -318,11 +344,11 @@ export function ProgressContent() {
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(255,255,255,0.93) 34%, rgba(255,255,255,0.3))' }} />
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', gap: 14 }}>
               <div>
-                <div style={{ fontSize: 19, fontWeight: 700, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif' }}>Memory grows like a vine</div>
-                <div style={{ fontSize: 12, color: '#6b563d', marginTop: 3 }}>reviews return exactly when you are about to forget</div>
+                <div style={{ fontSize: 19, fontWeight: 700, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif' }}>{memHead}</div>
+                <div style={{ fontSize: 12, color: '#6b563d', marginTop: 3 }}>{memSub}</div>
               </div>
               <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.78)', border: '1px solid rgba(242,227,213,0.9)', borderRadius: 14, padding: '9px 18px' }}>
-                <div style={{ fontSize: 24, fontWeight: 800, color: '#2b211a', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{(data.bookmarks ?? []).length}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#2b211a', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{savedN}</div>
                 <div style={{ ...T.cap, marginTop: 3 }}>saved moment{(data.bookmarks ?? []).length === 1 ? '' : 's'}</div>
               </div>
             </div>
@@ -333,16 +359,16 @@ export function ProgressContent() {
             <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px', display: 'flex', flexDirection: 'column' }}>
               <div style={{ ...T.cap, fontWeight: 800 }}>REVIEW QUEUE</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10 }}>
-                <span style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, color: (data.dueCount ?? 0) > 0 ? '#c0522d' : '#cbbfa8', fontVariantNumeric: 'tabular-nums' }}>{data.dueCount ?? 0}</span>
+                <span style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, color: (data.dueCount ?? 0) > 0 ? '#c0522d' : '#cbbfa8', fontVariantNumeric: 'tabular-nums' }}>{dueN}</span>
                 <span style={T.cap}>due now</span>
               </div>
               {(data.dueCount ?? 0) > 0 ? (
                 <a href="/bookmarks" style={{ marginTop: 12, alignSelf: 'flex-start', background: T.accent, color: '#fff', borderRadius: 999, padding: '8px 18px', fontWeight: 800, fontSize: 12.5, textDecoration: 'none', boxShadow: '0 3px 10px rgba(232,96,76,0.35)' }}>Start review</a>
               ) : (
-                <div style={{ ...T.cap, marginTop: 12, lineHeight: 1.5 }}>{(data.upcoming ?? [])[0] ? `queue is clear — next returns ${new Date(data.upcoming[0].due).toLocaleDateString('en', { weekday: 'long' })}` : <>press <b style={{ color: '#2b211a' }}>B</b> in a lesson to save your first moment</>}</div>
+                <div style={{ ...T.cap, marginTop: 12, lineHeight: 1.5 }}>{nextUp ? `clear until ${wk(nextUp.due)} — a good recall then stretches its gap to ${nextGap(nextBk)} day${nextGap(nextBk) === 1 ? '' : 's'}` : <>press <b style={{ color: '#2b211a' }}>B</b> in a lesson to save your first moment</>}</div>
               )}
             </div>
-            <ForecastCard f={data.forecast ?? {}} />
+            <ForecastCard f={data.forecast ?? {}} caption={forecastCap} />
             <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
               <div style={{ ...T.cap, fontWeight: 800 }}>MEMORY BANK</div>
               {[['moments saved', (data.bookmarks ?? []).length],
@@ -383,8 +409,10 @@ export function ProgressContent() {
           <div style={{ ...T.card, padding: T.pad }}>
             <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>LEARNING HEALTH</div>
             {[['Progress', `${data.stats?.totalScenes ?? 0} scene${(data.stats?.totalScenes ?? 0) === 1 ? '' : 's'} · ${data.stats?.lessonsDone ?? 0} lesson${(data.stats?.lessonsDone ?? 0) === 1 ? '' : 's'}`, true],
-              ['Recall', (data.stats?.totalReviews ?? 0) >= 3 ? `${data.stats.totalReviews} reviews` : 'Not enough data', (data.stats?.totalReviews ?? 0) >= 3],
-              ['Verified', (data.stats?.totalCheckpoints ?? 0) > 0 ? `${data.stats.totalCheckpoints} checkpoint${data.stats.totalCheckpoints === 1 ? '' : 's'}` : 'Not measured yet', (data.stats?.totalCheckpoints ?? 0) > 0]].map(([l, v, ok]) => (
+              ['Recall', (data.stats?.totalReviews ?? 0) >= 3 ? `${data.stats.totalReviews} recalls — trend visible`
+                : (data.stats?.totalReviews ?? 0) > 0 ? `${data.stats.totalReviews} of 3 recalls for a trend`
+                : nextUp ? `first recall opens ${wk(nextUp.due)}` : 'no recalls yet', (data.stats?.totalReviews ?? 0) >= 3],
+              ['Verified', (data.stats?.totalCheckpoints ?? 0) > 0 ? `${data.stats.totalCheckpoints} checkpoint${data.stats.totalCheckpoints === 1 ? '' : 's'} passed` : 'answer any quiz inside a lesson', (data.stats?.totalCheckpoints ?? 0) > 0]].map(([l, v, ok]) => (
               <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 0', fontSize: 12.5 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: ok ? '#2f9e5f' : '#e3d7c2', flexShrink: 0 }} />
                 <span style={{ flex: 1, color: '#9b8465' }}>{l}</span>
@@ -570,7 +598,7 @@ function MiniHeat({ days }) {
 }
 
 // Due-load ahead as honest bars — counts come straight from each bookmark's reviewDue.
-function ForecastCard({ f }) {
+function ForecastCard({ f, caption }) {
   const rows = [['today', f.today ?? 0, '#e8604c'], ['tomorrow', f.tomorrow ?? 0, '#eb9a3d'], ['next 7 days', f.week ?? 0, '#b3a889']];
   const max = Math.max(1, ...rows.map((r) => r[1]));
   return (
@@ -587,7 +615,7 @@ function ForecastCard({ f }) {
           </div>
         ))}
       </div>
-      <div style={{ ...T.cap, marginTop: 8 }}>spaced repetition schedules these automatically</div>
+      <div style={{ ...T.cap, marginTop: 8 }}>{caption}</div>
     </div>
   );
 }
