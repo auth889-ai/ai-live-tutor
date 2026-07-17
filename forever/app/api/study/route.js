@@ -4,12 +4,12 @@ import { addBookmark, listBookmarks, removeBookmark, saveProgress, getProgress, 
 
 export async function GET(request) {
   const session = sessionFromRequest(request);
-  if (!session?.userId) return Response.json({ bookmarks: [], progress: [] });
+  if (!session?.userId) return Response.json({ signedIn: false, bookmarks: [], progress: [] });
   const url = new URL(request.url);
   const lessonId = url.searchParams.get('lessonId');
   if (lessonId) return Response.json({ progress: await getProgress(session.userId, lessonId) });
   const [bookmarks, progress] = await Promise.all([listBookmarks(session.userId), listProgress(session.userId)]);
-  return Response.json({ bookmarks, progress });
+  return Response.json({ signedIn: true, bookmarks, progress });
 }
 
 export async function POST(request) {

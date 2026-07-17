@@ -35,14 +35,16 @@ export async function removeBookmark(userId, id) {
 }
 
 // Progress: ONE record per (user, lesson) — the resume point plus scene completion.
-export async function saveProgress({ userId, lessonId, lessonTitle = '', sceneIndex = 0, sceneCount = 0, tMs = 0, completed = false }) {
+export async function saveProgress({ userId, lessonId, lessonTitle = '', sceneIndex = 0, sceneCount = 0, tMs = 0, completedCount = 0, completed = false }) {
   if (!userId || !lessonId) return null;
   const col = await studyCollection();
   if (!col) return null;
   const doc = {
     _id: `pr_${userId}_${lessonId}`, kind: 'progress', userId, lessonId, lessonTitle,
-    sceneIndex, sceneCount, tMs, completed,
-    percent: sceneCount > 0 ? Math.min(100, Math.round(((sceneIndex + (completed ? 1 : 0)) / sceneCount) * 100)) : 0,
+    sceneIndex, sceneCount, tMs, completedCount, completed,
+    // The bar is EARNED: scenes watched to their end count; the scene you are inside adds
+    // nothing until finished (same law as the player's checkmarks).
+    percent: completed ? 100 : sceneCount > 0 ? Math.min(99, Math.round((completedCount / sceneCount) * 100)) : 0,
     updatedAt: new Date().toISOString(),
   };
   await col.replaceOne({ _id: doc._id }, doc, { upsert: true });

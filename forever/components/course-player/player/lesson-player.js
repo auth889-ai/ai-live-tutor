@@ -57,7 +57,7 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
     lastSync.current = now;
     fetch('/api/study', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'progress', lessonId, lessonTitle: lesson.lessonTitle, sceneIndex, sceneCount: lesson.scenes.length, tMs: Math.round(tMs), completed: completed.size >= lesson.scenes.length }),
+      body: JSON.stringify({ type: 'progress', lessonId, lessonTitle: lesson.lessonTitle, sceneIndex, sceneCount: lesson.scenes.length, tMs: Math.round(tMs), completedCount: completed.size, completed: completed.size >= lesson.scenes.length }),
     }).catch(() => {});
   }, [lessonId, sceneIndex, Math.floor(tMs / 5000)]);
 
@@ -75,13 +75,25 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
     if (Number.isFinite(tQ) && tQ > 0) setTimeout(() => player.seek(tQ), 400);
   }, []);
 
-  const [marked, setMarked] = useState(false);
-  const bookmarkNow = () => {
+  const [marked, setMarked] = useState(''); // '' | 'saving' | 'saved' | 'note' | 'signin'
+  const [noteDraft, setNoteDraft] = useState('');
+  const bookmarkNow = (note = '') => {
     if (!lessonId) return;
+    setMarked('saving');
     fetch('/api/study', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'bookmark', lessonId, lessonTitle: lesson.lessonTitle, sceneId: scene.sceneId, sceneTitle: scene.title, tMs: Math.round(tMs) }),
-    }).then(() => { setMarked(true); setTimeout(() => setMarked(false), 1600); }).catch(() => {});
+      body: JSON.stringify({ type: 'bookmark', lessonId, lessonTitle: lesson.lessonTitle, sceneId: scene.sceneId, sceneTitle: scene.title, tMs: Math.round(tMs), note }),
+    }).then((r) => {
+      if (r.status === 401) { setMarked('signin'); setTimeout(() => setMarked(''), 2600); return; }
+      setMarked('note'); // saved — offer an optional note for a few seconds
+      setTimeout(() => setMarked((m) => (m === 'note' ? '' : m)), 6000);
+    }).catch(() => setMarked(''));
+  };
+  const saveNote = () => {
+    bookmarkNow(noteDraft); // same id -> upsert with the note attached
+    setNoteDraft('');
+    setMarked('saved');
+    setTimeout(() => setMarked(''), 1200);
   };
 
   // A scene watched to its end is complete — the checkmark is EARNED, not decorative.
@@ -247,13 +259,31 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
               <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12.5, color: 'rgba(247,233,227,.75)', whiteSpace: 'nowrap' }}>
                 {fmt(tMs)} / {fmt(durationMs)}
               </span>
-              <button
-                onClick={bookmarkNow}
-                title="Bookmark this moment"
-                style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 16, padding: '0 6px', opacity: marked ? 1 : 0.75 }}
-              >
-                {marked ? '✅' : '🔖'}
-              </button>
+              <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                <button
+                  onClick={() => (marked === '' ? bookmarkNow() : null)}
+                  title="Bookmark this moment"
+                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 16, padding: '0 6px', opacity: marked ? 1 : 0.75 }}
+                >
+                  {marked === 'saved' || marked === 'note' ? '✅' : marked === 'signin' ? '🔒' : '🔖'}
+                </button>
+                {marked === 'signin' ? (
+                  <span style={{ position: 'absolute', bottom: '120%', right: 0, whiteSpace: 'nowrap', background: '#2b211a', color: '#fff', borderRadius: 8, padding: '4px 10px', fontSize: 11.5 }}>
+                    Sign in to keep bookmarks
+                  </span>
+                ) : null}
+                {marked === 'note' ? (
+                  <span style={{ position: 'absolute', bottom: '120%', right: 0, display: 'flex', gap: 6, background: '#fffcfa', border: '1px solid #f0dcd5', borderRadius: 10, padding: 6, boxShadow: '0 6px 18px rgba(120,90,40,0.18)' }}>
+                    <input
+                      autoFocus value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') saveNote(); if (e.key === 'Escape') setMarked(''); }}
+                      placeholder="Saved ✓ — add a note?"
+                      style={{ width: 190, border: '1px solid #efe6d3', borderRadius: 7, padding: '4px 8px', fontSize: 12 }}
+                    />
+                    <button onClick={saveNote} style={{ border: 'none', borderRadius: 7, background: '#e8604c', color: '#fff', fontSize: 12, fontWeight: 800, padding: '4px 10px', cursor: 'pointer' }}>Save</button>
+                  </span>
+                ) : null}
+              </span>
               <input
                 type="range" min="0" max={durationMs || 1} value={Math.min(tMs, durationMs)}
                 onChange={(e) => player.seek(Number(e.target.value))}
