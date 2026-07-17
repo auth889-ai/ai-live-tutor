@@ -36,6 +36,18 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
   const focusObj = scene.objects.find((o) => o.id === lastFocus.current) || scene.objects[0];
   const subtitle = activeLine?.text ?? '';
 
+  // DRY-RUN REDIRECT (live-caught on the Linear Search lesson): older scenes carry BOTH the
+  // real recorded trace (obj_algo_trace) and its handwritten twin (a step list the timeline
+  // writes for 40s) — and the timeline never stages the trace, so students watched TEXT while
+  // the elite animated stage sat unused in the scene data. When the focused object is a twin
+  // (list/diagram/code) and a real trace exists, the trace takes the board: same voice, same
+  // pacing (the twin's write-progress drives the steps), real animation. Render-time only —
+  // heals every existing lesson without regeneration, deletes nothing.
+  const algoObj = scene.objects.find((o) => o.renderHint === 'algorithm');
+  const TRACE_TWINS = new Set(['list', 'diagram', 'code']);
+  const renderObj = algoObj && focusObj && focusObj.id !== algoObj.id && TRACE_TWINS.has(focusObj.renderHint) ? algoObj : focusObj;
+  const twinProgress = renderObj !== focusObj ? (state.writing.get(focusObj.id)?.progress ?? 1) : null;
+
   // Voice-synced trace step. Best: the active line's EXPLICIT traceStep (the Voice Writer wrote
   // one line per step, so the words are guaranteed to match the marked node). Fallback: the Nth
   // line targeting the diagram drives the Nth step. Either way the marking tracks the narration,
@@ -67,18 +79,19 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
       <div style={{ minHeight: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 28 }}>
         <AnimatePresence mode="wait">
           <motion.div
-            key={focusObj?.id}
+            key={renderObj?.id}
             style={{ width: '100%' }}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
           >
-            {focusObj && (
+            {renderObj && (
               <Focus
-                object={focusObj}
+                object={renderObj}
+                progressOverride={twinProgress}
                 state={state}
-                focusRef={activeLine?.targetObjectId === focusObj.id ? activeLine?.focusRef : undefined}
+                focusRef={activeLine?.targetObjectId === renderObj.id ? activeLine?.focusRef : undefined}
                 activeStep={activeStep}
                 setHold={setHold}
                 onQuizAnswered={() => setAnswered((prev) => new Set(prev).add(focusObj.id))}
@@ -103,11 +116,11 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
       </div>
       {/* Student practice: the scene's code seeds an editable sandbox run (Koedinger: doing
           beats watching). Shown for code demos and algorithm trace scenes. */}
-      {(focusObj?.renderHint === 'code' || focusObj?.renderHint === 'algorithm') && (
+      {(renderObj?.renderHint === 'code' || renderObj?.renderHint === 'algorithm') && (
         <TryItPanel
-          key={focusObj.id}
-          seedCode={focusObj.renderHint === 'algorithm' ? focusObj.content?.code ?? '' : String(focusObj.content ?? '')}
-          language={focusObj.renderHint === 'algorithm' ? focusObj.content?.language ?? 'python' : 'python'}
+          key={renderObj.id}
+          seedCode={renderObj.renderHint === 'algorithm' ? renderObj.content?.code ?? '' : String(renderObj.content ?? '')}
+          language={renderObj.renderHint === 'algorithm' ? renderObj.content?.language ?? 'python' : 'python'}
         />
       )}
       {/* The society's real debate on THIS scene (Track 3: how agents resolve conflict), made
@@ -117,7 +130,7 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
   );
 }
 
-function Focus({ object, state, focusRef, activeStep, setHold, onQuizAnswered }) {
+function Focus({ object, state, focusRef, activeStep, setHold, onQuizAnswered, progressOverride = null }) {
   if (object.renderHint === 'quiz') {
     return <QuizView content={object.content} onAnswered={onQuizAnswered} />;
   }
@@ -134,7 +147,7 @@ function Focus({ object, state, focusRef, activeStep, setHold, onQuizAnswered })
     // The elite DSA/ML dry run: one ExecutionTrace, all panels synced. The active voice line's
     // traceStep drives the step (voice-synced); write-progress is the fallback before audio
     // timing. setHold lets the student EXPLORE steps while playback waits.
-    return <AlgorithmStage trace={object.content} stepIndex={activeStep} progress={state.writing.get(object.id)?.progress ?? 1} setHold={setHold} />;
+    return <AlgorithmStage trace={object.content} stepIndex={activeStep} progress={progressOverride ?? state.writing.get(object.id)?.progress ?? 1} setHold={setHold} />;
   }
   if (object.renderHint === 'table') {
     // Tables render through the comparison diagram (same contract, same visual).

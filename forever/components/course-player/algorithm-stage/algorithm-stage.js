@@ -22,6 +22,7 @@ import { IntervalsView } from '../panels/intervals-view.js';
 import { TraceTable } from './trace-table.js';
 import { CompositionCockpit } from '../panels/composition-cockpit.js';
 import { CallStackPanel } from '../panels/call-stack-panel.js';
+import { RunInBrowser } from '../panels/run-in-browser.js';
 
 export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, stepIndex = null, setHold }) {
   // LIVE INSTRUMENT: the student can re-run the engine on their own input (RetracePanel);
@@ -168,6 +169,7 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
             ⚗️ your own run — step through it; “resume voice” returns to the lesson’s example
           </div>
         ) : null}
+        <RunInBrowser code={trace.code} language={trace.language} />
         {trace.views?.bitmask && step.maskState ? <MaskPanel maskState={step.maskState} bitmask={trace.views.bitmask} /> : null}
         {cockpitSpec ? (
           <button onClick={() => setAiCockpit(true)} style={{ alignSelf: 'flex-start', border: '1.5px solid #f0c39a', borderRadius: 999, background: 'linear-gradient(180deg,#fffdf9,#fff5ec)', color: '#8a3a12', padding: '4px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
