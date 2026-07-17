@@ -62,3 +62,26 @@ renders with BOTH in_mst and key labels live per node — an algorithm the engin
 
 This is the "correct graph for any of 4000 LC" engine: record once → detect → the right
 visualization, never a hardcoded one.
+
+
+## Society vs single-agent — mechanical validators, N=4 matched pairs (2026-07-17)
+
+`node --env-file=.env eval/society-vs-single.eval.mjs` — same 4 materials (Tarjan LC1192,
+Dijkstra LC743, Bitmask LC847, unseen LC1466); single arm = ONE model call producing the whole
+mini-lesson incl. a hand-written dry run; society arm = the lessons the real pipeline built.
+Both arms judged by the SAME code: validateExecutionTrace, dryRunQualityIssue, execution.
+
+| Metric (mechanical, not judge-scored) | Single agent | Society |
+|---|---|---|
+| Dry-run passes the elite quality gate | **0/4** (every trace: no pointers riding the structure) | 4/4 by construction (gate enforced in-pipeline) |
+| Structural contract violations in visual JSON | 1/4 (unseen LC1466: invalid step references) | **0 across all traces** |
+| Final answers correct | 4/4 (well-known problems; hand answers are easy — hand TRACES are not) | 4/4 (executed, not claimed) |
+| Values on screen provably from a real run | 0/4 (all hand-written) | 4/4 engine-recorded |
+| Lesson depth | 3 scenes | 9–16 scenes, each critic-reviewed (objections/repairs/refusals logged per build) |
+
+HONEST CAVEATS: N=4, coding domain only; the ungrounded-numbers comparison was run but is NOT
+reported as a result — the classifier counts prose numbers against the SOURCE text only, and
+society lessons legitimately cite values grounded in the EXECUTION (plus 3-5x more prose), so
+the raw counts are not comparable across arms. Fixing that metric (execution-aware grounding
+per 1000 chars) is future eval work. Single-agent answers being right on famous problems is
+expected — the measured gap is TRACE quality and verifiability, which is what students see.
