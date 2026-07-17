@@ -203,8 +203,13 @@ export function ProgressContent() {
           ) : <EmptyCard />}
           {know.length ? (
             <Section title="Knowledge" sub="evidence: checkpoints · reviews · recency">
+              {know.every((k) => k.status === 'New') ? (
+                <div style={{ ...T.card, padding: T.pad, ...T.cap, lineHeight: 1.6 }}>
+                  Statuses unlock with evidence — answer any checkpoint quiz inside a lesson and its knowledge status starts moving: New → Learning → Developing → Strong.
+                </div>
+              ) : (
               <div style={{ ...T.card }}>
-                {know.map((k, i) => (
+                {know.filter((k) => k.status !== 'New').map((k, i) => (
                   <div key={k.lessonId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 18px', borderTop: i ? '1px solid #f2e3d5' : 'none' }}>
                     <span style={{ ...T.body, fontWeight: 700 }}>{k.lessonTitle}</span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -214,6 +219,7 @@ export function ProgressContent() {
                   </div>
                 ))}
               </div>
+              )}
             </Section>
           ) : null}
         </div>
@@ -285,16 +291,16 @@ function LessonCard({ p }) {
       <div style={{ position: 'relative', height: 108, overflow: 'hidden' }}>
         <img src={coverFor(p.lessonId)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(43,33,26,0.55))' }} />
-        <div style={{ position: 'absolute', right: 10, bottom: -14 }}><Ring percent={p.percent} done={p.completed} /></div>
+        <div style={{ position: 'absolute', right: 10, bottom: -14 }}><Ring percent={p.percent} done={p.completed} started={(p.tMs ?? 0) > 0 || (p.completedCount ?? 0) > 0} /></div>
         <div style={{ position: 'absolute', left: 12, bottom: 8, color: '#fff', fontSize: 11.5, fontWeight: 800, textShadow: '0 1px 4px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', gap: 6 }}>
           {Date.now() - new Date(p.updatedAt).getTime() < 3 * 60 * 1000 && !p.completed ? (
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#e8604c', animation: 'pulseDot 1.6s infinite' }} title="watching now" />
           ) : null}
-          {p.completed ? 'COMPLETED ✓' : `▶ RESUME · SCENE ${p.sceneIndex + 1}`}
+          {p.completed ? 'COMPLETED ✓' : (p.completedCount ?? 0) > 0 ? `▶ RESUME · SCENE ${p.sceneIndex + 1}` : (p.tMs ?? 0) > 0 ? `▶ CONTINUE SCENE ${p.sceneIndex + 1}` : '▶ START LESSON'}
         </div>
       </div>
       <div style={{ padding: '16px 14px 13px' }}>
-        <div style={{ fontWeight: 800, fontSize: 14.5, lineHeight: 1.3, minHeight: 38 }}>{p.lessonTitle || p.lessonId}</div>
+        <div style={{ fontWeight: 800, fontSize: 14.5, lineHeight: 1.3, minHeight: 38, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.lessonTitle || p.lessonId}</div>
         {p.sceneCount > 0 && p.sceneCount <= 24 ? (
           <div style={{ display: 'flex', gap: 3, margin: '9px 0 7px' }}>
             {Array.from({ length: p.sceneCount }, (_, i) => (
@@ -303,7 +309,7 @@ function LessonCard({ p }) {
           </div>
         ) : null}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: UI.muted }}>
-          <span>{p.completedCount ?? 0}/{p.sceneCount} scenes</span>
+          <span>{(p.completedCount ?? 0) > 0 ? `${p.completedCount}/${p.sceneCount} scenes` : (p.tMs ?? 0) > 0 ? `just started · ${p.sceneCount} scenes` : `${p.sceneCount} scenes · not started`}</span>
           <span>{ago(p.updatedAt)}</span>
         </div>
       </div>
@@ -311,7 +317,7 @@ function LessonCard({ p }) {
   );
 }
 
-function Ring({ percent, done }) {
+function Ring({ percent, done, started = true }) {
   const r = 24; const c = 2 * Math.PI * r;
   const [on, setOn] = useState(false);
   useEffect(() => { const t = setTimeout(() => setOn(true), 60); return () => clearTimeout(t); }, []);
@@ -321,7 +327,7 @@ function Ring({ percent, done }) {
       <circle cx="31" cy="31" r={r} fill="none" stroke="#f2e8dc" strokeWidth="5" />
       <circle className="ringArc" cx="31" cy="31" r={r} fill="none" stroke={done ? '#2f9e5f' : '#f47368'} strokeWidth="5" strokeLinecap="round"
         strokeDasharray={`${(on ? (percent / 100) * c : 0)} ${c}`} transform="rotate(-90 31 31)" />
-      <text x="31" y="35" textAnchor="middle" fontSize="13" fontWeight="800" fill={done ? '#2f9e5f' : '#c0522d'}>{done ? '✓' : `${percent}%`}</text>
+      <text x="31" y="35" textAnchor="middle" fontSize="13" fontWeight="800" fill={done ? '#2f9e5f' : '#c0522d'}>{done ? '✓' : percent > 0 ? `${percent}%` : '▶'}</text>
     </svg>
   );
 }
