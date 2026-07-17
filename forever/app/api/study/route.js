@@ -98,7 +98,16 @@ export async function GET(request) {
     if ((p.checkpointsPassed ?? 0) >= 1) status = 'Developing';
     if ((p.checkpointsPassed ?? 0) >= 2 && goodReviews >= 2) status = 'Strong';
     if (dueByLesson.has(p.lessonId)) status = 'Review due';
-    return { lessonId: p.lessonId, lessonTitle: p.lessonTitle, status, checkpointsPassed: p.checkpointsPassed ?? 0 };
+    // The COMPUTED next rung of the evidence ladder — never a canned placeholder.
+    const next = status === 'Review due' ? 'clear the due review'
+      : status === 'New' ? ((p.scenePercent ?? 0) > 0 ? `finish scene ${p.sceneIndex + 1} (${p.scenePercent}% watched)` : 'watch scene 1')
+      : status === 'Learning' ? 'pass a checkpoint quiz'
+      : status === 'Developing' ? `${Math.max(0, 2 - goodReviews)} good review${2 - goodReviews === 1 ? '' : 's'} to Strong`
+      : 'keep reviews on schedule';
+    return {
+      lessonId: p.lessonId, lessonTitle: p.lessonTitle, status, next,
+      evidence: { scenes: p.completedCount ?? 0, sceneCount: p.sceneCount ?? 0, scenePercent: p.scenePercent ?? 0, checkpoints: p.checkpointsPassed ?? 0, goodReviews, lastActive: p.updatedAt },
+    };
   });
 
   // WEEKLY: verified learning actions (scenes + checkpoints + reviews) vs an editable goal.

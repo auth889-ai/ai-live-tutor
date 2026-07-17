@@ -202,24 +202,25 @@ export function ProgressContent() {
             </div>
           ) : <EmptyCard />}
           {know.length ? (
-            <Section title="Knowledge" sub="evidence: checkpoints · reviews · recency">
-              {know.every((k) => k.status === 'New') ? (
-                <div style={{ ...T.card, padding: T.pad, ...T.cap, lineHeight: 1.6 }}>
-                  Statuses unlock with evidence — answer any checkpoint quiz inside a lesson and its knowledge status starts moving: New → Learning → Developing → Strong.
-                </div>
-              ) : (
+            <Section title="Knowledge" sub="live evidence per lesson — status moves the moment the evidence does">
               <div style={{ ...T.card }}>
-                {know.filter((k) => k.status !== 'New').map((k, i) => (
-                  <div key={k.lessonId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 18px', borderTop: i ? '1px solid #f2e3d5' : 'none' }}>
-                    <span style={{ ...T.body, fontWeight: 700 }}>{k.lessonTitle}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      {k.checkpointsPassed > 0 ? <span style={T.cap}>{k.checkpointsPassed} ✓</span> : null}
-                      <span style={{ fontSize: 12, fontWeight: 800, color: STATUS_COLOR[k.status] ?? '#9b8465', background: `${STATUS_COLOR[k.status] ?? '#9b8465'}14`, borderRadius: 999, padding: '3px 11px' }}>{k.status}</span>
-                    </span>
+                {know.map((k, i) => (
+                  <div key={k.lessonId} style={{ padding: '11px 18px', borderTop: i ? '1px solid #f2e3d5' : 'none' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                      <span style={{ ...T.body, fontWeight: 700, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{k.lessonTitle}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', color: STATUS_COLOR[k.status] ?? '#9b8465', background: `${STATUS_COLOR[k.status] ?? '#9b8465'}14`, borderRadius: 999, padding: '3px 11px' }}>{k.status}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
+                      <span style={T.cap}>
+                        {k.evidence.scenes > 0 ? `${k.evidence.scenes}/${k.evidence.sceneCount} scenes` : k.evidence.scenePercent > 0 ? `scene 1 · ${k.evidence.scenePercent}% watched` : 'not started'}
+                        {k.evidence.checkpoints > 0 ? ` · ${k.evidence.checkpoints} checkpoint${k.evidence.checkpoints === 1 ? '' : 's'} ✓` : ''}
+                        {k.evidence.goodReviews > 0 ? ` · ${k.evidence.goodReviews} good review${k.evidence.goodReviews === 1 ? '' : 's'}` : ''}
+                      </span>
+                      <span style={{ ...T.cap, color: '#c0522d' }}>next: {k.next}</span>
+                    </div>
                   </div>
                 ))}
               </div>
-              )}
             </Section>
           ) : null}
         </div>
