@@ -5,7 +5,9 @@ server/node_modules/
 eva/
 wrong/
 Algo/
+Algo1/
 Algo2/
+
 dev/
 # env / secrets
 forever/public/images/image*.png
