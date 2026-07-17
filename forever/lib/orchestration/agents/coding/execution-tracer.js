@@ -56,7 +56,7 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
     const program = String(json.program || '').trim();
     const views = json.views && typeof json.views === 'object' ? json.views : {};
 
-    const ctx = { json, code, program, views, lang, exec };
+    const ctx = { json, code, program, views, lang, exec, sourceText };
     const mode = TRACER_MODES.find((m) => m.canHandle(ctx));
     if (!mode) {
       // Battery-measured: a bare "missing code or program" burned 3 retries on the same
