@@ -127,8 +127,10 @@ export function ProgressContent() {
         .hmcell{transition:background .6s, outline .3s}
         @media (prefers-reduced-motion: no-preference){ .hmcell{animation:cellIn .4s ease-out both} }
         @media (prefers-reduced-motion: reduce){ .pcard,.ringArc,.hmcell{transition:none!important;animation:none!important} }
-        .twocol{display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:20px; align-items:start}
+        .twocol{display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:14px; align-items:start}
         @media (max-width: 980px){ .twocol{grid-template-columns:1fr} }
+        .eqcol{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px; align-items:start}
+        @media (max-width: 980px){ .eqcol{grid-template-columns:1fr} }
       `}</style>
       {toast ? <div style={{ position: 'fixed', bottom: 22, right: 22, zIndex: 60, background: '#2b211a', color: '#fff', borderRadius: 14, padding: '12px 18px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', animation: 'toastIn .35s ease-out', fontSize: 14 }}>🎉 Badge earned: <b>{toast}</b></div> : null}
 
@@ -169,28 +171,110 @@ export function ProgressContent() {
             </a>
           ) : <div style={{ gridColumn: '1 / -1' }}><EmptyCard /></div>}
 
-          {/* KPI METRIC STRIP — segmented, dividers, tabular numerals (research pattern) */}
-          <div style={{ gridColumn: '1 / 3', ...T.card, borderRadius: 20, display: 'flex', alignItems: 'stretch' }}>
-            {[[t.scenes ?? 0, 'scenes today'], [t.checkpoints ?? 0, 'checkpoints ✓'], [t.reviews ?? 0, 'reviews'], [t.minutes ?? 0, 'focused min']].map(([n, l], i) => (
-              <div key={l} style={{ flex: 1, padding: '18px 8px', textAlign: 'center', borderLeft: i ? '1px solid #f2e3d5' : 'none' }}>
-                <div style={{ fontSize: 30, fontWeight: 800, color: n > 0 ? '#2b211a' : '#cbbfa8', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{n}</div>
-                <div style={{ ...T.cap, marginTop: 7 }}>{l}</div>
+          {/* TWO-COLUMN BENTO below the hero (research: F-pattern — work on the left,
+              targets & memory in the right rail). Every card is an entry point to its tab. */}
+          <div className="twocol" style={{ gridColumn: '1 / -1' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+              {/* KPI METRIC STRIP — segmented, dividers, tabular numerals */}
+              <div style={{ ...T.card, borderRadius: 20, display: 'flex', alignItems: 'stretch' }}>
+                {[[t.scenes ?? 0, 'scenes today'], [t.checkpoints ?? 0, 'checkpoints ✓'], [t.reviews ?? 0, 'reviews'], [t.minutes ?? 0, 'focused min']].map(([n, l], i) => (
+                  <div key={l} style={{ flex: 1, padding: '18px 8px', textAlign: 'center', borderLeft: i ? '1px solid #f2e3d5' : 'none' }}>
+                    <div style={{ fontSize: 30, fontWeight: 800, color: n > 0 ? '#2b211a' : '#cbbfa8', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{n}</div>
+                    <div style={{ ...T.cap, marginTop: 7 }}>{l}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          {/* WEEKLY — ring card completing the bento row */}
-          <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>WEEKLY TARGET</div>
-            <WeeklyTarget total={data.weekTotal ?? 0} goal={data.weekGoal ?? 10} actions={data.weekActions ?? {}} pace={data.pace ?? ''} bare />
-          </div>
+              {/* JUMP BACK IN — every in-flight lesson one click away, live percent bars */}
+              {inProgress.length ? (
+                <div style={{ ...T.card, borderRadius: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '15px 18px 2px' }}>
+                    <span style={{ ...T.cap, fontWeight: 800 }}>JUMP BACK IN</span>
+                    <button onClick={() => setTab('lessons')} style={{ border: 'none', background: 'transparent', color: T.accent, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>All lessons →</button>
+                  </div>
+                  {inProgress.slice(0, 3).map((p, i) => (
+                    <a key={p._id} className="pcard" href={`/course/${p.lessonId}?t=${p.tMs}&scene=${p.sceneIndex}`} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '12px 18px', borderTop: i ? '1px solid #f8efe6' : 'none', textDecoration: 'none' }}>
+                      <img src={coverFor(p.lessonId)} alt="" style={{ width: 62, height: 44, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ ...T.body, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.lessonTitle || p.lessonId}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 6 }}>
+                          <div style={{ flex: 1, height: 5, borderRadius: 99, background: '#f4e9dc', overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.max(2, p.percent ?? 0)}%`, height: '100%', borderRadius: 99, background: T.accent, transition: 'width .8s' }} />
+                          </div>
+                          <span style={{ ...T.cap, whiteSpace: 'nowrap' }}>
+                            {(p.scenePercent ?? 0) > 0 ? `scene ${p.sceneIndex + 1} · ${p.scenePercent}% watched` : (p.completedCount ?? 0) > 0 ? `${p.completedCount}/${p.sceneCount} scenes` : 'ready to start'}
+                          </span>
+                        </div>
+                      </div>
+                      <span style={{ color: T.accent, fontWeight: 800, fontSize: 15 }}>▶</span>
+                    </a>
+                  ))}
+                </div>
+              ) : null}
 
-          {(data.dueCount ?? 0) > 0 ? (
-            <a href="/bookmarks" className="pcard" style={{ gridColumn: '1 / -1', ...T.card, borderRadius: 20, padding: '15px 20px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ ...T.body, fontWeight: 800 }}>🧠 {data.dueCount} review{data.dueCount === 1 ? '' : 's'} due — about 4 minutes</span>
-              <span style={{ color: '#c0522d', fontWeight: 800, fontSize: 13 }}>Start →</span>
-            </a>
-          ) : null}
+              {/* KNOWLEDGE — status chips per lesson, full evidence lives on Lessons */}
+              {know.length ? (
+                <div style={{ ...T.card, borderRadius: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '15px 18px 4px' }}>
+                    <span style={{ ...T.cap, fontWeight: 800 }}>KNOWLEDGE</span>
+                    <button onClick={() => setTab('lessons')} style={{ border: 'none', background: 'transparent', color: T.accent, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>Evidence →</button>
+                  </div>
+                  {know.slice(0, 4).map((k, i) => (
+                    <div key={k.lessonId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9px 18px', borderTop: i ? '1px solid #f8efe6' : 'none' }}>
+                      <span style={{ ...T.body, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.lessonTitle}</span>
+                      <span style={{ fontSize: 11.5, fontWeight: 800, whiteSpace: 'nowrap', color: STATUS_COLOR[k.status] ?? '#9b8465', background: `${STATUS_COLOR[k.status] ?? '#9b8465'}14`, borderRadius: 999, padding: '3px 10px' }}>{k.status}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            {/* RIGHT RAIL — targets, memory, rhythm */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+              <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
+                <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>WEEKLY TARGET</div>
+                <WeeklyTarget total={data.weekTotal ?? 0} goal={data.weekGoal ?? 10} actions={data.weekActions ?? {}} pace={data.pace ?? ''} bare />
+              </div>
+
+              <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ ...T.cap, fontWeight: 800 }}>MEMORY</span>
+                  <button onClick={() => setTab('memory')} style={{ border: 'none', background: 'transparent', color: T.accent, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>Open →</button>
+                </div>
+                {(data.dueCount ?? 0) > 0 ? (
+                  <a href="/bookmarks" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, textDecoration: 'none' }}>
+                    <span style={{ ...T.body, fontWeight: 800 }}>🧠 {data.dueCount} review{data.dueCount === 1 ? '' : 's'} due</span>
+                    <span style={{ color: '#c0522d', fontWeight: 800, fontSize: 12.5 }}>Start →</span>
+                  </a>
+                ) : (data.upcoming ?? []).length ? (
+                  <div style={{ marginTop: 6 }}>
+                    {(data.upcoming ?? []).slice(0, 3).map((u) => (
+                      <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5, padding: '4px 0' }}>
+                        <span style={{ color: '#2b211a', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.label}</span>
+                        <span style={{ ...T.cap, whiteSpace: 'nowrap' }}>{new Date(u.due).toLocaleDateString('en', { weekday: 'short' })}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : <div style={{ ...T.cap, marginTop: 8, lineHeight: 1.5 }}>Press <b style={{ color: '#2b211a' }}>B</b> in any lesson to bookmark a moment — it becomes your first review.</div>}
+              </div>
+
+              <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+                  <span style={{ ...T.cap, fontWeight: 800 }}>LAST 14 DAYS</span>
+                  <button onClick={() => setTab('awards')} style={{ border: 'none', background: 'transparent', color: T.accent, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>Full year →</button>
+                </div>
+                <MiniHeat days={data.heatmap ?? []} />
+              </div>
+
+              {(data.tomorrow?.review || data.tomorrow?.continueTitle) ? (
+                <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px', fontSize: 12.5, color: '#9b8465', lineHeight: 1.55 }}>
+                  <div style={{ ...T.cap, fontWeight: 800, marginBottom: 6 }}>TOMORROW'S FIRST BLOCK</div>
+                  {data.tomorrow.review ? <>Review “{data.tomorrow.review}”{data.tomorrow.continueTitle ? ', then ' : ''}</> : null}
+                  {data.tomorrow.continueTitle ? <>continue <b style={{ color: '#2b211a' }}>{data.tomorrow.continueTitle}</b></> : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -227,8 +311,8 @@ export function ProgressContent() {
       ) : null}
 
       {tab === 'memory' ? (
-        <div style={{ marginTop: 24, maxWidth: 640, display: 'flex', flexDirection: 'column', gap: T.gap }}>
-          <div style={{ position: 'relative', height: 86, borderRadius: 20, overflow: 'hidden' }}>
+        <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ position: 'relative', height: 96, borderRadius: 20, overflow: 'hidden' }}>
             <img src="/images/progress-vine.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(255,255,255,0.88) 30%, rgba(255,255,255,0.25))' }} />
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 20px' }}>
@@ -236,6 +320,8 @@ export function ProgressContent() {
               <div style={{ fontSize: 11.5, color: '#6b563d' }}>reviews return exactly when you are about to forget</div>
             </div>
           </div>
+          <div className="eqcol">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
           <div style={{ ...T.card, padding: T.pad }}>
             <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>{(data.dueCount ?? 0) > 0 ? `DUE TODAY · ${data.dueCount}` : 'NOTHING DUE TODAY'}</div>
             {(data.dueCount ?? 0) > 0 ? (
@@ -254,6 +340,9 @@ export function ProgressContent() {
               ))}
             </div>
           ) : null}
+          <Reflection saved={t.reflection} bare />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
           <div style={{ ...T.card, padding: T.pad }}>
             <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>LEARNING HEALTH</div>
             {[['Progress', `${data.stats?.totalScenes ?? 0} scene${(data.stats?.totalScenes ?? 0) === 1 ? '' : 's'} · ${data.stats?.lessonsDone ?? 0} lesson${(data.stats?.lessonsDone ?? 0) === 1 ? '' : 's'}`, true],
@@ -265,7 +354,6 @@ export function ProgressContent() {
               </div>
             ))}
           </div>
-          <Reflection saved={t.reflection} bare />
           {(data.tomorrow?.review || data.tomorrow?.continueTitle) ? (
             <div style={{ ...T.card, padding: T.pad, fontSize: 12.5, color: '#9b8465', lineHeight: 1.55 }}>
               <div style={{ ...T.cap, fontWeight: 800, marginBottom: 6 }}>TOMORROW'S FIRST BLOCK</div>
@@ -273,6 +361,8 @@ export function ProgressContent() {
               {data.tomorrow.continueTitle ? <>continue <b style={{ color: '#2b211a' }}>{data.tomorrow.continueTitle}</b></> : null}
             </div>
           ) : null}
+          </div>
+          </div>
         </div>
       ) : null}
 
@@ -411,6 +501,32 @@ function Heatmap({ days }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', marginTop: 9, fontSize: 9.5, color: '#9b8465' }}>
         less {[0, 1, 3, 5, 8].map((n) => <span key={n} style={{ width: 10, height: 10, borderRadius: 2, background: shade(n) }} />)} more
       </div>
+    </div>
+  );
+}
+
+// 14-day strip for the Overview rail — same shade scale as the year heatmap, today outlined.
+function MiniHeat({ days }) {
+  const byDate = new Map(days.map((d) => [d.date, d]));
+  const shade = (n) => (n === 0 ? '#f4ece2' : n < 2 ? '#f8c9ad' : n < 4 ? '#f4936b' : n < 7 ? '#e8604c' : '#b93c2b');
+  const cells = [];
+  const now = new Date();
+  for (let i = 13; i >= 0; i -= 1) {
+    const dt = new Date(now); dt.setDate(now.getDate() - i);
+    const key = dt.toISOString().slice(0, 10);
+    const rec = byDate.get(key);
+    cells.push({ key, n: (rec?.scenes ?? 0) + (rec?.reviews ?? 0) + (rec?.bookmarks ?? 0), today: i === 0 });
+  }
+  const active = cells.filter((c) => c.n > 0).length;
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(14, 1fr)', gap: 4 }}>
+        {cells.map((c) => (
+          <span key={c.key} className="hmcell" title={`${c.key}: ${c.n} action${c.n === 1 ? '' : 's'}`}
+            style={{ aspectRatio: '1', borderRadius: 4, background: shade(c.n), outline: c.today ? '1.5px solid #b93c2b' : 'none', outlineOffset: 1 }} />
+        ))}
+      </div>
+      <div style={{ ...T.cap, marginTop: 8 }}>{active} of 14 day{active === 1 ? '' : 's'} active · {cells.reduce((a, c) => a + c.n, 0)} actions</div>
     </div>
   );
 }
