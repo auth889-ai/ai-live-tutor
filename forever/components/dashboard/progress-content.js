@@ -312,26 +312,63 @@ export function ProgressContent() {
 
       {tab === 'memory' ? (
         <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ position: 'relative', height: 96, borderRadius: 20, overflow: 'hidden' }}>
+          {/* banner — the vine plus the bank's real size, one glance */}
+          <div style={{ position: 'relative', height: 108, borderRadius: 20, overflow: 'hidden', boxShadow: '0 4px 18px rgba(58,46,34,0.08)' }}>
             <img src="/images/progress-vine.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(255,255,255,0.88) 30%, rgba(255,255,255,0.25))' }} />
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 20px' }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif' }}>Memory grows like a vine</div>
-              <div style={{ fontSize: 11.5, color: '#6b563d' }}>reviews return exactly when you are about to forget</div>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(255,255,255,0.93) 34%, rgba(255,255,255,0.3))' }} />
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 19, fontWeight: 700, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif' }}>Memory grows like a vine</div>
+                <div style={{ fontSize: 12, color: '#6b563d', marginTop: 3 }}>reviews return exactly when you are about to forget</div>
+              </div>
+              <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.78)', border: '1px solid rgba(242,227,213,0.9)', borderRadius: 14, padding: '9px 18px' }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#2b211a', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{(data.bookmarks ?? []).length}</div>
+                <div style={{ ...T.cap, marginTop: 3 }}>saved moment{(data.bookmarks ?? []).length === 1 ? '' : 's'}</div>
+              </div>
             </div>
           </div>
+
+          {/* stat row — queue, forecast bars, bank */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+            <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ ...T.cap, fontWeight: 800 }}>REVIEW QUEUE</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10 }}>
+                <span style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, color: (data.dueCount ?? 0) > 0 ? '#c0522d' : '#cbbfa8', fontVariantNumeric: 'tabular-nums' }}>{data.dueCount ?? 0}</span>
+                <span style={T.cap}>due now</span>
+              </div>
+              {(data.dueCount ?? 0) > 0 ? (
+                <a href="/bookmarks" style={{ marginTop: 12, alignSelf: 'flex-start', background: T.accent, color: '#fff', borderRadius: 999, padding: '8px 18px', fontWeight: 800, fontSize: 12.5, textDecoration: 'none', boxShadow: '0 3px 10px rgba(232,96,76,0.35)' }}>Start review</a>
+              ) : (
+                <div style={{ ...T.cap, marginTop: 12, lineHeight: 1.5 }}>{(data.upcoming ?? [])[0] ? `queue is clear — next returns ${new Date(data.upcoming[0].due).toLocaleDateString('en', { weekday: 'long' })}` : <>press <b style={{ color: '#2b211a' }}>B</b> in a lesson to save your first moment</>}</div>
+              )}
+            </div>
+            <ForecastCard f={data.forecast ?? {}} />
+            <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
+              <div style={{ ...T.cap, fontWeight: 800 }}>MEMORY BANK</div>
+              {[['moments saved', (data.bookmarks ?? []).length],
+                ['recalls done', data.stats?.totalReviews ?? 0],
+                ['held on last recall', (data.bookmarks ?? []).filter((bk) => bk.lastGrade === 'good').length]].map(([l, n]) => (
+                <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', marginTop: 2 }}>
+                  <span style={{ fontSize: 12.5, color: '#9b8465' }}>{l}</span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: n > 0 ? '#2b211a' : '#cbbfa8', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="eqcol">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
-          <div style={{ ...T.card, padding: T.pad }}>
-            <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>{(data.dueCount ?? 0) > 0 ? `DUE TODAY · ${data.dueCount}` : 'NOTHING DUE TODAY'}</div>
-            {(data.dueCount ?? 0) > 0 ? (
-              <a href="/bookmarks" style={{ display: 'inline-block', background: T.accent, color: '#fff', borderRadius: 999, padding: '7px 16px', fontWeight: 800, fontSize: 12.5, textDecoration: 'none' }}>Start review</a>
-            ) : (data.upcoming ?? []).length ? (data.upcoming ?? []).map((u) => (
-              <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, padding: '4px 0' }}>
-                <span style={{ color: '#2b211a' }}>{u.label}</span><span style={T.cap}>{new Date(u.due).toLocaleDateString('en', { weekday: 'short' })}</span>
-              </div>
-            )) : <div style={{ ...T.cap, lineHeight: 1.5 }}>Your first review appears after a bookmark or checkpoint.</div>}
-          </div>
+          {(data.upcoming ?? []).length ? (
+            <div style={{ ...T.card, padding: T.pad }}>
+              <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>COMING BACK</div>
+              {(data.upcoming ?? []).map((u) => (
+                <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5, padding: '5px 0' }}>
+                  <span style={{ color: '#2b211a', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.label}</span>
+                  <span style={{ ...T.cap, fontWeight: 700, whiteSpace: 'nowrap' }}>{new Date(u.due).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
           {(data.weak ?? []).length ? (
             <div style={{ ...T.card, padding: T.pad }}>
               <div style={{ ...T.cap, fontWeight: 800, marginBottom: 6, color: '#c0522d' }}>NEEDS REINFORCEMENT</div>
@@ -348,8 +385,9 @@ export function ProgressContent() {
             {[['Progress', `${data.stats?.totalScenes ?? 0} scene${(data.stats?.totalScenes ?? 0) === 1 ? '' : 's'} · ${data.stats?.lessonsDone ?? 0} lesson${(data.stats?.lessonsDone ?? 0) === 1 ? '' : 's'}`, true],
               ['Recall', (data.stats?.totalReviews ?? 0) >= 3 ? `${data.stats.totalReviews} reviews` : 'Not enough data', (data.stats?.totalReviews ?? 0) >= 3],
               ['Verified', (data.stats?.totalCheckpoints ?? 0) > 0 ? `${data.stats.totalCheckpoints} checkpoint${data.stats.totalCheckpoints === 1 ? '' : 's'}` : 'Not measured yet', (data.stats?.totalCheckpoints ?? 0) > 0]].map(([l, v, ok]) => (
-              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: 12.5 }}>
-                <span style={{ color: '#9b8465' }}>{l}</span>
+              <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 0', fontSize: 12.5 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: ok ? '#2f9e5f' : '#e3d7c2', flexShrink: 0 }} />
+                <span style={{ flex: 1, color: '#9b8465' }}>{l}</span>
                 <span style={{ color: ok ? '#2b211a' : '#b3a889', fontWeight: 700 }}>{v}</span>
               </div>
             ))}
@@ -527,6 +565,29 @@ function MiniHeat({ days }) {
         ))}
       </div>
       <div style={{ ...T.cap, marginTop: 8 }}>{active} of 14 day{active === 1 ? '' : 's'} active · {cells.reduce((a, c) => a + c.n, 0)} actions</div>
+    </div>
+  );
+}
+
+// Due-load ahead as honest bars — counts come straight from each bookmark's reviewDue.
+function ForecastCard({ f }) {
+  const rows = [['today', f.today ?? 0, '#e8604c'], ['tomorrow', f.tomorrow ?? 0, '#eb9a3d'], ['next 7 days', f.week ?? 0, '#b3a889']];
+  const max = Math.max(1, ...rows.map((r) => r[1]));
+  return (
+    <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
+      <div style={{ ...T.cap, fontWeight: 800 }}>REVIEWS AHEAD</div>
+      <div style={{ marginTop: 10 }}>
+        {rows.map(([l, n, col]) => (
+          <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '4px 0' }}>
+            <span style={{ width: 74, fontSize: 11.5, color: '#9b8465', flexShrink: 0 }}>{l}</span>
+            <div style={{ flex: 1, height: 8, borderRadius: 99, background: '#f6ede1', overflow: 'hidden' }}>
+              <div style={{ width: `${(n / max) * 100}%`, minWidth: n > 0 ? 8 : 0, height: '100%', borderRadius: 99, background: col, transition: 'width .7s' }} />
+            </div>
+            <span style={{ width: 18, textAlign: 'right', fontSize: 12.5, fontWeight: 800, color: n > 0 ? '#2b211a' : '#cbbfa8', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ ...T.cap, marginTop: 8 }}>spaced repetition schedules these automatically</div>
     </div>
   );
 }
