@@ -156,8 +156,8 @@ export function ProgressContent() {
           {rec ? (
             <a href={`/course/${rec.lessonId}?t=${rec.tMs}&scene=${rec.sceneIndex}`} className="pcard"
               style={{ gridColumn: '1 / -1', position: 'relative', borderRadius: 20, overflow: 'hidden', textDecoration: 'none', minHeight: 210, display: 'flex', alignItems: 'flex-end', boxShadow: '0 6px 24px rgba(58,46,34,0.12)' }}>
-              <img src={coverFor(rec.lessonId)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(43,33,26,0.05) 20%, rgba(43,33,26,0.78))' }} />
+              <img src="/images/progress-compass.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 62%' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(43,33,26,0.02) 15%, rgba(43,33,26,0.72))' }} />
               <div style={{ position: 'relative', padding: '22px 24px', width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                 <div>
                   <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: 1, color: '#ffd9c9' }}>UP NEXT{rec.minutes ? ` · ~${rec.minutes} MIN` : ''}</div>
@@ -228,6 +228,14 @@ export function ProgressContent() {
 
       {tab === 'memory' ? (
         <div style={{ marginTop: 24, maxWidth: 640, display: 'flex', flexDirection: 'column', gap: T.gap }}>
+          <div style={{ position: 'relative', height: 86, borderRadius: 20, overflow: 'hidden' }}>
+            <img src="/images/progress-vine.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(255,255,255,0.88) 30%, rgba(255,255,255,0.25))' }} />
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 20px' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif' }}>Memory grows like a vine</div>
+              <div style={{ fontSize: 11.5, color: '#6b563d' }}>reviews return exactly when you are about to forget</div>
+            </div>
+          </div>
           <div style={{ ...T.card, padding: T.pad }}>
             <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>{(data.dueCount ?? 0) > 0 ? `DUE TODAY · ${data.dueCount}` : 'NOTHING DUE TODAY'}</div>
             {(data.dueCount ?? 0) > 0 ? (
@@ -248,9 +256,9 @@ export function ProgressContent() {
           ) : null}
           <div style={{ ...T.card, padding: T.pad }}>
             <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>LEARNING HEALTH</div>
-            {[['Progress', `${data.stats?.totalScenes ?? 0} scenes · ${data.stats?.lessonsDone ?? 0} lessons`, true],
+            {[['Progress', `${data.stats?.totalScenes ?? 0} scene${(data.stats?.totalScenes ?? 0) === 1 ? '' : 's'} · ${data.stats?.lessonsDone ?? 0} lesson${(data.stats?.lessonsDone ?? 0) === 1 ? '' : 's'}`, true],
               ['Recall', (data.stats?.totalReviews ?? 0) >= 3 ? `${data.stats.totalReviews} reviews` : 'Not enough data', (data.stats?.totalReviews ?? 0) >= 3],
-              ['Verified', (data.stats?.totalCheckpoints ?? 0) > 0 ? `${data.stats.totalCheckpoints} checkpoints` : 'Not measured yet', (data.stats?.totalCheckpoints ?? 0) > 0]].map(([l, v, ok]) => (
+              ['Verified', (data.stats?.totalCheckpoints ?? 0) > 0 ? `${data.stats.totalCheckpoints} checkpoint${data.stats.totalCheckpoints === 1 ? '' : 's'}` : 'Not measured yet', (data.stats?.totalCheckpoints ?? 0) > 0]].map(([l, v, ok]) => (
               <div key={l} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: 12.5 }}>
                 <span style={{ color: '#9b8465' }}>{l}</span>
                 <span style={{ color: ok ? '#2b211a' : '#b3a889', fontWeight: 700 }}>{v}</span>
