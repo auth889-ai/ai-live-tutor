@@ -59,7 +59,7 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
     lastSync.current = now;
     fetch('/api/study', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'progress', lessonId, lessonTitle: lesson.lessonTitle, sceneIndex, sceneCount: lesson.scenes.length, tMs: Math.round(tMs), completedCount: completed.size, completed: completed.size >= lesson.scenes.length, watchedMs }),
+      body: JSON.stringify({ type: 'progress', lessonId, lessonTitle: lesson.lessonTitle, sceneIndex, sceneCount: lesson.scenes.length, tMs: Math.round(tMs), sceneDurationMs: Math.round(durationMs || 0), completedCount: completed.size, completed: completed.size >= lesson.scenes.length, watchedMs }),
     }).catch(() => {});
   }, [lessonId, sceneIndex, Math.floor(tMs / 5000)]);
 

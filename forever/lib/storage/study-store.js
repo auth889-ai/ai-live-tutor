@@ -132,7 +132,7 @@ export async function removeBookmark(userId, id) {
 }
 
 // Progress: ONE record per (user, lesson) — the resume point plus scene completion.
-export async function saveProgress({ userId, lessonId, lessonTitle = '', sceneIndex = 0, sceneCount = 0, tMs = 0, completedCount = 0, completed = false, watchedMs = 0 }) {
+export async function saveProgress({ userId, lessonId, lessonTitle = '', sceneIndex = 0, sceneCount = 0, tMs = 0, sceneDurationMs = 0, completedCount = 0, completed = false, watchedMs = 0 }) {
   if (!userId || !lessonId) return null;
   const col = await studyCollection();
   if (!col) return null;
@@ -148,9 +148,13 @@ export async function saveProgress({ userId, lessonId, lessonTitle = '', sceneIn
     _id: `pr_${userId}_${lessonId}`, kind: 'progress', userId, lessonId, lessonTitle,
     sceneIndex, sceneCount, tMs, completedCount, completed,
     checkpointsPassed: prev?.checkpointsPassed ?? 0, checkpointsMissed: prev?.checkpointsMissed ?? 0,
-    // The bar is EARNED: scenes watched to their end count; the scene you are inside adds
-    // nothing until finished (same law as the player's checkmarks).
-    percent: completed ? 100 : sceneCount > 0 ? Math.min(99, Math.round((completedCount / sceneCount) * 100)) : 0,
+    // LIVE percent (Coursera pattern): finished scenes count in full, and the scene being
+    // watched contributes its REAL position (capped at 95% until earned) — the bar moves
+    // from the first seconds of watching, never a dead 0 for an active learner.
+    scenePercent: sceneDurationMs > 0 ? Math.min(95, Math.round((tMs / sceneDurationMs) * 100)) : 0,
+    percent: completed ? 100 : sceneCount > 0
+      ? Math.min(99, Math.round(((completedCount + (sceneDurationMs > 0 ? Math.min(0.95, tMs / sceneDurationMs) : 0)) / sceneCount) * 100))
+      : 0,
     updatedAt: new Date().toISOString(),
   };
   await col.replaceOne({ _id: doc._id }, doc, { upsert: true });

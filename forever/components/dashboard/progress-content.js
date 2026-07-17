@@ -309,7 +309,7 @@ function LessonCard({ p }) {
           </div>
         ) : null}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: UI.muted }}>
-          <span>{(p.completedCount ?? 0) > 0 ? `${p.completedCount}/${p.sceneCount} scenes` : (p.tMs ?? 0) > 0 ? `just started · ${p.sceneCount} scenes` : `${p.sceneCount} scenes · not started`}</span>
+          <span>{(p.scenePercent ?? 0) > 0 && !p.completed ? `scene ${p.sceneIndex + 1} · ${p.scenePercent}% watched` : (p.completedCount ?? 0) > 0 ? `${p.completedCount}/${p.sceneCount} scenes` : (p.tMs ?? 0) > 0 ? `just started · ${p.sceneCount} scenes` : `${p.sceneCount} scenes · not started`}</span>
           <span>{ago(p.updatedAt)}</span>
         </div>
       </div>
