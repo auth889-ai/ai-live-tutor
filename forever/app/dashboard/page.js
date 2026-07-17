@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 
 import { listLessons } from '../../lib/storage/lesson-store.js';
 import { SESSION_COOKIE, verifySessionToken } from '../../lib/auth/session.js';
+import { ContinueCard } from '../../components/dashboard/continue-card.js';
 import { DashboardSidebar } from '../../components/dashboard/sidebar.js';
 import { CourseGrid, fmtDuration } from '../../components/dashboard/course-grid.js';
 
@@ -26,6 +27,7 @@ export default async function DashboardPage() {
       <DashboardSidebar email={session.email} active="home" />
 
       <main style={{ flex: 1, minWidth: 0 }}>
+        <ContinueCard />
         {/* welcome banner */}
         <section style={{
           display: 'flex', alignItems: 'center', gap: 20, marginBottom: 18, borderRadius: 20, overflow: 'hidden',

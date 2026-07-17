@@ -116,6 +116,7 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
   useEffect(() => {
     const onKey = (e) => {
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      if (e.key === 'b' || e.key === 'B') { bookmarkNow(); return; }
       if (e.code === 'Space') { e.preventDefault(); player.togglePlay(); }
       if (e.code === 'ArrowRight') player.skip(10_000);
       if (e.code === 'ArrowLeft') player.skip(-10_000);

@@ -9,7 +9,20 @@ export async function GET(request) {
   const lessonId = url.searchParams.get('lessonId');
   if (lessonId) return Response.json({ progress: await getProgress(session.userId, lessonId) });
   const [bookmarks, progress] = await Promise.all([listBookmarks(session.userId), listProgress(session.userId)]);
-  return Response.json({ signedIn: true, bookmarks, progress });
+  // STREAK (Duolingo pattern, deterministic): consecutive days with any learning activity —
+  // progress updates, bookmark saves, or reviews all count as showing up.
+  const days = new Set([
+    ...progress.map((x) => x.updatedAt), ...bookmarks.map((x) => x.createdAt), ...bookmarks.map((x) => x.lastReviewed),
+  ].filter(Boolean).map((iso) => String(iso).slice(0, 10)));
+  let streak = 0;
+  for (let d = new Date(); ; d.setDate(d.getDate() - 1)) {
+    const key = d.toISOString().slice(0, 10);
+    if (days.has(key)) streak += 1;
+    else if (streak === 0 && key === new Date().toISOString().slice(0, 10)) continue; // today not yet active doesn't break yesterday's streak
+    else break;
+  }
+  const dueCount = bookmarks.filter((b) => b.reviewDue && new Date(b.reviewDue).getTime() <= Date.now()).length;
+  return Response.json({ signedIn: true, bookmarks, progress, streak, dueCount });
 }
 
 export async function POST(request) {

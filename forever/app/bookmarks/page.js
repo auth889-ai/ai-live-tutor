@@ -27,12 +27,41 @@ export default function BookmarksPage() {
     if (rv) setData((d) => ({ ...d, bookmarks: d.bookmarks.map((b) => (b._id === id ? { ...b, ...rv, reviewDue: rv.reviewDue } : b)) }));
   });
 
+  const [tag, setTag] = useState('');
+  const tags = useMemo(() => {
+    const t = new Set();
+    for (const b of data?.bookmarks ?? []) for (const m of String(b.note ?? '').match(/#[\w-]+/g) ?? []) t.add(m);
+    return [...t];
+  }, [data]);
   const filtered = useMemo(() => {
-    const items = data?.bookmarks ?? [];
+    let items = data?.bookmarks ?? [];
+    if (tag) items = items.filter((b) => String(b.note ?? '').includes(tag));
     if (!q.trim()) return items;
     const needle = q.toLowerCase();
     return items.filter((b) => [b.lessonTitle, b.sceneTitle, b.note, b.context].join(' ').toLowerCase().includes(needle));
-  }, [data, q]);
+  }, [data, q, tag]);
+
+  // Readwise-style portability: your moments are YOURS — one click, clean Markdown.
+  const exportMd = () => {
+    const lines = ['# My bookmarks — Forever', ''];
+    const byLesson = new Map();
+    for (const b of data?.bookmarks ?? []) {
+      if (!byLesson.has(b.lessonId)) byLesson.set(b.lessonId, { title: b.lessonTitle || b.lessonId, items: [] });
+      byLesson.get(b.lessonId).items.push(b);
+    }
+    for (const [, g] of byLesson) {
+      lines.push(`## ${g.title}`, '');
+      for (const b of g.items) {
+        lines.push(`- **${b.sceneTitle || 'Scene'}** · ${fmtT(b.tMs)}${b.context ? `\n  > ${b.context}` : ''}${b.note ? `\n  📝 ${b.note}` : ''}`);
+      }
+      lines.push('');
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'forever-bookmarks.md';
+    a.click();
+  };
 
   if (data === null) return <Shell><div style={{ color: '#8a6d3b' }}>Loading…</div></Shell>;
   if (data.signedIn === false) return <Shell><CTA text="Sign in and every moment you press 🔖 in a lesson lands here — with the exact teaching line, your notes, and a review schedule." /></Shell>;
@@ -47,10 +76,23 @@ export default function BookmarksPage() {
 
   return (
     <Shell count={(data.bookmarks ?? []).length} dueCount={due.length}>
-      <input
-        value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes, teaching lines, scenes…"
-        style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #efe6d3', borderRadius: 10, padding: '9px 13px', fontSize: 13.5, marginBottom: 16, background: '#fffcfa' }}
-      />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <input
+          value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes, teaching lines, scenes…"
+          style={{ flex: 1, border: '1px solid #efe6d3', borderRadius: 10, padding: '9px 13px', fontSize: 13.5, background: '#fffcfa' }}
+        />
+        <button onClick={exportMd} title="Export all as Markdown" style={{ border: '1px solid #efe6d3', borderRadius: 10, background: '#fffcfa', color: '#5a4a2a', fontSize: 12.5, fontWeight: 700, padding: '0 14px', cursor: 'pointer' }}>⬇ Export .md</button>
+      </div>
+      {tags.length ? (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+          {tags.map((t) => (
+            <button key={t} onClick={() => setTag(tag === t ? '' : t)}
+              style={{ border: `1.5px solid ${tag === t ? '#d35400' : '#efe6d3'}`, borderRadius: 999, background: tag === t ? '#fff5ec' : '#fff', color: '#8a3a12', fontSize: 12, fontWeight: 700, padding: '3px 11px', cursor: 'pointer' }}>
+              {t}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {due.length > 0 ? (
         <section style={{ marginBottom: 22, border: '1.5px solid #f0c39a', borderRadius: 14, background: 'linear-gradient(180deg,#fffdf9,#fff5ec)', padding: '12px 14px' }}>
           <h2 style={{ fontSize: 14.5, color: '#8a3a12', margin: '0 0 10px' }}>🧠 Due for review — re-read, then grade yourself honestly</h2>
