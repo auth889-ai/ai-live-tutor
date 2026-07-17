@@ -42,6 +42,7 @@ export function compileStructureTrace({ events, result, code, entry = null, lang
   };
   if (last.kind === 'adj') for (const [f, t] of last.edges) addEdge(f, t);
   else for (const [id, n] of Object.entries(last.nodes)) for (const [field, cid] of n.refs) addEdge(id, cid, field === 'left' || field === 'right' ? field : undefined);
+  const hasForwardEdge = (a, b) => edges.some((e) => String(e.from) === String(a) && String(e.to) === String(b));
   const hasEdgeBetween = (a, b) => edgeKey.has(`${a}>${b}`) || edgeKey.has(`${b}>${a}`);
 
   // Steps: growth + cursor. Everything filtered to the FINAL id set (validator contract).
@@ -81,7 +82,7 @@ export function compileStructureTrace({ events, result, code, entry = null, lang
         revealed: [...revealed],
         pointers: cur ? { [curName]: cur } : {},
       },
-      ...(cur && prevCur && cur !== prevCur && hasEdgeBetween(prevCur, cur) ? { activeEdge: [prevCur, cur] } : {}),
+      ...(cur && prevCur && cur !== prevCur && hasEdgeBetween(prevCur, cur) ? { activeEdge: [prevCur, cur], ...(hasForwardEdge && !hasForwardEdge(prevCur, cur) ? { activeEdgeReverse: true } : {}) } : {}),
       variables: ev.variables && typeof ev.variables === 'object' ? ev.variables : {},
     });
     prevCur = cur ?? prevCur;

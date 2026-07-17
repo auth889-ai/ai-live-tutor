@@ -82,6 +82,7 @@ export function compileRecursionTrace({ callTree, code, language = 'python', lin
     stack: [...stack],
     variables: over.variables ?? {},
     ...(over.activeEdge ? { activeEdge: over.activeEdge } : {}),
+    ...(over.activeEdgeReverse ? { activeEdgeReverse: true } : {}),
   });
 
   const rootId = ids.find((id) => !edges.some((e) => e.to === String(id))) ?? ids[0];
@@ -128,6 +129,7 @@ export function compileRecursionTrace({ callTree, code, language = 'python', lin
         line: lineOf(kind),
         current: String(id),
         activeEdge: [childId, String(id)],
+        activeEdgeReverse: true, // the return ride: child -> parent along the declared call edge
         // STABLE table keys (call/returns) — per-child keys made the trace table grow a new
         // column per node, shifting headers mid-lesson.
         variables: { call: nameOf(child.id), returns: child.value },

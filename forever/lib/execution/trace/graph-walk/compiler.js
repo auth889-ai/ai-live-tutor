@@ -149,9 +149,13 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
   const ids = new Set(nodes.map((n) => String(n.id)));
   // Orientation-agnostic membership (a relaxation can only light an edge that EXISTS between
   // the two nodes — direction of travel may legitimately oppose a directed edge on returns).
-  const edgePairs = new Set(edges.flatMap((e) => [
-    `${String(e.from)}>${String(e.to)}`, `${String(e.to)}>${String(e.from)}`,
-  ]));
+  // Direction law: a traversal/relaxation on a DIRECTED graph may only light the declared
+  // forward orientation (a reverse ride is a return and must be marked; the walk compiler
+  // never emits returns, so it simply refuses the highlight). Undirected: either way.
+  const forwardPairs = new Set(edges.map((e) => `${String(e.from)}>${String(e.to)}`));
+  const edgePairs = graph.directed === false
+    ? new Set(edges.flatMap((e) => [`${String(e.from)}>${String(e.to)}`, `${String(e.to)}>${String(e.from)}`]))
+    : forwardPairs;
   const edgeExists = (a, b) => edgePairs.has(`${String(a)}>${String(b)}`);
   const labelOf = new Map(nodes.map((n) => [String(n.id), String(n.label ?? n.id)]));
   const name = (id) => labelOf.get(String(id)) ?? String(id);

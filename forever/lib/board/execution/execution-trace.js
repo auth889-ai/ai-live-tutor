@@ -40,12 +40,17 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     for (const e of views.graph.edges) {
       if (!graphIds.has(String(e.from)) || !graphIds.has(String(e.to))) throw new Error(`${context} views.graph edge references a missing node`);
     }
-    // Membership is orientation-agnostic: walking BACK along a directed tree edge (a return
-    // from child to parent) is still that edge. What must be impossible is an edge between
-    // two nodes that share NO declared edge at all (the invented-edge class).
-    graphEdgePairs = new Set(views.graph.edges.flatMap((e) => [
-      `${String(e.from)}>${String(e.to)}`, `${String(e.to)}>${String(e.from)}`,
-    ]));
+    // DIRECTION LAW (external probe: a reverse 2->1 on a declared 1->2 rendered as an
+    // ordinary traversal): on DIRECTED graphs an activeEdge must match the declared
+    // orientation exactly; riding an edge BACKWARDS (returns/backtracks) is legal only when
+    // the step SAYS so (activeEdgeReverse: true — drawn as a return, never as a traversal).
+    // Undirected graphs accept either orientation.
+    const directedG = views.graph.directed !== false;
+    graphEdgePairs = {
+      forward: new Set(views.graph.edges.map((e) => `${String(e.from)}>${String(e.to)}`)),
+      any: new Set(views.graph.edges.flatMap((e) => [`${String(e.from)}>${String(e.to)}`, `${String(e.to)}>${String(e.from)}`])),
+      directed: directedG,
+    };
   }
   // Linked-list chain view: node ids in FIRST-APPEARANCE order (box positions are fixed for
   // the whole animation — only arrows and named pointers move between steps).
@@ -139,8 +144,15 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
       // MEMBERSHIP, not just node existence (external review: an INVENTED edge whose two
       // endpoints happen to exist rendered as confidently as a real one — 3->1 on a graph
       // with no such edge). The edge must be declared, respecting direction.
-      if (!graphEdgePairs.has(`${String(step.activeEdge[0])}>${String(step.activeEdge[1])}`)) {
+      const fwdKey = `${String(step.activeEdge[0])}>${String(step.activeEdge[1])}`;
+      const revKey = `${String(step.activeEdge[1])}>${String(step.activeEdge[0])}`;
+      if (!graphEdgePairs.any.has(fwdKey)) {
         throw new Error(`${at} activeEdge ${step.activeEdge[0]}->${step.activeEdge[1]} is not a declared edge of views.graph`);
+      }
+      if (graphEdgePairs.directed && !graphEdgePairs.forward.has(fwdKey)) {
+        if (step.activeEdgeReverse !== true) {
+          throw new Error(`${at} activeEdge ${step.activeEdge[0]}->${step.activeEdge[1]} rides the declared edge ${revKey.replace('>', '->')} BACKWARDS without activeEdgeReverse — a directed traversal may not be drawn in reverse`);
+        }
       }
     }
     if (step.traceRow !== undefined && (typeof step.traceRow !== 'object' || Array.isArray(step.traceRow))) {

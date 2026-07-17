@@ -60,7 +60,7 @@ export function compileDivideConquer({ events, result, code, entry = null, fn = 
     const shown = seg.slice(0, 8).map((v) => JSON.stringify(v)).join(', ');
     return `[${shown}${seg.length > 8 ? ', …' : ''}]`;
   };
-  const snap = ({ line, explanation, arrayOver = {}, activeEdge, variables = {} }) => {
+  const snap = ({ line, explanation, arrayOver = {}, activeEdge, activeEdgeReverse, variables = {} }) => {
     const top = activeStack[activeStack.length - 1] ?? null;
     const dimmed = band(); // cells OUTSIDE the active call's segment — faded, not eliminated
     return {
@@ -76,6 +76,7 @@ export function compileDivideConquer({ events, result, code, entry = null, fn = 
       },
       stack: activeStack.map(labelOf),
       ...(activeEdge ? { activeEdge } : {}),
+      ...(activeEdgeReverse ? { activeEdgeReverse: true } : {}),
       variables,
     };
   };
@@ -108,6 +109,7 @@ export function compileDivideConquer({ events, result, code, entry = null, fn = 
         line,
         explanation: narrateReturn({ label: labelOf(c), segmentText: segText(c), parentLabel: parent ? labelOf(parent) : null }),
         activeEdge: parent ? [nid(c.id), nid(parent.id)] : null,
+        activeEdgeReverse: Boolean(parent), // returning UP a declared parent->child edge
       }));
       continue;
     }
