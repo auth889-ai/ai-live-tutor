@@ -76,3 +76,8 @@ test('compare computes the verdict from two bindings (bridge_test); join renders
   const j = resolveBinding({ op: 'join', collection: 'frames', field: 'functionName', separator: ' → ' }, FRAME);
   assert.equal(j.value, 'dfs → dfs');
 });
+
+test('exact-token grounding: a source "14" can no longer ground an AI-written "4"', () => {
+  assert.deepEqual(ungroundedNumbers('value is 4', 'array of 14 items'), ['4']);
+  assert.deepEqual(ungroundedNumbers('value is 14', 'array of 14 items'), []);
+});

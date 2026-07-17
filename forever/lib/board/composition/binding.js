@@ -118,10 +118,10 @@ export function resolveBinding(binding, frame, { context = {}, expect = null } =
 // hallucination class bindings exist to prevent. Algorithm-rule text (formulas) goes through
 // the society's Grounding Auditor like every board object — not decided here.
 export function ungroundedNumbers(text, sourceText, { entityIds = [] } = {}) {
-  const src = String(sourceText ?? '');
-  // Entity ids (node labels, grid indices) are grounded by the STRUCTURE, not the prose —
-  // "disc[3]" is fine on a graph that has node 3, whatever the problem text says.
+  // EXACT TOKEN grounding (external review: substring matching let a source '14' ground an
+  // AI-written '4'). Both sides tokenize to full numbers; only exact tokens ground.
+  const sourceNums = new Set(String(sourceText ?? '').match(/-?\d+(?:\.\d+)?/g) ?? []);
   const ids = new Set([...entityIds].map(String));
   const nums = String(text ?? '').match(/\d+(?:\.\d+)?/g) ?? [];
-  return [...new Set(nums.filter((n) => !src.includes(n) && !ids.has(n)))];
+  return [...new Set(nums.filter((n) => !sourceNums.has(n) && !ids.has(n)))];
 }

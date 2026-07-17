@@ -153,3 +153,11 @@ test('B2: typed events ride the steps — visit/relax/finalize/state_write with 
   assert.equal(trace.steps.at(-1).events.at(-1).eventType, 'solution_emit', 'terminal step emits the solution');
   assert.ok(all.every((e) => e.eventType !== 'solution_emit' ? Number.isInteger(e.provenance?.eventIndex) : true), 'provenance carries the recording index');
 });
+
+test('structure gate: event targets and formula operands outside the declared grid/array throw', () => {
+  const base = { language: 'python', code: 'a\nb', views: { array2d: { rows: 2, cols: 2 } } };
+  const step = (events) => [{ line: 1, explanation: 'x'.repeat(70), array2d: {}, events }];
+  assert.throws(() => validateExecutionTrace({ ...base, steps: step([{ eventType: 'cell_update', target: { entityId: 'gridCell:99:99' } }]) }, 't'), /outside the 2x2 grid/);
+  assert.throws(() => validateExecutionTrace({ ...base, steps: step([{ eventType: 'cell_update', target: { entityId: 'gridCell:0:0' }, formula: { operator: 'add', operands: [{ ref: 'gridCell:5:0' }] } }]) }, 't'), /formula operand/);
+  validateExecutionTrace({ ...base, steps: step([{ eventType: 'cell_update', target: { entityId: 'gridCell:1:1' } }]) }, 't');
+});

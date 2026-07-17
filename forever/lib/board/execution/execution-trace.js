@@ -151,8 +151,32 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
       validateStepEvents(step.events, at);
       for (const e of step.events) {
         const id = e.target?.entityId;
-        if (typeof id === 'string' && id.startsWith('graphNode:') && graphIds && !graphIds.has(id.slice('graphNode:'.length))) {
+        if (typeof id !== 'string') continue;
+        // Structure gate (external review: gridCell:99:99 passed on a 1x1 grid): every typed
+        // target must exist in the DECLARED structure — graph nodes, grid bounds, array bounds.
+        if (id.startsWith('graphNode:') && graphIds && !graphIds.has(id.slice('graphNode:'.length))) {
           throw new Error(`${at} event targets missing ${id}`);
+        }
+        if (id.startsWith('gridCell:')) {
+          const [r, c] = id.slice('gridCell:'.length).split(':').map(Number);
+          if (!grid) throw new Error(`${at} event targets ${id} but no views.array2d is declared`);
+          if (!(Number.isInteger(r) && Number.isInteger(c) && r >= 0 && r < grid.rows && c >= 0 && c < grid.cols)) {
+            throw new Error(`${at} event targets ${id} outside the ${grid.rows}x${grid.cols} grid`);
+          }
+        }
+        if (id.startsWith('arrayCell:')) {
+          const i = Number(id.slice('arrayCell:'.length));
+          if (!(Number.isInteger(i) && i >= 0 && i < arrayLen)) throw new Error(`${at} event targets ${id} outside the array`);
+        }
+        // Formula operands are references too — same gate.
+        for (const op of e.formula?.operands ?? []) {
+          const ref = op?.ref;
+          if (typeof ref === 'string' && ref.startsWith('gridCell:') && grid) {
+            const [rr, cc] = ref.slice('gridCell:'.length).split(':').map(Number);
+            if (!(rr >= 0 && rr < grid.rows && cc >= 0 && cc < grid.cols)) {
+              throw new Error(`${at} formula operand ${ref} outside the ${grid.rows}x${grid.cols} grid`);
+            }
+          }
         }
       }
     }
