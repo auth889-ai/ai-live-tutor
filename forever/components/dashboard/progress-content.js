@@ -75,6 +75,15 @@ const T = {
   accent: '#e8604c',
 };
 
+// Colored identity per card: tinted icon chip + label — one accent color per concern.
+const CardHead = ({ icon, color, label, right, mb = 0 }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: mb }}>
+    <span style={{ width: 26, height: 26, borderRadius: 8, background: `${color}18`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{icon}</span>
+    <span style={{ ...T.cap, fontWeight: 800, flex: 1, minWidth: 0 }}>{label}</span>
+    {right ?? null}
+  </div>
+);
+
 const Section = ({ title, sub, children, style }) => (
   <section style={{ marginTop: T.sectionGap, ...style }}>
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
@@ -331,7 +340,7 @@ export function ProgressContent() {
 
               {(data.tomorrow?.review || data.tomorrow?.continueTitle) ? (
                 <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px', fontSize: 12.5, color: '#9b8465', lineHeight: 1.55 }}>
-                  <div style={{ ...T.cap, fontWeight: 800, marginBottom: 6 }}>TOMORROW'S FIRST BLOCK</div>
+                  <CardHead icon="🌅" color="#c98f2d" label="TOMORROW'S FIRST BLOCK" mb={6} />
                   {data.tomorrow.review ? <>Review “{data.tomorrow.review}”{data.tomorrow.continueTitle ? ', then ' : ''}</> : null}
                   {data.tomorrow.continueTitle ? <>continue <b style={{ color: '#2b211a' }}>{data.tomorrow.continueTitle}</b></> : null}
                 </div>
@@ -364,14 +373,14 @@ export function ProgressContent() {
           {/* banner — the vine plus the bank's real size, one glance */}
           <div style={{ position: 'relative', height: 108, borderRadius: 20, overflow: 'hidden', boxShadow: '0 4px 18px rgba(58,46,34,0.08)' }}>
             <img src="/images/progress-vine.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(255,255,255,0.93) 34%, rgba(255,255,255,0.3))' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(255,255,255,0.94) 30%, rgba(222,240,222,0.5))' }} />
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', gap: 14 }}>
               <div>
                 <div style={{ fontSize: 19, fontWeight: 700, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif' }}>{memHead}</div>
                 <div style={{ fontSize: 12, color: '#6b563d', marginTop: 3 }}>{memSub}</div>
               </div>
               <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.78)', border: '1px solid rgba(242,227,213,0.9)', borderRadius: 14, padding: '9px 18px' }}>
-                <div style={{ fontSize: 24, fontWeight: 800, color: '#2b211a', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{savedN}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#2f7d4a', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{savedN}</div>
                 <div style={{ ...T.cap, marginTop: 3 }}>saved moment{(data.bookmarks ?? []).length === 1 ? '' : 's'}</div>
               </div>
             </div>
@@ -379,8 +388,8 @@ export function ProgressContent() {
 
           {/* stat row — queue, forecast bars, bank */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-            <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ ...T.cap, fontWeight: 800 }}>REVIEW QUEUE</div>
+            <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px', display: 'flex', flexDirection: 'column', borderTop: '3px solid #e8604c' }}>
+              <CardHead icon="🧠" color="#e8604c" label="REVIEW QUEUE" />
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10 }}>
                 <span style={{ fontSize: 34, fontWeight: 800, lineHeight: 1, color: (data.dueCount ?? 0) > 0 ? '#c0522d' : '#cbbfa8', fontVariantNumeric: 'tabular-nums' }}>{dueN}</span>
                 <span style={T.cap}>due now</span>
@@ -392,15 +401,15 @@ export function ProgressContent() {
               )}
             </div>
             <ForecastCard days={dueDays} caption={forecastCap} />
-            <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
-              <div style={{ ...T.cap, fontWeight: 800 }}>MEMORY BANK</div>
+            <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px', borderTop: '3px solid #2f7d4a' }}>
+              <CardHead icon="🌱" color="#2f7d4a" label="MEMORY BANK" />
               {[['moments saved', (data.bookmarks ?? []).length],
                 ['recalls done', data.stats?.totalReviews ?? 0],
                 ['held on last recall', (data.bookmarks ?? []).filter((bk) => bk.lastGrade === 'good').length],
                 ['mature · 21d+ gap', (data.bookmarks ?? []).filter((bk) => (bk.reviewInterval ?? 1) >= 21).length]].map(([l, n]) => (
                 <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', marginTop: 2 }}>
                   <span style={{ fontSize: 12.5, color: '#9b8465' }}>{l}</span>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: n > 0 ? '#2b211a' : '#cbbfa8', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: n > 0 ? '#2f7d4a' : '#cbbfa8', background: n > 0 ? '#2f7d4a14' : 'transparent', borderRadius: 999, padding: '2px 10px', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
                 </div>
               ))}
             </div>
@@ -412,7 +421,7 @@ export function ProgressContent() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
           {(data.upcoming ?? []).length ? (
             <div style={{ ...T.card, padding: T.pad }}>
-              <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>COMING BACK</div>
+              <CardHead icon="⏳" color="#c98f2d" label="COMING BACK" mb={8} />
               {(data.upcoming ?? []).map((u) => {
                 const ub = bms.find((b) => String(b._id ?? b.id) === String(u.id));
                 const iv = Math.round(ub?.reviewInterval ?? 1);
@@ -439,7 +448,7 @@ export function ProgressContent() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
           <div style={{ ...T.card, padding: T.pad }}>
-            <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>LEARNING HEALTH</div>
+            <CardHead icon="🌿" color="#2f7d4a" label="LEARNING HEALTH" mb={8} />
             {[['Progress', `${data.stats?.totalScenes ?? 0} scene${(data.stats?.totalScenes ?? 0) === 1 ? '' : 's'} · ${data.stats?.lessonsDone ?? 0} lesson${(data.stats?.lessonsDone ?? 0) === 1 ? '' : 's'}`, true],
               ['Recall', (data.stats?.totalReviews ?? 0) >= 3 ? `${data.stats.totalReviews} recalls — trend visible`
                 : (data.stats?.totalReviews ?? 0) > 0 ? `${data.stats.totalReviews} of 3 recalls for a trend`
@@ -454,7 +463,7 @@ export function ProgressContent() {
           </div>
           {(data.tomorrow?.review || data.tomorrow?.continueTitle) ? (
             <div style={{ ...T.card, padding: T.pad, fontSize: 12.5, color: '#9b8465', lineHeight: 1.55 }}>
-              <div style={{ ...T.cap, fontWeight: 800, marginBottom: 6 }}>TOMORROW'S FIRST BLOCK</div>
+              <CardHead icon="🌅" color="#c98f2d" label="TOMORROW'S FIRST BLOCK" mb={6} />
               {data.tomorrow.review ? <>Review “{data.tomorrow.review}”{data.tomorrow.continueTitle ? ', then ' : ''}</> : null}
               {data.tomorrow.continueTitle ? <>continue <b style={{ color: '#2b211a' }}>{data.tomorrow.continueTitle}</b></> : null}
             </div>
@@ -684,8 +693,8 @@ function MiniHeat({ days }) {
 function ForecastCard({ days, caption }) {
   const max = Math.max(1, ...days.map((d) => d.n));
   return (
-    <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
-      <div style={{ ...T.cap, fontWeight: 800 }}>REVIEWS AHEAD · 14 DAYS</div>
+    <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px', borderTop: '3px solid #eb9a3d' }}>
+      <CardHead icon="📅" color="#eb9a3d" label="REVIEWS AHEAD · 14 DAYS" />
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 76, marginTop: 12 }}>
         {days.map((d, i) => (
           <div key={d.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 3, minWidth: 0, height: '100%' }}>
@@ -710,35 +719,52 @@ function ForgettingCurve({ bk }) {
   const span = Math.max(1, end - start);
   const tau = span / 1.05; // S(end) = e^-1.05 ≈ 0.35
   const S = (t) => Math.exp(-Math.max(0, t - start) / tau);
-  const W = 560, H = 122, pad = 14;
+  const W = 560, H = 128, pad = 14;
   const x = (t) => pad + ((t - start) / (span * 1.25)) * (W - 2 * pad);
-  const y = (v) => 16 + (1 - v) * (H - 44);
-  const pts = Array.from({ length: 48 }, (_, i) => {
+  const y = (v) => 16 + (1 - v) * (H - 48);
+  const ptArr = Array.from({ length: 48 }, (_, i) => {
     const t = start + (i / 47) * span * 1.25;
-    return `${x(t).toFixed(1)},${y(S(t)).toFixed(1)}`;
+    return [x(t), y(S(t))];
   });
-  const solid = pts.slice(0, 39).join(' ');
-  const after = pts.slice(38).join(' ');
+  const fmt = ([a, b]) => `${a.toFixed(1)},${b.toFixed(1)}`;
+  const solidArr = ptArr.slice(0, 39);
+  const solid = solidArr.map(fmt).join(' ');
+  const after = ptArr.slice(38).map(fmt).join(' ');
+  const area = `${solid} ${solidArr[solidArr.length - 1][0].toFixed(1)},${y(0)} ${pad},${y(0)}`;
   const nowT = Math.min(Math.max(now, start), end);
   const nowPct = Math.round(S(nowT) * 100);
   const label = String(bk.note || bk.context || 'this moment').slice(0, 30);
+  const day = (t) => new Date(t).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
   return (
-    <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 6 }}>
-        <span style={{ ...T.cap, fontWeight: 800 }}>FORGETTING CURVE · “{label}”</span>
-        <span style={T.cap}>modeled recall now ≈ <b style={{ color: nowPct > 60 ? '#2f7d4a' : '#c0522d' }}>{nowPct}%</b></span>
-      </div>
+    <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px', borderTop: '3px solid #4477aa' }}>
+      <CardHead icon="📉" color="#4477aa" label={`FORGETTING CURVE · “${label}”`}
+        right={<span style={{ ...T.cap, whiteSpace: 'nowrap' }}>modeled recall now ≈ <b style={{ color: nowPct > 60 ? '#2f7d4a' : nowPct > 35 ? '#c98f2d' : '#c0522d', fontSize: 13 }}>{nowPct}%</b></span>} />
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', marginTop: 8, display: 'block' }}>
+        <defs>
+          <linearGradient id="fcArea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#e8604c" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#e8604c" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        <rect x={pad} y={y(1)} width={W - 2 * pad} height={y(0.6) - y(1)} fill="#2f9e5f" opacity="0.06" />
+        <rect x={pad} y={y(0.6)} width={W - 2 * pad} height={y(0.35) - y(0.6)} fill="#eb9a3d" opacity="0.07" />
+        <rect x={pad} y={y(0.35)} width={W - 2 * pad} height={y(0) - y(0.35)} fill="#e8604c" opacity="0.05" />
+        <text x={pad + 4} y={y(0.8)} fontSize="8" fontWeight="700" fill="#2f9e5f" opacity="0.75">strong</text>
+        <text x={pad + 4} y={y(0.47)} fontSize="8" fontWeight="700" fill="#c98f2d" opacity="0.8">fading</text>
+        <text x={pad + 4} y={y(0.16)} fontSize="8" fontWeight="700" fill="#c0522d" opacity="0.7">at risk</text>
         <line x1={pad} y1={y(1)} x2={W - pad} y2={y(1)} stroke="#f2e3d5" strokeDasharray="3 4" />
         <line x1={pad} y1={y(0.35)} x2={W - pad} y2={y(0.35)} stroke="#f2e3d5" strokeDasharray="3 4" />
         <text x={W - pad} y={y(1) - 4} textAnchor="end" fontSize="8.5" fill="#b3a889">100%</text>
         <text x={W - pad} y={y(0.35) - 4} textAnchor="end" fontSize="8.5" fill="#b3a889">35% — the review lands here</text>
+        <polygon points={area} fill="url(#fcArea)" />
         <polyline points={after} fill="none" stroke="#d8cbb6" strokeWidth="2" strokeDasharray="4 5" />
         <polyline points={solid} fill="none" stroke="#e8604c" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1={x(nowT)} y1={14} x2={x(nowT)} y2={H - 24} stroke="#2b211a" strokeDasharray="2 3" opacity="0.5" />
-        <text x={Math.min(x(nowT) + 4, W - 40)} y={24} fontSize="9" fontWeight="700" fill="#2b211a">now</text>
-        <circle cx={x(end)} cy={y(S(end))} r="5" fill="#2f9e5f" />
-        <text x={x(end)} y={Math.min(y(S(end)) + 17, H - 10)} textAnchor="middle" fontSize="9" fontWeight="800" fill="#2f7d4a">{new Date(end).toLocaleDateString('en', { weekday: 'short' })}</text>
+        <line x1={x(nowT)} y1={14} x2={x(nowT)} y2={H - 28} stroke="#2b211a" strokeDasharray="2 3" opacity="0.5" />
+        <circle cx={x(nowT)} cy={y(S(nowT))} r="4.5" fill="#2b211a" stroke="#fff" strokeWidth="1.5" />
+        <text x={Math.min(x(nowT) + 6, W - 44)} y={22} fontSize="9" fontWeight="700" fill="#2b211a">now · {nowPct}%</text>
+        <circle cx={x(end)} cy={y(S(end))} r="5.5" fill="#2f9e5f" stroke="#fff" strokeWidth="1.5" />
+        <text x={pad} y={H - 6} fontSize="8.5" fill="#b3a889">{day(start)} — saved</text>
+        <text x={x(end)} y={H - 6} textAnchor="middle" fontSize="9" fontWeight="800" fill="#2f7d4a">{day(end)} — review</text>
       </svg>
       <div style={{ ...T.cap, marginTop: 4 }}>memory decays along the Ebbinghaus curve — the return on {new Date(end).toLocaleDateString('en', { weekday: 'long' })} resets it to full, then the gap stretches</div>
     </div>
