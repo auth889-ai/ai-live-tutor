@@ -29,7 +29,13 @@ Hard requirements:
     ? 'console.log("@@STEP " + JSON.stringify({line, explanation, array, variables}))'
     : 'import json  # then:  print("@@STEP " + json.dumps({"line": line, "explanation": expl, "array": arr_state, "variables": vars}))'}
     This guarantees lists/ints serialize correctly. Print ONLY @@STEP lines on their own lines.`,
-  canHandle: ({ code, program }) => Boolean(code && program),
+  // CONTAINMENT (external review #1: an AI-written program can PRINT steps that diverge
+  // from what the solution computes — shape-valid lies). Python always has the real recorder
+  // (auto mode), so AI-authored step programs are refused for Python unless explicitly
+  // enabled for research; other languages keep this as their honest floor until they get a
+  // real recorder.
+  canHandle: ({ code, program, lang }) => Boolean(code && program)
+    && (lang !== 'python' || process.env.ALLOW_AI_TRACES === '1'),
   async run({ code, program, views, lang, exec }) {
     const run = await exec({ language: lang, source: program });
     if (run.timedOut) throw new Error('Program timed out (likely an infinite loop).');

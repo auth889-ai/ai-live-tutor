@@ -19,6 +19,20 @@ export const EVENT_TYPES = Object.freeze([
 
 const TYPES = new Set(EVENT_TYPES);
 
+// CLOSED ROLE REGISTRY (external review: any string passed as semanticRole). Emitted roles
+// come from compilers; reserved roles are contract names the Director's when-annotations may
+// bind to before a compiler emits them. Unknown roles are rejected — a made-up role is a
+// made-up meaning.
+export const SEMANTIC_ROLES = Object.freeze([
+  // emitted today
+  'frontier_take', 'first_discovery', 'improvement', 'indegree_drop', 'state_write',
+  'mask_update', 'dp_recurrence_update',
+  // reserved contract names (Director bindings / future invariant-backed upgrades)
+  'low_link_update', 'bridge_confirmed', 'backtrack', 'memo_hit', 'swap', 'partition_move',
+  'union_merge', 'level_advance', 'window_slide', 'pop_reason',
+]);
+const ROLES = new Set(SEMANTIC_ROLES);
+
 // Permissive, additive validation — throws with the step context on a malformed event.
 // Entity existence is checked by the caller (the trace validator owns the id sets).
 export function validateStepEvents(events, at) {
@@ -26,7 +40,9 @@ export function validateStepEvents(events, at) {
   for (const e of events) {
     if (!e || typeof e !== 'object') throw new Error(`${at} event must be an object`);
     if (!TYPES.has(e.eventType)) throw new Error(`${at} unknown eventType "${e.eventType}" — use the universal vocabulary (${EVENT_TYPES.join(', ')})`);
-    if (e.semanticRole !== undefined && typeof e.semanticRole !== 'string') throw new Error(`${at} semanticRole must be a string`);
+    if (e.semanticRole !== undefined && !ROLES.has(e.semanticRole)) {
+      throw new Error(`${at} unknown semanticRole "${e.semanticRole}" — the registry is closed (${SEMANTIC_ROLES.join(', ')})`);
+    }
     if (e.target !== undefined) {
       // Canonical B1 identity: ONE typed string ("graphNode:0", "gridCell:1:2") — parallel
       // identity systems make the resolver and StructureSpec validator diverge (reviewer).

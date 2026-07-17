@@ -1,3 +1,7 @@
+// These tests exercise the AI-authored program mode machinery itself — the research escape
+// hatch is set explicitly; production never sets it, so Python always uses the real recorder.
+process.env.ALLOW_AI_TRACES = '1';
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
