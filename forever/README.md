@@ -56,14 +56,37 @@ Critic object with evidence; the board revises; a bounded debate ends with an Ar
 animation is stripped (the Execution Tracer, which ran the real algorithm, owns motion), and
 a dry-run scene without a real trace refuses to ship.
 
+## The universal dry-run engine — and who writes what
+
+> **Compiler extracts. AI interprets. Validator proves. Resolver fills. Renderer draws.**
+
+The AI never authors a runtime fact. For any coding problem the engine records ONE real
+execution (`sys.settrace`: every line, local, call/return/exception) and **17 behavioral
+detectors** pick the teaching lens from the run itself — DP grid with proved dependency rules,
+graph walk with per-node state (Tarjan's disc/low riding under the nodes), heap, trie,
+union-find, recursion tree, bitmask semantics, call-stack frames (Active/Waiting/Returned/
+Threw). Regression battery: **64 problems, 0 errors, zero per-problem code** (a pass rate,
+not a coverage claim — an unfamiliar shape degrades to a simpler-but-true view, never wrong).
+
+On top of the trace sit four contracts (see `notes/16july.md` for the full locked design):
+`ProblemStructureSpec` (typed ids: `graphNode:4`, `gridCell:1:2`) → `ExecutionTraceIR`
+(typed events, structured formulas, frames) → `SemanticVisualSpec` (the **Semantic Visual
+Director** — an AI that composes each problem's cockpit as **bindings**, validated
+behaviorally against the recording; its hallucination attempts are rejected by name in the
+shadow log) → `ResolvedVisualFrame` (a no-eval resolver fills bindings with recorded values).
+Authority on any disagreement: **execution > structure > behavioral invariants > AI
+interpretation > detector confidence.** Dev galleries: `/dev/lenses`, `/dev/cockpit`.
+
 ## The measurable gain (Track 3 requirement)
 
 `eval/RESULTS.md` — regenerate with `node --env-file=.env eval/benchmark.eval.js`.
-Same material through a **single mega-prompt agent** vs **the society**; every number is
-measured, none asserted: contract validity (programmatic validators), grounding (the same
-citation check on both arms), real token usage (client ledger), wall time, and a blind
-7-criterion pedagogy rubric judged in **both presentation orders** (a win only counts if it
-survives the swap).
+Two benchmarks, every number measured, none asserted:
+- **Mechanical validators, N=4 matched coding materials** (`eval/society-vs-single.eval.mjs`):
+  single agent — **0/4** hand-written dry runs pass the elite quality gate, 1/4 violates the
+  structural contract, 0/4 screen values provably from a real run; society — 0 contract
+  failures, 4/4 engine-recorded, 3–5× depth with logged objections/repairs/refusals.
+- **Cross-domain blind rubric** (`eval/benchmark.eval.js`): contract validity, grounding,
+  tokens, wall time, 7-criterion pedagogy judged in both presentation orders.
 
 ## What makes it different
 
@@ -93,7 +116,7 @@ cp .env.example .env       # set DASHSCOPE_API_KEY, MONGODB_URI, REDIS_URL, SESS
 docker pull python:3.12-slim node:22-slim   # the code sandbox
 npm run dev:all            # web + worker (worker restarts on code changes)
 # open http://localhost:3000 → create an account → Studio → paste material → watch the society work
-npm test                   # 278 tests, no tokens spent
+npm test                   # 660+ tests, no tokens spent
 ```
 
 A full course fans out one queued job per lesson (parallel workers, live SSE progress per
@@ -117,7 +140,7 @@ lib/
   storage/              mongo/fs dual stores: lessons, courses, users, uploads, assets
   tts/                  qwen + elevenlabs adapters, word timings, gapless concat
 eval/                   benchmark (society vs single agent) + live proof scripts
-tests/                  278 tests — contracts, agents (injected), stores, e2e flow
+tests/                  660+ tests — contracts, agents (injected), engines, stores, e2e flow
 ```
 
 Built for the Global AI Hackathon with Qwen Cloud (Track 3: Agent Society). AGPL-3.0.
