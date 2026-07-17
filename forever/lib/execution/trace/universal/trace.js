@@ -29,6 +29,11 @@ export async function traceUniversal({ code, entry, exec, language = 'python' } 
   for (const plan of detectLenses(recording, { code })) {
     try {
       const trace = plan.compile({ recording, plan, code, entry, language });
+      // Independent value verification: the recording judges every claimed before/after;
+      // unprovable events are stripped and counted — never rendered.
+      const { verifyEventValues } = await import('./verify-events.js');
+      const { stripped } = verifyEventValues(recording, trace);
+      if (stripped > 0) console.error(`[verify-events] stripped ${stripped} unprovable event(s) from ${plan.lens}`);
       return { trace, lens: plan.lens, confidence: plan.confidence, recording, attempts };
     } catch (error) {
       attempts.push(`${plan.lens}: ${error.message}`);
