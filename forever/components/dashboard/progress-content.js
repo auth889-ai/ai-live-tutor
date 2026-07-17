@@ -539,12 +539,12 @@ function Heatmap({ days }) {
       cells.push({ key, w, d, future: dt > end, n: (rec?.scenes ?? 0) + (rec?.reviews ?? 0) });
     }
   }
-  const shade = (n) => (n === 0 ? '#f4ece2' : n < 2 ? '#f8c9ad' : n < 4 ? '#f4936b' : n < 7 ? '#e8604c' : '#b93c2b');
+  const shade = (n) => (n === 0 ? '#efe7da' : n < 2 ? '#c5e6c0' : n < 4 ? '#8ed08d' : n < 7 ? '#4fae5c' : '#2f7d4a');
   return (
     <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10, gap: 10, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 12.5, fontWeight: 800, color: '#2b211a' }}>Activity <span style={{ color: '#9b8465', fontWeight: 400 }}>· last 12 months</span></div>
-        <div style={{ fontSize: 12, color: today.scenes + today.reviews > 0 ? '#c0522d' : '#9b8465', fontWeight: 700 }}>
+        <div style={{ fontSize: 12, color: today.scenes + today.reviews > 0 ? '#2f7d4a' : '#9b8465', fontWeight: 700 }}>
           today: {todayTotal} action{todayTotal === 1 ? '' : 's'}
         </div>
       </div>
@@ -558,8 +558,9 @@ function Heatmap({ days }) {
             style={{
               aspectRatio: '1', borderRadius: 2.5, minWidth: 0,
               background: c.future ? 'transparent' : shade(c.n),
+              boxShadow: c.future || c.n > 0 ? 'none' : 'inset 0 0 0 1px rgba(58,46,34,0.05)',
               border: c.future ? '1px dashed #f2e3d5' : 'none',
-              outline: c.key === todayKey ? '1.5px solid #b93c2b' : 'none', outlineOffset: 1,
+              outline: c.key === todayKey ? '1.5px solid #2f7d4a' : 'none', outlineOffset: 1,
               animationDelay: `${(c.w * 7 + c.d) * 1.5}ms`,
             }} />
         ))}
@@ -574,7 +575,7 @@ function Heatmap({ days }) {
 // 14-day strip for the Overview rail — same shade scale as the year heatmap, today outlined.
 function MiniHeat({ days }) {
   const byDate = new Map(days.map((d) => [d.date, d]));
-  const shade = (n) => (n === 0 ? '#f4ece2' : n < 2 ? '#f8c9ad' : n < 4 ? '#f4936b' : n < 7 ? '#e8604c' : '#b93c2b');
+  const shade = (n) => (n === 0 ? '#efe7da' : n < 2 ? '#c5e6c0' : n < 4 ? '#8ed08d' : n < 7 ? '#4fae5c' : '#2f7d4a');
   const cells = [];
   const now = new Date();
   for (let i = 13; i >= 0; i -= 1) {
@@ -589,7 +590,7 @@ function MiniHeat({ days }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(14, 1fr)', gap: 4 }}>
         {cells.map((c) => (
           <span key={c.key} className="hmcell" title={`${c.key}: ${c.n} action${c.n === 1 ? '' : 's'}`}
-            style={{ aspectRatio: '1', borderRadius: 4, background: shade(c.n), outline: c.today ? '1.5px solid #b93c2b' : 'none', outlineOffset: 1 }} />
+            style={{ aspectRatio: '1', borderRadius: 4, background: shade(c.n), outline: c.today ? '1.5px solid #2f7d4a' : 'none', outlineOffset: 1 }} />
         ))}
       </div>
       <div style={{ ...T.cap, marginTop: 8 }}>{active} of 14 day{active === 1 ? '' : 's'} active · {cells.reduce((a, c) => a + c.n, 0)} actions</div>
