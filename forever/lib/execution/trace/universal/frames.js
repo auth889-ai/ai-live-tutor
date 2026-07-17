@@ -28,17 +28,18 @@ export function buildFrameTimeline(events) {
       stack.push(frames.length - 1);
     } else if (e?.ev === 'exception') {
       if (stack.length) pendingException.set(stack[stack.length - 1], { type: e.type ?? 'Exception', message: e.message ?? '' });
-    } else if (e?.ev === 'line') {
-      // A line executing in the top frame AFTER an exception means it was CAUGHT there —
-      // only exception-then-immediate-return counts as threw (handled errors return normally).
-      if (stack.length) pendingException.delete(stack[stack.length - 1]);
     } else if (e?.ev === 'return') {
       const idx = stack.pop();
       if (idx !== undefined) {
         const frame = frames[idx];
         frame.exitedAtEvent = i;
         const exc = pendingException.get(idx);
-        if (exc) {
+        // try/finally probe (external review): a finally block runs LINES while the exception
+        // still escapes — so lines can no longer clear the pending flag. The evidence that a
+        // frame RECOVERED is a real (non-null) return value; a pending exception + null return
+        // = threw. (An except-handler that returns a value classifies correctly; one returning
+        // None is conservatively marked threw — documented LIMITED, never falsely 'returned'.)
+        if (exc && (e.value === null || e.value === undefined)) {
           frame.status = 'threw';
           frame.exception = exc;
         } else {

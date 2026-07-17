@@ -43,4 +43,8 @@ Output: [3,99,-1,-100]`;
   assert.equal(bad.failures.length, 2, 'BOTH stated examples fail, both named');
   const none = await verifySolution({ code: GOOD, entry: 'rotate([1], 1)', sourceText: 'no examples here', exec });
   assert.equal(none.level, 'unverified', 'no stated examples -> honest unverified, never fake-verified');
+  // Multiline input blocks (external probe: matrix examples parsed nothing before).
+  const multi = parseStatedExamples('Example:\nInput: grid =\n[[1,0],\n [0,1]]\nOutput: 2');
+  assert.equal(multi.length, 1);
+  assert.equal(multi[0].argsRaw, '[[1,0], [0,1]]');
 });

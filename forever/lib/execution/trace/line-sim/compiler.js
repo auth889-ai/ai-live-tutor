@@ -95,7 +95,16 @@ export function compileLineTrace({ events, result, code, entry = null, language 
       // directly below (the indented block); anything else means the check said no.
       const next = lineEvents[evIndex + 1];
       const nextLine = Number(next?.line);
-      const taken = Number.isInteger(nextLine) && nextLine === line + 1;
+      // The branch body's first line is the next EXECUTABLE line, not line+1 — a comment or
+      // blank line inside the block made a TAKEN branch narrate as skipped (external review,
+      // reproduced live). Executable = first following line with real content.
+      let bodyLine = line + 1;
+      while (bodyLine < codeLines.length + 1) {
+        const t = String(codeLines[bodyLine - 1] ?? '').trim();
+        if (t !== '' && !t.startsWith('#')) break;
+        bodyLine += 1;
+      }
+      const taken = Number.isInteger(nextLine) && nextLine === bodyLine;
       const names = (src.replace(/'[^']*'|"[^"]*"/g, '').match(/[A-Za-z_]\w*/g) ?? [])
         .filter((n) => n in locals && !Array.isArray(locals[n]) && typeof locals[n] !== 'object')
         .slice(0, 3);

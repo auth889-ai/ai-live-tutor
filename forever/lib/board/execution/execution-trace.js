@@ -168,6 +168,13 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
           const i = Number(id.slice('arrayCell:'.length));
           if (!(Number.isInteger(i) && i >= 0 && i < arrayLen)) throw new Error(`${at} event targets ${id} outside the array`);
         }
+        if (id.startsWith('listNode:') && listIds && !listIds.has(id.slice('listNode:'.length))) {
+          throw new Error(`${at} event targets missing ${id}`);
+        }
+        // UNKNOWN TYPED IDS (external probe: listNode:ghost passed): only the known entity
+        // namespaces may appear at all — an unrecognized type is rejected, not ignored.
+        const knownType = ['graphNode:', 'gridCell:', 'arrayCell:', 'listNode:', 'edge:', 'interval:', 'collection:', 'callFrame:'].some((t) => id.startsWith(t));
+        if (!knownType) throw new Error(`${at} event target "${id}" uses an unknown entity namespace`);
         // Formula operands are references too — same gate.
         for (const op of e.formula?.operands ?? []) {
           const ref = op?.ref;

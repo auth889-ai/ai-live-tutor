@@ -55,6 +55,15 @@ test('exception then immediate return = threw; caught exception = returned', () 
     { ev: 'line', fn: 'g', line: 4, depth: 1, locals: {} }, // the except block runs
     { ev: 'return', fn: 'g', line: 5, depth: 1, value: 'fallback' },
   ]);
-  assert.equal(caught.frames[0].status, 'returned');
+  assert.equal(caught.frames[0].status, 'returned', 'a REAL return value proves recovery');
   assert.equal(caught.frames[0].returnValue, 'fallback');
+  // try/finally (external probe): finally runs a LINE but the exception still escapes —
+  // a pending exception + null return is THREW, lines no longer launder it.
+  const fin = buildFrameTimeline([
+    { ev: 'call', fn: 'g', line: 1, depth: 1, args: {} },
+    { ev: 'exception', fn: 'g', line: 2, depth: 1, type: 'ValueError', message: 'boom' },
+    { ev: 'line', fn: 'g', line: 6, depth: 1, locals: {} }, // finally body
+    { ev: 'return', fn: 'g', line: 6, depth: 1, value: null },
+  ]);
+  assert.equal(fin.frames[0].status, 'threw', 'finally lines cannot launder a propagating exception');
 });

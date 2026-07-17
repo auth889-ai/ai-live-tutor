@@ -24,10 +24,12 @@ export function resultMatchesExpect(actual, expect) {
 export function parseStatedExamples(sourceText) {
   const src = String(sourceText ?? '');
   const out = [];
-  const re = /Input:\s*([^\n]+)\n+\s*Output:\s*([^\n]+)/g;
+  // Multiline inputs supported (external probe: matrix examples across lines parsed nothing):
+  // capture everything between Input: and Output: lazily, then flatten whitespace.
+  const re = /Input:\s*([\s\S]*?)\n\s*Output:\s*([^\n]+)/g;
   let m;
   while ((m = re.exec(src)) !== null) {
-    const inputLine = m[1].trim();
+    const inputLine = m[1].replace(/\s+/g, ' ').trim();
     // "n = 4, edges = [[3,1,2],...]" -> strip the names, keep ordered raw values.
     const args = [];
     let depth = 0; let cur = '';

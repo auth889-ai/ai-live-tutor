@@ -34,8 +34,10 @@ Hard requirements:
   // (auto mode), so AI-authored step programs are refused for Python unless explicitly
   // enabled for research; other languages keep this as their honest floor until they get a
   // real recorder.
-  canHandle: ({ code, program, lang }) => Boolean(code && program)
-    && (lang !== 'python' || process.env.ALLOW_AI_TRACES === '1'),
+  // ALL languages: an AI-authored step program is a channel for invented values; production
+  // refuses it everywhere (external probe: solve() returning 1 shipped steps claiming 999).
+  // Python has the real recorder; other languages honestly show code+result until they do.
+  canHandle: ({ code, program }) => Boolean(code && program) && process.env.ALLOW_AI_TRACES === '1',
   async run({ code, program, views, lang, exec }) {
     const run = await exec({ language: lang, source: program });
     if (run.timedOut) throw new Error('Program timed out (likely an infinite loop).');

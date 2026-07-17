@@ -12,6 +12,7 @@
 import { runAgentChain } from '../../../qwen/client.js';
 import { runCode } from '../../../execution/run-code.js';
 import { TRACER_MODES } from './tracer-modes/index.js';
+import { verifySolution, verificationIssue } from '../../../execution/trace/oracle.js';
 
 const RUNNABLE_LANGUAGES = ['python', 'javascript'];
 
@@ -65,6 +66,23 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
       logAttempt(attempt, lastError);
       continue;
     }
+    // CENTRAL ORACLE (external review: dedicated modes bypassed verification): whatever mode
+    // was chosen, if the output declares a callable entry and the source states examples, the
+    // solution must pass them BEFORE any trace is built. Python-only (the runner language).
+    const declaredEntry = json.auto?.entry ?? json.graphwalk?.entry ?? json.dptable?.entry
+      ?? json.traversal?.entry ?? json.recursion?.entry ?? null;
+    if (lang === 'python' && code && declaredEntry) {
+      try {
+        const verdict = await verifySolution({ code, entry: declaredEntry, sourceText, exec });
+        const vIssue = verificationIssue(verdict);
+        if (vIssue) {
+          lastError = vIssue;
+          logAttempt(attempt, lastError);
+          continue;
+        }
+      } catch { /* oracle infrastructure failure never blocks (the per-mode oracle still runs) */ }
+    }
+
     // The quality gate is a closure so a mode (line-sim's auto-upgrade) can also apply it to an
     // intermediate candidate. SEVERITY SPLIT (external review: "final retry must not bypass the
     // gate"): truth-critical rules (junk traces, graph-stealing lies) hold on EVERY attempt —
