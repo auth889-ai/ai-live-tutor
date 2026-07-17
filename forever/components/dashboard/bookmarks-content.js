@@ -7,7 +7,8 @@
 import { useEffect, useMemo, useState } from 'react';
 
 const COVERS = ['/images/study-29.png', '/images/study-30.png', '/images/study-31.png', '/images/study-32.png', '/images/study-33.png', '/images/study-34.png', '/images/study-35.png', '/images/study-36.png', '/images/study-37.png', '/images/study-38.png'];
-const coverFor = (id) => COVERS[[...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % COVERS.length];
+const hashCover = (id) => COVERS[[...String(id)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % COVERS.length];
+const coverMapFor = (ids) => new Map([...new Set(ids)].sort().map((id, i) => [id, COVERS[i % COVERS.length]]));
 
 const fmtT = (t) => `${Math.floor(t / 60000)}:${String(Math.floor((t % 60000) / 1000)).padStart(2, '0')}`;
 const ago = (iso) => {
@@ -86,6 +87,8 @@ export function BookmarksContent() {
     if (!groups.has(b.lessonId)) groups.set(b.lessonId, { title: b.lessonTitle || b.lessonId, items: [] });
     groups.get(b.lessonId).items.push(b);
   }
+  const coverMap = coverMapFor((data.bookmarks ?? []).map((b) => b.lessonId));
+  const coverFor = (id) => coverMap.get(id) ?? hashCover(id);
 
   return (
     <Shell count={(data.bookmarks ?? []).length} dueCount={due.length}>

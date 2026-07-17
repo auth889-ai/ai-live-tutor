@@ -44,7 +44,11 @@ function useCountUp(target, ms = 700) {
 
 const UI = { text: '#2b211a', muted: '#8a6d3b', border: '#f5e6d9', card: '#fff', bgSoft: '#fdf1ea' };
 const COVERS = ['/images/study-29.png', '/images/study-30.png', '/images/study-31.png', '/images/study-32.png', '/images/study-33.png', '/images/study-34.png', '/images/study-35.png', '/images/study-36.png', '/images/study-37.png', '/images/study-38.png'];
-const coverFor = (id) => COVERS[[...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % COVERS.length];
+const hashCover = (id) => COVERS[[...String(id)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % COVERS.length];
+// Distinct covers: the user's lessons (sorted by id, stable) deal covers in order — no two
+// visible lessons share an image until there are more lessons than covers.
+const coverMapFor = (ids) => new Map([...new Set(ids)].sort().map((id, i) => [id, COVERS[i % COVERS.length]]));
+const STATUS_COLOR = { New: '#9b8465', Learning: '#c98f2d', Developing: '#4477aa', Strong: '#2f7d4a', 'Review due': '#c0522d' };
 const ago = (iso) => {
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
   if (s < 3600) return `${Math.max(1, Math.floor(s / 60))}m ago`;
@@ -109,7 +113,9 @@ export function ProgressContent() {
   const t = data.today ?? {};
   const rec = data.recommended;
   const know = data.knowledge ?? [];
-  const STATUS_COLOR = { New: '#9b8465', Learning: '#c98f2d', Developing: '#4477aa', Strong: '#2f7d4a', 'Review due': '#c0522d' };
+  const knowById = new Map(know.map((k) => [k.lessonId, k]));
+  const coverMap = coverMapFor((data.progress ?? []).map((p) => p.lessonId));
+  const coverFor = (id) => coverMap.get(id) ?? hashCover(id);
   // MEMORY copy is COMPUTED from the bank's real state — no sentence renders the same for two
   // different learners. Gap math mirrors the store's SM-2 (good: ×2.5, capped 60 days).
   const bms = data.bookmarks ?? [];
@@ -306,33 +312,19 @@ export function ProgressContent() {
 
       {tab === 'lessons' ? (
         <div style={{ marginTop: 24 }}>
-          {inProgress.length ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
-              {inProgress.map((p) => <LessonCard key={p._id} p={p} />)}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 10, flexWrap: 'wrap' }}>
+            <span style={T.cap}>{inProgress.length} in flight{items.length - inProgress.length > 0 ? ` · ${items.length - inProgress.length} completed` : ''} — status and next step live on each card</span>
+            <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ fontSize: 12, border: '1px solid #f2e3d5', borderRadius: 10, background: '#fff', color: '#6b563d', padding: '5px 10px' }}>
+              <option value="recent">Recently active</option>
+              <option value="percent">Most progress</option>
+              <option value="alpha">A → Z</option>
+            </select>
+          </div>
+          {items.length ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {items.map((p) => <LessonRow key={p._id} p={p} k={knowById.get(p.lessonId)} cover={coverFor(p.lessonId)} />)}
             </div>
           ) : <EmptyCard />}
-          {know.length ? (
-            <Section title="Knowledge" sub="live evidence per lesson — status moves the moment the evidence does">
-              <div style={{ ...T.card }}>
-                {know.map((k, i) => (
-                  <div key={k.lessonId} style={{ padding: '11px 18px', borderTop: i ? '1px solid #f2e3d5' : 'none' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                      <span style={{ ...T.body, fontWeight: 700, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{k.lessonTitle}</span>
-                      <span style={{ fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', color: STATUS_COLOR[k.status] ?? '#9b8465', background: `${STATUS_COLOR[k.status] ?? '#9b8465'}14`, borderRadius: 999, padding: '3px 11px' }}>{k.status}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
-                      <span style={T.cap}>
-                        {k.evidence.scenes > 0 ? `${k.evidence.scenes}/${k.evidence.sceneCount} scenes` : k.evidence.scenePercent > 0 ? `scene 1 · ${k.evidence.scenePercent}% watched` : 'not started'}
-                        {k.evidence.checkpoints > 0 ? ` · ${k.evidence.checkpoints} checkpoint${k.evidence.checkpoints === 1 ? '' : 's'} ✓` : ''}
-                        {k.evidence.goodReviews > 0 ? ` · ${k.evidence.goodReviews} good review${k.evidence.goodReviews === 1 ? '' : 's'}` : ''}
-                      </span>
-                      <span style={{ ...T.cap, color: '#c0522d' }}>next: {k.next}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          ) : null}
         </div>
       ) : null}
 
@@ -447,12 +439,61 @@ export function ProgressContent() {
   );
 }
 
+// One lesson = one row card: cover, scene pills, status chip, evidence and the computed next
+// step all together — the old separate Knowledge table lived inside these cards' data anyway.
+function LessonRow({ p, k, cover }) {
+  const started = (p.tMs ?? 0) > 0 || (p.completedCount ?? 0) > 0;
+  const label = p.completed ? '↻ REVISIT' : (p.completedCount ?? 0) > 0 ? `▶ RESUME · SCENE ${p.sceneIndex + 1}` : (p.tMs ?? 0) > 0 ? `▶ CONTINUE SCENE ${p.sceneIndex + 1}` : '▶ START LESSON';
+  const watching = Date.now() - new Date(p.updatedAt).getTime() < 3 * 60 * 1000 && !p.completed;
+  const status = k?.status ?? (p.completed ? 'Strong' : 'New');
+  const col = STATUS_COLOR[status] ?? '#9b8465';
+  const ev = k?.evidence ?? {};
+  const evidence = [
+    ev.scenes > 0 ? `${ev.scenes}/${ev.sceneCount} scenes` : (p.scenePercent ?? 0) > 0 && !p.completed ? `scene ${p.sceneIndex + 1} · ${p.scenePercent}% watched` : started ? 'just started' : `${p.sceneCount} scenes · ~${Math.max(5, (p.sceneCount ?? 0) * 2)} min`,
+    ev.checkpoints > 0 ? `${ev.checkpoints} checkpoint${ev.checkpoints === 1 ? '' : 's'} ✓` : null,
+    ev.goodReviews > 0 ? `${ev.goodReviews} good review${ev.goodReviews === 1 ? '' : 's'}` : null,
+    ago(p.updatedAt),
+  ].filter(Boolean).join(' · ');
+  return (
+    <a className="pcard" href={`/course/${p.lessonId}?t=${p.tMs}&scene=${p.sceneIndex}`}
+      style={{ display: 'flex', gap: 16, alignItems: 'stretch', ...T.card, borderRadius: 18, padding: 12, textDecoration: 'none', color: '#2b211a' }}>
+      <div style={{ position: 'relative', width: 168, minHeight: 108, borderRadius: 12, overflow: 'hidden', flexShrink: 0 }}>
+        <img src={cover} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(43,33,26,0.6))' }} />
+        <div style={{ position: 'absolute', left: 10, bottom: 8, color: '#fff', fontSize: 11, fontWeight: 800, textShadow: '0 1px 4px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {watching ? <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#e8604c', animation: 'pulseDot 1.6s infinite' }} title="watching now" /> : null}
+          {p.completed ? 'COMPLETED ✓' : `${p.completedCount ?? 0}/${p.sceneCount} SCENES`}
+        </div>
+      </div>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 7 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <span style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.3, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.lessonTitle || p.lessonId}</span>
+          <span style={{ fontSize: 11.5, fontWeight: 800, whiteSpace: 'nowrap', color: col, background: `${col}14`, borderRadius: 999, padding: '3px 10px', flexShrink: 0 }}>{status}</span>
+        </div>
+        {p.sceneCount > 0 && p.sceneCount <= 24 ? (
+          <div style={{ display: 'flex', gap: 3 }}>
+            {Array.from({ length: p.sceneCount }, (_, i) => (
+              <span key={i} style={{ flex: 1, maxWidth: 18, height: 8, borderRadius: 3, background: i < (p.completedCount ?? 0) ? '#4fae5c' : i === p.sceneIndex && !p.completed ? '#f47368' : '#f2e8dc' }} />
+            ))}
+          </div>
+        ) : null}
+        <div style={{ ...T.cap, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{evidence}</div>
+        {k?.next && !p.completed ? <div style={{ fontSize: 12, fontWeight: 700, color: T.accent, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>next: {k.next}</div> : null}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, paddingRight: 8, flexShrink: 0 }}>
+        <Ring percent={p.completed ? 100 : (p.percent ?? 0)} done={p.completed} started={started} />
+        <span style={{ fontSize: 11, fontWeight: 800, color: T.accent, border: `1.5px solid ${T.accent}`, borderRadius: 999, padding: '5px 13px', whiteSpace: 'nowrap' }}>{label}</span>
+      </div>
+    </a>
+  );
+}
+
 function LessonCard({ p }) {
   return (
     <a className="pcard" href={`/course/${p.lessonId}?t=${p.tMs}&scene=${p.sceneIndex}`}
       style={{ border: `1px solid ${UI.border}`, borderRadius: 18, overflow: 'hidden', background: UI.card, textDecoration: 'none', color: UI.text, boxShadow: '0 2px 10px rgba(58,46,34,0.06)' }}>
       <div style={{ position: 'relative', height: 108, overflow: 'hidden' }}>
-        <img src={coverFor(p.lessonId)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <img src={hashCover(p.lessonId)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(43,33,26,0.55))' }} />
         <div style={{ position: 'absolute', right: 10, bottom: -14 }}><Ring percent={p.percent} done={p.completed} started={(p.tMs ?? 0) > 0 || (p.completedCount ?? 0) > 0} /></div>
         <div style={{ position: 'absolute', left: 12, bottom: 8, color: '#fff', fontSize: 11.5, fontWeight: 800, textShadow: '0 1px 4px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', gap: 6 }}>
