@@ -20,6 +20,7 @@ import { LinkedListView } from '../panels/linked-list-view.js';
 import { GridView } from './grid-view.js';
 import { IntervalsView } from '../panels/intervals-view.js';
 import { TraceTable } from './trace-table.js';
+import { CompositionCockpit } from '../panels/composition-cockpit.js';
 
 export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, stepIndex = null, setHold }) {
   // LIVE INSTRUMENT: the student can re-run the engine on their own input (RetracePanel);
@@ -34,6 +35,9 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
   // back to the tutor. While exploring, playback holds — the voice never talks over the wrong
   // frame. This is the interactivity a video teacher cannot offer.
   const [explore, setExplore] = useState(null); // null = follow the voice
+  // C7: when the Semantic Visual Director's ACCEPTED spec rides the trace, the student can
+  // flip to the AI-composed cockpit; the deterministic stage stays the default (preview).
+  const [aiCockpit, setAiCockpit] = useState(false);
   // STABLE graph content, built ONCE per trace (the playback-visibility fix): the clock ticks
   // many times a second, and rebuilding this object every tick made ReactFlow re-layout and
   // re-measure continuously — the tree only painted when playback PAUSED. With a stable
@@ -86,6 +90,17 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
   }
   const index = explore !== null ? Math.max(0, Math.min(total - 1, explore)) : currentClockIndex();
   const step = trace.steps[index];
+  const cockpitSpec = trace.meta?.cockpitSpec;
+  if (aiCockpit && cockpitSpec) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <button onClick={() => setAiCockpit(false)} style={{ alignSelf: 'flex-start', border: '1px solid #f0dcd5', borderRadius: 999, background: '#fff', color: '#8a3a12', padding: '4px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+          ← deterministic view
+        </button>
+        <CompositionCockpit spec={cockpitSpec} trace={trace} stepIndex={index} />
+      </div>
+    );
+  }
   const historySteps = trace.steps.slice(0, index + 1); // full step objects, for accumulation
   const views = trace.views ?? {};
 
@@ -153,6 +168,11 @@ export function AlgorithmStage({ trace: lessonTrace, tMs = 0, progress = 1, step
           </div>
         ) : null}
         {trace.views?.bitmask && step.maskState ? <MaskPanel maskState={step.maskState} bitmask={trace.views.bitmask} /> : null}
+        {cockpitSpec ? (
+          <button onClick={() => setAiCockpit(true)} style={{ alignSelf: 'flex-start', border: '1.5px solid #f0c39a', borderRadius: 999, background: 'linear-gradient(180deg,#fffdf9,#fff5ec)', color: '#8a3a12', padding: '4px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+            ✨ AI-composed cockpit (preview)
+          </button>
+        ) : null}
         <Caption index={index} total={trace.steps.length} text={step.explanation} />
         <Vars step={step} />
         <Collections step={step} />

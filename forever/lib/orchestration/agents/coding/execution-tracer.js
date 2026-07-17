@@ -82,11 +82,22 @@ export async function traceExecution({ directive, sourceText = '', language = 'p
       // C4 SHADOW MODE: the Semantic Visual Director composes a spec for this trace and its
       // verdict is LOGGED — users keep seeing the deterministic cockpit until C7 flips it on.
       // Fire-and-forget: a Director failure can never touch the lesson.
-      if (process.env.COCKPIT_DIRECTOR === 'shadow') {
+      const directorMode = process.env.COCKPIT_DIRECTOR;
+      if (directorMode === 'shadow') {
         import('../authoring/cockpit-director.js')
           .then(({ directCockpit }) => directCockpit({ problemText: sourceText, directive, trace }))
           .then(({ spec, verdict }) => console.log(`[cockpit-director shadow] ${verdict}${spec ? ` — ${spec.panels.length} panels (${spec.panels.map((p) => p.type).join(', ')})` : ''}`))
           .catch((e) => console.log(`[cockpit-director shadow] error: ${String(e?.message).slice(0, 120)}`));
+      } else if (directorMode === 'preview' || directorMode === 'on') {
+        // C7 preview/on: awaited; an ACCEPTED spec persists with the lesson so the player can
+        // render the AI-composed cockpit (preview = opt-in toggle; on = default view). A
+        // rejection changes nothing — the deterministic cockpit is always there.
+        try {
+          const { directCockpit } = await import('../authoring/cockpit-director.js');
+          const { spec, verdict } = await directCockpit({ problemText: sourceText, directive, trace });
+          console.log(`[cockpit-director ${directorMode}] ${verdict}`);
+          if (spec) trace.meta = { ...(trace.meta ?? {}), cockpitSpec: spec };
+        } catch (e) { console.log(`[cockpit-director ${directorMode}] error: ${String(e?.message).slice(0, 120)}`); }
       }
       return { trace, usage, fixes: attempt };
     } catch (error) {
