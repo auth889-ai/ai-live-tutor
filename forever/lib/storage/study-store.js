@@ -178,18 +178,23 @@ export async function listProgress(userId) {
 // no badge storage, no way to fake one.
 export function computeBadges({ progress = [], bookmarks = [], streak = 0, totalScenes = 0, totalReviews = 0 }) {
   const done = progress.filter((p) => p.completed).length;
+  const scenes = Math.max(totalScenes, progress.reduce((a, p) => a + (p.completedCount ?? 0), 0));
+  const reviews = Math.max(totalReviews, bookmarks.filter((b) => b.lastReviewed).length);
+  // Every badge is a LIVE METER (current/target) — locked badges show distance, not a grey box.
   const defs = [
-    ['🎬', 'First scene', totalScenes >= 1 || progress.some((p) => (p.completedCount ?? 0) > 0)],
-    ['🏁', 'First lesson complete', done >= 1],
-    ['📚', '3 lessons complete', done >= 3],
-    ['🎓', '10 lessons complete', done >= 10],
-    ['🔥', '3-day streak', streak >= 3],
-    ['⚡', '7-day streak', streak >= 7],
-    ['🌟', '30-day streak', streak >= 30],
-    ['🔖', 'First bookmark', bookmarks.length >= 1],
-    ['🗂', '10 kept moments', bookmarks.length >= 10],
-    ['🧠', 'First review done', totalReviews >= 1 || bookmarks.some((b) => b.lastReviewed)],
-    ['🏆', '25 reviews done', totalReviews >= 25],
+    ['🎬', 'First scene', scenes, 1],
+    ['🏁', 'Lesson complete', done, 1],
+    ['📚', '3 lessons', done, 3],
+    ['🎓', '10 lessons', done, 10],
+    ['🔥', '3-day streak', streak, 3],
+    ['⚡', '7-day streak', streak, 7],
+    ['🌟', '30-day streak', streak, 30],
+    ['🔖', 'First bookmark', bookmarks.length, 1],
+    ['🗂', '10 moments', bookmarks.length, 10],
+    ['🧠', 'First review', reviews, 1],
+    ['🏆', '25 reviews', reviews, 25],
   ];
-  return defs.map(([icon, label, earned]) => ({ icon, label, earned: Boolean(earned) }));
+  return defs.map(([icon, label, current, target]) => ({
+    icon, label, current: Math.min(current, target), target, earned: current >= target,
+  }));
 }

@@ -269,15 +269,13 @@ export function ProgressContent() {
       ) : null}
 
       {tab === 'awards' ? (
-        <div style={{ marginTop: 24, maxWidth: 720 }}>
-          <Heatmap days={data.heatmap ?? []} />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: 10, marginTop: T.gap }}>
-            {(data.badges ?? []).map((b) => (
-              <div key={b.label} title={b.label} style={{ ...T.card, padding: '12px 6px', textAlign: 'center', borderColor: b.earned ? '#f0c39a' : '#f2e3d5' }}>
-                <div style={{ fontSize: 22, filter: b.earned ? 'none' : 'grayscale(1) opacity(0.35)' }}>{b.icon}</div>
-                <div style={{ fontSize: 9.5, color: b.earned ? '#8a3a12' : '#c9bda1', marginTop: 4, lineHeight: 1.2, fontWeight: 700 }}>{b.label}</div>
-              </div>
-            ))}
+        <div style={{ marginTop: 24 }}>
+          <YearStats days={data.heatmap ?? []} bestStreak={data.bestStreak ?? 0} />
+          <div style={{ marginTop: 14 }}>
+            <Heatmap days={data.heatmap ?? []} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginTop: 14 }}>
+            {(data.badges ?? []).map((b) => <BadgeMeter key={b.label} b={b} />)}
           </div>
         </div>
       ) : null}
@@ -475,6 +473,56 @@ function WeeklyTarget({ total, goal, actions, pace, bare = false }) {
         scenes+checkpoints <b style={{ color: '#2b211a' }}>{(actions.scenes ?? 0) + (actions.checkpoints ?? 0)}</b> · reviews <b style={{ color: '#2b211a' }}>{actions.reviews ?? 0}</b><br />
         <span style={{ color: pct >= 100 ? '#2f7d4a' : '#c0522d' }}>{pace}</span>
       </div>
+    </div>
+  );
+}
+
+
+// Year in numbers — computed from the day records, filling Awards with real content.
+function YearStats({ days, bestStreak }) {
+  const acts = days.map((d) => (d.scenes ?? 0) + (d.reviews ?? 0) + (d.bookmarks ?? 0));
+  const total = acts.reduce((a, n) => a + n, 0);
+  const activeDays = acts.filter((n) => n > 0).length;
+  const best = days.reduce((m, d) => {
+    const n = (d.scenes ?? 0) + (d.reviews ?? 0) + (d.bookmarks ?? 0);
+    return n > m.n ? { n, date: d.date } : m;
+  }, { n: 0, date: null });
+  const tiles = [
+    [total, 'actions this year'],
+    [activeDays, 'active days'],
+    [best.n, best.date ? `best day · ${new Date(best.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}` : 'best day'],
+    [bestStreak, 'longest streak'],
+  ];
+  return (
+    <div style={{ ...T.card, borderRadius: 20, display: 'flex' }}>
+      {tiles.map(([n, l], i) => (
+        <div key={l} style={{ flex: 1, padding: '16px 8px', textAlign: 'center', borderLeft: i ? '1px solid #f2e3d5' : 'none' }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: n > 0 ? '#2b211a' : '#cbbfa8', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{n}</div>
+          <div style={{ ...T.cap, marginTop: 6 }}>{l}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// A badge is a live meter: the ring fills as the evidence approaches the target.
+function BadgeMeter({ b }) {
+  const pct = b.target > 0 ? Math.round((b.current / b.target) * 100) : 0;
+  const r = 26; const c = 2 * Math.PI * r;
+  const [on, setOn] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setOn(true), 80); return () => clearTimeout(t); }, []);
+  return (
+    <div title={`${b.label}: ${b.current}/${b.target}`} style={{ ...T.card, borderRadius: 18, padding: '14px 8px 12px', textAlign: 'center', borderColor: b.earned ? '#f0c39a' : '#f2e3d5', background: b.earned ? 'linear-gradient(180deg,#fffdf9,#fff5ec)' : '#fff' }}>
+      <div style={{ position: 'relative', width: 64, height: 64, margin: '0 auto' }}>
+        <svg width="64" height="64" viewBox="0 0 64 64" style={{ position: 'absolute', inset: 0 }}>
+          <circle cx="32" cy="32" r={r} fill="none" stroke="#f2e8dc" strokeWidth="4.5" />
+          <circle className="ringArc" cx="32" cy="32" r={r} fill="none" stroke={b.earned ? '#2f9e5f' : '#f47368'} strokeWidth="4.5" strokeLinecap="round"
+            strokeDasharray={`${(on ? (pct / 100) * c : 0)} ${c}`} transform="rotate(-90 32 32)" />
+        </svg>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, filter: b.earned ? 'none' : 'grayscale(0.9) opacity(0.55)' }}>{b.icon}</div>
+      </div>
+      <div style={{ fontSize: 11, fontWeight: 800, color: b.earned ? '#8a3a12' : '#9b8465', marginTop: 8, lineHeight: 1.25 }}>{b.label}</div>
+      <div style={{ fontSize: 10, color: b.earned ? '#2f9e5f' : '#c9bda1', marginTop: 2, fontWeight: 700 }}>{b.earned ? 'earned ✓' : `${b.current}/${b.target}`}</div>
     </div>
   );
 }
