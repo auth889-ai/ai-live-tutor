@@ -626,6 +626,20 @@ def prim(n, edges):
                 key[v] = w
                 heapq.heappush(pq, (w, v))
     return total`, 'prim(5, [[0,1,2],[0,3,6],[1,2,3],[1,3,8],[1,4,5],[2,4,7],[3,4,9]])'],
+  ['graphs', 'LC332 Reconstruct Itinerary (Hierholzer, edge-consuming)', `def find_itinerary(tickets):
+    adj = {}
+    for a, b in sorted(tickets, reverse=True):
+        adj.setdefault(a, []).append(b)
+        adj.setdefault(b, [])
+    route = []
+    stack = ['JFK']
+    while stack:
+        u = stack[-1]
+        if adj[u]:
+            stack.append(adj[u].pop())
+        else:
+            route.append(stack.pop())
+    return route[::-1]`, "find_itinerary([['MUC','LHR'],['JFK','MUC'],['SFO','SJC'],['LHR','SFO']])"],
   ['graphs', 'G-25 Eventual Safe States (BFS)', `from collections import deque
 def safe_nodes(adj):
     rev = {u: [] for u in adj}

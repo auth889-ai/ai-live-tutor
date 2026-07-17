@@ -37,13 +37,31 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
   const lines = (recording?.events ?? []).filter((e) => e.ev === 'line');
   if (lines.length === 0) return null;
 
-  // THE ADJACENCY: the local holding the most edges in any of the three idioms.
+  // THE ADJACENCY: the local holding the most edges in any of the three idioms. Read from
+  // the UNION of all sightings, never just the final snapshot — edge-CONSUMING algorithms
+  // (Hierholzer's adj[u].pop(), edge-removal walks) drain the structure to empty by the end,
+  // which hid the whole graph from this detector (measured live on LC332: the itinerary
+  // rendered as a discovery tree instead of the flight graph + stack).
   let adj = null;
   for (const name of new Set(lines.flatMap((e) => Object.keys(e.locals)))) {
     const snaps = lines.map((e) => e.locals[name]).filter((v) => v !== undefined && v !== null);
     const final = snaps.at(-1);
     if (!final) continue;
-    const cand = isPlainObj(final) ? adjFromDict(final) : Array.isArray(final) ? adjFromLists(final, snaps) : null;
+    let dictView = null;
+    if (isPlainObj(final) && snaps.every((v) => isPlainObj(v) || v === final)) {
+      const union = {};
+      for (const snap of snaps) {
+        if (!isPlainObj(snap)) continue;
+        for (const [k, v] of Object.entries(snap)) {
+          if (!Array.isArray(v)) { union[k] = v; continue; } // non-list values: keep shape, adjFromDict will judge
+          const cur = union[k] instanceof Set ? union[k] : new Set(Array.isArray(union[k]) ? union[k].map((x) => JSON.stringify(x)) : []);
+          for (const m of v) cur.add(JSON.stringify(m));
+          union[k] = cur;
+        }
+      }
+      dictView = Object.fromEntries(Object.entries(union).map(([k, v]) => [k, v instanceof Set ? [...v].map((x) => JSON.parse(x)) : v]));
+    }
+    const cand = isPlainObj(final) ? adjFromDict(dictView ?? final) : Array.isArray(final) ? adjFromLists(final, snaps) : null;
     if (!cand || cand.edges.length === 0) continue;
     if (!adj || cand.edges.length > adj.edges.length) adj = { name, ...cand };
   }
