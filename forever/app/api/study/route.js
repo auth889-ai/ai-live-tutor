@@ -1,6 +1,6 @@
 // /api/study — bookmarks + progress, session-scoped like every data route.
 import { sessionFromRequest } from '../../../lib/auth/session.js';
-import { addBookmark, listBookmarks, removeBookmark, saveProgress, getProgress, listProgress } from '../../../lib/storage/study-store.js';
+import { addBookmark, listBookmarks, removeBookmark, reviewBookmark, saveProgress, getProgress, listProgress } from '../../../lib/storage/study-store.js';
 
 export async function GET(request) {
   const session = sessionFromRequest(request);
@@ -19,6 +19,9 @@ export async function POST(request) {
   if (body.type === 'bookmark') {
     const doc = await addBookmark({ ...body, userId: session.userId });
     return Response.json({ bookmark: doc });
+  }
+  if (body.type === 'review') {
+    return Response.json({ review: await reviewBookmark(session.userId, body.id, body.grade === 'good' ? 'good' : 'again') });
   }
   if (body.type === 'progress') {
     const doc = await saveProgress({ ...body, userId: session.userId });

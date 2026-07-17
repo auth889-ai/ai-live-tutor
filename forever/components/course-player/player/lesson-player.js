@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { useLessonClock } from './use-lesson-clock.js';
 import { StagePresenter } from '../panels/stage-presenter.js';
+import { boardStateAt } from '../../../lib/playback/engine/action-engine.js';
 import { StallOverlay } from './live/stall-overlay.js';
 import { PendingSceneRows, PendingSceneChips } from './live/pending-scenes.js';
 import { AskTutor } from './ask/ask-tutor.js';
@@ -80,9 +81,16 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
   const bookmarkNow = (note = '') => {
     if (!lessonId) return;
     setMarked('saving');
+    // Rayan-style capture: the exact teaching line being SPOKEN right now rides with the
+    // bookmark, so the card re-reads as a memory, not a timestamp.
+    let context = '';
+    try {
+      const bs = boardStateAt(scene.timeline, tMs);
+      context = (bs.activeSpeech ? scene.voiceLines.find((l) => l.id === bs.activeSpeech)?.text : '') ?? '';
+    } catch { /* context is best-effort */ }
     fetch('/api/study', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'bookmark', lessonId, lessonTitle: lesson.lessonTitle, sceneId: scene.sceneId, sceneTitle: scene.title, tMs: Math.round(tMs), note }),
+      body: JSON.stringify({ type: 'bookmark', lessonId, lessonTitle: lesson.lessonTitle, sceneId: scene.sceneId, sceneTitle: scene.title, tMs: Math.round(tMs), note, context }),
     }).then((r) => {
       if (r.status === 401) { setMarked('signin'); setTimeout(() => setMarked(''), 2600); return; }
       setMarked('note'); // saved — offer an optional note for a few seconds
