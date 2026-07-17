@@ -7,7 +7,19 @@
 
 import { useState } from 'react';
 
+import { AlgorithmStage } from '../algorithm-stage/algorithm-stage.js';
+
 const UI = { border: '#f5e6d9', muted: '#8a6d3b', accent: '#f47368', accentDark: '#e8604c', ink: '#2b211a' };
+
+// Seed the entry-call box from the code itself: the LAST def's signature becomes a template
+// ("linear_search(arr, target)") — the student swaps parameter names for real values.
+function guessEntry(src) {
+  const defs = [...String(src ?? '').matchAll(/^def\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/gm)];
+  const last = defs[defs.length - 1];
+  if (!last) return '';
+  const params = last[2].split(',').map((x) => x.trim().split('=')[0].trim()).filter((x) => x && x !== 'self');
+  return `${last[1]}(${params.join(', ')})`;
+}
 
 export function TryItPanel({ seedCode = '', language = 'python' }) {
   const [open, setOpen] = useState(false);
@@ -15,6 +27,37 @@ export function TryItPanel({ seedCode = '', language = 'python' }) {
   const [lang, setLang] = useState(language === 'javascript' ? 'javascript' : 'python');
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null); // { stdout, stderr, timedOut } | { error }
+  // THE PYODIDE VISUAL DRY RUN: the student's OWN code + entry call run under the universal
+  // recorder INSIDE the browser (real CPython/WASM), then the same detectors and compilers
+  // build an ExecutionTrace and the full AlgorithmStage animates it — array, pointers, ledger,
+  // code line, variables. Any edit, any input, no server. Correctness is architectural: every
+  // frame comes from the recording of the run that just happened on this machine.
+  const [entry, setEntry] = useState('');
+  const [vizState, setVizState] = useState('idle'); // idle | working | done | error
+  const [vizError, setVizError] = useState('');
+  const [vizTrace, setVizTrace] = useState(null);
+  const [vizLens, setVizLens] = useState('');
+
+  async function visualize() {
+    setVizState('working');
+    setVizError('');
+    setVizTrace(null);
+    try {
+      const call = (entry || guessEntry(code)).trim();
+      if (!call) throw new Error('write the entry call, e.g. linear_search([2,5,8], 8)');
+      const [{ traceUniversal }, { pyodideExec }] = await Promise.all([
+        import('../../../lib/execution/trace/universal/trace.js'),
+        import('./run-in-browser.js'),
+      ]);
+      const { trace, lens } = await traceUniversal({ code, entry: call, exec: pyodideExec });
+      setVizTrace(trace);
+      setVizLens(lens);
+      setVizState('done');
+    } catch (e) {
+      setVizError(String(e?.message ?? e));
+      setVizState('error');
+    }
+  }
 
   async function run() {
     setRunning(true);
@@ -72,6 +115,40 @@ export function TryItPanel({ seedCode = '', language = 'python' }) {
         </button>
         {result?.timedOut && <span style={{ fontSize: 12.5, color: '#a33d2e', fontWeight: 700 }}>⏱ Timed out — infinite loop?</span>}
       </div>
+
+      {lang === 'python' ? (
+        <div style={{ marginTop: 12, border: '1.5px dashed #e8b7a4', borderRadius: 12, background: '#fdf6f0', padding: '10px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#8a3a12', whiteSpace: 'nowrap' }}>🔬 Visual dry run of YOUR code</span>
+            <input
+              value={entry}
+              onChange={(e) => setEntry(e.target.value)}
+              placeholder={guessEntry(code) ? `entry call — e.g. ${guessEntry(code)}` : 'entry call — e.g. solve([1,2,3])'}
+              spellCheck={false}
+              style={{ flex: '1 1 220px', border: `1px solid ${UI.border}`, borderRadius: 8, padding: '6px 10px', fontSize: 12.5, fontFamily: 'ui-monospace, monospace', background: '#fff' }}
+            />
+            <button onClick={visualize} disabled={vizState === 'working' || !code.trim()}
+              style={{ background: vizState === 'working' ? '#c9bda1' : '#2b7a3f', color: '#fff', border: 'none', borderRadius: 999, padding: '7px 18px', fontSize: 12.5, fontWeight: 800, cursor: vizState === 'working' ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
+              {vizState === 'working' ? 'recording your run…' : '🔬 visualize in this browser'}
+            </button>
+          </div>
+          <div style={{ fontSize: 11.5, color: UI.muted, marginTop: 5 }}>
+            your edit runs under the real recorder (CPython in WebAssembly, this tab) — then the full animated dry run below is built from that recording, nothing invented
+          </div>
+          {vizState === 'error' ? (
+            <pre style={{ margin: '8px 0 0', background: '#fdf0ee', color: '#a33d2e', borderRadius: 8, padding: '8px 12px', fontSize: 12, whiteSpace: 'pre-wrap', fontFamily: 'ui-monospace, monospace' }}>{vizError}</pre>
+          ) : null}
+        </div>
+      ) : null}
+
+      {vizState === 'done' && vizTrace ? (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#2b7a3f', marginBottom: 8 }}>
+            ✓ recorded in your browser · teaching lens: {vizLens} · every frame below is from that run
+          </div>
+          <AlgorithmStage trace={vizTrace} progress={1} stepIndex={0} />
+        </div>
+      ) : null}
 
       {result?.error && (
         <pre style={outputBox('#fdf0ee', '#a33d2e')}>{result.error}</pre>

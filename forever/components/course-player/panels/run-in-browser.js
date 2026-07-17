@@ -27,6 +27,26 @@ function loadPyodideOnce() {
   return pyodidePromise;
 }
 
+// exec in the run-code shape ({language, source} -> {stdout, stderr, timedOut}) so the
+// UNIVERSAL ORCHESTRATOR (traceUniversal) can run its recorder INSIDE the browser: same
+// tracker string, same detectors, same compilers — Pyodide only replaces the subprocess.
+export async function pyodideExec({ source }) {
+  const py = await loadPyodideOnce();
+  const out = [];
+  const err = [];
+  py.setStdout({ batched: (t) => out.push(t) });
+  py.setStderr({ batched: (t) => err.push(t) });
+  try {
+    await py.runPythonAsync(source);
+  } catch (e) {
+    err.push(String(e?.message ?? e));
+  } finally {
+    py.setStdout({});
+    py.setStderr({});
+  }
+  return { stdout: out.join('\n'), stderr: err.join('\n'), timedOut: false };
+}
+
 export function RunInBrowser({ code, language }) {
   const [state, setState] = useState('idle'); // idle | loading | running | done | error
   const [output, setOutput] = useState('');
