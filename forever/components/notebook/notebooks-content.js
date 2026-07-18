@@ -22,18 +22,12 @@ const TRUST_COLOR = { user: '#2f7d4a', extracted: '#4477aa', ai: '#c98f2d' };
 export function NotebooksContent() {
   const [list, setList] = useState(null);
   const [openId, setOpenId] = useState(null);
+  const [creating, setCreating] = useState(false);
   const load = () => fetch('/api/notebooks').then((r) => r.json()).then((d) => setList(d.notebooks ?? [])).catch(() => setList([]));
   useEffect(() => { load(); }, []);
 
-  const create = async () => {
-    const title = window.prompt('Name your notebook (what are you collecting?)');
-    if (!title) return;
-    const res = await fetch('/api/notebooks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title }) });
-    const d = await res.json();
-    if (d.id) { await load(); setOpenId(d.id); }
-  };
-
   if (list === null) return <div style={{ ...T.card, padding: 40, textAlign: 'center', color: '#9b8465' }}>Opening your notebooks…</div>;
+  if (creating) return <CreateWizard onDone={async (id) => { setCreating(false); await load(); if (id) setOpenId(id); }} />;
   if (openId) return <Workspace id={openId} onBack={() => { setOpenId(null); load(); }} />;
 
   return (
@@ -43,7 +37,7 @@ export function NotebooksContent() {
           <h1 style={{ fontSize: 27, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif', fontWeight: 600, margin: 0 }}>Notebooks</h1>
           <p style={{ ...T.cap, margin: '4px 0 0' }}>Collect anything — notes, links, files, your voice — and your notebook writes back: grounded study notes, summaries, self-tests.</p>
         </div>
-        <button onClick={create} style={{ border: 'none', borderRadius: 999, background: T.accent, color: '#fff', padding: '9px 20px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer' }}>+ New notebook</button>
+        <button onClick={() => setCreating(true)} style={{ border: 'none', borderRadius: 999, background: T.accent, color: '#fff', padding: '9px 20px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer' }}>+ New notebook</button>
       </div>
       {list.length === 0 ? (
         <div style={{ ...T.card, marginTop: 18, padding: '46px 20px', textAlign: 'center', color: '#9b8465' }}>
@@ -68,8 +62,97 @@ export function NotebooksContent() {
   );
 }
 
+// The eva IntakeFlow, ported: one question per screen, progress bar, Enter to advance, back
+// restores, optional steps skippable — and the outcome-driven law (research: ~60s to value):
+// by step 3 the user has a notebook WITH their first captured thought in it.
+const WIZARD_STEPS = [
+  { key: 'title', q: 'What is this notebook about?', hint: 'e.g. "Graph algorithms", "System design prep", "Everything I read this month"', required: true, max: 120 },
+  { key: 'intent', q: 'What do you want to get out of it?', hint: 'optional — helps the synthesizer aim its study notes', required: false, max: 500 },
+  { key: 'first', q: 'Drop your first thought', hint: 'write a note, paste anything, or drop a link — your notebook starts alive', required: false, max: 20000 },
+];
+
+function CreateWizard({ onDone }) {
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [value, setValue] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const cur = WIZARD_STEPS[step];
+
+  const next = async () => {
+    const v = value.trim();
+    if (cur.required && !v) { setErr('this one is required — it names your notebook'); return; }
+    if (v.length > cur.max) { setErr(`keep it under ${cur.max} characters`); return; }
+    setErr('');
+    const nextAnswers = { ...answers, [cur.key]: v };
+    setAnswers(nextAnswers);
+    if (step < WIZARD_STEPS.length - 1) {
+      setStep(step + 1);
+      setValue(nextAnswers[WIZARD_STEPS[step + 1].key] ?? '');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/notebooks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: nextAnswers.title, intent: nextAnswers.intent ?? '' }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'could not create the notebook');
+      const first = (nextAnswers.first ?? '').trim();
+      if (first) {
+        const isUrl = /^https?:\/\/\S+$/i.test(first);
+        await fetch(`/api/notebooks/${d.id}/blocks`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(isUrl ? { type: 'link', url: first } : { type: 'note', content: first, source: 'typed' }),
+        }).catch(() => {});
+      }
+      onDone(d.id);
+    } catch (e) {
+      setErr(String(e.message ?? e));
+      setBusy(false);
+    }
+  };
+
+  const back = () => {
+    if (step === 0) { onDone(null); return; }
+    setStep(step - 1);
+    setValue(answers[WIZARD_STEPS[step - 1].key] ?? '');
+    setErr('');
+  };
+
+  return (
+    <div style={{ maxWidth: 620, margin: '40px auto 0' }}>
+      <div style={{ height: 3, borderRadius: 2, background: '#f2e8dc', overflow: 'hidden', marginBottom: 10 }}>
+        <div style={{ width: `${((step + 1) / WIZARD_STEPS.length) * 100}%`, height: '100%', background: T.accent, transition: 'width .4s' }} />
+      </div>
+      <div style={{ ...T.cap, marginBottom: 18 }}>{step + 1} of {WIZARD_STEPS.length}</div>
+      <h1 style={{ fontSize: 26, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif', fontWeight: 600, margin: 0 }}>{cur.q}</h1>
+      <div style={{ ...T.cap, margin: '8px 0 16px' }}>{cur.hint}</div>
+      <textarea
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && cur.key !== 'first') { e.preventDefault(); next(); } }}
+        rows={cur.key === 'first' ? 5 : 1}
+        maxLength={cur.max}
+        style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', border: '1.5px solid #f0dcd5', borderRadius: 14, padding: '13px 16px', fontSize: 15.5, lineHeight: 1.5, color: '#2b211a', background: '#fff', outline: 'none' }} />
+      {err ? <div style={{ marginTop: 8, fontSize: 12.5, color: '#a33d2e', fontWeight: 700 }}>{err}</div> : null}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 }}>
+        <button onClick={back} disabled={busy} style={{ border: '1px solid #f2e3d5', borderRadius: 999, background: '#fff', color: '#9b8465', padding: '8px 18px', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>← back</button>
+        <button onClick={next} disabled={busy}
+          style={{ border: 'none', borderRadius: 999, background: busy ? '#e9ddcb' : T.accent, color: '#fff', padding: '9px 24px', fontSize: 13.5, fontWeight: 800, cursor: busy ? 'default' : 'pointer' }}>
+          {busy ? 'preparing your notebook…' : step === WIZARD_STEPS.length - 1 ? '✓ Create notebook' : 'Next →'}
+        </button>
+        {!cur.required && step < WIZARD_STEPS.length - 1 ? (
+          <button onClick={() => { setValue(''); setErr(''); setAnswers({ ...answers, [cur.key]: '' }); setStep(step + 1); }} disabled={busy}
+            style={{ border: 'none', background: 'transparent', color: '#b3a889', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>skip this step</button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function Workspace({ id, onBack }) {
   const [data, setData] = useState(null);
+  const [revealId, setRevealId] = useState(null);
   const load = () => fetch(`/api/notebooks/${id}`).then((r) => r.json()).then(setData).catch(() => {});
   useEffect(() => { load(); }, [id]);
   if (!data?.notebook) return <div style={{ ...T.card, padding: 40, textAlign: 'center', color: '#9b8465' }}>Opening…</div>;
@@ -79,7 +162,7 @@ function Workspace({ id, onBack }) {
       <button onClick={onBack} style={{ border: 'none', background: 'transparent', color: '#9b8465', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', padding: 0 }}>← all notebooks</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: 24, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif', fontWeight: 600, margin: 0, flex: 1, minWidth: 0 }}>{notebook.title}</h1>
-        <SynthesizeButton id={id} blocks={blocks} onDone={load} />
+        <SynthesizeButton id={id} blocks={blocks} onDone={(newId) => { setRevealId(newId ?? null); load(); }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(260px, 340px)', gap: 14, alignItems: 'start', marginTop: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -90,7 +173,7 @@ function Workspace({ id, onBack }) {
             <div key={day}>
               <div style={{ ...T.cap, fontWeight: 800, margin: '6px 0 8px' }}>{day}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {dayBlocks.map((b) => <Block key={b._id} nb={id} b={b} onChanged={load} />)}
+                {dayBlocks.map((b) => <Block key={b._id} nb={id} b={b} onChanged={load} reveal={b._id === revealId} />)}
               </div>
             </div>
           ))}
@@ -129,7 +212,7 @@ function Flashback({ blocks }) {
   );
 }
 
-function Block({ nb, b, onChanged }) {
+function Block({ nb, b, onChanged, reveal = false }) {
   const [icon, label] = TYPE_META[b.type] ?? ['•', b.type];
   const remove = async () => {
     await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'DELETE' });
@@ -146,9 +229,18 @@ function Block({ nb, b, onChanged }) {
         <button onClick={remove} title="remove block" style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: '#c9bda1', cursor: 'pointer', fontSize: 13 }}>✕</button>
       </div>
       {b.title ? <div style={{ fontSize: 14, fontWeight: 800, color: '#2b211a', marginTop: 6 }}>{b.title}</div> : null}
+      {reveal ? (
+        <div style={{ fontSize: 13.5, color: '#3a3327', marginTop: 6, lineHeight: 1.55, overflowWrap: 'break-word' }}>
+          <style>{`@keyframes nbSegIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}`}</style>
+          {(b.content ?? '').split(/\n\n+/).map((seg, i) => (
+            <p key={i} style={{ whiteSpace: 'pre-wrap', margin: '0 0 10px', animation: `nbSegIn .5s ease-out both`, animationDelay: `${Math.min(i * 450, 4000)}ms` }}>{seg}</p>
+          ))}
+        </div>
+      ) : (
       <div style={{ fontSize: 13.5, color: '#3a3327', marginTop: 6, lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>
         {b.type === 'voice' ? (b.transcript || b.content) : b.type === 'link' ? `${(b.content ?? '').slice(0, 400)}${(b.content ?? '').length > 400 ? '…' : ''}` : b.content}
       </div>
+      )}
       {b.url ? <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#4477aa', fontWeight: 700 }}>{b.url}</a> : null}
     </div>
   );
@@ -311,7 +403,7 @@ function SynthesizeButton({ id, blocks, onDone }) {
       const res = await fetch(`/api/notebooks/${id}/synthesize`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }) });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'synthesis failed');
-      onDone();
+      onDone(d.block?._id ?? null);
     } catch (e) {
       setErr(String(e.message ?? e));
     } finally {
