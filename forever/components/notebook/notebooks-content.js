@@ -77,7 +77,25 @@ export function NotebooksContent() {
             <button key={n.id} onClick={() => { window.location.href = `/notebooks/${n.id}`; }} className="pcard"
               style={{ ...T.card, borderRadius: 18, padding: 0, textAlign: 'left', cursor: 'pointer', overflow: 'hidden' }}>
               <div style={{ position: 'relative', height: 64 }}>
-                <img src="/images/notebook-cover.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${(n.id.charCodeAt(4) * 7) % 100}% ${(n.id.charCodeAt(5) * 7) % 100}%` }} />
+                <img src={n.cover || '/images/notebook-cover.png'} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: n.cover ? 'center' : `${(n.id.charCodeAt(4) * 7) % 100}% ${(n.id.charCodeAt(5) * 7) % 100}%` }} />
+                <label onClick={(e) => e.stopPropagation()} title="upload your own cover photo"
+                  style={{ position: 'absolute', top: 8, right: 8, background: '#FFFFFFDD', borderRadius: 999, padding: '3px 9px', fontSize: 12, cursor: 'pointer', zIndex: 2 }}>
+                  🖼
+                  <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      if (!file) return;
+                      const fd = new FormData();
+                      fd.append('file', file);
+                      const up = await fetch('/api/uploads', { method: 'POST', body: fd });
+                      const upd = await up.json();
+                      if (up.ok) {
+                        await fetch(`/api/notebooks/${n.id}/cover`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uploadId: upd.uploadId, fileName: file.name }) });
+                        load();
+                      }
+                    }} />
+                </label>
                 <span style={{ position: 'absolute', left: 12, bottom: -14, width: 34, height: 34, borderRadius: 10, background: '#fff', border: '1px solid #f2e3d5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, boxShadow: '0 2px 8px rgba(58,46,34,0.15)' }}>📓</span>
               </div>
               <div style={{ padding: '20px 16px 14px' }}>
