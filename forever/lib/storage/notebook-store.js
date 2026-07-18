@@ -8,6 +8,17 @@
 import { randomUUID } from 'crypto';
 
 import { notebooksCollection } from './db.js';
+import { embedTexts } from '../qwen/embeddings.js';
+
+// Best-effort semantic index: the block's meaning as a 1024-dim vector, refreshed on write.
+// Embedding failure NEVER fails the write — a block without a vector just falls back to
+// lexical retrieval.
+async function embedBlock(col, blockId, text) {
+  try {
+    const [v] = await embedTexts([text]);
+    if (v) await col.updateOne({ _id: blockId }, { $set: { embedding: v } });
+  } catch { /* semantic layer is enrichment */ }
+}
 
 // Test seam (same law as the rest of the suite: unit tests inject fake collections, never a
 // live cluster). Production always uses the real notebooksCollection.
@@ -105,6 +116,7 @@ export async function addBlock({ userId, notebookId, type, content = '', url = n
   };
   await col.insertOne(doc);
   await col.updateOne({ _id: notebookId }, { $inc: { blockCount: 1 }, $set: { updatedAt: now() } });
+  await embedBlock(col, doc._id, `${doc.title ?? ''} ${doc.transcript ?? ''} ${doc.content ?? ''}`);
   return doc;
 }
 
@@ -118,7 +130,13 @@ export async function updateBlock(userId, notebookId, blockId, { content, seq, t
   if (page !== undefined) set.page = String(page).slice(0, 80);
   if (trust !== undefined && ['user', 'extracted', 'ai'].includes(trust)) set.trust = trust;
   const r = await col.updateOne({ _id: blockId, kind: 'block', ownerId: userId, notebookId }, { $set: set });
-  if (r.matchedCount > 0) await col.updateOne({ _id: notebookId }, { $set: { updatedAt: now() } });
+  if (r.matchedCount > 0) {
+    await col.updateOne({ _id: notebookId }, { $set: { updatedAt: now() } });
+    if (content !== undefined) {
+      const doc = await col.findOne({ _id: blockId });
+      if (doc) await embedBlock(col, blockId, `${doc.title ?? ''} ${doc.transcript ?? ''} ${doc.content ?? ''}`);
+    }
+  }
   return r.matchedCount > 0;
 }
 

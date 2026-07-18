@@ -11,6 +11,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 
 import { getNotebook, addBlock } from '../../../../../../lib/storage/notebook-store.js';
 import { buildSynthesisGraph } from '../../../../../../lib/notebook/synthesis-graph.js';
+import { embedTexts, cosine } from '../../../../../../lib/qwen/embeddings.js';
 import { sessionFromRequest } from '../../../../../../lib/auth/session.js';
 
 export const dynamic = 'force-dynamic';
@@ -67,16 +68,30 @@ export async function GET(request, { params }) {
   // RETRIEVAL (RAG-lite, deterministic): when there is a query (a question or a focus block),
   // rank blocks by term overlap and keep only the relevant top-K — the writer never sees
   // unrelated material, so it cannot wander onto it.
-  const terms = (t) => new Set(String(t ?? '').toLowerCase().match(/[a-z][a-z0-9_-]{3,}/g) ?? []);
-  const queryTerms = terms(question || (focus ? `${focus.title ?? ''} ${focus.transcript ?? ''} ${focus.content ?? ''}` : ''));
-  if (queryTerms.size && !selectedIds.length) {
-    const scored = material.map((b) => {
-      const bt = terms(`${b.title ?? ''} ${b.transcript ?? ''} ${b.content ?? ''}`);
-      let hit = 0;
-      for (const w of queryTerms) if (bt.has(w)) hit += 1;
-      return { b, hit };
-    });
-    material = scored.filter((x) => x.hit > 0 || (focus && x.b._id === focus._id)).sort((a, z) => z.hit - a.hit).slice(0, 10).map((x) => x.b);
+  const queryText = question || (focus ? `${focus.title ?? ''} ${focus.transcript ?? ''} ${focus.content ?? ''}` : '');
+  if (queryText.trim() && !selectedIds.length) {
+    // SEMANTIC retrieval first: cosine over each block's stored text-embedding-v4 vector —
+    // meaning-based, so "how do I know an edge is critical?" finds the bridge blocks even
+    // with zero shared words. Lexical overlap remains the fallback for unembedded blocks.
+    let ranked = null;
+    try {
+      const withVec = material.filter((b) => Array.isArray(b.embedding));
+      if (withVec.length >= 2) {
+        const [qv] = await embedTexts([queryText]);
+        if (qv) ranked = withVec.map((b) => ({ b, hit: cosine(qv, b.embedding) })).filter((x) => x.hit > 0.25);
+      }
+    } catch { /* fall back to lexical */ }
+    if (!ranked) {
+      const terms = (t) => new Set(String(t ?? '').toLowerCase().match(/[a-z][a-z0-9_-]{3,}/g) ?? []);
+      const queryTerms = terms(queryText);
+      ranked = material.map((b) => {
+        const bt = terms(`${b.title ?? ''} ${b.transcript ?? ''} ${b.content ?? ''}`);
+        let hit = 0;
+        for (const w of queryTerms) if (bt.has(w)) hit += 1;
+        return { b, hit };
+      }).filter((x) => x.hit > 0);
+    }
+    material = ranked.sort((a, z) => z.hit - a.hit).slice(0, 10).map((x) => x.b);
     if (focus && !material.some((b) => b._id === focus._id)) material.unshift(focus);
     if (material.length === 0) material = focus ? [focus] : found.blocks.filter(TEXTY).slice(0, 10);
   }
