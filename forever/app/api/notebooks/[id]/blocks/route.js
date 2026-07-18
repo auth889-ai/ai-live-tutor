@@ -6,6 +6,7 @@ import path from 'node:path';
 import { readFile, mkdir } from 'node:fs/promises';
 
 import { addBlock, rebuildBlockLinks } from '../../../../../lib/storage/notebook-store.js';
+import { bumpDay } from '../../../../../lib/storage/study-store.js';
 import { ingestUrl } from '../../../../../lib/ingest/url/ingest-url.js';
 import { resolveUpload } from '../../../../../lib/storage/upload-store.js';
 import { parsePdfWithMineru } from '../../../../../lib/ingest/pdf/mineru.js';
@@ -92,6 +93,7 @@ export async function POST(request, { params }) {
     if (!doc) return Response.json({ error: 'notebook not found' }, { status: 404 });
     // Knowledge engine: [[Title]] in the new block becomes real links (auto-creating targets).
     await rebuildBlockLinks({ userId: session.userId, notebookId: id, blockId: doc._id, text: `${doc.content ?? ''} ${doc.transcript ?? ''}` }).catch(() => {});
+    await bumpDay(session.userId, 'notebook').catch(() => {}); // Progress sees notebook work
     return Response.json({ block: doc }, { status: 201 });
   } catch (e) {
     return Response.json({ error: String(e.message ?? e) }, { status: 400 });

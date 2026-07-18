@@ -10,7 +10,7 @@ import { studyCollection } from './db.js';
 // incremented by REAL events only — scene completions use the delta between saves, so
 // refreshing a page can never inflate a day.
 const dayId = (userId) => `day_${userId}_${new Date().toISOString().slice(0, 10)}`;
-async function bumpDay(userId, field, by = 1) {
+export async function bumpDay(userId, field, by = 1) {
   const col = await studyCollection();
   if (!col || !userId || by <= 0) return;
   await col.updateOne(

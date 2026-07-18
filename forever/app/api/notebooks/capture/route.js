@@ -5,6 +5,7 @@
 
 import { listNotebooksFor, createNotebook, addBlock } from '../../../../lib/storage/notebook-store.js';
 import { sessionFromRequest } from '../../../../lib/auth/session.js';
+import { bumpDay } from '../../../../lib/storage/study-store.js';
 
 export async function POST(request) {
   const session = sessionFromRequest(request);
@@ -36,5 +37,6 @@ export async function POST(request) {
     trust: 'user',
     origin: lessonTitle,
   });
+  await bumpDay(session.userId, 'notebook').catch(() => {});
   return Response.json({ notebookId: notebook._id, block }, { status: 201 });
 }

@@ -607,8 +607,8 @@ function WeeklyRing({ scenes, goal }) {
 function Heatmap({ days }) {
   const byDate = new Map(days.map((d) => [d.date, d]));
   const todayKey = new Date().toISOString().slice(0, 10);
-  const today = byDate.get(todayKey) ?? { scenes: 0, reviews: 0 };
-  const todayTotal = useCountUp((today.scenes ?? 0) + (today.reviews ?? 0));
+  const today = byDate.get(todayKey) ?? { scenes: 0, reviews: 0, bookmarks: 0, checkpoints: 0, notebook: 0 };
+  const todayTotal = useCountUp((today.scenes ?? 0) + (today.reviews ?? 0) + (today.bookmarks ?? 0) + (today.checkpoints ?? 0) + (today.notebook ?? 0));
   // FULL GRID (GitHub-style): 52 complete weeks ending this week — every column has all 7
   // cells; days after today render as faint placeholders so the rectangle is never ragged.
   const WEEKS = 52;
@@ -626,7 +626,7 @@ function Heatmap({ days }) {
       const dt = new Date(start); dt.setDate(start.getDate() + w * 7 + d);
       const key = dt.toISOString().slice(0, 10);
       const rec = byDate.get(key);
-      cells.push({ key, w, d, future: dt > end, n: (rec?.scenes ?? 0) + (rec?.reviews ?? 0) });
+      cells.push({ key, w, d, future: dt > end, n: (rec?.scenes ?? 0) + (rec?.reviews ?? 0) + (rec?.bookmarks ?? 0) + (rec?.checkpoints ?? 0) + (rec?.notebook ?? 0) });
     }
   }
   const shade = (n) => (n === 0 ? '#efe7da' : n < 2 ? '#c5e6c0' : n < 4 ? '#8ed08d' : n < 7 ? '#4fae5c' : '#2f7d4a');
@@ -634,7 +634,7 @@ function Heatmap({ days }) {
     <div style={{ ...T.card, borderRadius: 20, padding: '16px 18px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10, gap: 10, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 12.5, fontWeight: 800, color: '#2b211a' }}>Activity <span style={{ color: '#9b8465', fontWeight: 400 }}>· last 12 months</span></div>
-        <div style={{ fontSize: 12, color: today.scenes + today.reviews > 0 ? '#2f7d4a' : '#9b8465', fontWeight: 700 }}>
+        <div style={{ fontSize: 12, color: (today.scenes + today.reviews + (today.bookmarks ?? 0) + (today.checkpoints ?? 0) + (today.notebook ?? 0)) > 0 ? '#2f7d4a' : '#9b8465', fontWeight: 700 }}>
           today: {todayTotal} action{todayTotal === 1 ? '' : 's'}
         </div>
       </div>
@@ -672,7 +672,7 @@ function MiniHeat({ days }) {
     const dt = new Date(now); dt.setDate(now.getDate() - i);
     const key = dt.toISOString().slice(0, 10);
     const rec = byDate.get(key);
-    cells.push({ key, n: (rec?.scenes ?? 0) + (rec?.reviews ?? 0) + (rec?.bookmarks ?? 0), today: i === 0 });
+    cells.push({ key, n: (rec?.scenes ?? 0) + (rec?.reviews ?? 0) + (rec?.bookmarks ?? 0) + (rec?.checkpoints ?? 0) + (rec?.notebook ?? 0) + (rec?.bookmarks ?? 0), today: i === 0 });
   }
   const active = cells.filter((c) => c.n > 0).length;
   return (
@@ -844,11 +844,11 @@ function WeeklyTarget({ total, goal, actions, pace, bare = false }) {
 
 // Year in numbers — computed from the day records, filling Awards with real content.
 function YearStats({ days, bestStreak }) {
-  const acts = days.map((d) => (d.scenes ?? 0) + (d.reviews ?? 0) + (d.bookmarks ?? 0));
+  const acts = days.map((d) => (d.scenes ?? 0) + (d.reviews ?? 0) + (d.bookmarks ?? 0) + (d.checkpoints ?? 0) + (d.notebook ?? 0));
   const total = acts.reduce((a, n) => a + n, 0);
   const activeDays = acts.filter((n) => n > 0).length;
   const best = days.reduce((m, d) => {
-    const n = (d.scenes ?? 0) + (d.reviews ?? 0) + (d.bookmarks ?? 0);
+    const n = (d.scenes ?? 0) + (d.reviews ?? 0) + (d.bookmarks ?? 0) + (d.checkpoints ?? 0) + (d.notebook ?? 0);
     return n > m.n ? { n, date: d.date } : m;
   }, { n: 0, date: null });
   const tiles = [

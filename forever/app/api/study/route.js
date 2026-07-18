@@ -27,7 +27,7 @@ export async function GET(request) {
   }
   const dueCount = bookmarks.filter((b) => b.reviewDue && new Date(b.reviewDue).getTime() <= Date.now()).length;
   const dayDocs = await listDays(session.userId);
-  const heatmap = dayDocs.map((d) => ({ date: d.date, scenes: d.scenes ?? 0, reviews: d.reviews ?? 0, bookmarks: d.bookmarks ?? 0 }));
+  const heatmap = dayDocs.map((d) => ({ date: d.date, scenes: d.scenes ?? 0, reviews: d.reviews ?? 0, bookmarks: d.bookmarks ?? 0, checkpoints: d.checkpoints ?? 0, notebook: d.notebook ?? 0 }));
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7)); // Monday
   const weekKey = weekStart.toISOString().slice(0, 10);
   const weekScenes = heatmap.filter((d) => d.date >= weekKey).reduce((a, d) => a + d.scenes, 0);
@@ -40,7 +40,7 @@ export async function GET(request) {
   const totalReviews = heatmap.reduce((a, d) => a + d.reviews, 0);
   const badges = computeBadges({ progress, bookmarks, streak, totalScenes, totalReviews });
   // Best streak ever (from day docs) + Anki-style due forecast.
-  const dateSet = new Set(heatmap.filter((d) => d.scenes + d.reviews + d.bookmarks > 0).map((d) => d.date));
+  const dateSet = new Set(heatmap.filter((d) => d.scenes + d.reviews + d.bookmarks + d.checkpoints + d.notebook > 0).map((d) => d.date));
   let bestStreak = streak;
   let run = 0;
   for (let i = 120; i >= 0; i -= 1) {
