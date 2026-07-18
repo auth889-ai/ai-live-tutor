@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { DrawingEditor, SvgDrawing, downloadDrawing } from './drawing.js';
 import { PageInk } from './ink/page-ink.js';
 import { HandBoard } from './hand-board.js';
+import { TryItPanel } from '../course-player/panels/try-it-panel.js';
 
 const C = {
   appBg: '#F6F3EE', surface: '#FFFFFF', ink: '#211A14', sub: '#77695B', border: '#EBE3D8',
@@ -659,6 +660,7 @@ function Composer({ id, page, onAdded }) {
 
 // ---------- right: contextual intelligence ----------
 function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExplain, onContinue, onAsk, onQuiz, onSummary }) {
+  const [dryCode, setDryCode] = useState(null);
   const [tab, setTab] = useState('ai');
   const [q, setQ] = useState('');
   const [teachText, setTeachText] = useState('');
@@ -704,6 +706,13 @@ function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExplain, on
             <ActionRow icon="🎓" title="Explain it back" sub="help me teach this back" disabled={!sel} onClick={() => sel && setTab('review')} />
             <ActionRow icon="🧠" title="Create quiz" sub="generate practice questions" onClick={() => onQuiz()} />
             <ActionRow icon="📋" title="Summarize" sub="create a short summary" onClick={() => onSummary()} />
+            <ActionRow icon="🔬" title="Dry run" sub="run this algorithm live, step by step" disabled={!sel} onClick={async () => {
+              if (!sel) return;
+              setDryCode({ loading: true });
+              const r = await fetch(`/api/notebooks/${nb}/dryrun-code`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ blockId: sel._id }) });
+              const d = await r.json();
+              setDryCode(r.ok ? { code: d.code, note: d.note } : { error: d.error });
+            }} />
             <ActionRow icon="✍️" title="Visual note" sub="a handwritten board from this block" disabled={!sel} onClick={async () => {
               if (!sel) return;
               const r = await fetch(`/api/notebooks/${nb}/handboard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: sel.page ?? 'Notes', blockIds: [sel._id] }) });
@@ -713,7 +722,17 @@ function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExplain, on
           </div>
 
           <div style={{ marginTop: 'auto', paddingTop: 16 }}>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, marginBottom: 6 }}>Ask anything about this notebook</div>
+            {dryCode ? (
+        <div style={{ margin: '10px 0' }}>
+          {dryCode.loading ? <div style={{ fontSize: 12, color: C.sub }}>writing the algorithm…</div>
+            : dryCode.error ? <div style={{ fontSize: 12, color: '#c0392b' }}>{dryCode.error}</div>
+            : <>
+                {dryCode.note ? <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 6 }}>{dryCode.note}</div> : null}
+                <TryItPanel seedCode={dryCode.code} language="python" />
+              </>}
+        </div>
+      ) : null}
+      <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, marginBottom: 6 }}>Ask anything about this notebook</div>
             <div style={{ display: 'flex', gap: 6 }}>
               <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && q.trim()) { onAsk(q.trim()); setQ(''); } }}
                 placeholder="Ask a question…" style={{ flex: 1, minWidth: 0, border: `1px solid ${C.border}`, borderRadius: 12, padding: '9px 11px', fontSize: 12.5 }} />

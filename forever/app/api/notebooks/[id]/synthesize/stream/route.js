@@ -31,7 +31,7 @@ const MODES = {
 // Length discipline (redesign spec): sections must be scannable, never essays.
 const LIMITS = {
   study_note: 'STRICT LENGTH: 80-140 words for this section. No repetition.',
-  detailed: 'STRICT LENGTH: 180-300 words for this section. No repetition.',
+  detailed: 'STRICT LENGTH: 280-450 words for this section. No repetition.',
   summary: 'STRICT LENGTH: 30-60 words for this section.',
   questions: 'QUESTIONS AND SHORT ANSWERS ONLY — no essay prose.',
   ask: 'STRICT LENGTH: at most 150 words.',
