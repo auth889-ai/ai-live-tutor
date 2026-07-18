@@ -90,6 +90,8 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
   const [view, setView] = useState('write'); // write | journal
   const [activePage, setActivePage] = useState(null);
   const [inkMode, setInkMode] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [dropBusy, setDropBusy] = useState(false);
   const [selected, setSelected] = useState(null); // block id for the context panel
   const [live, setLive] = useState(null);
   const [draft, setDraftState] = useState(null); // finished draft awaiting accept
@@ -222,7 +224,37 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
         </div>
 
         {/* ---------- center: THE DOCUMENT ---------- */}
-        <div style={{ padding: '22px 26px 90px', position: 'relative' }}>
+        <div style={{ padding: '22px 26px 90px', position: 'relative' }}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={async (e) => {
+            e.preventDefault();
+            setDragOver(false);
+            const files = [...(e.dataTransfer?.files ?? [])].slice(0, 3)
+              .filter((f) => f.type === 'application/pdf' || f.type.startsWith('image/'));
+            if (!files.length) return;
+            setDropBusy(true);
+            try {
+              for (const file of files) {
+                const fd = new FormData();
+                fd.append('file', file);
+                const up = await fetch('/api/uploads', { method: 'POST', body: fd });
+                const upd = await up.json();
+                if (up.ok) {
+                  await fetch(`/api/notebooks/${id}/blocks`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: file.type === 'application/pdf' ? 'pdf' : 'image', uploadId: upd.uploadId, fileName: file.name, mediaType: file.type, source: 'upload', page: activePage ?? 'Notes' }),
+                  });
+                }
+              }
+              load();
+            } finally { setDropBusy(false); }
+          }}>
+          {dragOver || dropBusy ? (
+            <div style={{ position: 'absolute', inset: 12, zIndex: 20, border: '2.5px dashed #e8604c', borderRadius: 16, background: '#FDF0EEEE', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', fontSize: 15, fontWeight: 800, color: '#e8604c' }}>
+              {dropBusy ? 'adding to your notebook…' : 'drop PDF or image here — it becomes a source block'}
+            </div>
+          ) : null}
           <div style={{ maxWidth: 820, margin: '0 auto', background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '30px 38px 26px', minHeight: 420, position: 'relative' }}>
             <PageInk nb={id} page={inkPage} inkBlock={inkBlock} active={inkMode && view === 'write'} color={C.accent} onDirty={() => {}} />
             <div style={{ fontSize: 25, fontWeight: 700, color: C.ink, fontFamily: 'var(--font-newsreader), Georgia, serif' }}>{activePage ?? notebook.title}</div>
