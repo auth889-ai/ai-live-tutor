@@ -80,6 +80,7 @@ function Workspace({ id, onBack }) {
       <button onClick={onBack} style={{ border: 'none', background: 'transparent', color: '#9b8465', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', padding: 0 }}>← all notebooks</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: 24, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif', fontWeight: 600, margin: 0, flex: 1, minWidth: 0 }}>{notebook.title}</h1>
+        <SynthesizeButton id={id} blocks={blocks} onDone={load} />
         <GenerateButton id={id} notebook={notebook} blocks={blocks} onKick={load} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(260px, 340px)', gap: 14, alignItems: 'start', marginTop: 16 }}>
@@ -100,10 +101,11 @@ function Block({ nb, b, onChanged }) {
     await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'DELETE' });
     onChanged();
   };
+  const isAi = b.trust === 'ai';
   return (
-    <div style={{ ...T.card, padding: '12px 16px' }}>
+    <div style={{ ...T.card, padding: '12px 16px', ...(isAi ? { background: 'linear-gradient(180deg,#fffdf9,#fff5ec)', borderColor: '#f0c39a' } : {}) }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 14 }}>{icon}</span>
+        <span style={{ fontSize: 14 }}>{isAi ? '✨' : icon}</span>
         <span style={{ ...T.cap, fontWeight: 800 }}>{label.toUpperCase()}</span>
         <span title={`provenance: ${b.trust}`} style={{ fontSize: 10.5, fontWeight: 800, color: TRUST_COLOR[b.trust] ?? '#9b8465', background: `${TRUST_COLOR[b.trust] ?? '#9b8465'}14`, borderRadius: 999, padding: '2px 8px' }}>{b.trust}</span>
         {b.origin ? <span style={T.cap}>{b.origin}</span> : null}
@@ -206,6 +208,44 @@ function Intake({ id, onAdded }) {
   );
 }
 
+// The notebook's OWN act of creation (eva: inputs -> generated blocks; NotebookLM: grounded +
+// cited). The result lands back in the notebook as an ai-provenance block — visibly the
+// notebook's work, never confused with yours.
+function SynthesizeButton({ id, blocks, onDone }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [mode, setMode] = useState('study_note');
+  const kick = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      const res = await fetch(`/api/notebooks/${id}/synthesize`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'synthesis failed');
+      onDone();
+    } catch (e) {
+      setErr(String(e.message ?? e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <select value={mode} onChange={(e) => setMode(e.target.value)} disabled={busy}
+        style={{ border: '1px solid #f2e3d5', borderRadius: 10, background: '#fff', color: '#6b563d', padding: '7px 10px', fontSize: 12.5, fontWeight: 700 }}>
+        <option value="study_note">study note</option>
+        <option value="summary">summary</option>
+        <option value="questions">self-test questions</option>
+      </select>
+      <button onClick={kick} disabled={busy || blocks.length === 0}
+        style={{ border: 'none', borderRadius: 999, background: busy || blocks.length === 0 ? '#e9ddcb' : T.accent, color: '#fff', padding: '9px 18px', fontSize: 13, fontWeight: 800, cursor: busy || blocks.length === 0 ? 'default' : 'pointer' }}>
+        {busy ? 'synthesizing from your blocks…' : '✨ Synthesize'}
+      </button>
+      {err ? <span style={{ fontSize: 12, color: '#a33d2e', fontWeight: 700, maxWidth: 320 }}>{err}</span> : null}
+    </div>
+  );
+}
+
 function GenerateButton({ id, notebook, blocks, onKick }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -231,8 +271,8 @@ function GenerateButton({ id, notebook, blocks, onKick }) {
         <span style={{ fontSize: 12.5, fontWeight: 800, color: '#c98f2d' }}>⏳ course generating — check My Courses shortly</span>
       ) : (
         <button onClick={kick} disabled={busy || blocks.length === 0}
-          style={{ border: 'none', borderRadius: 999, background: busy || blocks.length === 0 ? '#e9ddcb' : '#2b211a', color: '#fff', padding: '9px 18px', fontSize: 13, fontWeight: 800, cursor: busy || blocks.length === 0 ? 'default' : 'pointer' }}>
-          {busy ? 'starting…' : '✨ Generate a course from this notebook'}
+          style={{ border: '1.5px solid #d8cbb6', borderRadius: 999, background: '#fff', color: busy || blocks.length === 0 ? '#c9bda1' : '#6b563d', padding: '8px 16px', fontSize: 12.5, fontWeight: 800, cursor: busy || blocks.length === 0 ? 'default' : 'pointer' }}>
+          {busy ? 'starting…' : '🎓 also make a course'}
         </button>
       )}
       {err ? <div style={{ marginTop: 6, fontSize: 12, color: '#a33d2e', fontWeight: 700, maxWidth: 380 }}>{err}</div> : null}

@@ -16,7 +16,7 @@ export function _setNotebookCollectionForTests(fn) { _collection = fn ?? noteboo
 
 const now = () => new Date().toISOString();
 const BLOCK_TYPES = new Set(['note', 'text', 'link', 'pdf', 'image', 'voice']);
-const SOURCES = new Set(['typed', 'pasted', 'url', 'upload', 'voice']);
+const SOURCES = new Set(['typed', 'pasted', 'url', 'upload', 'voice', 'generated']);
 const TRUSTS = new Set(['user', 'extracted', 'ai']);
 
 export async function createNotebook({ userId, title, intent = '' }) {
