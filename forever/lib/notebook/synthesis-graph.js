@@ -125,7 +125,7 @@ async function writer(state) {
   if (!['ask'].includes(state.mode) && (sec.evidence || sec.focus) && await imagesAvailable()) {
     try {
       emit('status', { stage: 'illustrating', heading: sec.heading });
-      const { bytes } = await generateImage({ prompt: `hand-drawn watercolor study diagram visualizing exactly this idea: "${(sec.evidence || sec.focus).slice(0, 220)}" (topic: ${sec.heading}) — clear, conceptual, no text, no words, no letters, no labels` });
+      const { bytes } = await generateImage({ prompt: `minimal watercolor painting, soft organic shapes and flowing arrows on cream paper, calm and clean, wordless — a visual metaphor for: ${(sec.evidence || sec.focus).replace(/[0-9+=<>\[\]()\-]/g, ' ').replace(/\s+/g, ' ').slice(0, 220)}` });
       const { mkdir, writeFile } = await import('node:fs/promises');
       const path = await import('node:path');
       const outDir = path.join('public', 'images', 'notebooks');

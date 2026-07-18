@@ -37,6 +37,9 @@ export async function imagesAvailable(env = process.env) {
 
 export async function generateImage({
   prompt,
+  // negative_prompt is the ENFORCED no-text rule — instruction-only versions produced
+  // gibberish pseudo-labels on technical concepts (measured 2026-07-19).
+  negativePrompt = 'text, words, letters, numbers, labels, captions, typography, handwriting, watermark, signature',
   model = process.env.IMAGE_MODEL || 'wan2.2-t2i-flash',
   size = '1024*576',
   timeoutMs = 120_000,
@@ -53,7 +56,7 @@ export async function generateImage({
     },
     body: JSON.stringify({
       model,
-      input: { prompt: String(prompt).slice(0, 800) },
+      input: { prompt: String(prompt).slice(0, 800), negative_prompt: String(negativePrompt).slice(0, 300) },
       parameters: { size, n: 1 },
     }),
   });
