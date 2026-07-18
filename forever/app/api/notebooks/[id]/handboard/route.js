@@ -16,16 +16,20 @@ export async function POST(request, { params }) {
   const body = await request.json().catch(() => ({}));
   const page = String(body.page ?? 'Notes').slice(0, 80);
 
-  const texty = found.blocks.filter((b) => b.origin !== 'page-ink' && String(b.content ?? b.transcript ?? '').trim());
+  const wantIds = Array.isArray(body.blockIds) ? new Set(body.blockIds.map(String)) : null;
+  let texty = found.blocks.filter((b) => b.origin !== 'page-ink' && String(b.content ?? b.transcript ?? '').trim());
+  if (wantIds) texty = texty.filter((b) => wantIds.has(String(b._id)));
   if (texty.length === 0) return Response.json({ error: 'add some material first' }, { status: 400 });
-  const numbered = texty.slice(0, 40).map((b, i) => `[${i + 1}] ${String(b.title ?? '').slice(0, 80)}\n${String(b.content ?? b.transcript ?? '').slice(0, 900)}`).join('\n\n');
+  // a board about ONE block reads the WHOLE block (transcripts are 20k chars)
+  const cap = texty.length <= 2 ? 18000 : 900;
+  const numbered = texty.slice(0, 40).map((b, i) => `[${i + 1}] ${String(b.title ?? '').slice(0, 80)}\n${String(b.content ?? b.transcript ?? '').slice(0, cap)}`).join('\n\n');
 
   const out = await runAgentChain({
     agent: 'notebook-handboard-planner',
     system: `You design ONE handwritten whiteboard note from the user's source blocks — like a student's beautiful marker-and-pen board. Return ONLY JSON:
 {"title": string, "sections": [{"heading": string, "para": string (optional, <=200 chars), "bullets": [string] (optional, <=6, each <=70 chars)}], "marks": [{"term": string, "color": "yellow"|"orange"|"blue"|"purple"|"green"|"pink"}], "diagrams": [{"type": "graph", "caption": string, "nodes": [{"label": string (<=3 chars)}], "edges": [[label, label]]}]}
 2-4 sections. marks = 3-6 KEY TERMS that literally appear in your sections' text, each a different color. 1-2 diagrams only if the material is genuinely about connected structures (graphs, trees, networks) — nodes/edges must reflect the material, never invented examples. HARD RULES: only facts from the numbered blocks, never outside knowledge. Output ONLY JSON.`,
-    user: `MY SOURCE BLOCKS:\n\n${numbered.slice(0, 9000)}`,
+    user: `MY SOURCE BLOCKS:\n\n${numbered.slice(0, 19000)}`,
     maxTokens: 900,
     temperature: 0.3,
   });

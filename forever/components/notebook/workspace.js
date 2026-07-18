@@ -704,6 +704,11 @@ function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExplain, on
             <ActionRow icon="🎓" title="Explain it back" sub="help me teach this back" disabled={!sel} onClick={() => sel && setTab('review')} />
             <ActionRow icon="🧠" title="Create quiz" sub="generate practice questions" onClick={() => onQuiz()} />
             <ActionRow icon="📋" title="Summarize" sub="create a short summary" onClick={() => onSummary()} />
+            <ActionRow icon="✍️" title="Visual note" sub="a handwritten board from this block" disabled={!sel} onClick={async () => {
+              if (!sel) return;
+              const r = await fetch(`/api/notebooks/${nb}/handboard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: sel.page ?? 'Notes', blockIds: [sel._id] }) });
+              if (r.ok) onChanged();
+            }} />
             {sel && sel.trust === 'user' && ['note', 'text'].includes(sel.type) ? <ActionRow icon="✍️" title="Continue writing" sub="the AI extends your draft" onClick={() => onContinue(sel._id)} /> : null}
           </div>
 
