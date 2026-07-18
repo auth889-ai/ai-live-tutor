@@ -38,6 +38,7 @@ export function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onN
     setAttaching(false);
   };
   const [attDrag, setAttDrag] = useState(null); // { id, dx, dy } while an image is being dragged
+  const [attResize, setAttResize] = useState(null); // { id, w } while a corner handle is being dragged
   const patchAtt = async (attachmentId, meta) => {
     await fetch(`/api/notebooks/${nb}/blocks/${b._id}/attach`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ attachmentId, ...meta }) });
     onChanged();
@@ -198,7 +199,7 @@ export function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onN
               : { float: att.placement === 'left' ? 'left' : att.placement === 'right' ? 'right' : 'none',
                   margin: att.placement === 'left' ? '4px 14px 6px 0' : att.placement === 'right' ? '4px 0 6px 14px' : '6px 0',
                   transform: attDrag?.id === att.id ? `translate(${attDrag.dx}px, ${attDrag.dy}px)` : undefined, position: 'relative' }),
-            width: { s: '26%', m: '52%', l: '100%' }[att.size ?? 'm'], minWidth: 160,
+            width: attResize?.id === att.id ? `${attResize.w * 100}%` : att.w ? `${att.w * 100}%` : { s: '26%', m: '52%', l: '100%' }[att.size ?? 'm'], minWidth: 110,
             opacity: attDrag?.id === att.id ? 0.75 : 1, zIndex: attDrag?.id === att.id ? 10 : att.placement === 'free' ? 5 : undefined }}>
           <img src={att.url} alt={att.title ?? ''} draggable={false}
             onPointerDown={(e) => {
@@ -221,6 +222,29 @@ export function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onN
               });
             }}
             style={{ width: '100%', borderRadius: 10, display: 'block', cursor: attDrag?.id === att.id ? 'grabbing' : 'grab', touchAction: 'none' }} />
+          {['nw', 'ne', 'sw', 'se'].map((corner) => (
+            <span key={corner}
+              onPointerDown={(e) => {
+                e.preventDefault(); e.stopPropagation();
+                e.currentTarget.setPointerCapture?.(e.pointerId);
+                const wrapEl = e.currentTarget.parentElement;
+                const host = wrapEl.closest('.nbk-blk');
+                setAttResize({ id: att.id, w: wrapEl.getBoundingClientRect().width / host.getBoundingClientRect().width, hostW: host.getBoundingClientRect().width, anchorX: corner.includes('w') ? wrapEl.getBoundingClientRect().right : wrapEl.getBoundingClientRect().left });
+              }}
+              onPointerMove={(e) => {
+                setAttResize((d) => (d && d.id === att.id ? { ...d, w: Math.min(1, Math.max(0.12, Math.abs(e.clientX - d.anchorX) / d.hostW)) } : d));
+              }}
+              onPointerUp={() => {
+                setAttResize((d) => {
+                  if (d && d.id === att.id) patchAtt(att.id, { w: d.w });
+                  return null;
+                });
+              }}
+              style={{ position: 'absolute', width: 12, height: 12, background: '#fff', border: '1.5px solid #4477aa', borderRadius: 2, touchAction: 'none', zIndex: 6,
+                cursor: corner === 'nw' || corner === 'se' ? 'nwse-resize' : 'nesw-resize',
+                top: corner.startsWith('n') ? -6 : undefined, bottom: corner.startsWith('s') ? 16 : undefined,
+                left: corner.endsWith('w') ? -6 : undefined, right: corner.endsWith('e') ? -6 : undefined }} />
+          ))}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 2 }}>
             {[['left', '◧'], ['full', '▣'], ['right', '◨']].map(([pl, icon]) => (
               <button key={pl} onClick={() => patchAtt(att.id, { placement: pl })} title={`place image ${pl}`}
