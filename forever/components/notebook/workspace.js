@@ -288,6 +288,7 @@ function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate, legacyIll 
   const [draftText, setDraftText] = useState('');
   const [busy, setBusy] = useState(false);
   const [showExtract, setShowExtract] = useState(false);
+  const [editingInk, setEditingInk] = useState(false);
   const save = async () => {
     setBusy(true);
     await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: draftText }) }).catch(() => {});
@@ -323,9 +324,27 @@ function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate, legacyIll 
   }
 
   if (b.type === 'drawing') {
+    // a saved page must stay writable, like Xournal: ✏️ reopens the editor over the same ink
+    if (editingInk) {
+      return (
+        <div style={{ margin: '10px 0' }}>
+          <DrawingEditor
+            initial={b.content}
+            onSave={async (data) => {
+              await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: data }) });
+              setEditingInk(false);
+              onChanged();
+            }}
+            onCancel={() => setEditingInk(false)}
+          />
+        </div>
+      );
+    }
     return (
-      <div className={`nbk-blk${selected ? ' sel' : ''}`} onClick={onSelect} style={{ margin: '10px 0', padding: '8px 10px', cursor: 'pointer' }}>
+      <div className={`nbk-blk${selected ? ' sel' : ''}`} onClick={onSelect} style={{ position: 'relative', margin: '10px 0', padding: '8px 10px', cursor: 'pointer' }}>
         <SvgDrawing data={b.content} />
+        <button onClick={(e) => { e.stopPropagation(); setEditingInk(true); }} title="keep writing on this drawing"
+          style={{ position: 'absolute', top: 16, right: 18, border: '1px solid #EBD9C4', borderRadius: 999, background: '#FFFFFFEE', color: C.ink, padding: '4px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>✏️ write</button>
         <div className="nbk-acts" style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
           <span style={{ fontSize: 11, color: C.sub }}>drawing · you · {when}</span>
           <button onClick={(e) => { e.stopPropagation(); downloadDrawing(b.content, 'svg', 'drawing'); }} style={ghost()}>⬇ svg</button>
