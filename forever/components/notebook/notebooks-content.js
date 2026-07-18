@@ -128,13 +128,20 @@ function CreateWizard({ onDone }) {
       const res = await fetch('/api/notebooks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: nextAnswers.title, intent }) });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'could not create the notebook');
+      // Every wizard seed becomes a REAL block with visible provenance — the Sankofa seeds
+      // live inside the notebook, not in a hidden field.
+      const seeds = [
+        nextAnswers.known?.trim() ? { type: 'note', content: nextAnswers.known.trim(), source: 'typed', title: 'What I already know' } : null,
+        nextAnswers.explore?.trim() ? { type: 'note', content: nextAnswers.explore.trim(), source: 'typed', title: 'What I want to explore' } : null,
+      ].filter(Boolean);
       const first = (nextAnswers.first ?? '').trim();
       if (first) {
         const isUrl = /^https?:\/\/\S+$/i.test(first);
-        await fetch(`/api/notebooks/${d.id}/blocks`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(isUrl ? { type: 'link', url: first } : { type: 'note', content: first, source: 'typed' }),
-        }).catch(() => {});
+        seeds.push(isUrl ? { type: 'link', url: first } : { type: 'note', content: first, source: 'typed' });
+      }
+      for (const seed of seeds) {
+        // eslint-disable-next-line no-await-in-loop -- sequential keeps seq + link rebuilds ordered
+        await fetch(`/api/notebooks/${d.id}/blocks`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(seed) }).catch(() => {});
       }
       onDone(d.id);
     } catch (e) {
