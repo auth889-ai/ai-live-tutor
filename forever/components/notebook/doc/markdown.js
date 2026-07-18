@@ -11,7 +11,7 @@ export function Inline({ text, onNavigate }) {
   const RES = [
     { re: /\[\[([^\]]+)\]\]/, r: (m) => <button key={k += 1} onClick={() => onNavigate?.(m[1].trim())} style={{ border: 'none', background: '#EDF3FB', color: C.extracted, borderRadius: 6, padding: '0 5px', font: 'inherit', fontWeight: 700, cursor: 'pointer' }}>{m[1].trim()}</button> },
     { re: /\[(\d+)\]/, r: (m) => <sup key={k += 1} style={{ background: '#EDF3FB', color: C.extracted, borderRadius: 5, padding: '0 4px', fontSize: 10, fontWeight: 800, marginLeft: 1 }}>{m[1]}</sup> },
-    { re: /\*\*([^*]+)\*\*/, r: (m) => <b key={k += 1}>{m[1]}</b> },
+    { re: /\*\*([^*]+)\*\*/, r: (m) => <b key={k += 1} style={{ background: '#FDE68A66', borderRadius: 4, padding: '0 4px' }}>{m[1]}</b> },
     { re: /`([^`]+)`/, r: (m) => <code key={k += 1} style={{ background: '#F4EEE5', borderRadius: 4, padding: '0 4px', fontSize: '0.88em', fontFamily: 'ui-monospace, monospace' }}>{m[1]}</code> },
   ];
   while (rest.length) {
