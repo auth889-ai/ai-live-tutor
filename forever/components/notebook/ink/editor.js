@@ -29,6 +29,7 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
   const [snap, setSnap] = useState(true);
   const [more, setMore] = useState(false);
   const [textFont, setTextFont] = useState('hand');  // hand | plain | mono — 'convert to many format'
+  const [textSize, setTextSize] = useState(24);      // S/M/L/XL font size chips
   const [typing, setTyping] = useState(null);        // inline text entry {x, y, left, top} — never a popup // advanced rows (styles/papers/layers) live behind ⋯
   const svgRef = useRef(null);
   const drawing = useRef(false);
@@ -215,7 +216,7 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
 
   const commitText = (raw) => {
     const t = String(raw ?? '').trim();
-    if (t && typing) setItems((cur) => [...cur, { kind: 'text', x: typing.x, y: typing.y, text: t.slice(0, 160), size: 14 + width * 3, color, font: textFont }]);
+    if (t && typing) setItems((cur) => [...cur, { kind: 'text', x: typing.x, y: typing.y, text: t.slice(0, 160), size: textSize, color, font: textFont }]);
     setTyping(null);
   };
 
@@ -289,7 +290,7 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
           onKeyDown={(e2) => { if (e2.key === 'Enter') commitText(e2.currentTarget.value); if (e2.key === 'Escape') setTyping(null); }}
           onBlur={(e2) => commitText(e2.currentTarget.value)}
           style={{ position: 'absolute', left: typing.left, top: typing.top - 14, width: 280, border: 'none', borderBottom: `2px dashed ${color}`, outline: 'none', background: 'transparent', color, zIndex: 3,
-            fontFamily: textFont === 'hand' ? 'var(--caveat), cursive' : textFont === 'mono' ? 'ui-monospace, monospace' : 'inherit', fontSize: 13 + width * 2.2, fontWeight: 600 }} />
+            fontFamily: textFont === 'hand' ? 'var(--caveat), cursive' : textFont === 'mono' ? 'ui-monospace, monospace' : 'inherit', fontSize: Math.max(13, textSize * 0.9), fontWeight: 600 }} />
       ) : null}
       {/* one floating toolbar under the paper — the Image-#36 layout */}
       <div style={{ display: 'flex', gap: 7, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', margin: '10px auto 0', padding: '8px 14px', borderRadius: 999, border: '1px solid #EBE3D8', background: '#fff', boxShadow: '0 6px 18px rgba(33,26,20,0.08)', width: 'fit-content', maxWidth: '100%' }}>
@@ -308,6 +309,10 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
             {['hand', 'plain', 'mono'].map((f) => (
               <button key={f} onClick={() => setTextFont(f)} title={`text format: ${f}`}
                 style={{ border: 'none', borderRadius: 8, background: textFont === f ? '#FDF0EE' : 'transparent', outline: textFont === f ? '1.5px solid #e8604c' : 'none', padding: '2px 7px', fontSize: 12, cursor: 'pointer', fontFamily: f === 'hand' ? 'var(--caveat), cursive' : f === 'mono' ? 'ui-monospace, monospace' : 'inherit', fontWeight: 700 }}>Aa</button>
+            ))}
+            {[['S', 16], ['M', 24], ['L', 34], ['XL', 48]].map(([lb, sz]) => (
+              <button key={lb} onClick={() => setTextSize(sz)} title={`font size ${sz}`}
+                style={{ border: 'none', borderRadius: 8, background: textSize === sz ? '#FDF0EE' : 'transparent', outline: textSize === sz ? '1.5px solid #e8604c' : 'none', padding: '2px 6px', fontSize: 10 + [16, 24, 34, 48].indexOf(sz) * 1.6, cursor: 'pointer', fontWeight: 800, color: '#211A14' }}>{lb}</button>
             ))}
             <span style={{ width: 1, height: 20, background: '#EBE3D8' }} />
           </>
