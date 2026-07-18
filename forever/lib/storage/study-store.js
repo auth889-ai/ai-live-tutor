@@ -161,6 +161,25 @@ export async function saveProgress({ userId, lessonId, lessonTitle = '', sceneIn
   return doc;
 }
 
+// NOTEBOOK (Sankofa pattern): one editable page per lesson — the student's own words living
+// beside the moments the player captured. One doc per user+lesson, upserted on every save.
+export async function saveNotebook(userId, lessonId, text) {
+  const col = await studyCollection();
+  const id = `nb_${userId}_${lessonId}`;
+  await col.updateOne(
+    { _id: id },
+    { $set: { kind: 'notebook', userId, lessonId, text: String(text ?? '').slice(0, 20000), updatedAt: new Date().toISOString() },
+      $setOnInsert: { createdAt: new Date().toISOString() } },
+    { upsert: true },
+  );
+  return { id };
+}
+
+export async function listNotebooks(userId) {
+  const col = await studyCollection();
+  return col.find({ kind: 'notebook', userId }).sort({ updatedAt: -1 }).limit(200).toArray();
+}
+
 export async function getProgress(userId, lessonId) {
   const col = await studyCollection();
   if (!col || !userId) return null;

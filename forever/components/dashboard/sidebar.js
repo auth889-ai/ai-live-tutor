@@ -14,9 +14,9 @@ export function DashboardSidebar({ email, active = 'home' }) {
     { key: 'courses', icon: '📚', label: 'My Courses', href: '/courses' },
     { key: 'progress', icon: '📊', label: 'Progress', href: '/progress' },
     { key: 'bookmarks', icon: '🔖', label: 'Bookmarks', href: '/bookmarks' },
+    { key: 'notebook', icon: '📓', label: 'Notebook', href: '/notebook' },
   ];
   const soon = [
-    ['📓', 'Notebook'],
     ['🧠', 'Quizzes'],
   ];
   const name = (email || '').split('@')[0].replace(/[._-]+/g, ' ');

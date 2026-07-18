@@ -1,6 +1,6 @@
 // /api/study — bookmarks + progress, session-scoped like every data route.
 import { sessionFromRequest } from '../../../lib/auth/session.js';
-import { addBookmark, listBookmarks, listLessonBookmarks, removeBookmark, reviewBookmark, saveProgress, getProgress, listProgress, listDays, computeBadges, recordCheckpoint, saveReflection, setWeekGoal, getSettings } from '../../../lib/storage/study-store.js';
+import { addBookmark, listBookmarks, listLessonBookmarks, removeBookmark, reviewBookmark, saveProgress, getProgress, listProgress, listDays, computeBadges, recordCheckpoint, saveReflection, setWeekGoal, getSettings, saveNotebook, listNotebooks } from '../../../lib/storage/study-store.js';
 import { loadLesson } from '../../../lib/storage/lesson-store.js';
 
 export async function GET(request) {
@@ -137,7 +137,7 @@ export async function GET(request) {
   };
 
   return Response.json({
-    signedIn: true, bookmarks, progress, streak, bestStreak, dueCount, heatmap, weekScenes, weekGoal, badges, forecast,
+    signedIn: true, bookmarks, progress, streak, notebooks: await listNotebooks(session.userId), bestStreak, dueCount, heatmap, weekScenes, weekGoal, badges, forecast,
     today, recommended, knowledge, weekActions, weekTotal, pace, upcoming, weak, tomorrow,
     stats: { totalScenes, totalReviews, totalBookmarks: bookmarks.length, lessonsDone: progress.filter((p) => p.completed).length,
       totalCheckpoints: dayDocs.reduce((a, d) => a + (d.checkpoints ?? 0), 0) },
@@ -154,6 +154,10 @@ export async function POST(request) {
   }
   if (body.type === 'checkpoint') {
     return Response.json({ ok: await recordCheckpoint({ userId: session.userId, lessonId: body.lessonId, quizId: body.quizId, correct: body.correct }) });
+  }
+  if (body.type === 'notebook') {
+    await saveNotebook(session.userId, String(body.lessonId ?? ''), body.text);
+    return Response.json({ ok: true });
   }
   if (body.type === 'reflection') {
     return Response.json({ ok: await saveReflection({ userId: session.userId, choice: body.choice }) });
