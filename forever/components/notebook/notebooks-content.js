@@ -83,12 +83,48 @@ function Workspace({ id, onBack }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(260px, 340px)', gap: 14, alignItems: 'start', marginTop: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Flashback blocks={blocks} />
           {blocks.length === 0 ? (
             <div style={{ ...T.card, padding: '30px 20px', textAlign: 'center', color: '#9b8465', fontSize: 13 }}>Empty page — add your first block →</div>
-          ) : blocks.map((b) => <Block key={b._id} nb={id} b={b} onChanged={load} />)}
+          ) : groupByDay(blocks).map(([day, dayBlocks]) => (
+            <div key={day}>
+              <div style={{ ...T.cap, fontWeight: 800, margin: '6px 0 8px' }}>{day}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {dayBlocks.map((b) => <Block key={b._id} nb={id} b={b} onChanged={load} />)}
+              </div>
+            </div>
+          ))}
         </div>
         <Intake id={id} onAdded={load} />
       </div>
+    </div>
+  );
+}
+
+// Journal timeline: entries grouped under day headers (research: timeline views + flashbacks
+// drive return visits) — newest day first, order inside a day preserved.
+function groupByDay(blocks) {
+  const groups = new Map();
+  for (const b of blocks) {
+    const day = new Date(b.createdAt).toLocaleDateString('en', { weekday: 'long', month: 'short', day: 'numeric' });
+    if (!groups.has(day)) groups.set(day, []);
+    groups.get(day).push(b);
+  }
+  return [...groups.entries()].reverse();
+}
+
+// Flashback (journal pattern): resurface one of YOUR older entries — deterministic per day,
+// only when something is genuinely older than a day. Never canned.
+function Flashback({ blocks }) {
+  const old = blocks.filter((b) => Date.now() - new Date(b.createdAt).getTime() > 24 * 3600 * 1000 && b.trust !== 'ai');
+  if (old.length === 0) return null;
+  const seed = Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''));
+  const b = old[seed % old.length];
+  const text = (b.type === 'voice' ? (b.transcript || b.content) : b.content) ?? '';
+  return (
+    <div style={{ ...T.card, borderStyle: 'dashed', padding: '10px 14px', background: '#fdf6f0' }}>
+      <span style={{ ...T.cap, fontWeight: 800 }}>🕰 FROM YOUR NOTES · {new Date(b.createdAt).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>
+      <div style={{ fontSize: 12.5, color: '#6b563d', marginTop: 4, fontStyle: 'italic' }}>“{text.slice(0, 180)}{text.length > 180 ? '…' : ''}”</div>
     </div>
   );
 }
@@ -119,13 +155,57 @@ function Block({ nb, b, onChanged }) {
 }
 
 // The eva IntakeFlow feel: one input surface, a type switcher, Enter adds, voice via Web Speech.
+const DAILY_PROMPTS = [
+  'What clicked for you today?',
+  'What still feels confusing — in your own words?',
+  'Explain the last thing you learned as if to a friend.',
+  'What would you ask the tutor tomorrow?',
+  'Which example finally made it make sense?',
+  'What do you want to remember a month from now?',
+];
+
 function Intake({ id, onAdded }) {
   const [mode, setMode] = useState('note'); // note | text | link | voice
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
+  const [busyLabel, setBusyLabel] = useState('');
   const [err, setErr] = useState('');
   const [listening, setListening] = useState(false);
   const recRef = useRef(null);
+  const fileRef = useRef(null);
+  const fileKind = useRef('pdf');
+  // Journal pattern: a rotating daily prompt seeds reflection — deterministic by date.
+  const daySeed = Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''));
+  const prompts = [DAILY_PROMPTS[daySeed % DAILY_PROMPTS.length], DAILY_PROMPTS[(daySeed + 3) % DAILY_PROMPTS.length]];
+
+  const pickFile = (kind) => { fileKind.current = kind; fileRef.current?.click(); };
+  const onFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    setErr('');
+    setBusyLabel(fileKind.current === 'pdf' ? 'extracting the PDF text (can take a minute)…' : 'the Vision agent is reading the image…');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const up = await fetch('/api/uploads', { method: 'POST', body: fd });
+      const upd = await up.json();
+      if (!up.ok) throw new Error(upd.error || 'upload failed');
+      const res = await fetch(`/api/notebooks/${id}/blocks`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: fileKind.current, uploadId: upd.uploadId, fileName: file.name, mediaType: file.type, source: 'upload' }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'could not add the file');
+      onAdded();
+    } catch (e2) {
+      setErr(String(e2.message ?? e2));
+    } finally {
+      setBusy(false);
+      setBusyLabel('');
+    }
+  };
 
   const add = async (payload) => {
     setBusy(true);
@@ -180,10 +260,21 @@ function Intake({ id, onAdded }) {
   return (
     <div style={{ ...T.card, borderRadius: 18, padding: '14px 16px', position: 'sticky', top: 12 }}>
       <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>ADD TO THIS NOTEBOOK</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+        {prompts.map((q) => (
+          <button key={q} onClick={() => { setMode('note'); setValue(q + '\n\n'); }}
+            style={{ border: '1px dashed #e8b7a4', borderRadius: 10, background: '#fdf6f0', color: '#8a5a3a', padding: '5px 10px', fontSize: 11.5, cursor: 'pointer', textAlign: 'left' }}>
+            💭 {q}
+          </button>
+        ))}
+      </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
         {chip('note', '📝 Note')}
         {chip('text', '📋 Paste')}
         {chip('link', '🔗 Link')}
+        <button onClick={() => pickFile('pdf')} style={{ border: '1.5px solid #f2e3d5', borderRadius: 999, background: '#fff', color: '#9b8465', padding: '4px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>📄 PDF</button>
+        <button onClick={() => pickFile('image')} style={{ border: '1.5px solid #f2e3d5', borderRadius: 999, background: '#fff', color: '#9b8465', padding: '4px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>🖼 Image</button>
+        <input ref={fileRef} type="file" accept={'.pdf,image/png,image/jpeg,image/webp'} onChange={onFile} style={{ display: 'none' }} />
         <button onClick={toggleVoice}
           style={{ border: listening ? `1.5px solid ${T.accent}` : '1.5px solid #f2e3d5', borderRadius: 999, background: listening ? '#fdf0ee' : '#fff', color: listening ? '#c0522d' : '#9b8465', padding: '4px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
           {listening ? '🎙 listening… tap to stop' : '🎙 Voice'}
@@ -198,10 +289,10 @@ function Intake({ id, onAdded }) {
         style={{ width: '100%', minHeight: mode === 'text' ? 140 : 74, boxSizing: 'border-box', resize: 'vertical', border: '1px solid #f2e3d5', borderRadius: 12, padding: '10px 12px', fontSize: 13.5, lineHeight: 1.55, color: '#2b211a', fontFamily: mode === 'link' ? 'ui-monospace, monospace' : 'inherit' }} />
       <button onClick={submit} disabled={busy || !value.trim()}
         style={{ marginTop: 8, width: '100%', border: 'none', borderRadius: 10, background: busy || !value.trim() ? '#e9ddcb' : T.accent, color: '#fff', padding: '9px 0', fontSize: 13, fontWeight: 800, cursor: busy || !value.trim() ? 'default' : 'pointer' }}>
-        {busy ? 'adding…' : '+ Add block'}
+        {busy ? (busyLabel || 'adding…') : '+ Add block'}
       </button>
       {err ? <div style={{ marginTop: 8, fontSize: 12, color: '#a33d2e', fontWeight: 700 }}>{err}</div> : null}
-      <div style={{ ...T.cap, marginTop: 10, lineHeight: 1.5 }}>PDF & image blocks land next round — links already pull the article text in.</div>
+      <div style={{ ...T.cap, marginTop: 10, lineHeight: 1.5 }}>links pull the article text · PDFs are extracted · images are read by the Vision agent</div>
     </div>
   );
 }
