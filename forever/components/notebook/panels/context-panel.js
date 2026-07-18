@@ -60,7 +60,7 @@ export function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExpl
               setDryCode({ loading: true });
               const r = await fetch(`/api/notebooks/${nb}/dryrun-code`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ blockId: sel._id }) });
               const d = await r.json();
-              setDryCode(r.ok ? { code: d.code, note: d.note } : { error: d.error });
+              setDryCode(r.ok ? { code: d.code, entry: d.entry, note: d.note } : { error: d.error });
             }} />
             <ActionRow icon="✍️" title="Visual note" sub="a handwritten board from this block" disabled={!sel} onClick={async () => {
               if (!sel) return;
@@ -77,7 +77,7 @@ export function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExpl
             : dryCode.error ? <div style={{ fontSize: 12, color: '#c0392b' }}>{dryCode.error}</div>
             : <>
                 {dryCode.note ? <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 6 }}>{dryCode.note}</div> : null}
-                <TryItPanel seedCode={dryCode.code} language="python" />
+                <TryItPanel seedCode={dryCode.code} seedEntry={dryCode.entry ?? ''} language="python" />
               </>}
         </div>
       ) : null}

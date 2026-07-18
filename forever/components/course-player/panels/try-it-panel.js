@@ -21,7 +21,7 @@ function guessEntry(src) {
   return `${last[1]}(${params.join(', ')})`;
 }
 
-export function TryItPanel({ seedCode = '', language = 'python' }) {
+export function TryItPanel({ seedCode = '', seedEntry = '', language = 'python' }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState(seedCode);
   const [lang, setLang] = useState(language === 'javascript' ? 'javascript' : 'python');
@@ -32,7 +32,7 @@ export function TryItPanel({ seedCode = '', language = 'python' }) {
   // build an ExecutionTrace and the full AlgorithmStage animates it — array, pointers, ledger,
   // code line, variables. Any edit, any input, no server. Correctness is architectural: every
   // frame comes from the recording of the run that just happened on this machine.
-  const [entry, setEntry] = useState('');
+  const [entry, setEntry] = useState(seedEntry);
   const [vizState, setVizState] = useState('idle'); // idle | working | done | error
   const [vizError, setVizError] = useState('');
   const [vizTrace, setVizTrace] = useState(null);
