@@ -3,7 +3,7 @@
 // INK EDITOR — the interactive DrawingEditor (tools, layers, lasso selection).
 // Feature-to-Xournal++-source map: see components/notebook/drawing.js
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { W, H, itemInLasso, selectionBounds, moveItem, scaleItem, rotateItem } from '../../../lib/notebook/ink-geometry.js';
 import { COLORS, DASH, GRID, PAPER_BG, paperDefs, parseData, ItemSvg } from './render.js';
@@ -27,6 +27,7 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
   const [fill, setFill] = useState(false);
   const [stabilize, setStabilize] = useState(true);
   const [snap, setSnap] = useState(true);
+  const [more, setMore] = useState(false); // advanced rows (styles/papers/layers) live behind ⋯
   const svgRef = useRef(null);
   const drawing = useRef(false);
   const raw = useRef([]);
@@ -209,42 +210,45 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
     }
   };
 
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onCancel?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onCancel]);
+
   const chip = (on) => ({ border: on ? '1.5px solid #e8604c' : '1px solid #EBE3D8', borderRadius: 8, background: on ? '#FDF0EE' : '#fff', color: '#211A14', padding: '3px 8px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' });
   return (
-    <div style={{ border: '1.5px solid #EBD9C4', borderRadius: 14, background: '#FDFAF3', padding: 12, margin: '10px 0' }}>
-      <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
-        {TOOLS.map(([t, label]) => <button key={t} onClick={() => { setTool(t); setSel(null); setLassoPath(null); dragSel.current = null; }} style={chip(tool === t)}>{label}</button>)}
-      </div>
-      <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-        {COLORS.map((c) => (
-          <button key={c} onClick={() => setColor(c)} style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: color === c ? '2.5px solid #fff' : '2px solid transparent', outline: color === c ? `2px solid ${c}` : 'none', cursor: 'pointer' }} />
-        ))}
-        <input type="range" min="1" max="8" value={width} onChange={(e) => setWidth(Number(e.target.value))} style={{ width: 60, accentColor: '#e8604c' }} />
-        {['solid', 'dashed', 'dotted'].map((st) => <button key={st} onClick={() => setStyle(st)} style={chip(style === st)}>{st}</button>)}
-        <button onClick={() => setFill((v) => !v)} style={chip(fill)}>fill</button>
-        <button onClick={() => setStabilize((v) => !v)} style={chip(stabilize)} title="input stabilization — smoother handwriting">smooth</button>
-        <button onClick={() => setSnap((v) => !v)} style={chip(snap)} title="snap shapes to the grid">snap</button>
-        <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 4 }}>
-          {['blank', 'ruled', 'grid', 'scratch', 'whiteboard'].map((pp) => <button key={pp} onClick={() => setPaper(pp)} style={chip(paper === pp)}>{pp}</button>)}
-        </span>
-      </div>
-      {/* LAYERS (Layer.h analog): active layer, visibility, add */}
-      <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-        <span style={{ fontSize: 10.5, fontWeight: 800, color: '#77695B' }}>LAYERS</span>
-        {layers.map((l, i) => (
-          <span key={i} style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
-            <button onClick={() => setActiveLayer(i)} style={chip(activeLayer === i)}>{l.name}</button>
-            <button onClick={() => setLayers((cur) => cur.map((x, j) => (j === i ? { ...x, visible: x.visible === false } : x)))}
-              title="show/hide" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, opacity: l.visible === false ? 0.35 : 1 }}>👁</button>
-            <button disabled={i === 0} onClick={() => { setLayers((cur) => { const n = [...cur]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; return n; }); setActiveLayer((a) => (a === i ? i - 1 : a === i - 1 ? i : a)); }}
-              title="move layer up (drawn earlier = beneath)" style={{ border: 'none', background: 'transparent', cursor: i === 0 ? 'default' : 'pointer', fontSize: 11, opacity: i === 0 ? 0.25 : 0.8, padding: 0 }}>↑</button>
-            <button disabled={i === layers.length - 1} onClick={() => { setLayers((cur) => { const n = [...cur]; [n[i + 1], n[i]] = [n[i], n[i + 1]]; return n; }); setActiveLayer((a) => (a === i ? i + 1 : a === i + 1 ? i : a)); }}
-              title="move layer down" style={{ border: 'none', background: 'transparent', cursor: i === layers.length - 1 ? 'default' : 'pointer', fontSize: 11, opacity: i === layers.length - 1 ? 0.25 : 0.8, padding: 0 }}>↓</button>
-          </span>
-        ))}
-        <button onClick={() => { setLayers((cur) => [...cur, { name: `Layer ${cur.length + 1}`, visible: true, items: [] }]); setActiveLayer(layers.length); }} style={chip(false)}>+ layer</button>
-        <button onClick={() => setItems((cur) => cur.slice(0, -1))} style={{ ...chip(false), marginLeft: 'auto' }}>↶ undo</button>
-      </div>
+    <div style={{ position: 'relative', border: '1.5px solid #EBD9C4', borderRadius: 14, background: '#FDFAF3', padding: 12, margin: '10px 0' }}>
+      <button onClick={onCancel} title="close (Esc)"
+        style={{ position: 'absolute', top: 8, right: 10, zIndex: 2, border: '1px solid #EBD9C4', borderRadius: 999, background: '#fff', color: '#77695B', width: 26, height: 26, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>✕</button>
+      {more ? (
+        <>
+          <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8, paddingRight: 30 }}>
+            {['solid', 'dashed', 'dotted'].map((st) => <button key={st} onClick={() => setStyle(st)} style={chip(style === st)}>{st}</button>)}
+            <button onClick={() => setFill((v) => !v)} style={chip(fill)}>fill</button>
+            <button onClick={() => setStabilize((v) => !v)} style={chip(stabilize)} title="input stabilization — smoother handwriting">smooth</button>
+            <button onClick={() => setSnap((v) => !v)} style={chip(snap)} title="snap shapes to the grid">snap</button>
+            <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 4 }}>
+              {['blank', 'ruled', 'grid', 'scratch', 'whiteboard'].map((pp) => <button key={pp} onClick={() => setPaper(pp)} style={chip(paper === pp)}>{pp}</button>)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+            <span style={{ fontSize: 10.5, fontWeight: 800, color: '#77695B' }}>LAYERS</span>
+            {layers.map((l, i) => (
+              <span key={i} style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
+                <button onClick={() => setActiveLayer(i)} style={chip(activeLayer === i)}>{l.name}</button>
+                <button onClick={() => setLayers((cur) => cur.map((x, j) => (j === i ? { ...x, visible: x.visible === false } : x)))}
+                  title="show/hide" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, opacity: l.visible === false ? 0.35 : 1 }}>👁</button>
+                <button disabled={i === 0} onClick={() => { setLayers((cur) => { const n = [...cur]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; return n; }); setActiveLayer((a) => (a === i ? i - 1 : a === i - 1 ? i : a)); }}
+                  title="move layer up (drawn earlier = beneath)" style={{ border: 'none', background: 'transparent', cursor: i === 0 ? 'default' : 'pointer', fontSize: 11, opacity: i === 0 ? 0.25 : 0.8, padding: 0 }}>↑</button>
+                <button disabled={i === layers.length - 1} onClick={() => { setLayers((cur) => { const n = [...cur]; [n[i + 1], n[i]] = [n[i], n[i + 1]]; return n; }); setActiveLayer((a) => (a === i ? i + 1 : a === i + 1 ? i : a)); }}
+                  title="move layer down" style={{ border: 'none', background: 'transparent', cursor: i === layers.length - 1 ? 'default' : 'pointer', fontSize: 11, opacity: i === layers.length - 1 ? 0.25 : 0.8, padding: 0 }}>↓</button>
+              </span>
+            ))}
+            <button onClick={() => { setLayers((cur) => [...cur, { name: `Layer ${cur.length + 1}`, visible: true, items: [] }]); setActiveLayer(layers.length); }} style={chip(false)}>+ layer</button>
+          </div>
+        </>
+      ) : null}
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up}
         style={{ width: '100%', touchAction: 'none', cursor: tool === 'select' || tool === 'lasso' ? 'grab' : 'crosshair', background: bg, borderRadius: 10, border: '1px solid #EBE3D8' }}>
@@ -270,10 +274,22 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
           );
         })() : null}
       </svg>
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+      {/* one floating toolbar under the paper — the Image-#36 layout */}
+      <div style={{ display: 'flex', gap: 7, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', margin: '10px auto 0', padding: '8px 14px', borderRadius: 999, border: '1px solid #EBE3D8', background: '#fff', boxShadow: '0 6px 18px rgba(33,26,20,0.08)', width: 'fit-content', maxWidth: '100%' }}>
+        {TOOLS.map(([t, label]) => (
+          <button key={t} onClick={() => { setTool(t); setSel(null); setLassoPath(null); dragSel.current = null; }} title={label}
+            style={{ border: 'none', borderRadius: 8, background: tool === t ? '#FDF0EE' : 'transparent', outline: tool === t ? '1.5px solid #e8604c' : 'none', padding: '3px 7px', fontSize: 13, cursor: 'pointer' }}>{label.split(' ')[0]}</button>
+        ))}
+        <span style={{ width: 1, height: 20, background: '#EBE3D8' }} />
+        {COLORS.map((c) => (
+          <button key={c} onClick={() => setColor(c)} style={{ width: 16, height: 16, borderRadius: '50%', background: c, border: color === c ? '2.5px solid #fff' : '2px solid transparent', outline: color === c ? `2px solid ${c}` : 'none', cursor: 'pointer', padding: 0 }} />
+        ))}
+        <input type="range" min="1" max="8" value={width} onChange={(e) => setWidth(Number(e.target.value))} style={{ width: 54, accentColor: '#e8604c' }} />
+        <span style={{ width: 1, height: 20, background: '#EBE3D8' }} />
+        <button onClick={() => setItems((cur) => cur.slice(0, -1))} title="undo" style={{ border: 'none', background: 'transparent', fontSize: 14, cursor: 'pointer', padding: '2px 4px' }}>↶</button>
+        <button onClick={() => setMore((v) => !v)} title="styles · papers · layers" style={{ border: 'none', borderRadius: 8, background: more ? '#FDF0EE' : 'transparent', outline: more ? '1.5px solid #e8604c' : 'none', fontSize: 15, cursor: 'pointer', padding: '0 6px' }}>⋯</button>
         <button onClick={() => onSave(JSON.stringify({ version: 2, paper, layers }))} disabled={layers.every((l) => l.items.length === 0)}
-          style={{ border: 'none', borderRadius: 999, background: layers.some((l) => l.items.length) ? '#1E9A61' : '#CFE0D2', color: '#fff', padding: '7px 18px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>✓ save drawing</button>
-        <button onClick={onCancel} style={{ border: 'none', background: 'transparent', color: '#77695B', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>cancel</button>
+          style={{ border: 'none', borderRadius: 999, background: layers.some((l) => l.items.length) ? '#1E9A61' : '#CFE0D2', color: '#fff', padding: '5px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>✓ save</button>
       </div>
     </div>
   );
