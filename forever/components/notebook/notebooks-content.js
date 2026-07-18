@@ -181,8 +181,33 @@ function CreateWizard({ onDone }) {
 function Workspace({ id, onBack, onNavigate }) {
   const [data, setData] = useState(null);
   const [revealId, setRevealId] = useState(null);
+  const [live, setLive] = useState(null); // { stage, plan, sections[], rejected[], error }
   const load = () => fetch(`/api/notebooks/${id}`).then((r) => r.json()).then(setData).catch(() => {});
   useEffect(() => { load(); }, [id]);
+
+  // The Sankofa arc, live: EventSource over the real pipeline stages — reading -> planning ->
+  // writing §N -> sections streaming in -> saved. Every status is a genuine stage.
+  const runStream = (qs) => {
+    if (live && !live.done && !live.error) return;
+    setLive({ stage: 'connecting', sections: [], rejected: [] });
+    const es = new EventSource(`/api/notebooks/${id}/synthesize/stream?${qs}`);
+    es.addEventListener('status', (e) => { const d = JSON.parse(e.data); setLive((cur) => ({ ...cur, stage: d.stage, statusMeta: d })); });
+    es.addEventListener('plan', (e) => { const d = JSON.parse(e.data); setLive((cur) => ({ ...cur, plan: d })); });
+    es.addEventListener('section', (e) => { const d = JSON.parse(e.data); setLive((cur) => ({ ...cur, sections: [...(cur?.sections ?? []), d] })); });
+    es.addEventListener('rejected', (e) => { const d = JSON.parse(e.data); setLive((cur) => ({ ...cur, rejected: [...(cur?.rejected ?? []), d] })); });
+    es.addEventListener('done', (e) => {
+      const d = JSON.parse(e.data);
+      es.close();
+      setRevealId(null);
+      setLive((cur) => ({ ...cur, done: true }));
+      setTimeout(() => { setLive(null); load(); }, 900);
+      if (d.blockId) setRevealId(null);
+    });
+    es.addEventListener('error', (e) => {
+      try { const d = JSON.parse(e.data); setLive((cur) => ({ ...cur, error: d.message })); } catch { setLive((cur) => ({ ...cur, error: 'stream lost' })); }
+      es.close();
+    });
+  };
   if (!data?.notebook) return <div style={{ ...T.card, padding: 40, textAlign: 'center', color: '#9b8465' }}>Opening…</div>;
   const { notebook, blocks } = data;
   return (
@@ -190,10 +215,11 @@ function Workspace({ id, onBack, onNavigate }) {
       <button onClick={onBack} style={{ border: 'none', background: 'transparent', color: '#9b8465', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', padding: 0 }}>← all notebooks</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: 24, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif', fontWeight: 600, margin: 0, flex: 1, minWidth: 0 }}>{notebook.title}</h1>
-        <SynthesizeButton id={id} blocks={blocks} onDone={(newId) => { setRevealId(newId ?? null); load(); }} />
+        <SynthesizeButton blocks={blocks} busy={Boolean(live) && !live.done && !live.error} onRun={(mode) => runStream(`mode=${mode}`)} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(260px, 340px)', gap: 14, alignItems: 'start', marginTop: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {live ? <LiveSynthesis live={live} /> : null}
           <Flashback blocks={blocks} />
           {(data.backlinks ?? []).length ? (
             <div style={{ ...T.card, padding: '10px 14px', borderLeft: '3px solid #4477aa' }}>
@@ -217,6 +243,7 @@ function Workspace({ id, onBack, onNavigate }) {
               </div>
             </div>
           ))}
+          <AskBox disabled={Boolean(live) && !live.done && !live.error} onAsk={(q) => runStream(`mode=ask&question=${encodeURIComponent(q)}`)} />
         </div>
         <Intake id={id} onAdded={load} />
       </div>
@@ -550,24 +577,8 @@ function Intake({ id, onAdded }) {
 // The notebook's OWN act of creation (eva: inputs -> generated blocks; NotebookLM: grounded +
 // cited). The result lands back in the notebook as an ai-provenance block — visibly the
 // notebook's work, never confused with yours.
-function SynthesizeButton({ id, blocks, onDone }) {
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
+function SynthesizeButton({ blocks, busy, onRun }) {
   const [mode, setMode] = useState('study_note');
-  const kick = async () => {
-    setBusy(true);
-    setErr('');
-    try {
-      const res = await fetch(`/api/notebooks/${id}/synthesize`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }) });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error || 'synthesis failed');
-      onDone(d.block?._id ?? null);
-    } catch (e) {
-      setErr(String(e.message ?? e));
-    } finally {
-      setBusy(false);
-    }
-  };
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
       <select value={mode} onChange={(e) => setMode(e.target.value)} disabled={busy}
@@ -576,11 +587,67 @@ function SynthesizeButton({ id, blocks, onDone }) {
         <option value="summary">summary</option>
         <option value="questions">self-test questions</option>
       </select>
-      <button onClick={kick} disabled={busy || blocks.length === 0}
-        style={{ border: 'none', borderRadius: 999, background: busy || blocks.length === 0 ? '#e9ddcb' : T.accent, color: '#fff', padding: '9px 18px', fontSize: 13, fontWeight: 800, cursor: busy || blocks.length === 0 ? 'default' : 'pointer' }}>
-        {busy ? 'synthesizing from your blocks…' : '✨ Synthesize'}
+      <button onClick={() => onRun(mode)} disabled={busy || blocks.length === 0}
+        style={{ border: 'none', borderRadius: 999, background: busy || blocks.length === 0 ? '#c9bda1' : T.accent, color: '#fff', padding: '9px 18px', fontSize: 13, fontWeight: 800, cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
+        {busy ? 'writing live…' : '✨ Synthesize'}
       </button>
-      {err ? <span style={{ fontSize: 12, color: '#a33d2e', fontWeight: 700, maxWidth: 320 }}>{err}</span> : null}
+    </div>
+  );
+}
+
+// The live panel — eva's streaming stage, honestly: each line is a REAL pipeline event.
+function LiveSynthesis({ live }) {
+  const stageLine = live.error ? `✗ ${live.error}`
+    : live.done ? '✓ saved to your notebook'
+    : live.stage === 'reading' ? `reading your ${live.statusMeta?.blocks ?? ''} blocks…`
+    : live.stage === 'planning' ? 'planning the sections…'
+    : live.stage === 'writing' ? `writing §${live.statusMeta?.index}/${live.statusMeta?.total} — ${live.statusMeta?.heading}`
+    : 'connecting…';
+  const doneHeadings = new Set((live.sections ?? []).map((sx) => sx.heading));
+  return (
+    <div style={{ ...T.card, borderRadius: 18, padding: '14px 16px', borderTop: '3px solid #c98f2d', background: 'linear-gradient(180deg,#fffdf9,#fff7ee)' }}>
+      <style>{`@keyframes nbSegIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}} @keyframes livePulse{50%{opacity:.45}}`}</style>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: live.error ? '#a33d2e' : live.done ? '#2f9e5f' : '#c98f2d', animation: live.done || live.error ? 'none' : 'livePulse 1.2s infinite' }} />
+        <span style={{ fontSize: 12.5, fontWeight: 800, color: live.error ? '#a33d2e' : '#8a5a3a' }}>{stageLine}</span>
+      </div>
+      {live.plan ? (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+          {live.plan.headings.map((h, i) => (
+            <span key={h} style={{ fontSize: 11, fontWeight: 800, borderRadius: 999, padding: '2px 10px',
+              background: doneHeadings.has(h) ? '#eaf7ee' : '#fff',
+              color: doneHeadings.has(h) ? '#2f7d4a' : '#b3a889',
+              border: '1px solid #eadfce' }}>
+              {doneHeadings.has(h) ? '✓ ' : `${i + 1}. `}{h}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {(live.sections ?? []).map((sec) => (
+        <div key={sec.heading} style={{ marginTop: 10, animation: 'nbSegIn .5s ease-out both' }}>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: '#2b211a' }}>{sec.heading}</div>
+          <Markdownish text={sec.markdown.replace(/^#+ .*$/m, '').trim()} />
+        </div>
+      ))}
+      {(live.rejected ?? []).map((r) => (
+        <div key={r.heading} style={{ marginTop: 8, fontSize: 12, color: '#a33d2e', fontWeight: 700 }}>✗ “{r.heading}” refused: {r.reason}</div>
+      ))}
+    </div>
+  );
+}
+
+// eva's follow-up box: ask anything — the answer arrives as a new grounded, cited section.
+function AskBox({ onAsk, disabled }) {
+  const [q, setQ] = useState('');
+  const submit = () => { const v = q.trim(); if (!v) return; onAsk(v); setQ(''); };
+  return (
+    <div style={{ ...T.card, padding: '10px 14px', display: 'flex', gap: 8, alignItems: 'center', borderStyle: 'dashed' }}>
+      <span style={{ fontSize: 15 }}>💬</span>
+      <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+        placeholder="Ask your notebook — answered only from your blocks, with citations…"
+        style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, color: '#2b211a', background: 'transparent' }} />
+      <button onClick={submit} disabled={disabled || !q.trim()}
+        style={{ border: 'none', borderRadius: 999, background: disabled || !q.trim() ? '#e9ddcb' : '#2b211a', color: '#fff', padding: '6px 14px', fontSize: 12, fontWeight: 800, cursor: disabled || !q.trim() ? 'default' : 'pointer' }}>Ask</button>
     </div>
   );
 }
