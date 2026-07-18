@@ -73,13 +73,14 @@ export async function getBlockVectors(userId, notebookId) {
   return new Map(rows.map((r) => [r._id, r.embedding]));
 }
 
-export async function updateNotebook(userId, notebookId, { title, intent, cover } = {}) {
+export async function updateNotebook(userId, notebookId, { title, intent, cover, pages } = {}) {
   const col = await _collection();
   if (!col || !userId) return null;
   const set = { updatedAt: now() };
   if (title !== undefined) set.title = String(title).slice(0, 200);
   if (intent !== undefined) set.intent = String(intent).slice(0, 500);
   if (cover !== undefined) set.cover = cover;
+  if (Array.isArray(pages)) set.pages = pages.map((x) => String(x).slice(0, 80)).slice(0, 20);
   const r = await col.updateOne({ _id: notebookId, kind: 'notebook', ownerId: userId }, { $set: set });
   return r.matchedCount > 0;
 }

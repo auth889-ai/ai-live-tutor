@@ -132,7 +132,7 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
 
   if (!data?.notebook) return <div style={{ padding: 60, textAlign: 'center', color: C.sub }}>Opening…</div>;
   const { notebook, blocks, backlinks = [] } = data;
-  const pages = [...new Set(blocks.map((b) => b.page ?? 'Notes'))];
+  const pages = [...new Set([...(notebook.pages ?? []), ...blocks.map((b) => b.page ?? 'Notes')])];
   if (activePage && !pages.includes(activePage)) pages.push(activePage);
   const sources = blocks.filter((b) => ['image', 'pdf', 'link', 'moment'].includes(b.type));
   const legacyIll = new Map(blocks.filter((b) => b.type === 'image' && b.trust === 'ai' && b.url && b.title).map((b) => [b.title.trim().toLowerCase(), b.url]));
@@ -205,7 +205,10 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
             <div style={{ fontSize: 10.5, fontWeight: 800, color: C.sub, letterSpacing: 0.6, marginBottom: 6 }}>PAGES</div>
             <SideItem label="All pages" on={activePage === null && view === 'write'} onClick={() => { setView('write'); setActivePage(null); }} />
             {pages.map((pg, i) => <SideItem key={pg} num={i + 1} label={pg} on={activePage === pg && view === 'write'} onClick={() => { setView('write'); setActivePage(pg); }} />)}
-            <NewPage onCreate={(name) => { setView('write'); setActivePage(name); }} />
+            <NewPage onCreate={async (name) => {
+              await fetch(`/api/notebooks/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pages: [...new Set([...pages, name])] }) });
+              setView('write'); setActivePage(name); load();
+            }} />
           </div>
           <div>
             <div style={{ fontSize: 10.5, fontWeight: 800, color: C.sub, letterSpacing: 0.6, marginBottom: 6 }}>SOURCES</div>
@@ -340,6 +343,20 @@ function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onNavigate
   const moveToPage = async (pg) => {
     await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: pg }) });
     onChanged();
+  };
+  const attachFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    const up = await fetch('/api/uploads', { method: 'POST', body: fd });
+    const upd = await up.json();
+    if (up.ok) {
+      await fetch(`/api/notebooks/${nb}/blocks/${b._id}/attach`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: file.type === 'application/pdf' ? 'pdf' : 'image', uploadId: upd.uploadId, fileName: file.name }) });
+      onChanged();
+    }
+    setAttaching(false);
   };
   const attachLink = async (url) => {
     setAttaching(false);
@@ -492,7 +509,7 @@ function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onNavigate
       ) : (
         <a key={att.id} href={att.url ?? undefined} target={att.url ? '_blank' : undefined} rel="noreferrer" onClick={(e) => e.stopPropagation()}
           style={{ display: 'inline-flex', gap: 5, fontSize: 12, color: C.extracted, fontWeight: 700, textDecoration: 'none', marginRight: 10 }}>
-          {att.kind === 'pdf' ? '📄' : '🔗'} {att.title ?? att.kind}
+          {att.kind === 'image' && att.url ? <img src={att.url} alt="" style={{ height: 40, borderRadius: 6, verticalAlign: 'middle' }} /> : <>{att.kind === 'pdf' ? '📄' : '🔗'} {att.title ?? att.kind}</>}
         </a>
       ))}
       {/* hover-only whisper row */}
@@ -516,10 +533,15 @@ function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onNavigate
         <button onClick={(e) => { e.stopPropagation(); remove(); }} style={ghost()}>✕</button>
       </div>
       {attaching ? (
-        <input autoFocus placeholder="paste a link — Enter attaches it to this block"
+        <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
+        <label style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: '#fff', color: C.sub, fontSize: 11.5, fontWeight: 800, padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          🖼 png / pdf<input type="file" accept=".pdf,image/png,image/jpeg,image/webp" onChange={attachFile} style={{ display: 'none' }} />
+        </label>
+        <input autoFocus placeholder="or paste a link — Enter attaches it to this block"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => { if (e.key === 'Enter') attachLink(e.currentTarget.value); if (e.key === 'Escape') setAttaching(false); }}
-          style={{ width: '100%', boxSizing: 'border-box', border: `1px dashed ${C.border}`, borderRadius: 8, padding: '6px 10px', fontSize: 12.5, marginTop: 4 }} />
+          style={{ flex: 1, boxSizing: 'border-box', border: `1px dashed ${C.border}`, borderRadius: 8, padding: '6px 10px', fontSize: 12.5 }} />
+        </div>
       ) : null}
     </div>
   );
