@@ -18,9 +18,11 @@ export const dynamic = 'force-dynamic';
 
 const MODES = {
   study_note: 'a tight STUDY NOTE',
+  detailed: 'a DETAILED DEEP-DIVE: thorough explanations, worked reasoning, and every example the sources contain',
   summary: 'a faithful SUMMARY (nothing added)',
   questions: 'SELF-TEST QUESTIONS with answers',
   ask: 'a direct ANSWER to the user\'s question',
+  continue: 'a CONTINUATION of the user\'s own draft — extend their thinking in their direction',
 };
 
 export async function GET(request, { params }) {
@@ -52,20 +54,25 @@ export async function GET(request, { params }) {
         send('status', { stage: 'reading', blocks: material.length });
 
         // ---- PLAN (eva's arc pass): sections with heading + focus, before any writing ----
+        const draftId = url.searchParams.get('blockId');
+        const draft = mode === 'continue' && draftId ? found.blocks.find((b) => b._id === draftId) : null;
         let plan;
-        if (mode === 'ask' && question) {
+        if (mode === 'continue') {
+          if (!draft?.content) throw new Error('continue needs one of your own blocks');
+          plan = { title: `Continuing: ${(draft.title || draft.content).slice(0, 80)}`, sections: [{ heading: 'Continuation', focus: `continue and deepen the user's draft, in their direction` }] };
+        } else if (mode === 'ask' && question) {
           plan = { title: question.slice(0, 120), sections: [{ heading: 'Answer', focus: `answer: ${question}` }] };
         } else {
           send('status', { stage: 'planning' });
           const planned = await runAgentChain({
             agent: 'notebook-arc-planner',
-            system: `${AIM}You plan ${MODES[mode]} from the user's source blocks. Return ONLY JSON {"title": string, "sections": [{"heading": string, "focus": string, "image_prompt": string}]} — 2 to 4 sections, each focus one sharp line, each image_prompt one vivid English scene description (warm hand-drawn watercolor study-illustration style) VISUALIZING that section's idea. ${GROUND}`,
+            system: `${AIM}You plan ${MODES[mode]} from the user's source blocks. Return ONLY JSON {"title": string, "sections": [{"heading": string, "focus": string, "image_prompt": string}]} — ${mode === 'detailed' ? '4 to 6' : '2 to 4'} sections, each focus one sharp line, each image_prompt one vivid English scene description (warm hand-drawn watercolor study-illustration style) VISUALIZING that section's idea. ${GROUND}`,
             user: `MY SOURCE BLOCKS:\n\n${numbered}`,
             maxTokens: 600,
             temperature: 0.3,
           });
           const p = planned?.json ?? planned;
-          plan = { title: String(p?.title ?? 'Study note').slice(0, 200), sections: (Array.isArray(p?.sections) ? p.sections : []).slice(0, 4).filter((x) => x?.heading) };
+          plan = { title: String(p?.title ?? 'Study note').slice(0, 200), sections: (Array.isArray(p?.sections) ? p.sections : []).slice(0, mode === 'detailed' ? 6 : 4).filter((x) => x?.heading) };
           plan.sections = plan.sections.map((x) => ({ ...x, image_prompt: String(x.image_prompt ?? '').slice(0, 500) }));
           if (plan.sections.length === 0) throw new Error('the planner produced no sections');
         }
@@ -78,9 +85,9 @@ export async function GET(request, { params }) {
           send('status', { stage: 'writing', index: i + 1, total: plan.sections.length, heading: sec.heading });
           const written = await runAgentChain({
             agent: 'notebook-section-writer',
-            system: `${AIM}You write ONE section of ${MODES[mode]}: "${sec.heading}" — focus: ${sec.focus}. ${question ? `The user's question: ${question}. ` : ''}Return ONLY JSON {"markdown": string, "cited": int[]}. ${GROUND}`,
+            system: `${AIM}You write ONE section of ${MODES[mode]}: "${sec.heading}" — focus: ${sec.focus}. ${question ? `The user's question: ${question}. ` : ''}${draft ? `THE USER'S OWN DRAFT (continue it, never rewrite it): """${String(draft.content).slice(0, 3000)}""". ` : ''}Return ONLY JSON {"markdown": string, "cited": int[]}. ${GROUND}`,
             user: `MY SOURCE BLOCKS:\n\n${numbered}`,
-            maxTokens: 900,
+            maxTokens: mode === 'detailed' ? 1500 : 900,
             temperature: 0.3,
           });
           const w = written?.json ?? written;
@@ -134,7 +141,7 @@ export async function GET(request, { params }) {
           content: `${markdown}\n\n— grounded in your blocks: ${allRefs.map((n) => `[${n}]`).join(' ')}`,
           source: 'generated',
           trust: 'ai',
-          origin: mode === 'ask' ? `answer · from ${material.length} blocks` : `synthesized from ${material.length} block${material.length === 1 ? '' : 's'}`,
+          origin: mode === 'ask' ? `answer · from ${material.length} blocks` : mode === 'continue' ? 'AI continuation of your note — your words untouched' : `synthesized from ${material.length} block${material.length === 1 ? '' : 's'}`,
         });
         send('done', { blockId: block?._id ?? null });
       } catch (e) {

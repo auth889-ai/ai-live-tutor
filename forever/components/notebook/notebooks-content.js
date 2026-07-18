@@ -251,7 +251,7 @@ function Workspace({ id, onBack, onNavigate }) {
             <div key={day}>
               <div style={{ ...T.cap, fontWeight: 800, margin: '6px 0 8px' }}>{day}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {dayBlocks.map((b) => <Block key={b._id} nb={id} b={b} onChanged={load} reveal={b._id === revealId} onNavigate={onNavigate} />)}
+                {dayBlocks.map((b) => <Block key={b._id} nb={id} b={b} onChanged={load} reveal={b._id === revealId} onNavigate={onNavigate} onContinue={(blockId) => runStream(`mode=continue&blockId=${blockId}`)} />)}
               </div>
             </div>
           ))}
@@ -371,7 +371,7 @@ function Flashback({ blocks }) {
   );
 }
 
-function Block({ nb, b, onChanged, reveal = false, onNavigate }) {
+function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue }) {
   const [icon, label] = TYPE_META[b.type] ?? ['•', b.type];
   const [audio, setAudio] = useState(b.audioUrl ?? null);
   const [voicing, setVoicing] = useState(false);
@@ -397,9 +397,15 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate }) {
         <span style={{ ...T.cap, fontWeight: 800 }}>{label.toUpperCase()}</span>
         <span title={`provenance: ${b.trust}`} style={{ fontSize: 10.5, fontWeight: 800, color: TRUST_COLOR[b.trust] ?? '#9b8465', background: `${TRUST_COLOR[b.trust] ?? '#9b8465'}14`, borderRadius: 999, padding: '2px 8px' }}>{b.trust}</span>
         {b.origin ? <span style={T.cap}>{b.origin}</span> : null}
+        {b.trust === 'user' && ['note', 'text'].includes(b.type) && (b.content ?? '').length > 40 && onContinue ? (
+          <button onClick={() => onContinue(b._id)} title="the AI continues YOUR draft — your words are never edited; the continuation arrives as its own ai-badged block"
+            style={{ marginLeft: 'auto', border: '1px solid #f0c39a', borderRadius: 999, background: '#fffdf9', color: '#8a5a3a', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+            ✍️ AI continue
+          </button>
+        ) : null}
         {!audio && ['note', 'text', 'voice'].includes(b.type) && (b.content ?? '').length > 60 ? (
-          <button onClick={narrate} disabled={voicing} title="read this block aloud (Qwen3-TTS)"
-            style={{ marginLeft: 'auto', border: '1px solid #f2e3d5', borderRadius: 999, background: '#fff', color: voicing ? '#c9bda1' : '#6b563d', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: voicing ? 'default' : 'pointer' }}>
+          <button onClick={narrate} disabled={voicing} title="read this block aloud"
+            style={{ marginLeft: b.trust === 'user' && ['note', 'text'].includes(b.type) && (b.content ?? '').length > 40 && onContinue ? 6 : 'auto', border: '1px solid #f2e3d5', borderRadius: 999, background: '#fff', color: voicing ? '#c9bda1' : '#6b563d', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: voicing ? 'default' : 'pointer' }}>
             {voicing ? 'voicing…' : '🔊 read to me'}
           </button>
         ) : null}
@@ -615,6 +621,7 @@ function SynthesizeButton({ blocks, busy, onRun }) {
       <select value={mode} onChange={(e) => setMode(e.target.value)} disabled={busy}
         style={{ border: '1px solid #f2e3d5', borderRadius: 10, background: '#fff', color: '#6b563d', padding: '7px 10px', fontSize: 12.5, fontWeight: 700 }}>
         <option value="study_note">study note</option>
+        <option value="detailed">detailed deep-dive</option>
         <option value="summary">summary</option>
         <option value="questions">self-test questions</option>
       </select>
