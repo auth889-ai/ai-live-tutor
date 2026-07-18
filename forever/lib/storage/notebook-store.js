@@ -141,6 +141,103 @@ export async function setGeneration(userId, notebookId, { jobId, courseId } = {}
   return r.matchedCount > 0;
 }
 
+// ============ KNOWLEDGE ENGINE (Obsidian pattern, three-engine blueprint P2) ============
+// [[Title]] in any block links notebooks. Links are stored as their own docs; backlinks are
+// the reverse query; the graph draws ONLY real links (blueprint law: no auto-AI edges).
+
+export const WIKI_LINK_PATTERN = /\[\[([^\]]+)\]\]/g;
+
+export function extractWikiLinks(text) {
+  const links = [];
+  for (const match of String(text ?? '').matchAll(WIKI_LINK_PATTERN)) {
+    const title = match[1]?.trim();
+    if (title) links.push(title);
+  }
+  return [...new Set(links)];
+}
+
+// Save-time rebuild (blueprint): drop the block's old links, resolve each [[title]] to the
+// user's notebook of that name (case-insensitive) — creating it when missing, the Obsidian
+// behavior — and insert the current set.
+export async function rebuildBlockLinks({ userId, notebookId, blockId, text }) {
+  const col = await _collection();
+  if (!col || !userId) return [];
+  await col.deleteMany({ kind: 'nblink', ownerId: userId, sourceBlockId: blockId });
+  const titles = extractWikiLinks(text);
+  if (titles.length === 0) return [];
+  const mine = await col.find({ kind: 'notebook', ownerId: userId }).limit(200).toArray();
+  const byTitle = new Map(mine.map((n) => [String(n.title).trim().toLowerCase(), n]));
+  const created = [];
+  for (const title of titles) {
+    let target = byTitle.get(title.toLowerCase());
+    if (!target) {
+      target = await createNotebook({ userId, title });
+      if (!target) continue;
+      byTitle.set(title.toLowerCase(), target);
+    }
+    if (target._id === notebookId) continue; // self-links draw nothing
+    await col.insertOne({
+      _id: `lnk_${randomUUID()}`,
+      kind: 'nblink',
+      ownerId: userId,
+      sourceNotebookId: notebookId,
+      targetNotebookId: target._id,
+      sourceBlockId: blockId,
+      displayText: title.slice(0, 200),
+      createdAt: now(),
+    });
+    created.push(target._id);
+  }
+  return created;
+}
+
+export async function removeBlockLinks(userId, blockId) {
+  const col = await _collection();
+  if (!col || !userId) return;
+  await col.deleteMany({ kind: 'nblink', ownerId: userId, sourceBlockId: blockId });
+}
+
+// Backlinks = incoming connections, with the source block's text as the preview and the
+// blockId so the UI can scroll to the referencing paragraph (blueprint requirement).
+export async function listBacklinks(userId, notebookId) {
+  const col = await _collection();
+  if (!col || !userId) return [];
+  const links = await col.find({ kind: 'nblink', ownerId: userId, targetNotebookId: notebookId }).limit(100).toArray();
+  const out = [];
+  for (const l of links) {
+    const src = await col.findOne({ _id: l.sourceNotebookId, kind: 'notebook', ownerId: userId });
+    const blk = await col.findOne({ _id: l.sourceBlockId, kind: 'block', ownerId: userId });
+    if (!src) continue;
+    out.push({
+      notebookId: src._id,
+      title: src.title,
+      blockId: l.sourceBlockId,
+      preview: String(blk?.content ?? blk?.transcript ?? '').slice(0, 160),
+    });
+  }
+  return out;
+}
+
+// The knowledge graph: one node per notebook, one edge per real link pair.
+export async function knowledgeGraph(userId) {
+  const col = await _collection();
+  if (!col || !userId) return { nodes: [], edges: [] };
+  const notebooks = await col.find({ kind: 'notebook', ownerId: userId }).limit(200).toArray();
+  const links = await col.find({ kind: 'nblink', ownerId: userId }).limit(1000).toArray();
+  const seen = new Set();
+  const edges = [];
+  for (const l of links) {
+    const key = `${l.sourceNotebookId}->${l.targetNotebookId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    edges.push({ id: key, source: l.sourceNotebookId, target: l.targetNotebookId, label: 'links to' });
+  }
+  return {
+    nodes: notebooks.map((n) => ({ id: n._id, label: n.title, blockCount: n.blockCount ?? 0 })),
+    edges,
+  };
+}
+
 // Assemble the job input from blocks (text-bearing blocks concatenated; the job contract's
 // 60-char minimum is the caller's concern to surface as a friendly error).
 export function assembleNotebookText(blocks) {

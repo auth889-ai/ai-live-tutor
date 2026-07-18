@@ -6,7 +6,9 @@
 // the same pipeline the studio uses. Library grid ↔ workspace, one component file.
 // Design contract: notes/research/notebook-sankofa-plan-18jul.md (from the full eva/ dissection).
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ReactFlow, Background, Controls } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 
 const T = {
   card: { border: '1px solid #f2e3d5', borderRadius: 16, background: '#fff', boxShadow: '0 1px 4px rgba(58,46,34,0.05)' },
@@ -24,12 +26,24 @@ export function NotebooksContent() {
   const [list, setList] = useState(null);
   const [openId, setOpenId] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [showGraph, setShowGraph] = useState(false);
   const load = () => fetch('/api/notebooks').then((r) => r.json()).then((d) => setList(d.notebooks ?? [])).catch(() => setList([]));
   useEffect(() => { load(); }, []);
 
   if (list === null) return <div style={{ ...T.card, padding: 40, textAlign: 'center', color: '#9b8465' }}>Opening your notebooks…</div>;
+  const navigateByTitle = (title) => {
+    const hit = (list ?? []).find((n) => String(n.title).trim().toLowerCase() === String(title).trim().toLowerCase());
+    if (hit) setOpenId(hit.id);
+    else load().then(() => {
+      // auto-created by a link rebuild moments ago — refetch then open
+      fetch('/api/notebooks').then((r) => r.json()).then((d) => {
+        const again = (d.notebooks ?? []).find((n) => String(n.title).trim().toLowerCase() === String(title).trim().toLowerCase());
+        if (again) { setList(d.notebooks); setOpenId(again.id); }
+      });
+    });
+  };
   if (creating) return <CreateWizard onDone={async (id) => { setCreating(false); await load(); if (id) setOpenId(id); }} />;
-  if (openId) return <Workspace id={openId} onBack={() => { setOpenId(null); load(); }} />;
+  if (openId) return <Workspace id={openId} onBack={() => { setOpenId(null); load(); }} onNavigate={(idOrTitle) => { if (String(idOrTitle).startsWith('nbk_')) setOpenId(idOrTitle); else navigateByTitle(idOrTitle); }} />;
 
   return (
     <div style={{ maxWidth: 1080 }}>
@@ -41,9 +55,13 @@ export function NotebooksContent() {
             <h1 style={{ fontSize: 26, color: '#fff', fontFamily: 'var(--font-newsreader), Georgia, serif', fontWeight: 600, margin: 0, textShadow: '0 1px 6px rgba(0,0,0,0.35)' }}>Notebooks</h1>
             <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.92)', margin: '3px 0 0' }}>Collect anything — and your notebook writes back: grounded notes, summaries, self-tests.</p>
           </div>
-          <button onClick={() => setCreating(true)} style={{ border: 'none', borderRadius: 999, background: T.accent, color: '#fff', padding: '9px 20px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,96,76,0.45)' }}>+ New notebook</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setShowGraph((v) => !v)} style={{ border: '1.5px solid rgba(255,255,255,0.75)', borderRadius: 999, background: showGraph ? '#fff' : 'rgba(255,255,255,0.15)', color: showGraph ? '#8a3a12' : '#fff', padding: '9px 16px', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>🕸 Graph</button>
+            <button onClick={() => setCreating(true)} style={{ border: 'none', borderRadius: 999, background: T.accent, color: '#fff', padding: '9px 20px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,96,76,0.45)' }}>+ New notebook</button>
+          </div>
         </div>
       </div>
+      {showGraph ? <KnowledgeGraphPanel onOpen={(id) => { setShowGraph(false); setOpenId(id); }} /> : null}
       {list.length === 0 ? (
         <div style={{ ...T.card, marginTop: 18, padding: '46px 20px', textAlign: 'center', color: '#9b8465' }}>
           <div style={{ fontSize: 34, marginBottom: 8 }}>📓</div>
@@ -160,7 +178,7 @@ function CreateWizard({ onDone }) {
   );
 }
 
-function Workspace({ id, onBack }) {
+function Workspace({ id, onBack, onNavigate }) {
   const [data, setData] = useState(null);
   const [revealId, setRevealId] = useState(null);
   const load = () => fetch(`/api/notebooks/${id}`).then((r) => r.json()).then(setData).catch(() => {});
@@ -177,13 +195,25 @@ function Workspace({ id, onBack }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(260px, 340px)', gap: 14, alignItems: 'start', marginTop: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <Flashback blocks={blocks} />
+          {(data.backlinks ?? []).length ? (
+            <div style={{ ...T.card, padding: '10px 14px', borderLeft: '3px solid #4477aa' }}>
+              <div style={{ ...T.cap, fontWeight: 800, marginBottom: 6 }}>🔗 LINKED FROM</div>
+              {(data.backlinks ?? []).map((bl, i) => (
+                <button key={i} onClick={() => onNavigate?.(bl.notebookId)}
+                  style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px 0' }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 800, color: '#4477aa' }}>{bl.title}</span>
+                  {bl.preview ? <span style={{ fontSize: 12, color: '#9b8465' }}> — “{bl.preview.slice(0, 90)}{bl.preview.length > 90 ? '…' : ''}”</span> : null}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {blocks.length === 0 ? (
             <div style={{ ...T.card, padding: '30px 20px', textAlign: 'center', color: '#9b8465', fontSize: 13 }}>Empty page — add your first block →</div>
           ) : groupByDay(blocks).map(([day, dayBlocks]) => (
             <div key={day}>
               <div style={{ ...T.cap, fontWeight: 800, margin: '6px 0 8px' }}>{day}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {dayBlocks.map((b) => <Block key={b._id} nb={id} b={b} onChanged={load} reveal={b._id === revealId} />)}
+                {dayBlocks.map((b) => <Block key={b._id} nb={id} b={b} onChanged={load} reveal={b._id === revealId} onNavigate={onNavigate} />)}
               </div>
             </div>
           ))}
@@ -222,7 +252,28 @@ function inline(text, keyBase) {
   return parts;
 }
 
-function Markdownish({ text, skipTitle = null, animate = false }) {
+// [[Title]] -> clickable wiki chip (knowledge engine): click opens that notebook.
+function WikiText({ text, onNavigate }) {
+  const parts = [];
+  let rest = String(text ?? '');
+  let k = 0;
+  while (rest.length) {
+    const m = rest.match(/\[\[([^\]]+)\]\]/);
+    if (!m) { parts.push(rest); break; }
+    if (m.index > 0) parts.push(rest.slice(0, m.index));
+    const title = m[1].trim();
+    parts.push(
+      <button key={k += 1} onClick={() => onNavigate?.(title)}
+        style={{ border: 'none', background: '#eef3f9', color: '#4477aa', borderRadius: 7, padding: '0 6px', fontSize: 'inherit', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+        {title}
+      </button>,
+    );
+    rest = rest.slice(m.index + m[0].length);
+  }
+  return <>{parts}</>;
+}
+
+function Markdownish({ text, skipTitle = null, animate = false, onNavigate = null }) {
   const lines = String(text ?? '').split('\n');
   const out = [];
   let list = null;
@@ -281,7 +332,7 @@ function Flashback({ blocks }) {
   );
 }
 
-function Block({ nb, b, onChanged, reveal = false }) {
+function Block({ nb, b, onChanged, reveal = false, onNavigate }) {
   const [icon, label] = TYPE_META[b.type] ?? ['•', b.type];
   const remove = async () => {
     await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'DELETE' });
@@ -308,12 +359,44 @@ function Block({ nb, b, onChanged, reveal = false }) {
           <>
             {reveal ? <style>{`@keyframes nbSegIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}`}</style> : null}
             {looksLikeMarkdown(deduped)
-              ? <Markdownish text={deduped} skipTitle={cleanTitle} animate={reveal} />
-              : <div style={{ fontSize: 13.5, color: '#3a3327', marginTop: 6, lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>{deduped}</div>}
+              ? <Markdownish text={deduped} skipTitle={cleanTitle} animate={reveal} onNavigate={onNavigate} />
+              : <div style={{ fontSize: 13.5, color: '#3a3327', marginTop: 6, lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}><WikiText text={deduped} onNavigate={onNavigate} /></div>}
           </>
         );
       })()}
       {b.url ? <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#4477aa', fontWeight: 700 }}>{b.url}</a> : null}
+    </div>
+  );
+}
+
+// The knowledge graph (blueprint 1.5): one node per notebook, one edge per real [[link]].
+// Circle layout — deterministic, no physics; click a node to open its notebook.
+function KnowledgeGraphPanel({ onOpen }) {
+  const [graph, setGraph] = useState(null);
+  useEffect(() => { fetch('/api/notebooks/graph').then((r) => r.json()).then(setGraph).catch(() => setGraph({ nodes: [], edges: [] })); }, []);
+  const flow = useMemo(() => {
+    const n = graph?.nodes ?? [];
+    const R = Math.max(160, n.length * 34);
+    return {
+      nodes: n.map((node, i) => ({
+        id: node.id,
+        position: { x: Math.round(R * Math.cos((2 * Math.PI * i) / Math.max(1, n.length))), y: Math.round(R * Math.sin((2 * Math.PI * i) / Math.max(1, n.length))) },
+        data: { label: `${node.label} (${node.blockCount})` },
+        style: { border: '2px solid #e8604c', borderRadius: 12, background: '#fff', fontSize: 12, fontWeight: 700, color: '#2b211a', padding: 6 },
+      })),
+      edges: (graph?.edges ?? []).map((e) => ({ ...e, animated: true, style: { stroke: '#4477aa' }, labelStyle: { fontSize: 9, fill: '#9b8465' } })),
+    };
+  }, [graph]);
+  return (
+    <div style={{ ...T.card, borderRadius: 20, marginTop: 14, height: 380, overflow: 'hidden' }}>
+      {graph === null ? <div style={{ padding: 30, textAlign: 'center', color: '#9b8465' }}>drawing your knowledge graph…</div> : (
+        (graph.nodes ?? []).length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: '#9b8465' }}>write [[Notebook Title]] inside any note — real links draw this graph</div> : (
+          <ReactFlow nodes={flow.nodes} edges={flow.edges} fitView onNodeClick={(_, node) => onOpen?.(node.id)} proOptions={{ hideAttribution: true }}>
+            <Background color="#f2e3d5" />
+            <Controls showInteractive={false} />
+          </ReactFlow>
+        )
+      )}
     </div>
   );
 }

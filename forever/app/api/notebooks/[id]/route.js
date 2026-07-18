@@ -1,7 +1,7 @@
 // /api/notebooks/[id] — one notebook with its typed blocks (owner-checked), metadata edits,
 // delete (cascades to blocks in the store).
 
-import { getNotebook, updateNotebook, deleteNotebook } from '../../../../lib/storage/notebook-store.js';
+import { getNotebook, updateNotebook, deleteNotebook, listBacklinks } from '../../../../lib/storage/notebook-store.js';
 import { sessionFromRequest } from '../../../../lib/auth/session.js';
 
 export async function GET(request, { params }) {
@@ -10,7 +10,7 @@ export async function GET(request, { params }) {
   const { id } = await params;
   const found = await getNotebook(session.userId, id);
   if (!found) return Response.json({ error: 'not found' }, { status: 404 });
-  return Response.json(found);
+  return Response.json({ ...found, backlinks: await listBacklinks(session.userId, id) });
 }
 
 export async function PATCH(request, { params }) {

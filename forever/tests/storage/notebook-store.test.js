@@ -97,3 +97,32 @@ test('assembleNotebookText: text-bearing blocks only, voice prefers transcript, 
   assert.match(text, /## Bridges\npage text/);
   assert.doesNotMatch(text, /up1/);
 });
+
+test('wiki links: extract, rebuild resolves case-insensitively and auto-creates targets, backlinks + graph follow', async (t) => {
+  const { extractWikiLinks, rebuildBlockLinks, listBacklinks, knowledgeGraph } = await import('../../lib/storage/notebook-store.js');
+  assert.deepEqual(extractWikiLinks('Learn [[Linear Algebra]] before [[Machine Learning]] and [[Linear Algebra]].'),
+    ['Linear Algebra', 'Machine Learning']);
+
+  const fake = fakeCollection();
+  _setNotebookCollectionForTests(async () => fake);
+  t.after(() => _setNotebookCollectionForTests(null));
+
+  const ml = await createNotebook({ userId: 'u1', title: 'Machine Learning' });
+  const la = await createNotebook({ userId: 'u1', title: 'linear algebra' });
+  const b = await addBlock({ userId: 'u1', notebookId: ml._id, type: 'note', content: 'Start with [[Linear Algebra]] then [[Gradient Descent]].' });
+  await rebuildBlockLinks({ userId: 'u1', notebookId: ml._id, blockId: b._id, text: b.content });
+
+  // case-insensitive resolution hit the existing notebook; the unknown title was auto-created
+  const back = await listBacklinks('u1', la._id);
+  assert.equal(back.length, 1);
+  assert.equal(back[0].title, 'Machine Learning');
+  assert.match(back[0].preview, /Linear Algebra/);
+
+  const graph = await knowledgeGraph('u1');
+  assert.equal(graph.nodes.length, 3); // ml, la, auto-created Gradient Descent
+  assert.equal(graph.edges.length, 2);
+
+  // rebuild with edited text drops stale links
+  await rebuildBlockLinks({ userId: 'u1', notebookId: ml._id, blockId: b._id, text: 'no links anymore' });
+  assert.equal((await listBacklinks('u1', la._id)).length, 0);
+});
