@@ -61,7 +61,7 @@ export function Doc({ text, onNavigate, skipTitle = null }) {
       const t = ln.replace(/^#{1,3} /, '');
       if (skipTitle && t.trim().toLowerCase() === skipTitle.trim().toLowerCase()) continue;
       flush();
-      out.push(<div key={i} style={{ clear: 'both', fontSize: 19, fontWeight: 650, color: C.ink, margin: '18px 0 6px' }}><Inline text={t} onNavigate={onNavigate} /></div>);
+      out.push(<div key={i} style={{ clear: 'both', fontSize: 20, fontWeight: 700, color: C.ink, margin: '22px 0 8px', letterSpacing: '-0.01em' }}><Inline text={t} onNavigate={onNavigate} /></div>);
     } else if (/^- /.test(ln)) {
       (list ??= []).push(<li key={i} style={{ margin: '3px 0', fontSize: 15.5, lineHeight: 1.65 }}><Inline text={ln.slice(2)} onNavigate={onNavigate} /></li>);
     } else if (ln.startsWith('— grounded in your blocks:')) {
@@ -73,7 +73,7 @@ export function Doc({ text, onNavigate, skipTitle = null }) {
       </div>);
     } else if (ln.trim()) {
       flush();
-      out.push(<p key={i} style={{ margin: '0 0 10px', fontSize: 15.5, lineHeight: 1.7, color: C.ink, whiteSpace: 'pre-wrap' }}><Inline text={ln} onNavigate={onNavigate} /></p>);
+      out.push(<p key={i} style={{ margin: '0 0 12px', fontSize: 16, lineHeight: 1.7, color: C.ink, whiteSpace: 'pre-wrap', maxWidth: '68ch' }}><Inline text={ln} onNavigate={onNavigate} /></p>);
     }
   }
   flush();
@@ -127,6 +127,7 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
   const pages = [...new Set(blocks.map((b) => b.page ?? 'Notes'))];
   if (activePage && !pages.includes(activePage)) pages.push(activePage);
   const sources = blocks.filter((b) => ['image', 'pdf', 'link', 'moment'].includes(b.type));
+  const legacyIll = new Map(blocks.filter((b) => b.type === 'image' && b.trust === 'ai' && b.url && b.title).map((b) => [b.title.trim().toLowerCase(), b.url]));
   const docBlocks = blocks.filter((b) => (activePage ? (b.page ?? 'Notes') === activePage : true) && !(b.type === 'image' && b.trust === 'ai'));
   const sel = blocks.find((b) => b._id === selected) ?? null;
 
@@ -174,9 +175,10 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
           <div>
             <div style={{ fontSize: 10.5, fontWeight: 800, color: C.sub, letterSpacing: 0.6, marginBottom: 6 }}>SOURCES</div>
             {sources.length === 0 ? <div style={{ fontSize: 12, color: C.sub }}>none yet</div>
-              : sources.slice(0, 12).map((b) => (
+              : sources.slice(0, 14).map((b) => (
                 <SideItem key={b._id} label={(b.title ?? b.origin ?? b.type).slice(0, 26)} on={selected === b._id}
-                  icon={{ image: '🖼', pdf: 'PDF', link: '🔗', moment: '▶' }[b.type]}
+                  thumb={b.type === 'image' && b.url ? b.url : null}
+                  icon={b.type === 'image' && b.url ? null : { image: '🖼', pdf: 'PDF', link: '🔗', moment: '▶' }[b.type]}
                   iconBg={{ image: '#F3EAFB', pdf: '#FBE9E4', link: '#E9F1FB', moment: '#FDEFE7' }[b.type]}
                   onClick={() => { setSelected(b._id); }} />
               ))}
@@ -202,7 +204,7 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
               <div style={{ color: C.sub, fontSize: 14, padding: '30px 0' }}>An empty page. Write below — or bring in a link, file, or voice note with ＋.</div>
             ) : (
               docBlocks.map((b) => (
-                <DocBlock key={b._id} nb={id} b={b} selected={selected === b._id}
+                <DocBlock key={b._id} nb={id} b={b} selected={selected === b._id} legacyIll={legacyIll}
                   onSelect={() => setSelected(selected === b._id ? null : b._id)}
                   onChanged={load} onNavigate={onNavigate} />
               ))
@@ -223,10 +225,11 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
   );
 }
 
-function SideItem({ label, on, onClick, num = null, icon = null, iconBg = null }) {
+function SideItem({ label, on, onClick, num = null, icon = null, iconBg = null, thumb = null }) {
   return (
     <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', border: 'none', borderRadius: 8, background: on ? '#F9E9E4' : 'transparent', color: on ? C.ink : C.sub, padding: '6px 9px', fontSize: 12.5, fontWeight: on ? 800 : 600, cursor: 'pointer' }}>
       {num != null ? <span style={{ width: 18, height: 18, borderRadius: 6, background: on ? C.accent : '#EFE7DB', color: on ? '#fff' : C.sub, fontSize: 10.5, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{num}</span> : null}
+      {thumb ? <img src={thumb} alt="" style={{ width: 26, height: 20, objectFit: 'cover', borderRadius: 5, flexShrink: 0 }} /> : null}
       {icon ? <span style={{ width: 20, height: 20, borderRadius: 6, background: iconBg ?? '#EFE7DB', fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</span> : null}
       <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
     </button>
@@ -260,7 +263,7 @@ function NewPage({ onCreate }) {
 }
 
 // ---------- document blocks: quiet by default, actions on hover ----------
-function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate }) {
+function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate, legacyIll = new Map() }) {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -320,7 +323,12 @@ function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate }) {
 
   return (
     <div className={`nbk-blk${selected ? ' sel' : ''}`} onClick={onSelect} style={{ margin: '4px -10px', padding: '8px 10px', cursor: 'pointer' }}>
-      {b.title ? <div style={{ fontSize: 15.5, fontWeight: 700, color: C.ink, marginBottom: 2 }}><Inline text={b.title} onNavigate={onNavigate} /></div> : null}
+      {b.title ? (
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '14px 0 4px' }}>
+          <span style={{ fontSize: b.trust === 'ai' ? 22 : 16.5, fontWeight: 700, color: C.ink, letterSpacing: '-0.01em' }}><Inline text={(b.title ?? '').replace(/^✨\s*/, '')} onNavigate={onNavigate} /></span>
+          {b.trust === 'ai' ? <span style={{ fontSize: 10, fontWeight: 800, color: C.ai, background: '#FBF3E4', borderRadius: 999, padding: '1px 8px', whiteSpace: 'nowrap' }}>AI · grounded</span> : null}
+        </div>
+      ) : null}
       {editing ? (
         <div onClick={(e) => e.stopPropagation()}>
           <textarea value={draftText} onChange={(e) => setDraftText(e.target.value)} spellCheck={false}
@@ -332,7 +340,18 @@ function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate }) {
           </div>
         </div>
       ) : (
-        <Doc text={b.type === 'voice' ? (b.transcript || b.content) : b.content} onNavigate={onNavigate} skipTitle={(b.title ?? '').replace(/^✨\s*/, '')} />
+        <Doc text={(() => {
+          let t = b.type === 'voice' ? (b.transcript || b.content) : (b.content ?? '');
+          // weave legacy illustrations under their matching section headings
+          if (b.trust === 'ai' && legacyIll.size && !/!\[/.test(t)) {
+            t = t.split('\n').map((ln) => {
+              const m = ln.match(/^#{1,3} (.+)$/);
+              const u = m ? legacyIll.get(m[1].trim().toLowerCase()) : null;
+              return u ? `${ln}\n![${m[1].trim()}](${u})` : ln;
+            }).join('\n');
+          }
+          return t;
+        })()} onNavigate={onNavigate} skipTitle={(b.title ?? '').replace(/^✨\s*/, '')} />
       )}
       {(b.attachments ?? []).map((att) => att.kind === 'image' && att.url ? (
         <img key={att.id} src={att.url} alt={att.title ?? ''} style={{ width: '52%', minWidth: 220, borderRadius: 10, display: 'block', margin: '6px 0' }} />
