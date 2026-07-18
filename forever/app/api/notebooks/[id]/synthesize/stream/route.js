@@ -55,10 +55,12 @@ export async function GET(request, { params }) {
   const question = String(url.searchParams.get('question') ?? '').slice(0, 500);
 
   const startedAt = generating.get(id);
-  if (startedAt && Date.now() - startedAt < 10 * 60 * 1000) {
+  if (startedAt && Date.now() - startedAt < 3 * 60 * 1000) {
     return Response.json({ error: 'this notebook is already generating — wait for it to finish' }, { status: 409 });
   }
   generating.set(id, Date.now());
+  // closing the tab mid-run must free the notebook — a stuck lock read as "no output"
+  request.signal?.addEventListener?.('abort', () => generating.delete(id));
 
   const found = await getNotebook(session.userId, id);
   if (!found) { generating.delete(id); return Response.json({ error: 'not found' }, { status: 404 }); }

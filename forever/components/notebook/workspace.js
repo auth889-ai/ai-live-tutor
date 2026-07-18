@@ -114,7 +114,7 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
       if (d.draft) { setDraftState(d.draft); setLive(null); } else { setLive(null); load(); }
     });
     es.addEventListener('error', (e) => {
-      try { setLive((c) => ({ ...c, error: JSON.parse(e.data).message })); } catch { setLive((c) => ({ ...c, error: 'stream lost' })); }
+      try { setLive((c) => ({ ...c, error: JSON.parse(e.data).message })); } catch { setLive((c) => ({ ...c, error: 'generation could not start — a previous run may still be finishing; wait a few seconds and press Synthesize again' })); }
       es.close();
     });
   };
