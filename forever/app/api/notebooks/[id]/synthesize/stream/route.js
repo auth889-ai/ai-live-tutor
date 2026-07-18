@@ -115,6 +115,10 @@ export async function GET(request, { params }) {
   // Sankofa's beat law (eva narrative_planner.py): a huge single block becomes numbered
   // PARTS cut at line boundaries, so the planner plans across the WHOLE lecture and each
   // section quotes its own beat — the note grows with the material.
+  // caption timestamps ("0:42" lines) interleave every phrase in the collapsed corpus,
+  // making verbatim evidence impossible — they are noise, not content
+  const stripStamps = (t) => String(t ?? '').split('\n').filter((ln) => !/^\d{1,2}:\d{2}(:\d{2})?$/.test(ln.trim())).join('\n');
+  material = material.map((b) => ({ ...b, content: b.content ? stripStamps(b.content) : b.content, transcript: b.transcript ? stripStamps(b.transcript) : b.transcript }));
   if (material.length <= 2) {
     const exploded = [];
     for (const b of material) {
