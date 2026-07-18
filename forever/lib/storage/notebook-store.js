@@ -122,6 +122,29 @@ export async function updateBlock(userId, notebookId, blockId, { content, seq, t
   return r.matchedCount > 0;
 }
 
+// ATTACHMENTS on a block (user order: a note carries its own link/png/pdf): capped list of
+// {kind: link|image|pdf, url, title, content} — content holds the extracted text so the
+// attachment GROUNDS synthesis, not just decorates the note.
+export async function addAttachment(userId, notebookId, blockId, { kind, url = null, title = null, content = '' }) {
+  const col = await _collection();
+  if (!col || !userId) return null;
+  if (!['link', 'image', 'pdf'].includes(kind)) throw new Error(`unknown attachment kind "${kind}"`);
+  const block = await col.findOne({ _id: blockId, kind: 'block', ownerId: userId, notebookId });
+  if (!block) return null;
+  if ((block.attachments ?? []).length >= 5) throw new Error('a block holds at most 5 attachments');
+  const att = {
+    id: `att_${randomUUID()}`,
+    kind,
+    url: url ? String(url).slice(0, 500) : null,
+    title: title ? String(title).slice(0, 200) : null,
+    content: String(content ?? '').slice(0, 8000),
+    createdAt: now(),
+  };
+  await col.updateOne({ _id: blockId }, { $push: { attachments: att }, $set: { updatedAt: now() } });
+  await col.updateOne({ _id: notebookId, kind: 'notebook', ownerId: userId }, { $set: { updatedAt: now() } });
+  return att;
+}
+
 // Narration attachment: the block keeps its spoken version (Sankofa's TTS-per-segment,
 // notebook-sized). URL only — bytes live under public/audio like every lesson clip.
 export async function setBlockAudio(userId, notebookId, blockId, audioUrl, durationMs) {

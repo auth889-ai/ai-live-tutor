@@ -453,6 +453,39 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue, onExp
       setEditBusy(false);
     }
   };
+  const [attaching, setAttaching] = useState(false);
+  const [attLink, setAttLink] = useState('');
+  const [attBusy, setAttBusy] = useState(false);
+  const attFileRef = useRef(null);
+  const attKind = useRef('pdf');
+  const attachLink = async () => {
+    const v = attLink.trim();
+    if (!v) return;
+    setAttBusy(true);
+    try {
+      const res = await fetch(`/api/notebooks/${nb}/blocks/${b._id}/attach`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'link', url: v }) });
+      if (res.ok) { setAttLink(''); setAttaching(false); onChanged(); }
+    } finally {
+      setAttBusy(false);
+    }
+  };
+  const attachFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setAttBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const up = await fetch('/api/uploads', { method: 'POST', body: fd });
+      const upd = await up.json();
+      if (!up.ok) throw new Error(upd.error);
+      const res = await fetch(`/api/notebooks/${nb}/blocks/${b._id}/attach`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: attKind.current, uploadId: upd.uploadId, fileName: file.name, mediaType: file.type }) });
+      if (res.ok) { setAttaching(false); onChanged(); }
+    } catch { /* surfaced by reload absence */ } finally {
+      setAttBusy(false);
+    }
+  };
   const [teach, setTeach] = useState(false);
   const [teachText, setTeachText] = useState('');
   const [teachBusy, setTeachBusy] = useState(false);
@@ -503,9 +536,15 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue, onExp
         <span style={{ ...T.cap, fontWeight: 800 }}>{label.toUpperCase()}</span>
         <span title={`provenance: ${b.trust}`} style={{ fontSize: 10.5, fontWeight: 800, color: TRUST_COLOR[b.trust] ?? '#9b8465', background: `${TRUST_COLOR[b.trust] ?? '#9b8465'}14`, borderRadius: 999, padding: '2px 8px' }}>{b.trust}</span>
         {b.origin ? <span style={T.cap}>{b.origin}</span> : null}
+        {['note', 'text', 'moment'].includes(b.type) && b.trust !== 'ai' ? (
+          <button onClick={() => setAttaching((v) => !v)} title="attach a link, PNG or PDF to THIS note — extracted text grounds the AI"
+            style={{ marginLeft: 'auto', border: '1px solid #eadfce', borderRadius: 999, background: attaching ? '#f6ede1' : '#fff', color: '#6b563d', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+            📎 {(b.attachments ?? []).length || ''}
+          </button>
+        ) : null}
         {['note', 'text', 'moment'].includes(b.type) ? (
           <button onClick={editing ? () => setEditing(false) : startEdit} title="edit this block"
-            style={{ marginLeft: 'auto', border: '1px solid #eadfce', borderRadius: 999, background: editing ? '#f6ede1' : '#fff', color: '#6b563d', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+            style={{ marginLeft: 6, border: '1px solid #eadfce', borderRadius: 999, background: editing ? '#f6ede1' : '#fff', color: '#6b563d', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
             {editing ? '✕ cancel' : '✏️ edit'}
           </button>
         ) : null}
@@ -570,6 +609,29 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue, onExp
       {b.type === 'moment' && b.url ? (
         <a href={b.url} style={{ display: 'inline-block', marginTop: 8, border: 'none', borderRadius: 999, background: T.accent, color: '#fff', padding: '5px 14px', fontSize: 12, fontWeight: 800, textDecoration: 'none' }}>▶ replay this moment</a>
       ) : b.type === 'image' && b.url ? <img src={b.url} alt={b.title ?? ''} style={{ width: '100%', borderRadius: 12, marginTop: 8 }} /> : b.url ? <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#4477aa', fontWeight: 700 }}>{b.url}</a> : null}
+      {(b.attachments ?? []).length ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+          {(b.attachments ?? []).map((att) => att.kind === 'image' && att.url ? (
+            <img key={att.id} src={att.url} alt={att.title ?? ''} style={{ width: '100%', borderRadius: 10 }} />
+          ) : (
+            <a key={att.id} href={att.url ?? undefined} target={att.url ? '_blank' : undefined} rel="noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#4477aa', fontWeight: 700, textDecoration: 'none', border: '1px solid #e3ecf5', borderRadius: 999, padding: '3px 10px', alignSelf: 'flex-start' }}>
+              {att.kind === 'pdf' ? '📄' : '🔗'} {att.title ?? att.kind}{att.content ? ' · text extracted' : ''}
+            </a>
+          ))}
+        </div>
+      ) : null}
+      {attaching ? (
+        <div style={{ marginTop: 8, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', borderTop: '1px dashed #e8dcc8', paddingTop: 8 }}>
+          <input value={attLink} onChange={(e) => setAttLink(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') attachLink(); }}
+            placeholder="paste a link…" style={{ flex: '1 1 160px', border: '1px solid #eadfce', borderRadius: 999, padding: '5px 12px', fontSize: 12 }} />
+          <button onClick={attachLink} disabled={attBusy || !attLink.trim()} style={{ border: 'none', borderRadius: 999, background: attBusy ? '#c9bda1' : '#4477aa', color: '#fff', padding: '5px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>🔗 attach</button>
+          <button onClick={() => { attKind.current = 'image'; attFileRef.current?.click(); }} disabled={attBusy} style={{ border: '1px solid #eadfce', borderRadius: 999, background: '#fff', color: '#6b563d', padding: '5px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>🖼 PNG</button>
+          <button onClick={() => { attKind.current = 'pdf'; attFileRef.current?.click(); }} disabled={attBusy} style={{ border: '1px solid #eadfce', borderRadius: 999, background: '#fff', color: '#6b563d', padding: '5px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>📄 PDF</button>
+          <input ref={attFileRef} type="file" accept=".pdf,image/png,image/jpeg,image/webp" onChange={attachFile} style={{ display: 'none' }} />
+          {attBusy ? <span style={T.cap}>attaching…</span> : null}
+        </div>
+      ) : null}
       {audio ? <audio controls src={audio} style={{ width: '100%', height: 32, marginTop: 8 }} /> : null}
       {teach ? (
         <div style={{ marginTop: 10, borderTop: '1px dashed #e8dcc8', paddingTop: 10 }}>
