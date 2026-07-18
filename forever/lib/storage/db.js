@@ -45,6 +45,13 @@ export async function studyCollection(env = process.env) {
   return (await getDb(env))?.collection('study');
 }
 
+export async function notebooksCollection(env = process.env) {
+  // Sankofa-pattern notebooks: user-created, typed blocks with provenance, generate-a-course
+  // action (design: notes/research/notebook-sankofa-plan-18jul.md). Notebook + block docs
+  // live together, kind-tagged, always owner-scoped.
+  return (await getDb(env))?.collection('notebooks');
+}
+
 export async function coursesCollection(env = process.env) {
   return (await getDb(env)).collection('courses');
 }
