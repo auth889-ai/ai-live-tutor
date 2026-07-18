@@ -96,7 +96,7 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
   const [selected, setSelected] = useState(null); // block id for the context panel
   const [live, setLive] = useState(null);
   const [draft, setDraftState] = useState(null); // finished draft awaiting accept
-  const [mode, setMode] = useState('study_note');
+  const [mode, setMode] = useState('detailed');
   const load = () => fetch(`/api/notebooks/${id}`).then((r) => r.json()).then(setData).catch(() => {});
   useEffect(() => { load(); }, [id]);
 
@@ -221,6 +221,15 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
                   onClick={() => { setSelected(b._id); }} />
               ))}
           </div>
+          <div>
+            <div style={{ fontSize: 10.5, fontWeight: 800, color: C.sub, letterSpacing: 0.6, marginBottom: 6 }}>ON THIS PAGE</div>
+            {docBlocks.slice(0, 30).map((b, i) => (
+              <button key={b._id} data-outline={b._id} onClick={() => document.getElementById(`blk-${b._id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: 'transparent', color: C.sub, fontSize: 11.5, padding: '2.5px 6px', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', borderRadius: 6 }}>
+                {{ handboard: '✍️', drawing: '✏️', image: '🖼', pdf: '📄', moment: '▶', voice: '🎙' }[b.type] ?? '·'} {(b.title ?? b.content ?? b.type).replace(/^✨\s*/, '').slice(0, 30)}
+              </button>
+            ))}
+          </div>
           <div style={{ marginTop: 'auto' }}>
             <SideItem label="🗓 Journal view" on={view === 'journal'} onClick={() => setView(view === 'journal' ? 'write' : 'journal')} />
           </div>
@@ -274,9 +283,11 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
               <div style={{ color: C.sub, fontSize: 14, padding: '30px 0' }}>An empty page. Write below — or bring in a link, file, or voice note with ＋.</div>
             ) : (
               docBlocks.map((b) => (
-                <DocBlock key={b._id} nb={id} b={b} pages={pages} selected={selected === b._id} legacyIll={legacyIll}
+                <div key={b._id} id={`blk-${b._id}`}>
+                <DocBlock nb={id} b={b} pages={pages} selected={selected === b._id} legacyIll={legacyIll}
                   onSelect={() => setSelected(selected === b._id ? null : b._id)}
                   onChanged={load} onNavigate={onNavigate} />
+                </div>
               ))
             )}
           </div>
@@ -341,6 +352,7 @@ function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onNavigate
   const [editingInk, setEditingInk] = useState(false);
   const [attaching, setAttaching] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [attSize, setAttSize] = useState(0); // attached-image size: 0 small, 1 medium, 2 large
   const moveToPage = async (pg) => {
     await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: pg }) });
     onChanged();
@@ -508,11 +520,13 @@ function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onNavigate
         })()} onNavigate={onNavigate} skipTitle={(b.title ?? '').replace(/^✨\s*/, '')} />
       )}
       {(b.attachments ?? []).map((att) => att.kind === 'image' && att.url ? (
-        <img key={att.id} src={att.url} alt={att.title ?? ''} style={{ width: '52%', minWidth: 220, borderRadius: 10, display: 'block', margin: '6px 0' }} />
+        <img key={att.id} src={att.url} alt={att.title ?? ''} title="click to resize"
+          onClick={(e) => { e.stopPropagation(); setAttSize((v) => (v + 1) % 3); }}
+          style={{ width: ['26%', '52%', '100%'][attSize], minWidth: 160, borderRadius: 10, display: 'block', margin: '6px 0', cursor: 'zoom-in' }} />
       ) : (
         <a key={att.id} href={att.url ?? undefined} target={att.url ? '_blank' : undefined} rel="noreferrer" onClick={(e) => e.stopPropagation()}
           style={{ display: 'inline-flex', gap: 5, fontSize: 12, color: C.extracted, fontWeight: 700, textDecoration: 'none', marginRight: 10 }}>
-          {att.kind === 'image' && att.url ? <img src={att.url} alt="" style={{ height: 40, borderRadius: 6, verticalAlign: 'middle' }} /> : <>{att.kind === 'pdf' ? '📄' : '🔗'} {att.title ?? att.kind}</>}
+          {att.kind === 'pdf' ? '📄' : '🔗'} {att.title ?? att.kind}
         </a>
       ))}
       {/* hover-only whisper row */}
