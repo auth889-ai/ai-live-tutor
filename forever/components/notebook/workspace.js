@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { DrawingEditor, SvgDrawing } from './drawing.js';
+import { DrawingEditor, SvgDrawing, downloadDrawing } from './drawing.js';
 
 const C = {
   appBg: '#F6F3EE', surface: '#FFFFFF', ink: '#211A14', sub: '#77695B', border: '#EBE3D8',
@@ -323,6 +323,8 @@ function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate, legacyIll 
         <SvgDrawing data={b.content} />
         <div className="nbk-acts" style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
           <span style={{ fontSize: 11, color: C.sub }}>drawing · you · {when}</span>
+          <button onClick={(e) => { e.stopPropagation(); downloadDrawing(b.content, 'svg', 'drawing'); }} style={ghost()}>⬇ svg</button>
+          <button onClick={(e) => { e.stopPropagation(); downloadDrawing(b.content, 'png', 'drawing'); }} style={ghost()}>⬇ png</button>
           <button onClick={(e) => { e.stopPropagation(); remove(); }} style={ghost()}>✕</button>
         </div>
       </div>
