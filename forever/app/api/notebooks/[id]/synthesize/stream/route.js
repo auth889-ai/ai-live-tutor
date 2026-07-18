@@ -142,7 +142,11 @@ export async function GET(request, { params }) {
         const kept = finalState.withImages ?? [];
         if (kept.length === 0) throw new Error('every section failed the gates — nothing was saved');
         const allRefs = [...new Set(kept.flatMap((k) => k.refs))].sort((a, b) => a - b);
-        const markdown = kept.map((k) => `## ${k.heading}\n${k.imageUrl ? `![${k.heading}](${k.imageUrl})\n` : ''}${k.markdown}`).join('\n\n');
+        // belt+braces: a section body must never re-carry its own heading into the note
+        const deHead = (heading, md) => String(md).split('\n')
+          .filter((ln, i) => !(i < 3 && ln.replace(/^#+\s*/, '').trim().toLowerCase() === String(heading).trim().toLowerCase()))
+          .join('\n').trim();
+        const markdown = kept.map((k) => `## ${k.heading}\n${k.imageUrl ? `![${k.heading}](${k.imageUrl})\n` : ''}${deHead(k.heading, k.markdown)}`).join('\n\n');
         const title = finalState.planTitle ?? 'Study note';
         if (isDraft) {
           send('done', { draft: { title, markdown: `${markdown}\n\n— grounded in your blocks: ${allRefs.map((n) => `[${n}]`).join(' ')}`, mode } });

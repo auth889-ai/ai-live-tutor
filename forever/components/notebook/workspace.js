@@ -318,6 +318,17 @@ function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate, legacyIll 
       if (r.ok) setDraftText(d.improved);
     } finally { setBusy(false); }
   };
+  const [narrating, setNarrating] = useState(false);
+  const listen = async (e) => {
+    e.stopPropagation();
+    if (narrating) return;
+    setNarrating(true);
+    try {
+      const r = await fetch(`/api/notebooks/${nb}/blocks/${b._id}/narrate`, { method: 'POST' });
+      const d = await r.json();
+      if (d.audioUrl) { new Audio(d.audioUrl).play(); onChanged(); }
+    } finally { setNarrating(false); }
+  };
   const remove = async () => { await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'DELETE' }); onChanged(); };
   const when = new Date(b.createdAt).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' });
   const provenance = b.trust === 'ai' ? 'AI' : b.trust === 'extracted' ? 'extracted' : 'you';
@@ -447,6 +458,9 @@ function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate, legacyIll 
           <button onClick={(e) => { e.stopPropagation(); setDraftText(b.content ?? ''); setEditing(true); }} style={ghost()}>✏️</button>
         ) : null}
         {b.audioUrl ? <audio controls src={b.audioUrl} style={{ height: 26 }} onClick={(e) => e.stopPropagation()} /> : null}
+        {!b.audioUrl && ['note', 'text'].includes(b.type) ? (
+          <button onClick={listen} title="read this note aloud (Sankofa-style narration)" style={ghost()}>{narrating ? '…' : '🔊 listen'}</button>
+        ) : null}
         <button onClick={(e) => { e.stopPropagation(); remove(); }} style={ghost()}>✕</button>
       </div>
     </div>
