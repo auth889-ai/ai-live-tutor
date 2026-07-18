@@ -94,9 +94,12 @@ export function NotebooksContent() {
 // restores, optional steps skippable — and the outcome-driven law (research: ~60s to value):
 // by step 3 the user has a notebook WITH their first captured thought in it.
 const WIZARD_STEPS = [
-  { key: 'title', q: 'What is this notebook about?', hint: 'e.g. "Graph algorithms", "System design prep", "Everything I read this month"', required: true, max: 120 },
-  { key: 'intent', q: 'What do you want to get out of it?', hint: 'optional — helps the synthesizer aim its study notes', required: false, max: 500 },
-  { key: 'first', q: 'Drop your first thought', hint: 'write a note, paste anything, or drop a link — your notebook starts alive', required: false, max: 20000 },
+  { key: 'title', q: 'What topic is this notebook for?', hint: 'e.g. "Graph algorithms", "System design prep", "Organic chemistry unit 3"', required: true, max: 120 },
+  { key: 'intent', q: 'What do you want to get out of it?', hint: 'e.g. "pass the interview", "finally understand DP" — the synthesizer aims at this', required: false, max: 500 },
+  { key: 'known', q: 'What do you already know about it?', hint: 'fragments are fine — they become your first note', required: false, max: 2000 },
+  { key: 'explore', q: 'What confuses you, or what do you most want to explore?', hint: 'the synthesizer leans into exactly this', required: false, max: 500 },
+  { key: 'level', q: 'How would you describe your level?', hint: 'e.g. "beginner", "solved 100 LeetCode", "revising before finals"', required: false, max: 120 },
+  { key: 'first', q: 'Drop your first material', hint: 'write a note, paste anything, or drop a link — your notebook starts alive', required: false, max: 20000 },
 ];
 
 function CreateWizard({ onDone }) {
@@ -121,7 +124,8 @@ function CreateWizard({ onDone }) {
     }
     setBusy(true);
     try {
-      const res = await fetch('/api/notebooks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: nextAnswers.title, intent: nextAnswers.intent ?? '' }) });
+      const intent = [nextAnswers.intent, nextAnswers.level ? `level: ${nextAnswers.level}` : ''].filter(Boolean).join(' · ');
+      const res = await fetch('/api/notebooks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: nextAnswers.title, intent }) });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'could not create the notebook');
       const first = (nextAnswers.first ?? '').trim();

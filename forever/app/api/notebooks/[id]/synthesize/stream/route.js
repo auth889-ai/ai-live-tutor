@@ -40,6 +40,8 @@ export async function GET(request, { params }) {
     const body = (b.type === 'voice' ? (b.transcript || b.content) : b.content) ?? '';
     return `[${i + 1}] (${b.type}${b.title ? ` — ${b.title}` : ''}) ${body.slice(0, 1500)}`;
   }).join('\n\n');
+  const intent = String(found.notebook?.intent ?? '').slice(0, 300);
+  const AIM = intent ? `THE USER'S GOAL for this notebook: "${intent}" — aim every heading and sentence at it. ` : '';
   const GROUND = 'HARD RULES: only facts from the numbered blocks — never outside knowledge; cite like [2] after the sentence each fact supports; omit what the blocks do not cover. Output ONLY JSON.';
 
   const encoder = new TextEncoder();
@@ -57,7 +59,7 @@ export async function GET(request, { params }) {
           send('status', { stage: 'planning' });
           const planned = await runAgentChain({
             agent: 'notebook-arc-planner',
-            system: `You plan ${MODES[mode]} from the user's source blocks. Return ONLY JSON {"title": string, "sections": [{"heading": string, "focus": string, "image_prompt": string}]} — 2 to 4 sections, each focus one sharp line, each image_prompt one vivid English scene description (warm hand-drawn watercolor study-illustration style) VISUALIZING that section's idea. ${GROUND}`,
+            system: `${AIM}You plan ${MODES[mode]} from the user's source blocks. Return ONLY JSON {"title": string, "sections": [{"heading": string, "focus": string, "image_prompt": string}]} — 2 to 4 sections, each focus one sharp line, each image_prompt one vivid English scene description (warm hand-drawn watercolor study-illustration style) VISUALIZING that section's idea. ${GROUND}`,
             user: `MY SOURCE BLOCKS:\n\n${numbered}`,
             maxTokens: 600,
             temperature: 0.3,
@@ -76,7 +78,7 @@ export async function GET(request, { params }) {
           send('status', { stage: 'writing', index: i + 1, total: plan.sections.length, heading: sec.heading });
           const written = await runAgentChain({
             agent: 'notebook-section-writer',
-            system: `You write ONE section of ${MODES[mode]}: "${sec.heading}" — focus: ${sec.focus}. ${question ? `The user's question: ${question}. ` : ''}Return ONLY JSON {"markdown": string, "cited": int[]}. ${GROUND}`,
+            system: `${AIM}You write ONE section of ${MODES[mode]}: "${sec.heading}" — focus: ${sec.focus}. ${question ? `The user's question: ${question}. ` : ''}Return ONLY JSON {"markdown": string, "cited": int[]}. ${GROUND}`,
             user: `MY SOURCE BLOCKS:\n\n${numbered}`,
             maxTokens: 900,
             temperature: 0.3,
