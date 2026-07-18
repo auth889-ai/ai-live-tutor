@@ -65,6 +65,22 @@ export async function GET(request, { params }) {
   if (material.length === 0) return Response.json({ error: 'the selected blocks hold no text to work from' }, { status: 422 });
   const focus = focusId ? material.find((b) => b._id === focusId) ?? found.blocks.find((b) => b._id === focusId && TEXTY(b)) : null;
   if (focus && !material.some((b) => b._id === focus._id)) material = [focus, ...material];
+  // RETRIEVAL (RAG-lite, deterministic): when there is a query (a question or a focus block),
+  // rank blocks by term overlap and keep only the relevant top-K — the writer never sees
+  // unrelated material, so it cannot wander onto it.
+  const terms = (t) => new Set(String(t ?? '').toLowerCase().match(/[a-z][a-z0-9_-]{3,}/g) ?? []);
+  const queryTerms = terms(question || (focus ? `${focus.title ?? ''} ${focus.transcript ?? ''} ${focus.content ?? ''}` : ''));
+  if (queryTerms.size && !selectedIds.length) {
+    const scored = material.map((b) => {
+      const bt = terms(`${b.title ?? ''} ${b.transcript ?? ''} ${b.content ?? ''}`);
+      let hit = 0;
+      for (const w of queryTerms) if (bt.has(w)) hit += 1;
+      return { b, hit };
+    });
+    material = scored.filter((x) => x.hit > 0 || (focus && x.b._id === focus._id)).sort((a, z) => z.hit - a.hit).slice(0, 10).map((x) => x.b);
+    if (focus && !material.some((b) => b._id === focus._id)) material.unshift(focus);
+    if (material.length === 0) material = focus ? [focus] : found.blocks.filter(TEXTY).slice(0, 10);
+  }
 
   const numbered = material.slice(0, 40).map((b, i) => {
     let body = (['voice', 'moment'].includes(b.type) ? [b.transcript, b.content].filter(Boolean).join(' — ') : b.content) ?? '';
@@ -99,15 +115,25 @@ export async function GET(request, { params }) {
           send('status', { stage: 'planning' });
           const planned = await runAgentChain({
             agent: 'notebook-arc-planner',
-            system: `${AIM}You plan ${MODES[mode]} from the user's source blocks. Return ONLY JSON {"title": string, "sections": [{"heading": string, "focus": string, "image_prompt": string}]} — ${mode === 'detailed' ? '4 to 6' : '2 to 4'} sections, each focus one sharp line, each image_prompt one vivid English scene description (warm hand-drawn watercolor study-illustration style) VISUALIZING that section's idea. ${GROUND}`,
+            system: `${AIM}You plan ${MODES[mode]} from the user's source blocks. Return ONLY JSON {"title": string, "sections": [{"heading": string, "focus": string, "evidence": string}]} — ${mode === 'detailed' ? '3 to 5' : '2 to 4'} sections. Each evidence MUST be a short phrase copied VERBATIM from the blocks (it will be checked by machine); each focus one sharp line explaining what the section says ABOUT that evidence. Sections about anything not literally in the blocks are forbidden. ${GROUND}`,
             user: `MY SOURCE BLOCKS:\n\n${numbered}`,
             maxTokens: 600,
             temperature: 0.3,
           });
           const p = planned?.json ?? planned;
           plan = { title: String(p?.title ?? 'Study note').slice(0, 200), sections: (Array.isArray(p?.sections) ? p.sections : []).slice(0, mode === 'detailed' ? 6 : 4).filter((x) => x?.heading) };
-          plan.sections = plan.sections.map((x) => ({ ...x, image_prompt: String(x.image_prompt ?? '').slice(0, 500) }));
-          if (plan.sections.length === 0) throw new Error('the planner produced no sections');
+          // EVIDENCE GATE (deterministic): a section lives only if its quoted evidence really
+          // appears in the material. This kills generic filler at the root.
+          const corpus = material.map((b) => `${b.title ?? ''} ${b.transcript ?? ''} ${b.content ?? ''}`).join(' ').toLowerCase().replace(/\s+/g, ' ');
+          plan.sections = plan.sections
+            .map((x) => ({ ...x, evidence: String(x.evidence ?? '').slice(0, 200) }))
+            .filter((x) => {
+              const ev = x.evidence.toLowerCase().replace(/\s+/g, ' ').trim();
+              const ok = ev.length >= 8 && corpus.includes(ev);
+              if (!ok) send('rejected', { heading: x.heading, reason: 'planned without verbatim evidence from your blocks — dropped' });
+              return ok;
+            });
+          if (plan.sections.length === 0) throw new Error('no section could quote your blocks — add more material about this topic');
         }
         send('plan', { title: plan.title, headings: plan.sections.map((x) => x.heading) });
 
@@ -118,7 +144,7 @@ export async function GET(request, { params }) {
           send('status', { stage: 'writing', index: i + 1, total: plan.sections.length, heading: sec.heading });
           const written = await runAgentChain({
             agent: 'notebook-section-writer',
-            system: `${AIM}You write ONE section of ${MODES[mode]}: "${sec.heading}" — focus: ${sec.focus}. ${LIMITS[mode]} Do NOT include the section title in the markdown. ${question ? `The user's question: ${question}. ` : ''}${draft ? `THE USER'S OWN DRAFT (continue it, never rewrite it): """${String(draft.content).slice(0, 3000)}""". ` : ''}Return ONLY JSON {"markdown": string, "cited": int[]}. ${GROUND}`,
+            system: `${AIM}You write ONE section of ${MODES[mode]}: "${sec.heading}" — focus: ${sec.focus}. ${sec.evidence ? `THE SECTION IS ABOUT THIS EXACT MATERIAL: "${sec.evidence}" — explain IT, concretely; generic advice or filler is forbidden. ` : ''}${LIMITS[mode]} Do NOT include the section title in the markdown. ${question ? `The user's question: ${question}. ` : ''}${draft ? `THE USER'S OWN DRAFT (continue it, never rewrite it): """${String(draft.content).slice(0, 3000)}""". ` : ''}Return ONLY JSON {"markdown": string, "cited": int[]}. ${GROUND}`,
             user: `MY SOURCE BLOCKS:\n\n${numbered}`,
             maxTokens: mode === 'detailed' ? 1500 : 900,
             temperature: 0.3,
@@ -136,11 +162,11 @@ export async function GET(request, { params }) {
           // Sankofa's per-act illustration, honestly gated: only when the workspace serves an
           // image model, and only from the PLANNED image_prompt. A region without image models
           // reports itself once — never a placeholder, never silence.
-          if (mode !== 'ask' && sec.image_prompt) {
+          if (mode !== 'ask' && (sec.evidence || sec.focus)) {
             if (await imagesAvailable()) {
               try {
                 send('status', { stage: 'illustrating', heading: sec.heading });
-                const { bytes } = await generateImage({ prompt: `${sec.image_prompt} — no text, no words, no letters, no labels in the image` });
+                const { bytes } = await generateImage({ prompt: `hand-drawn watercolor study diagram visualizing exactly this idea: "${(sec.evidence || sec.focus).slice(0, 220)}" (topic: ${sec.heading}) — clear, conceptual, no text, no words, no letters, no labels` });
                 const outDir = path.join('public', 'images', 'notebooks');
                 await mkdir(outDir, { recursive: true });
                 const file = `nbimg_${Date.now()}_${i}.png`;
