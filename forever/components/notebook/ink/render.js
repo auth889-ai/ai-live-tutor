@@ -45,7 +45,8 @@ export function ItemSvg({ it, bg }) {
   const dash = DASH[it.style ?? 'solid'];
   const rotT = (cx, cy) => (it.rot ? `rotate(${(it.rot * 180 / Math.PI).toFixed(2)} ${cx} ${cy})` : undefined);
   if (it.kind === 'text') {
-    return <text x={px(it.x)} y={py(it.y)} fontSize={it.size ?? 22} fill={it.color} fontFamily="inherit" transform={rotT(px(it.x), py(it.y))}>{it.text}</text>;
+    const FONTS = { hand: 'var(--caveat), "Segoe Script", cursive', mono: 'ui-monospace, SFMono-Regular, monospace', plain: 'inherit' };
+    return <text x={px(it.x)} y={py(it.y)} fontSize={it.size ?? 22} fill={it.color} fontFamily={FONTS[it.font ?? 'plain']} fontWeight={it.font === 'hand' ? 600 : 400} transform={rotT(px(it.x), py(it.y))}>{it.text}</text>;
   }
   if (it.kind === 'shape') {
     const common = { fill: it.fill ? `${it.color}22` : 'none', stroke: color, strokeWidth: it.width, strokeDasharray: dash ?? undefined, strokeLinecap: 'round' };

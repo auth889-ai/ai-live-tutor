@@ -19,7 +19,7 @@ export function drawingToSvgString(data) {
     const dash = DASH[it.style ?? 'solid'] ? ` stroke-dasharray="${DASH[it.style ?? 'solid']}"` : '';
     const op = it.tool === 'highlighter' ? ' opacity="0.35"' : '';
     const rotA = (cx, cy) => (it.rot ? ` transform="rotate(${(it.rot * 180 / Math.PI).toFixed(2)} ${cx} ${cy})"` : '');
-    if (it.kind === 'text') return `<text x="${P(it.x, 'x')}" y="${P(it.y, 'y')}" font-size="${it.size ?? 22}" fill="${it.color}"${rotA(P(it.x, 'x'), P(it.y, 'y'))}>${String(it.text).replace(/</g, '&lt;')}</text>`;
+    if (it.kind === 'text') { const F = { hand: 'cursive', mono: 'monospace', plain: 'sans-serif' }; return `<text x="${P(it.x, 'x')}" y="${P(it.y, 'y')}" font-size="${it.size ?? 22}" font-family="${F[it.font ?? 'plain']}" fill="${it.color}"${rotA(P(it.x, 'x'), P(it.y, 'y'))}>${String(it.text).replace(/</g, '&lt;')}</text>`; }
     if (it.kind === 'shape') {
       const x1 = +P(it.x1, 'x'); const y1 = +P(it.y1, 'y'); const x2 = +P(it.x2, 'x'); const y2 = +P(it.y2, 'y');
       const fill = it.fill ? `${it.color}22` : 'none';

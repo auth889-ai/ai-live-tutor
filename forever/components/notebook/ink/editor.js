@@ -27,7 +27,9 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
   const [fill, setFill] = useState(false);
   const [stabilize, setStabilize] = useState(true);
   const [snap, setSnap] = useState(true);
-  const [more, setMore] = useState(false); // advanced rows (styles/papers/layers) live behind ⋯
+  const [more, setMore] = useState(false);
+  const [textFont, setTextFont] = useState('hand');  // hand | plain | mono — 'convert to many format'
+  const [typing, setTyping] = useState(null);        // inline text entry {x, y, left, top} — never a popup // advanced rows (styles/papers/layers) live behind ⋯
   const svgRef = useRef(null);
   const drawing = useRef(false);
   const raw = useRef([]);
@@ -78,8 +80,9 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
       return;
     }
     if (tool === 'text') {
-      const t = window.prompt('text:');
-      if (t?.trim()) setItems((cur) => [...cur, { kind: 'text', x, y, text: t.trim().slice(0, 120), size: 14 + width * 3, color }]);
+      // inline, on-canvas typing (Xournal's TextEditor behaves this way — no dialogs)
+      const r = svgRef.current.getBoundingClientRect();
+      setTyping({ x, y, left: e.clientX - r.left, top: e.clientY - r.top });
       return;
     }
     if (tool === 'select') {
@@ -210,11 +213,17 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
     }
   };
 
+  const commitText = (raw) => {
+    const t = String(raw ?? '').trim();
+    if (t && typing) setItems((cur) => [...cur, { kind: 'text', x: typing.x, y: typing.y, text: t.slice(0, 160), size: 14 + width * 3, color, font: textFont }]);
+    setTyping(null);
+  };
+
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onCancel?.(); };
+    const onKey = (e) => { if (e.key === 'Escape' && !typing) onCancel?.(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel]);
+  }, [onCancel, typing]);
 
   const chip = (on) => ({ border: on ? '1.5px solid #e8604c' : '1px solid #EBE3D8', borderRadius: 8, background: on ? '#FDF0EE' : '#fff', color: '#211A14', padding: '3px 8px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' });
   return (
@@ -274,6 +283,14 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
           );
         })() : null}
       </svg>
+      {typing ? (
+        <input autoFocus placeholder="type — Enter puts it on the paper"
+          onPointerDown={(e2) => e2.stopPropagation()}
+          onKeyDown={(e2) => { if (e2.key === 'Enter') commitText(e2.currentTarget.value); if (e2.key === 'Escape') setTyping(null); }}
+          onBlur={(e2) => commitText(e2.currentTarget.value)}
+          style={{ position: 'absolute', left: typing.left, top: typing.top - 14, width: 280, border: 'none', borderBottom: `2px dashed ${color}`, outline: 'none', background: 'transparent', color, zIndex: 3,
+            fontFamily: textFont === 'hand' ? 'var(--caveat), cursive' : textFont === 'mono' ? 'ui-monospace, monospace' : 'inherit', fontSize: 13 + width * 2.2, fontWeight: 600 }} />
+      ) : null}
       {/* one floating toolbar under the paper — the Image-#36 layout */}
       <div style={{ display: 'flex', gap: 7, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', margin: '10px auto 0', padding: '8px 14px', borderRadius: 999, border: '1px solid #EBE3D8', background: '#fff', boxShadow: '0 6px 18px rgba(33,26,20,0.08)', width: 'fit-content', maxWidth: '100%' }}>
         {TOOLS.map(([t, label]) => (
@@ -286,6 +303,15 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
         ))}
         <input type="range" min="1" max="8" value={width} onChange={(e) => setWidth(Number(e.target.value))} style={{ width: 54, accentColor: '#e8604c' }} />
         <span style={{ width: 1, height: 20, background: '#EBE3D8' }} />
+        {tool === 'text' ? (
+          <>
+            {['hand', 'plain', 'mono'].map((f) => (
+              <button key={f} onClick={() => setTextFont(f)} title={`text format: ${f}`}
+                style={{ border: 'none', borderRadius: 8, background: textFont === f ? '#FDF0EE' : 'transparent', outline: textFont === f ? '1.5px solid #e8604c' : 'none', padding: '2px 7px', fontSize: 12, cursor: 'pointer', fontFamily: f === 'hand' ? 'var(--caveat), cursive' : f === 'mono' ? 'ui-monospace, monospace' : 'inherit', fontWeight: 700 }}>Aa</button>
+            ))}
+            <span style={{ width: 1, height: 20, background: '#EBE3D8' }} />
+          </>
+        ) : null}
         <button onClick={() => setItems((cur) => cur.slice(0, -1))} title="undo" style={{ border: 'none', background: 'transparent', fontSize: 14, cursor: 'pointer', padding: '2px 4px' }}>↶</button>
         <button onClick={() => setMore((v) => !v)} title="styles · papers · layers" style={{ border: 'none', borderRadius: 8, background: more ? '#FDF0EE' : 'transparent', outline: more ? '1.5px solid #e8604c' : 'none', fontSize: 15, cursor: 'pointer', padding: '0 6px' }}>⋯</button>
         <button onClick={() => onSave(JSON.stringify({ version: 2, paper, layers }))} disabled={layers.every((l) => l.items.length === 0)}
