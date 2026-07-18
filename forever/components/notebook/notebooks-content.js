@@ -186,6 +186,65 @@ function Workspace({ id, onBack }) {
 
 // Journal timeline: entries grouped under day headers (research: timeline views + flashbacks
 // drive return visits) — newest day first, order inside a day preserved.
+// Small honest markdown renderer for synthesized/extracted blocks: #/##/### headings, - bullets,
+// **bold**, `code`, and [n] citations as chips pointing at your numbered blocks. No library,
+// no HTML injection — everything becomes React nodes.
+function looksLikeMarkdown(text) {
+  return /^#{1,3} |\n- |\n#{1,3} /.test(text ?? '');
+}
+
+function inline(text, keyBase) {
+  const parts = [];
+  let rest = String(text ?? '');
+  let k = 0;
+  const CITE = /\[(\d+)\]/;
+  const BOLD = /\*\*([^*]+)\*\*/;
+  const CODE = /`([^`]+)`/;
+  while (rest.length) {
+    const m = [CITE, BOLD, CODE].map((re) => ({ re, m: rest.match(re) })).filter((x) => x.m).sort((a, b) => a.m.index - b.m.index)[0];
+    if (!m) { parts.push(rest); break; }
+    if (m.m.index > 0) parts.push(rest.slice(0, m.m.index));
+    if (m.re === CITE) parts.push(<sup key={`${keyBase}-${k += 1}`} style={{ background: '#eef3f9', color: '#4477aa', borderRadius: 6, padding: '1px 5px', fontSize: 10, fontWeight: 800, marginLeft: 1 }}>{m.m[1]}</sup>);
+    else if (m.re === BOLD) parts.push(<b key={`${keyBase}-${k += 1}`}>{m.m[1]}</b>);
+    else parts.push(<code key={`${keyBase}-${k += 1}`} style={{ background: '#f7f0e6', borderRadius: 5, padding: '1px 5px', fontSize: 12, fontFamily: 'ui-monospace, monospace' }}>{m.m[1]}</code>);
+    rest = rest.slice(m.m.index + m.m[0].length);
+  }
+  return parts;
+}
+
+function Markdownish({ text, skipTitle = null, animate = false }) {
+  const lines = String(text ?? '').split('\n');
+  const out = [];
+  let list = null;
+  let seg = 0;
+  const flush = () => { if (list) { out.push(<ul key={`ul${out.length}`} style={{ margin: '4px 0 10px', paddingLeft: 20 }}>{list}</ul>); list = null; } };
+  for (let i = 0; i < lines.length; i += 1) {
+    const ln = lines[i];
+    const anim = animate ? { animation: 'nbSegIn .5s ease-out both', animationDelay: `${Math.min(seg * 350, 3500)}ms` } : {};
+    if (/^#{1,3} /.test(ln)) {
+      const t = ln.replace(/^#{1,3} /, '');
+      if (skipTitle && t.trim() === skipTitle.trim()) continue;
+      flush(); seg += 1;
+      out.push(<div key={i} style={{ fontSize: ln.startsWith('###') ? 13 : 14.5, fontWeight: 800, color: '#2b211a', margin: '12px 0 4px', ...anim }}>{inline(t, i)}</div>);
+    } else if (/^- /.test(ln)) {
+      if (!list) seg += 1;
+      (list ??= []).push(<li key={i} style={{ margin: '2px 0', ...(animate ? { animation: 'nbSegIn .5s ease-out both', animationDelay: `${Math.min(seg * 350, 3500)}ms` } : {}) }}>{inline(ln.slice(2), i)}</li>);
+    } else if (ln.startsWith('— grounded in your blocks:')) {
+      flush(); seg += 1;
+      const refs = [...ln.matchAll(/\[(\d+)\]/g)].map((m) => m[1]);
+      out.push(<div key={i} style={{ display: 'flex', gap: 5, alignItems: 'center', marginTop: 10, flexWrap: 'wrap', ...anim }}>
+        <span style={{ fontSize: 10.5, fontWeight: 800, color: '#9b8465' }}>GROUNDED IN YOUR BLOCKS</span>
+        {refs.map((r) => <span key={r} style={{ background: '#eef3f9', color: '#4477aa', borderRadius: 999, padding: '1px 8px', fontSize: 10.5, fontWeight: 800 }}>#{r}</span>)}
+      </div>);
+    } else if (ln.trim()) {
+      flush(); seg += 1;
+      out.push(<p key={i} style={{ margin: '0 0 8px', whiteSpace: 'pre-wrap', ...anim }}>{inline(ln, i)}</p>);
+    }
+  }
+  flush();
+  return <div style={{ fontSize: 13.5, color: '#3a3327', marginTop: 6, lineHeight: 1.6, overflowWrap: 'break-word' }}>{out}</div>;
+}
+
 function groupByDay(blocks) {
   const groups = new Map();
   for (const b of blocks) {
@@ -229,18 +288,21 @@ function Block({ nb, b, onChanged, reveal = false }) {
         <button onClick={remove} title="remove block" style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: '#c9bda1', cursor: 'pointer', fontSize: 13 }}>✕</button>
       </div>
       {b.title ? <div style={{ fontSize: 14, fontWeight: 800, color: '#2b211a', marginTop: 6 }}>{b.title}</div> : null}
-      {reveal ? (
-        <div style={{ fontSize: 13.5, color: '#3a3327', marginTop: 6, lineHeight: 1.55, overflowWrap: 'break-word' }}>
-          <style>{`@keyframes nbSegIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}`}</style>
-          {(b.content ?? '').split(/\n\n+/).map((seg, i) => (
-            <p key={i} style={{ whiteSpace: 'pre-wrap', margin: '0 0 10px', animation: `nbSegIn .5s ease-out both`, animationDelay: `${Math.min(i * 450, 4000)}ms` }}>{seg}</p>
-          ))}
-        </div>
-      ) : (
-      <div style={{ fontSize: 13.5, color: '#3a3327', marginTop: 6, lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>
-        {b.type === 'voice' ? (b.transcript || b.content) : b.type === 'link' ? `${(b.content ?? '').slice(0, 400)}${(b.content ?? '').length > 400 ? '…' : ''}` : b.content}
-      </div>
-      )}
+      {(() => {
+        const raw = b.type === 'voice' ? (b.transcript || b.content) : b.type === 'link' ? `${(b.content ?? '').slice(0, 400)}${(b.content ?? '').length > 400 ? '…' : ''}` : (b.content ?? '');
+        // never repeat the title as the first content line (image captions, synthesized notes)
+        const cleanTitle = (b.title ?? '').replace(/^✨\s*/, '').trim();
+        const deduped = cleanTitle && raw.split('\n')[0].trim().replace(/[.:]$/, '') === cleanTitle.replace(/[.:]$/, '')
+          ? raw.split('\n').slice(1).join('\n').replace(/^\n+/, '') : raw;
+        return (
+          <>
+            {reveal ? <style>{`@keyframes nbSegIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}`}</style> : null}
+            {looksLikeMarkdown(deduped)
+              ? <Markdownish text={deduped} skipTitle={cleanTitle} animate={reveal} />
+              : <div style={{ fontSize: 13.5, color: '#3a3327', marginTop: 6, lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>{deduped}</div>}
+          </>
+        );
+      })()}
       {b.url ? <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#4477aa', fontWeight: 700 }}>{b.url}</a> : null}
     </div>
   );
