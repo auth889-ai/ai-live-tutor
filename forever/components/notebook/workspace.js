@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { DrawingEditor, SvgDrawing, downloadDrawing } from './drawing.js';
+import { PageInk } from './ink/page-ink.js';
 
 const C = {
   appBg: '#F6F3EE', surface: '#FFFFFF', ink: '#211A14', sub: '#77695B', border: '#EBE3D8',
@@ -87,6 +88,7 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
   const [data, setData] = useState(null);
   const [view, setView] = useState('write'); // write | journal
   const [activePage, setActivePage] = useState(null);
+  const [inkMode, setInkMode] = useState(false);
   const [selected, setSelected] = useState(null); // block id for the context panel
   const [live, setLive] = useState(null);
   const [draft, setDraftState] = useState(null); // finished draft awaiting accept
@@ -130,7 +132,9 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
   if (activePage && !pages.includes(activePage)) pages.push(activePage);
   const sources = blocks.filter((b) => ['image', 'pdf', 'link', 'moment'].includes(b.type));
   const legacyIll = new Map(blocks.filter((b) => b.type === 'image' && b.trust === 'ai' && b.url && b.title).map((b) => [b.title.trim().toLowerCase(), b.url]));
-  const docBlocks = blocks.filter((b) => (activePage ? (b.page ?? 'Notes') === activePage : true) && !(b.type === 'image' && b.trust === 'ai'));
+  const docBlocks = blocks.filter((b) => (activePage ? (b.page ?? 'Notes') === activePage : true) && !(b.type === 'image' && b.trust === 'ai') && b.origin !== 'page-ink');
+  const inkPage = activePage ?? 'Notes';
+  const inkBlock = blocks.find((b) => b.origin === 'page-ink' && (b.page ?? 'Notes') === inkPage) ?? null;
   const sel = blocks.find((b) => b._id === selected) ?? null;
 
   return (
@@ -156,6 +160,10 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
           <div style={{ fontSize: 11.5, color: C.sub }}>{pages.length} page{pages.length === 1 ? '' : 's'} · {sources.length} source{sources.length === 1 ? '' : 's'} · {blocks.length} blocks</div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button onClick={() => setInkMode((v) => !v)} title="write on the page with your finger or pen"
+            style={{ border: inkMode ? 'none' : `1px solid ${C.border}`, borderRadius: 999, background: inkMode ? C.accent : '#fff', color: inkMode ? '#fff' : C.sub, padding: '7px 14px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>
+            ✍️ {inkMode ? 'writing on page' : 'pen'}
+          </button>
           <PagePager pages={pages} active={activePage} onPick={(pg) => { setView('write'); setActivePage(pg); }} />
           <select value={mode} onChange={(e) => setMode(e.target.value)} style={{ border: `1px solid ${C.border}`, borderRadius: 9, background: '#fff', color: C.sub, padding: '6px 9px', fontSize: 12, fontWeight: 700 }}>
             <option value="study_note">study note</option>
@@ -210,7 +218,8 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
 
         {/* ---------- center: THE DOCUMENT ---------- */}
         <div style={{ padding: '22px 26px 90px', position: 'relative' }}>
-          <div style={{ maxWidth: 820, margin: '0 auto', background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '30px 38px 26px', minHeight: 420 }}>
+          <div style={{ maxWidth: 820, margin: '0 auto', background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '30px 38px 26px', minHeight: 420, position: 'relative' }}>
+            <PageInk nb={id} page={inkPage} inkBlock={inkBlock} active={inkMode && view === 'write'} color={C.accent} onDirty={() => {}} />
             <div style={{ fontSize: 25, fontWeight: 700, color: C.ink, fontFamily: 'var(--font-newsreader), Georgia, serif' }}>{activePage ?? notebook.title}</div>
             {notebook.intent ? <div style={{ fontSize: 12.5, color: C.sub, margin: '3px 0 6px' }}>Goal — {notebook.intent}</div> : null}
             <div style={{ height: 1, background: C.border, margin: '14px 0 18px' }} />
