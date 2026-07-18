@@ -10,6 +10,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { DrawingEditor, SvgDrawing } from './drawing.js';
+
 const C = {
   appBg: '#F6F3EE', surface: '#FFFFFF', ink: '#211A14', sub: '#77695B', border: '#EBE3D8',
   accent: '#e8604c', user: '#2f7d4a', extracted: '#4477aa', ai: '#a06a1f',
@@ -156,6 +158,17 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
             <option value="summary">summary</option>
             <option value="questions">self-test</option>
           </select>
+          <button onClick={() => {
+            const md = [`# ${notebook.title}`, notebook.intent ? `> ${notebook.intent}` : '', ...docBlocks.map((b) => {
+              if (b.type === 'drawing') return '*(drawing)*';
+              const body = b.type === 'voice' ? (b.transcript || b.content) : b.content;
+              return `${b.title ? `## ${String(b.title).replace(/^✨\s*/, '')}\n` : ''}${body ?? ''}`;
+            })].filter(Boolean).join('\n\n');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([md], { type: 'text/markdown' }));
+            a.download = `${notebook.title.replace(/[^\w]+/g, '-').slice(0, 50)}.md`;
+            a.click();
+          }} title="export this view as Markdown" style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: '#fff', color: C.sub, padding: '7px 11px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>⬇</button>
           <button onClick={() => runStream(`mode=${mode}`)} disabled={Boolean(live)}
             style={{ border: 'none', borderRadius: 999, background: live ? '#D8CBB9' : C.accent, color: '#fff', padding: '8px 18px', fontSize: 12.5, fontWeight: 800, cursor: live ? 'default' : 'pointer' }}>
             {live ? 'writing…' : '✨ Synthesize'}
@@ -299,6 +312,18 @@ function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate, legacyIll 
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <a href={b.url} onClick={(e) => e.stopPropagation()} style={{ borderRadius: 999, background: C.accent, color: '#fff', padding: '4px 12px', fontSize: 11.5, fontWeight: 800, textDecoration: 'none' }}>Replay moment</a>
           <span className="nbk-acts" style={{ fontSize: 11, color: C.sub, alignSelf: 'center' }}>{b.origin} · {when}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (b.type === 'drawing') {
+    return (
+      <div className={`nbk-blk${selected ? ' sel' : ''}`} onClick={onSelect} style={{ margin: '10px 0', padding: '8px 10px', cursor: 'pointer' }}>
+        <SvgDrawing data={b.content} />
+        <div className="nbk-acts" style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
+          <span style={{ fontSize: 11, color: C.sub }}>drawing · you · {when}</span>
+          <button onClick={(e) => { e.stopPropagation(); remove(); }} style={ghost()}>✕</button>
         </div>
       </div>
     );
@@ -455,6 +480,7 @@ function Composer({ id, page, onAdded }) {
   const fileRef = useRef(null);
   const kindRef = useRef('pdf');
   const [listening, setListening] = useState(false);
+  const [drawOpen, setDrawOpen] = useState(false);
   const recRef = useRef(null);
 
   const post = async (payload) => {
@@ -502,9 +528,14 @@ function Composer({ id, page, onAdded }) {
 
   return (
     <div style={{ maxWidth: 820, margin: '12px auto 0', position: 'sticky', bottom: 12 }}>
+      {drawOpen ? (
+        <DrawingEditor
+          onSave={async (data) => { setDrawOpen(false); await post({ type: 'drawing', content: data, source: 'typed' }); }}
+          onCancel={() => setDrawOpen(false)} />
+      ) : null}
       {menu ? (
         <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
-          {[['📄 PDF', () => { kindRef.current = 'pdf'; fileRef.current?.click(); }], ['🖼 Image', () => { kindRef.current = 'image'; fileRef.current?.click(); }], ['🎙 Voice', voice]].map(([label, fn]) => (
+          {[['📄 PDF', () => { kindRef.current = 'pdf'; fileRef.current?.click(); }], ['🖼 Image', () => { kindRef.current = 'image'; fileRef.current?.click(); }], ['🎙 Voice', voice], ['✏️ Draw', () => { setDrawOpen(true); setMenu(false); }]].map(([label, fn]) => (
             <button key={label} onClick={fn} style={{ border: `1px solid ${C.border}`, borderRadius: 999, background: '#fff', color: C.sub, padding: '6px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>{label}</button>
           ))}
         </div>
