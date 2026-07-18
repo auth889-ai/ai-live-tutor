@@ -181,12 +181,14 @@ export async function addAttachment(userId, notebookId, blockId, { kind, url = n
 // notebook-sized). URL only — bytes live under public/audio like every lesson clip.
 // Attachment layout meta (user order: images MOVE inside their block): placement
 // left|full|right + size s|m|l, stored on the attachment itself.
-export async function setAttachmentMeta(userId, notebookId, blockId, attachmentId, { placement, size } = {}) {
+export async function setAttachmentMeta(userId, notebookId, blockId, attachmentId, { placement, size, fx, fy } = {}) {
   const col = await _collection();
   if (!col || !userId) return null;
   const set = { updatedAt: now() };
-  if (['left', 'full', 'right'].includes(placement)) set['attachments.$.placement'] = placement;
+  if (['left', 'full', 'right', 'free'].includes(placement)) set['attachments.$.placement'] = placement;
   if (['s', 'm', 'l'].includes(size)) set['attachments.$.size'] = size;
+  if (Number.isFinite(fx)) set['attachments.$.fx'] = Math.min(1, Math.max(0, fx));   // 0..1 of block width
+  if (Number.isFinite(fy)) set['attachments.$.fy'] = Math.max(0, Math.round(fy));    // px from block top
   const r = await col.updateOne(
     { _id: blockId, kind: 'block', ownerId: userId, notebookId, 'attachments.id': attachmentId },
     { $set: set },

@@ -157,7 +157,7 @@ export function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onN
   }
 
   return (
-    <div className={`nbk-blk${selected ? ' sel' : ''}`} onClick={onSelect} style={{ margin: '4px -10px', padding: '8px 10px', cursor: 'pointer' }}>
+    <div className={`nbk-blk${selected ? ' sel' : ''}`} onClick={onSelect} style={{ margin: '4px -10px', padding: '8px 10px', cursor: 'pointer', position: 'relative' }}>
       {b.title ? (
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '14px 0 4px' }}>
           <span style={{ fontSize: b.trust === 'ai' ? 22 : 16.5, fontWeight: 700, color: C.ink, letterSpacing: '-0.01em' }}><Inline text={(b.title ?? '').replace(/^✨\s*/, '')} onNavigate={onNavigate} /></span>
@@ -192,11 +192,14 @@ export function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onN
       )}
       {(b.attachments ?? []).map((att) => att.kind === 'image' && att.url ? (
         <div key={att.id} onClick={(e) => e.stopPropagation()} data-att={att.id}
-          style={{ float: att.placement === 'left' ? 'left' : att.placement === 'right' ? 'right' : 'none',
+          style={{
+            ...(att.placement === 'free'
+              ? { position: 'absolute', left: `${(att.fx ?? 0.5) * 100}%`, top: att.fy ?? 0, transform: `translateX(-50%) ${attDrag?.id === att.id ? `translate(${attDrag.dx}px, ${attDrag.dy}px)` : ''}`, margin: 0 }
+              : { float: att.placement === 'left' ? 'left' : att.placement === 'right' ? 'right' : 'none',
+                  margin: att.placement === 'left' ? '4px 14px 6px 0' : att.placement === 'right' ? '4px 0 6px 14px' : '6px 0',
+                  transform: attDrag?.id === att.id ? `translate(${attDrag.dx}px, ${attDrag.dy}px)` : undefined, position: 'relative' }),
             width: { s: '26%', m: '52%', l: '100%' }[att.size ?? 'm'], minWidth: 160,
-            margin: att.placement === 'left' ? '4px 14px 6px 0' : att.placement === 'right' ? '4px 0 6px 14px' : '6px 0',
-            transform: attDrag?.id === att.id ? `translate(${attDrag.dx}px, ${attDrag.dy}px)` : undefined,
-            opacity: attDrag?.id === att.id ? 0.75 : 1, zIndex: attDrag?.id === att.id ? 10 : undefined, position: 'relative' }}>
+            opacity: attDrag?.id === att.id ? 0.75 : 1, zIndex: attDrag?.id === att.id ? 10 : att.placement === 'free' ? 5 : undefined }}>
           <img src={att.url} alt={att.title ?? ''} draggable={false}
             onPointerDown={(e) => {
               e.preventDefault(); e.stopPropagation();
@@ -209,11 +212,10 @@ export function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onN
             onPointerUp={(e) => {
               setAttDrag((d) => {
                 if (d && d.id === att.id && (Math.abs(d.dx) > 12 || Math.abs(d.dy) > 12)) {
-                  // drop zone by horizontal position inside the block: left / full / right
+                  // FREE placement: the image lands exactly where you drop it (Xournal page law)
                   const host = e.target.closest('.nbk-blk') ?? e.target.parentElement.parentElement;
                   const r = host.getBoundingClientRect();
-                  const rel = (e.clientX - r.left) / r.width;
-                  patchAtt(att.id, { placement: rel < 0.34 ? 'left' : rel > 0.66 ? 'right' : 'full' });
+                  patchAtt(att.id, { placement: 'free', fx: (e.clientX - r.left) / r.width, fy: e.clientY - r.top });
                 }
                 return null;
               });

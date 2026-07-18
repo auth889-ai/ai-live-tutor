@@ -77,7 +77,7 @@ export async function PATCH(request, { params }) {
   if (!session?.userId) return Response.json({ error: 'sign in first' }, { status: 401 });
   const { id, blockId } = await params;
   const body = await request.json().catch(() => ({}));
-  const ok = await setAttachmentMeta(session.userId, id, blockId, String(body.attachmentId ?? ''), { placement: body.placement, size: body.size });
+  const ok = await setAttachmentMeta(session.userId, id, blockId, String(body.attachmentId ?? ''), { placement: body.placement, size: body.size, fx: Number(body.fx), fy: Number(body.fy) });
   if (!ok) return Response.json({ error: 'attachment not found' }, { status: 404 });
   return Response.json({ ok: true });
 }
