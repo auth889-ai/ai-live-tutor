@@ -297,6 +297,10 @@ export function DrawingEditor({ initial = null, onSave, onCancel }) {
             <button onClick={() => setActiveLayer(i)} style={chip(activeLayer === i)}>{l.name}</button>
             <button onClick={() => setLayers((cur) => cur.map((x, j) => (j === i ? { ...x, visible: x.visible === false } : x)))}
               title="show/hide" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, opacity: l.visible === false ? 0.35 : 1 }}>👁</button>
+            <button disabled={i === 0} onClick={() => { setLayers((cur) => { const n = [...cur]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; return n; }); setActiveLayer((a) => (a === i ? i - 1 : a === i - 1 ? i : a)); }}
+              title="move layer up (drawn earlier = beneath)" style={{ border: 'none', background: 'transparent', cursor: i === 0 ? 'default' : 'pointer', fontSize: 11, opacity: i === 0 ? 0.25 : 0.8, padding: 0 }}>↑</button>
+            <button disabled={i === layers.length - 1} onClick={() => { setLayers((cur) => { const n = [...cur]; [n[i + 1], n[i]] = [n[i], n[i + 1]]; return n; }); setActiveLayer((a) => (a === i ? i + 1 : a === i + 1 ? i : a)); }}
+              title="move layer down" style={{ border: 'none', background: 'transparent', cursor: i === layers.length - 1 ? 'default' : 'pointer', fontSize: 11, opacity: i === layers.length - 1 ? 0.25 : 0.8, padding: 0 }}>↓</button>
           </span>
         ))}
         <button onClick={() => { setLayers((cur) => [...cur, { name: `Layer ${cur.length + 1}`, visible: true, items: [] }]); setActiveLayer(layers.length); }} style={chip(false)}>+ layer</button>
