@@ -374,6 +374,26 @@ function Flashback({ blocks }) {
 
 function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue }) {
   const [icon, label] = TYPE_META[b.type] ?? ['•', b.type];
+  const [teach, setTeach] = useState(false);
+  const [teachText, setTeachText] = useState('');
+  const [teachBusy, setTeachBusy] = useState(false);
+  const [teachErr, setTeachErr] = useState('');
+  const submitTeach = async () => {
+    setTeachBusy(true);
+    setTeachErr('');
+    try {
+      const res = await fetch(`/api/notebooks/${nb}/blocks/${b._id}/teachback`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ explanation: teachText }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'check failed');
+      setTeach(false);
+      setTeachText('');
+      onChanged();
+    } catch (e) {
+      setTeachErr(String(e.message ?? e));
+    } finally {
+      setTeachBusy(false);
+    }
+  };
   const [audio, setAudio] = useState(b.audioUrl ?? null);
   const [voicing, setVoicing] = useState(false);
   const narrate = async () => {
@@ -398,9 +418,15 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue }) {
         <span style={{ ...T.cap, fontWeight: 800 }}>{label.toUpperCase()}</span>
         <span title={`provenance: ${b.trust}`} style={{ fontSize: 10.5, fontWeight: 800, color: TRUST_COLOR[b.trust] ?? '#9b8465', background: `${TRUST_COLOR[b.trust] ?? '#9b8465'}14`, borderRadius: 999, padding: '2px 8px' }}>{b.trust}</span>
         {b.origin ? <span style={T.cap}>{b.origin}</span> : null}
+        {b.trust === 'user' && ['note', 'text', 'moment'].includes(b.type) && ((b.content ?? '').length > 20 || (b.transcript ?? '').length > 20) ? (
+          <button onClick={() => setTeach((v) => !v)} title="explain this in your own words — the tutor checks it and schedules what you missed"
+            style={{ marginLeft: 'auto', border: '1px solid #cfe3d2', borderRadius: 999, background: teach ? '#eaf7ee' : '#fff', color: '#2f7d4a', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+            🎓 explain it back
+          </button>
+        ) : null}
         {b.trust === 'user' && ['note', 'text'].includes(b.type) && (b.content ?? '').length > 40 && onContinue ? (
           <button onClick={() => onContinue(b._id)} title="the AI continues YOUR draft — your words are never edited; the continuation arrives as its own ai-badged block"
-            style={{ marginLeft: 'auto', border: '1px solid #f0c39a', borderRadius: 999, background: '#fffdf9', color: '#8a5a3a', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+            style={{ marginLeft: 6, border: '1px solid #f0c39a', borderRadius: 999, background: '#fffdf9', color: '#8a5a3a', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
             ✍️ AI continue
           </button>
         ) : null}
@@ -433,6 +459,20 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue }) {
         <a href={b.url} style={{ display: 'inline-block', marginTop: 8, border: 'none', borderRadius: 999, background: T.accent, color: '#fff', padding: '5px 14px', fontSize: 12, fontWeight: 800, textDecoration: 'none' }}>▶ replay this moment</a>
       ) : b.type === 'image' && b.url ? <img src={b.url} alt={b.title ?? ''} style={{ width: '100%', borderRadius: 12, marginTop: 8 }} /> : b.url ? <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#4477aa', fontWeight: 700 }}>{b.url}</a> : null}
       {audio ? <audio controls src={audio} style={{ width: '100%', height: 32, marginTop: 8 }} /> : null}
+      {teach ? (
+        <div style={{ marginTop: 10, borderTop: '1px dashed #e8dcc8', paddingTop: 10 }}>
+          <textarea value={teachText} onChange={(e) => setTeachText(e.target.value)} spellCheck={false}
+            placeholder="Explain it in your own words — as if teaching a friend…"
+            style={{ width: '100%', minHeight: 84, boxSizing: 'border-box', resize: 'vertical', border: '1px solid #cfe3d2', borderRadius: 10, padding: '9px 12px', fontSize: 13, lineHeight: 1.55, color: '#2b211a' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+            <button onClick={submitTeach} disabled={teachBusy || teachText.trim().length < 20}
+              style={{ border: 'none', borderRadius: 999, background: teachBusy || teachText.trim().length < 20 ? '#cfe0d2' : '#2f7d4a', color: '#fff', padding: '7px 16px', fontSize: 12, fontWeight: 800, cursor: teachBusy ? 'default' : 'pointer' }}>
+              {teachBusy ? 'the tutor is checking…' : '✓ check my explanation'}
+            </button>
+            {teachErr ? <span style={{ fontSize: 12, color: '#a33d2e', fontWeight: 700 }}>{teachErr}</span> : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
