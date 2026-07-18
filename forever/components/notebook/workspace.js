@@ -141,8 +141,8 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
         .nbk-blk.sel{background:#FBF4EC;outline:1.5px solid #EBD9C4}
       `}</style>
 
-      {/* topbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px', borderBottom: `1px solid ${C.border}` }}>
+      {/* topbar — sticky: the document scrolls, the chrome does not (app-shell pattern) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px', borderBottom: `1px solid ${C.border}`, position: 'sticky', top: 0, zIndex: 30, background: C.appBg, borderRadius: '18px 18px 0 0' }}>
         <button onClick={onBack} style={{ border: 'none', background: 'transparent', color: C.sub, fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>←</button>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: C.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{notebook.title}</div>
@@ -165,7 +165,8 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '215px minmax(0, 1fr) 300px', gap: 0, alignItems: 'stretch' }}>
         {/* ---------- left: pages + sources ---------- */}
-        <div style={{ borderRight: `1px solid ${C.border}`, padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ borderRight: `1px solid ${C.border}` }}>
+        <div style={{ position: 'sticky', top: 62, maxHeight: 'calc(100vh - 76px)', overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <div style={{ fontSize: 10.5, fontWeight: 800, color: C.sub, letterSpacing: 0.6, marginBottom: 6 }}>PAGES</div>
             <SideItem label="All pages" on={activePage === null && view === 'write'} onClick={() => { setView('write'); setActivePage(null); }} />
@@ -186,6 +187,7 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
           <div style={{ marginTop: 'auto' }}>
             <SideItem label="🗓 Journal view" on={view === 'journal'} onClick={() => setView(view === 'journal' ? 'write' : 'journal')} />
           </div>
+        </div>
         </div>
 
         {/* ---------- center: THE DOCUMENT ---------- */}
@@ -542,7 +544,8 @@ function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExplain, on
     <button key={idd} onClick={() => setTab(idd)} style={{ border: 'none', borderBottom: tab === idd ? `2px solid ${C.accent}` : '2px solid transparent', background: 'transparent', color: tab === idd ? C.ink : C.sub, fontSize: 12, fontWeight: 800, padding: '8px 2px', marginRight: 14, cursor: 'pointer' }}>{label}</button>
   );
   return (
-    <div style={{ borderLeft: `1px solid ${C.border}`, padding: '4px 16px 16px', minWidth: 0 }}>
+    <div style={{ borderLeft: `1px solid ${C.border}`, minWidth: 0 }}>
+    <div style={{ position: 'sticky', top: 62, maxHeight: 'calc(100vh - 76px)', overflowY: 'auto', padding: '4px 16px 16px' }}>
       <div style={{ borderBottom: `1px solid ${C.border}`, marginBottom: 12 }}>{T2('ai', 'AI')}{T2('back', 'Backlinks')}{T2('review', 'Explain back')}</div>
 
       {tab === 'ai' ? (
@@ -608,6 +611,7 @@ function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExplain, on
           ) : <div style={{ fontSize: 12.5, color: C.sub }}>Select a block first, then explain it back.</div>}
         </div>
       ) : null}
+    </div>
     </div>
   );
 }
