@@ -27,6 +27,10 @@ export function drawingToSvgString(data) {
       if (it.shape === 'ellipse') return `<ellipse cx="${(x1 + x2) / 2}" cy="${(y1 + y2) / 2}" rx="${Math.abs(x2 - x1) / 2}" ry="${Math.abs(y2 - y1) / 2}" fill="${fill}" stroke="${color}" stroke-width="${it.width}"${dash}${rotA((x1 + x2) / 2, (y1 + y2) / 2)}/>`;
       return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${it.width}"${dash} stroke-linecap="round"/>`;
     }
+    if (it.points.length === 2) {
+      const r = Math.max(1.4, (it.width * (0.5 + (it.pressures?.[0] ?? 0.5))) / 1.6);
+      return `<circle cx="${(it.points[0] * W).toFixed(1)}" cy="${(it.points[1] * H).toFixed(1)}" r="${r.toFixed(1)}" fill="${color}"${op}/>`;
+    }
     const pts = it.points.map((v, j) => (j % 2 === 0 ? v * W : v * H).toFixed(1)).join(' ').replace(/(\S+) (\S+) ?/g, '$1,$2 ');
     return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="${it.width}" stroke-linecap="round" stroke-linejoin="round"${dash}${op}/>`;
   };

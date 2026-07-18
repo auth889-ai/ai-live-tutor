@@ -69,6 +69,12 @@ export function ItemSvg({ it, bg }) {
   // stroke — pressure-aware: per-point widths render as segments (Stroke::setPressure analog)
   const pts = it.points;
   const opacity = it.tool === 'highlighter' ? 0.35 : 1;
+  // a pen TAP is a one-point stroke — Xournal renders it as a dot (round cap on a
+  // zero-length stroke); a one-point polyline has no segment and would be invisible
+  if (pts.length === 2) {
+    const r = Math.max(1.4, (it.width * (0.5 + (it.pressures?.[0] ?? 0.5))) / 1.6);
+    return <circle cx={px(pts[0])} cy={py(pts[1])} r={r} fill={color} opacity={opacity} />;
+  }
   if (Array.isArray(it.pressures) && it.pressures.length * 2 === pts.length && it.tool === 'pen') {
     const segs = [];
     for (let i = 2; i < pts.length; i += 2) {
