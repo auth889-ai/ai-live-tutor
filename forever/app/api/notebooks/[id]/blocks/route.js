@@ -32,6 +32,7 @@ export async function POST(request, { params }) {
     origin: body.origin ?? null,
     title: body.title ?? null,
     trust: body.trust ?? 'user',
+    page: body.page ?? 'Notes',
   };
   // Link blocks: fetch + extract the readable text so the notebook (and the course generator)
   // holds the actual content, provenance marked 'extracted' — never pretending the user wrote it.

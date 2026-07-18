@@ -75,7 +75,7 @@ export async function deleteNotebook(userId, notebookId) {
 
 // One block per input. Provenance is first-class (eva's trust_level analog):
 // source = HOW it arrived, trust = WHO authored the content.
-export async function addBlock({ userId, notebookId, type, content = '', url = null, uploadId = null, mediaType = null, transcript = null, source = 'typed', origin = null, title = null, trust = 'user' }) {
+export async function addBlock({ userId, notebookId, type, content = '', url = null, uploadId = null, mediaType = null, transcript = null, source = 'typed', origin = null, title = null, trust = 'user', page = 'Notes' }) {
   const col = await _collection();
   if (!col || !userId) return null;
   if (!BLOCK_TYPES.has(type)) throw new Error(`unknown block type "${type}"`);
@@ -99,6 +99,7 @@ export async function addBlock({ userId, notebookId, type, content = '', url = n
     origin: origin ? String(origin).slice(0, 200) : null,
     trust,
     title: title ? String(title).slice(0, 300) : null,
+    page: String(page ?? 'Notes').slice(0, 80),
     createdAt: now(),
     updatedAt: now(),
   };
@@ -107,13 +108,15 @@ export async function addBlock({ userId, notebookId, type, content = '', url = n
   return doc;
 }
 
-export async function updateBlock(userId, notebookId, blockId, { content, seq, title } = {}) {
+export async function updateBlock(userId, notebookId, blockId, { content, seq, title, page, trust } = {}) {
   const col = await _collection();
   if (!col || !userId) return null;
   const set = { updatedAt: now() };
   if (content !== undefined) set.content = String(content).slice(0, 20000);
   if (title !== undefined) set.title = String(title).slice(0, 300);
   if (seq !== undefined && Number.isInteger(seq) && seq >= 0) set.seq = seq;
+  if (page !== undefined) set.page = String(page).slice(0, 80);
+  if (trust !== undefined && ['user', 'extracted', 'ai'].includes(trust)) set.trust = trust;
   const r = await col.updateOne({ _id: blockId, kind: 'block', ownerId: userId, notebookId }, { $set: set });
   if (r.matchedCount > 0) await col.updateOne({ _id: notebookId }, { $set: { updatedAt: now() } });
   return r.matchedCount > 0;

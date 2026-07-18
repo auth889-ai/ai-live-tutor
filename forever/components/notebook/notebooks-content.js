@@ -195,6 +195,9 @@ function Workspace({ id, onBack, onNavigate }) {
   const [revealId, setRevealId] = useState(null);
   const [live, setLive] = useState(null); // { stage, plan, sections[], rejected[], error }
   const [sel, setSel] = useState(() => new Set()); // block ids chosen as synthesis material
+  const [activePage, setActivePage] = useState(null);
+  const [addingPage, setAddingPage] = useState(false);
+  const [newPage, setNewPage] = useState('');
   const toggleSel = (bid) => setSel((cur) => { const n = new Set(cur); if (n.has(bid)) n.delete(bid); else n.add(bid); return n; });
   const load = () => fetch(`/api/notebooks/${id}`).then((r) => r.json()).then(setData).catch(() => {});
   useEffect(() => { load(); }, [id]);
@@ -251,7 +254,7 @@ function Workspace({ id, onBack, onNavigate }) {
           ) : null}
           {blocks.length === 0 ? (
             <div style={{ ...T.card, padding: '30px 20px', textAlign: 'center', color: '#9b8465', fontSize: 13 }}>Empty page — add your first block →</div>
-          ) : groupByDay(blocks).map(([day, dayBlocks]) => (
+          ) : groupByDay(activePage ? blocks.filter((b) => (b.page ?? 'Notes') === activePage) : blocks).map(([day, dayBlocks]) => (
             <div key={day}>
               <div style={{ ...T.cap, fontWeight: 800, margin: '6px 0 8px' }}>{day}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -264,8 +267,45 @@ function Workspace({ id, onBack, onNavigate }) {
           ))}
           <AskBox disabled={Boolean(live) && !live.done && !live.error} onAsk={(q) => runStream(`mode=ask&question=${encodeURIComponent(q)}`)} />
         </div>
-        <Intake id={id} onAdded={load} />
+        <Intake id={id} onAdded={load} page={activePage ?? 'Notes'} />
       </div>
+    </div>
+  );
+}
+
+// PAGE TABS — Xournal++'s Document->XojPage model, ported: a notebook is PAGES, each holding
+// its blocks. "All" shows the whole document; + adds a page (blocks land on the active page).
+function PageTabs({ blocks, active, onPick, adding, newPage, setNewPage, onStartAdd, onCreate }) {
+  const pages = [];
+  for (const b of blocks) { const pg = b.page ?? 'Notes'; if (!pages.includes(pg)) pages.push(pg); }
+  if (active && !pages.includes(active)) pages.push(active);
+  if (pages.length <= 1 && !adding && !active) {
+    return (
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <span style={T.cap}>one page — </span>
+        <button onClick={onStartAdd} style={{ border: 'none', background: 'transparent', color: '#4477aa', fontSize: 12, fontWeight: 800, cursor: 'pointer', padding: 0 }}>+ add a page (chapters, topics, weeks…)</button>
+      </div>
+    );
+  }
+  const chip = (label, isOn, onClick) => (
+    <button key={label} onClick={onClick}
+      style={{ border: isOn ? 'none' : '1px solid #eadfce', borderRadius: 999, background: isOn ? '#2b211a' : '#fff', color: isOn ? '#fff' : '#6b563d', padding: '5px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+      {label}
+    </button>
+  );
+  return (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+      {chip('All pages', active === null, () => onPick(null))}
+      {pages.map((pg) => chip(`📄 ${pg}`, active === pg, () => onPick(pg)))}
+      {adding ? (
+        <span style={{ display: 'inline-flex', gap: 4 }}>
+          <input autoFocus value={newPage} onChange={(e) => setNewPage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') onCreate(); }}
+            placeholder="page name" style={{ border: '1px solid #eadfce', borderRadius: 999, padding: '4px 12px', fontSize: 12, width: 120 }} />
+          <button onClick={onCreate} style={{ border: 'none', borderRadius: 999, background: T.accent, color: '#fff', padding: '4px 10px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>✓</button>
+        </span>
+      ) : (
+        <button onClick={onStartAdd} style={{ border: '1px dashed #d8cbb6', borderRadius: 999, background: 'transparent', color: '#9b8465', padding: '5px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>+ page</button>
+      )}
     </div>
   );
 }
@@ -380,6 +420,39 @@ function Flashback({ blocks }) {
 
 function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue, onExplain, selected = false, onToggleSel }) {
   const [icon, label] = TYPE_META[b.type] ?? ['•', b.type];
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [editBusy, setEditBusy] = useState(false);
+  const [editErr, setEditErr] = useState('');
+  const startEdit = () => { setDraft(b.content ?? ''); setEditing(true); setEditErr(''); };
+  const saveEdit = async () => {
+    setEditBusy(true);
+    setEditErr('');
+    try {
+      const res = await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: draft }) });
+      if (!res.ok) throw new Error((await res.json()).error || 'save failed');
+      setEditing(false);
+      onChanged();
+    } catch (e) {
+      setEditErr(String(e.message ?? e));
+    } finally {
+      setEditBusy(false);
+    }
+  };
+  const aiTidy = async () => {
+    setEditBusy(true);
+    setEditErr('');
+    try {
+      const res = await fetch(`/api/notebooks/${nb}/blocks/${b._id}/improve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ draft }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'improve failed');
+      setDraft(d.improved); // proposal only — the human reads it and decides to save
+    } catch (e) {
+      setEditErr(String(e.message ?? e));
+    } finally {
+      setEditBusy(false);
+    }
+  };
   const [teach, setTeach] = useState(false);
   const [teachText, setTeachText] = useState('');
   const [teachBusy, setTeachBusy] = useState(false);
@@ -430,9 +503,15 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue, onExp
         <span style={{ ...T.cap, fontWeight: 800 }}>{label.toUpperCase()}</span>
         <span title={`provenance: ${b.trust}`} style={{ fontSize: 10.5, fontWeight: 800, color: TRUST_COLOR[b.trust] ?? '#9b8465', background: `${TRUST_COLOR[b.trust] ?? '#9b8465'}14`, borderRadius: 999, padding: '2px 8px' }}>{b.trust}</span>
         {b.origin ? <span style={T.cap}>{b.origin}</span> : null}
+        {['note', 'text', 'moment'].includes(b.type) ? (
+          <button onClick={editing ? () => setEditing(false) : startEdit} title="edit this block"
+            style={{ marginLeft: 'auto', border: '1px solid #eadfce', borderRadius: 999, background: editing ? '#f6ede1' : '#fff', color: '#6b563d', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+            {editing ? '✕ cancel' : '✏️ edit'}
+          </button>
+        ) : null}
         {onExplain && b.trust !== 'ai' && ((b.content ?? '').length > 20 || (b.transcript ?? '').length > 20) ? (
           <button onClick={() => onExplain(b._id)} title="the notebook explains THIS block in depth — detailed sections + an illustration, grounded in its content"
-            style={{ marginLeft: 'auto', border: '1px solid #f0c39a', borderRadius: 999, background: '#fffdf9', color: '#8a5a3a', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+            style={{ marginLeft: 6, border: '1px solid #f0c39a', borderRadius: 999, background: '#fffdf9', color: '#8a5a3a', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
             🔍 explain in detail
           </button>
         ) : null}
@@ -457,7 +536,22 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue, onExp
         <button onClick={remove} title="remove block" style={{ marginLeft: audio || !['note', 'text', 'voice'].includes(b.type) || (b.content ?? '').length <= 60 ? 'auto' : 6, border: 'none', background: 'transparent', color: '#c9bda1', cursor: 'pointer', fontSize: 13 }}>✕</button>
       </div>
       {b.title ? <div style={{ fontSize: 14, fontWeight: 800, color: '#2b211a', marginTop: 6 }}>{b.title}</div> : null}
-      {(() => {
+      {editing ? (
+        <div style={{ marginTop: 8 }}>
+          <textarea value={draft} onChange={(e) => setDraft(e.target.value)} spellCheck={false}
+            style={{ width: '100%', minHeight: 110, boxSizing: 'border-box', resize: 'vertical', border: '1px solid #eadfce', borderRadius: 10, padding: '10px 12px', fontSize: 13.5, lineHeight: 1.6, color: '#2b211a', fontFamily: 'inherit' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+            <button onClick={saveEdit} disabled={editBusy}
+              style={{ border: 'none', borderRadius: 999, background: editBusy ? '#cfe0d2' : '#2f7d4a', color: '#fff', padding: '7px 16px', fontSize: 12, fontWeight: 800, cursor: editBusy ? 'default' : 'pointer' }}>✓ save</button>
+            <button onClick={aiTidy} disabled={editBusy || draft.trim().length < 10} title="the AI proposes a clearer rewrite INTO the editor — nothing saves until you press save"
+              style={{ border: '1px solid #f0c39a', borderRadius: 999, background: '#fffdf9', color: '#8a5a3a', padding: '6px 14px', fontSize: 12, fontWeight: 800, cursor: editBusy ? 'default' : 'pointer' }}>
+              {editBusy ? 'working…' : '✨ AI tidy (proposes, you decide)'}
+            </button>
+            {editErr ? <span style={{ fontSize: 12, color: '#a33d2e', fontWeight: 700 }}>{editErr}</span> : null}
+          </div>
+        </div>
+      ) : null}
+      {!editing ? (() => {
         const raw = b.type === 'voice' ? (b.transcript || b.content) : b.type === 'link' ? `${(b.content ?? '').slice(0, 400)}${(b.content ?? '').length > 400 ? '…' : ''}` : (b.content ?? '');
         // never repeat the title as the first content line (image captions, synthesized notes)
         const cleanTitle = (b.title ?? '').replace(/^✨\s*/, '').trim();
@@ -471,7 +565,7 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue, onExp
               : <div style={{ fontSize: 13.5, color: '#3a3327', marginTop: 6, lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}><WikiText text={deduped} onNavigate={onNavigate} /></div>}
           </>
         );
-      })()}
+      })() : null}
       {b.type === 'moment' && b.transcript ? <div style={{ fontSize: 12.5, color: '#6b563d', fontStyle: 'italic', marginTop: 6 }}>“{b.transcript}”</div> : null}
       {b.type === 'moment' && b.url ? (
         <a href={b.url} style={{ display: 'inline-block', marginTop: 8, border: 'none', borderRadius: 999, background: T.accent, color: '#fff', padding: '5px 14px', fontSize: 12, fontWeight: 800, textDecoration: 'none' }}>▶ replay this moment</a>
@@ -537,7 +631,7 @@ const DAILY_PROMPTS = [
   'What do you want to remember a month from now?',
 ];
 
-function Intake({ id, onAdded }) {
+function Intake({ id, onAdded, page = 'Notes' }) {
   const [mode, setMode] = useState('note'); // note | text | link | voice
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
@@ -567,7 +661,7 @@ function Intake({ id, onAdded }) {
       if (!up.ok) throw new Error(upd.error || 'upload failed');
       const res = await fetch(`/api/notebooks/${id}/blocks`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: fileKind.current, uploadId: upd.uploadId, fileName: file.name, mediaType: file.type, source: 'upload' }),
+        body: JSON.stringify({ type: fileKind.current, uploadId: upd.uploadId, fileName: file.name, mediaType: file.type, source: 'upload', page }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'could not add the file');
@@ -599,10 +693,10 @@ function Intake({ id, onAdded }) {
   const submit = () => {
     const v = value.trim();
     if (!v) return;
-    if (mode === 'note') add({ type: 'note', content: v, source: 'typed' });
-    if (mode === 'text') add({ type: 'text', content: v, source: 'pasted' });
-    if (mode === 'link') add({ type: 'link', url: v });
-    if (mode === 'voice') add({ type: 'voice', transcript: v, source: 'voice' });
+    if (mode === 'note') add({ type: 'note', content: v, source: 'typed', page });
+    if (mode === 'text') add({ type: 'text', content: v, source: 'pasted', page });
+    if (mode === 'link') add({ type: 'link', url: v, page });
+    if (mode === 'voice') add({ type: 'voice', transcript: v, source: 'voice', page });
   };
 
   // eva's Web Speech pattern: client-side STT into the input; the transcript becomes the block.
