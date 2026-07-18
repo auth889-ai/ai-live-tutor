@@ -41,7 +41,7 @@ export function NotebooksContent() {
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ fontSize: 27, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif', fontWeight: 600, margin: 0 }}>Notebooks</h1>
-          <p style={{ ...T.cap, margin: '4px 0 0' }}>Collect anything — notes, links, files, your voice — then turn a notebook into a course.</p>
+          <p style={{ ...T.cap, margin: '4px 0 0' }}>Collect anything — notes, links, files, your voice — and your notebook writes back: grounded study notes, summaries, self-tests.</p>
         </div>
         <button onClick={create} style={{ border: 'none', borderRadius: 999, background: T.accent, color: '#fff', padding: '9px 20px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer' }}>+ New notebook</button>
       </div>
@@ -49,7 +49,7 @@ export function NotebooksContent() {
         <div style={{ ...T.card, marginTop: 18, padding: '46px 20px', textAlign: 'center', color: '#9b8465' }}>
           <div style={{ fontSize: 34, marginBottom: 8 }}>📓</div>
           <div style={{ fontWeight: 700, color: '#2b211a' }}>Start your first notebook</div>
-          <div style={{ fontSize: 13, marginTop: 4 }}>type notes, paste articles, drop links or PDFs, even talk — forever turns it into a course</div>
+          <div style={{ fontSize: 13, marginTop: 4 }}>type notes, paste articles, drop links, even talk — then let the notebook synthesize what you collected</div>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14, marginTop: 18 }}>
@@ -59,8 +59,7 @@ export function NotebooksContent() {
               <div style={{ fontSize: 26 }}>📓</div>
               <div style={{ fontSize: 15, fontWeight: 800, color: '#2b211a', marginTop: 8, lineHeight: 1.3 }}>{n.title}</div>
               <div style={{ ...T.cap, marginTop: 6 }}>{n.blockCount} block{n.blockCount === 1 ? '' : 's'} · {new Date(n.updatedAt).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</div>
-              {n.generatedCourseId ? <div style={{ marginTop: 8, fontSize: 11.5, fontWeight: 800, color: '#2f7d4a' }}>✓ course generated</div>
-                : n.lastGeneratedJobId ? <div style={{ marginTop: 8, fontSize: 11.5, fontWeight: 800, color: '#c98f2d' }}>⏳ generating…</div> : null}
+
             </button>
           ))}
         </div>
@@ -81,7 +80,6 @@ function Workspace({ id, onBack }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: 24, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif', fontWeight: 600, margin: 0, flex: 1, minWidth: 0 }}>{notebook.title}</h1>
         <SynthesizeButton id={id} blocks={blocks} onDone={load} />
-        <GenerateButton id={id} notebook={notebook} blocks={blocks} onKick={load} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(260px, 340px)', gap: 14, alignItems: 'start', marginTop: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
