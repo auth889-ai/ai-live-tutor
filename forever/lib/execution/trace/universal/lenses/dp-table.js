@@ -18,7 +18,7 @@ const isTable = (v) => Array.isArray(v) && v.length >= 1 && v.every((row) => Arr
 
 // Decide the lens from the recording. Returns null or:
 //   { lens: 'dp-table', confidence, name, rows, cols }
-export function detectDpTable(recording, _ctx = {}) {
+export function detectDpTable(recording, ctx = {}) {
   const lines = (recording?.events ?? []).filter((e) => e.ev === 'line');
   if (lines.length === 0) return null;
 
@@ -26,6 +26,10 @@ export function detectDpTable(recording, _ctx = {}) {
   const names = new Set(lines.flatMap((e) => Object.keys(e.locals).filter((k) => isTable(e.locals[k]))));
   let best = null;
   for (const name of names) {
+    // GUARD (reproduced miss, 2026-07-19): a SET has no stable order — its sorted-list
+    // snapshot shows insertion shifts that read as in-place writes. seen = set() in a
+    // bitmask BFS classified as a DP table. If the code builds this name as a set, skip it.
+    if (ctx?.code && new RegExp(`\\b${name}\\s*=\\s*set\\s*\\(|\\b${name}\\.add\\s*\\(`).test(ctx.code)) continue;
     const snaps = lines.map((e) => e.locals[name]).filter(isTable);
     if (snaps.length < 2) continue;
     const final = snaps.at(-1);
@@ -60,6 +64,22 @@ export function detectDpTable(recording, _ctx = {}) {
     // 3, not more: teaching inputs are TINY, and a write that stores the value a cell already
     // held (dp[1][1] = max(0,0) on a 0-scaffold) is invisible to state diffing.
     if (writes.length < 3) continue;
+    // GUARD (reproduced miss, 2026-07-19): a DP table NEVER loses cells — a "table" whose
+    // total cell count ever shrinks is a queue/stack of tuples wearing a table's shape
+    // (bitmask-BFS deque of (node, mask, dist) triples classified as dp-table).
+    let shrank = false;
+    for (let i = 1; i < snaps.length; i += 1) {
+      if (snaps[i].flat().length < snaps[i - 1].flat().length) { shrank = true; break; }
+    }
+    if (shrank) continue;
+    // GUARD (reproduced miss, same day): an append-grown ragged "table" must grow its row
+    // lengths MONOTONICALLY (Pascal's 1,2,3,4) — bouncing lengths ([],[1],[1,2],[1],[1,3]...)
+    // are a backtracking result accumulator, not a fill.
+    if (!inPlace) {
+      let monotone = true;
+      for (let r = 1; r < final.length; r += 1) if (final[r].length < final[r - 1].length) { monotone = false; break; }
+      if (!monotone) continue;
+    }
     // APPEND-ONLY + 2 columns = a growing PAIRS list (bridges/edges/intervals/coordinates —
     // a RESULT accumulator, not a DP fill). Measured live: Tarjan on an 8-node graph found 3
     // bridges and the [[u,v],...] accumulator out-claimed the real graph as a 3x2 "DP table".

@@ -45,6 +45,44 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
     variables: variables ?? {},
   });
 
+  // GUARD (reproduced fake-arrow, 2026-07-19): rules are only provable when writes carry
+  // information. A constant fill (table[i][j] = 1 on a zero scaffold) satisfies
+  // 'diagonal + 1' at EVERY cell — systematically — so exactly-one-match passes on a
+  // coincidence. Fewer than 2 distinct written values across the run -> no claims, ever.
+  const distinctWritten = new Set();
+  {
+    let prevT = null;
+    for (const e of snapshots) {
+      if (!Array.isArray(e?.table)) continue;
+      if (prevT) {
+        for (let r = 0; r < e.table.length; r += 1) {
+          for (let c = 0; c < (e.table[r]?.length ?? 0); c += 1) {
+            if (JSON.stringify(prevT?.[r]?.[c]) !== JSON.stringify(e.table[r][c])) distinctWritten.add(JSON.stringify(e.table[r][c]));
+          }
+        }
+      }
+      prevT = e.table;
+    }
+  }
+  // a systematic coincidence needs repetition: only suppress when 3+ writes all carry
+  // one single value (the constant-fill signature) — tiny demos keep their proofs
+  let totalWrites = 0;
+  {
+    let prevT = null;
+    for (const e of snapshots) {
+      if (!Array.isArray(e?.table)) continue;
+      if (prevT) {
+        for (let r = 0; r < e.table.length; r += 1) {
+          for (let c = 0; c < (e.table[r]?.length ?? 0); c += 1) {
+            if (JSON.stringify(prevT?.[r]?.[c]) !== JSON.stringify(e.table[r][c])) totalWrites += 1;
+          }
+        }
+      }
+      prevT = e.table;
+    }
+  }
+  const informative = !(totalWrites >= 3 && distinctWritten.size < 2);
+
   for (const ev of snapshots) {
     const line = Number(ev.line);
     const writes = [];
@@ -76,7 +114,7 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
     // non-base writes only. Candidates from the PRE-write state; exactly one matching rule
     // -> highlight those reads + name the rule; zero or several matches -> nothing.
     let proved = null;
-    if (writes.length === 1) {
+    if (informative && writes.length === 1) {
       const [r, c] = writes[0];
       if (r > 0 || c > 0) {
         const val = ev.table[r]?.[c];

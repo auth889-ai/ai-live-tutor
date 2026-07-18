@@ -862,7 +862,33 @@ def last_stone(stones):
 // THE FRONTIER — every KNOWN-GAP shape, run and reported honestly. These rows are excluded
 // from the headline elite % (they document the boundary, they don't inflate or deflate it);
 // when a frontier row goes structural, its lens just landed — promote it into PROBLEMS.
-const FRONTIER = [];
+const FRONTIER = [
+  // Reported by external review 2026-07-19, reproduced same day. Both run CORRECTLY —
+  // the gap is lens choice, not accuracy:
+  ['Subsets via closure backtracking (should be recursion-tree, reads graph-adjacency)', `def subsets(nums):
+    result = []
+    path = []
+
+    def search(index):
+        result.append(path[:])
+        for i in range(index, len(nums)):
+            path.append(nums[i])
+            search(i + 1)
+            path.pop()
+
+    search(0)
+    return result`, 'subsets([1, 2, 3])'],
+  ['Kadane inside class Solution (should be pointer-array, falls to line-floor)', `class Solution:
+    def maxSubArray(self, nums):
+        best = nums[0]
+        cur = nums[0]
+        for x in nums[1:]:
+            cur = max(x, cur + x)
+            best = max(best, cur)
+        return best
+
+sol = Solution()`, 'sol.maxSubArray([-2, 1, -3, 4, -1, 2, 1, -5, 4])'],
+];
 
 const rows = [];
 let structural = 0;
