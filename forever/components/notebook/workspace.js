@@ -271,7 +271,7 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
               <div style={{ color: C.sub, fontSize: 14, padding: '30px 0' }}>An empty page. Write below — or bring in a link, file, or voice note with ＋.</div>
             ) : (
               docBlocks.map((b) => (
-                <DocBlock key={b._id} nb={id} b={b} selected={selected === b._id} legacyIll={legacyIll}
+                <DocBlock key={b._id} nb={id} b={b} pages={pages} selected={selected === b._id} legacyIll={legacyIll}
                   onSelect={() => setSelected(selected === b._id ? null : b._id)}
                   onChanged={load} onNavigate={onNavigate} />
               ))
@@ -330,12 +330,23 @@ function NewPage({ onCreate }) {
 }
 
 // ---------- document blocks: quiet by default, actions on hover ----------
-function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate, legacyIll = new Map() }) {
+function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onNavigate, legacyIll = new Map() }) {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState('');
   const [busy, setBusy] = useState(false);
   const [showExtract, setShowExtract] = useState(false);
   const [editingInk, setEditingInk] = useState(false);
+  const [attaching, setAttaching] = useState(false);
+  const moveToPage = async (pg) => {
+    await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: pg }) });
+    onChanged();
+  };
+  const attachLink = async (url) => {
+    setAttaching(false);
+    if (!url?.trim()) return;
+    await fetch(`/api/notebooks/${nb}/blocks/${b._id}/attach`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'link', url: url.trim() }) });
+    onChanged();
+  };
   const save = async () => {
     setBusy(true);
     await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: draftText }) }).catch(() => {});
@@ -494,8 +505,22 @@ function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate, legacyIll 
         {!b.audioUrl && ['note', 'text'].includes(b.type) ? (
           <button onClick={listen} title="read this note aloud (Sankofa-style narration)" style={ghost()}>{narrating ? '…' : '🔊 listen'}</button>
         ) : null}
+        <button onClick={(e) => { e.stopPropagation(); setAttaching((v) => !v); }} title="attach a link to this block" style={ghost()}>📎</button>
+        {pages.length > 1 ? (
+          <select value={b.page ?? 'Notes'} onClick={(e) => e.stopPropagation()} onChange={(e) => moveToPage(e.target.value)}
+            title="move this block to another page"
+            style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: '#fff', color: C.sub, fontSize: 10.5, fontWeight: 700, padding: '1px 4px' }}>
+            {pages.map((pg) => <option key={pg} value={pg}>⇢ {pg}</option>)}
+          </select>
+        ) : null}
         <button onClick={(e) => { e.stopPropagation(); remove(); }} style={ghost()}>✕</button>
       </div>
+      {attaching ? (
+        <input autoFocus placeholder="paste a link — Enter attaches it to this block"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => { if (e.key === 'Enter') attachLink(e.currentTarget.value); if (e.key === 'Escape') setAttaching(false); }}
+          style={{ width: '100%', boxSizing: 'border-box', border: `1px dashed ${C.border}`, borderRadius: 8, padding: '6px 10px', fontSize: 12.5, marginTop: 4 }} />
+      ) : null}
     </div>
   );
 }
