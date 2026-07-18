@@ -340,6 +340,7 @@ function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onNavigate
   const [showExtract, setShowExtract] = useState(false);
   const [editingInk, setEditingInk] = useState(false);
   const [attaching, setAttaching] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const moveToPage = async (pg) => {
     await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: pg }) });
     onChanged();
@@ -493,6 +494,8 @@ function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onNavigate
       ) : (
         <Doc text={(() => {
           let t = b.type === 'voice' ? (b.transcript || b.content) : (b.content ?? '');
+          // Sankofa's context-cap law, applied to READING: huge pasted text collapses
+          if (!expanded && b.trust === 'user' && t.length > 1500) t = `${t.slice(0, 1500).split('\n').slice(0, -1).join('\n')}\n\n…`;
           // weave legacy illustrations under their matching section headings
           if (b.trust === 'ai' && legacyIll.size && !/!\[/.test(t)) {
             t = t.split('\n').map((ln) => {
@@ -523,6 +526,9 @@ function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onNavigate
           <button onClick={listen} title="read this note aloud (Sankofa-style narration)" style={ghost()}>{narrating ? '…' : '🔊 listen'}</button>
         ) : null}
         <button onClick={(e) => { e.stopPropagation(); setAttaching((v) => !v); }} title="attach a link to this block" style={ghost()}>📎</button>
+        {b.trust === 'user' && String(b.content ?? '').length > 1500 ? (
+          <button onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }} style={ghost()}>{expanded ? '▴ collapse' : `▾ show all (${Math.round(String(b.content ?? '').length / 1000)}k)`}</button>
+        ) : null}
         {pages.length > 1 ? (
           <select value={b.page ?? 'Notes'} onClick={(e) => e.stopPropagation()} onChange={(e) => moveToPage(e.target.value)}
             title="move this block to another page"

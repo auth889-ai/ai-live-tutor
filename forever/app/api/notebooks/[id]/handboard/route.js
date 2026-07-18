@@ -24,6 +24,38 @@ export async function POST(request, { params }) {
   const cap = texty.length <= 2 ? 18000 : 900;
   const numbered = texty.slice(0, 40).map((b, i) => `[${i + 1}] ${String(b.title ?? '').slice(0, 80)}\n${String(b.content ?? b.transcript ?? '').slice(0, cap)}`).join('\n\n');
 
+  // Sankofa's law (eva narrative_planner.py): huge text -> beats -> one artifact per
+  // beat, each writer seeing only its own slice, cut at line boundaries (_cap_context).
+  const full = texty.length === 1 ? String(texty[0].content ?? texty[0].transcript ?? '') : null;
+  const parts = [];
+  if (full && full.length > 9000) {
+    const lines = full.split('\n');
+    const per = Math.ceil(lines.length / Math.min(3, Math.ceil(full.length / 9000)));
+    for (let i = 0; i < lines.length; i += per) parts.push(lines.slice(i, i + per).join('\n'));
+  }
+  if (parts.length > 1) {
+    const blocks = [];
+    for (let i = 0; i < parts.length; i += 1) {
+      const partOut = await runAgentChain({
+        agent: 'notebook-handboard-planner',
+        system: `You design ONE handwritten whiteboard note from PART ${i + 1} of ${parts.length} of a lecture. Return ONLY JSON {"title": string, "sections": [{"heading": string, "para": string (optional, <=200 chars), "bullets": [string] (optional, <=6, each <=70 chars)}], "marks": [{"term": string, "color": "yellow"|"orange"|"blue"|"purple"|"green"|"pink"}], "diagrams": [{"type": "graph", "caption": string, "nodes": [{"label": string (<=3 chars)}], "edges": [[label, label]]}]} — 2-3 sections about THIS PART only. HARD RULES: only facts from the text. Output ONLY JSON.`,
+        user: `PART ${i + 1}/${parts.length}:\n\n${parts[i].slice(0, 12000)}`,
+        maxTokens: 900,
+        temperature: 0.3,
+      });
+      const ps = partOut?.json ?? partOut;
+      if (!ps?.title || !Array.isArray(ps.sections) || ps.sections.length === 0) continue;
+      blocks.push(await addBlock({
+        userId: session.userId, notebookId: id, type: 'handboard',
+        content: JSON.stringify(ps), source: 'generated', trust: 'ai',
+        title: `${String(ps.title).slice(0, 100)} · board ${i + 1}/${parts.length}`, page,
+      }));
+    }
+    if (blocks.length === 0) return Response.json({ error: 'no part produced a usable board — try again' }, { status: 502 });
+    await bumpDay(session.userId, 'notebook').catch(() => {});
+    return Response.json({ blocks, partCount: parts.length }, { status: 201 });
+  }
+
   const out = await runAgentChain({
     agent: 'notebook-handboard-planner',
     system: `You design ONE handwritten whiteboard note from the user's source blocks — like a student's beautiful marker-and-pen board. Return ONLY JSON:
