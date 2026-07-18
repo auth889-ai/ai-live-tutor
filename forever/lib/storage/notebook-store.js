@@ -119,6 +119,18 @@ export async function updateBlock(userId, notebookId, blockId, { content, seq, t
   return r.matchedCount > 0;
 }
 
+// Narration attachment: the block keeps its spoken version (Sankofa's TTS-per-segment,
+// notebook-sized). URL only — bytes live under public/audio like every lesson clip.
+export async function setBlockAudio(userId, notebookId, blockId, audioUrl, durationMs) {
+  const col = await _collection();
+  if (!col || !userId) return null;
+  const r = await col.updateOne(
+    { _id: blockId, kind: 'block', ownerId: userId, notebookId },
+    { $set: { audioUrl: String(audioUrl).slice(0, 500), audioDurationMs: Number(durationMs) || 0, updatedAt: now() } },
+  );
+  return r.matchedCount > 0;
+}
+
 export async function removeBlock(userId, notebookId, blockId) {
   const col = await _collection();
   if (!col || !userId) return null;

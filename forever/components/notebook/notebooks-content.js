@@ -361,6 +361,18 @@ function Flashback({ blocks }) {
 
 function Block({ nb, b, onChanged, reveal = false, onNavigate }) {
   const [icon, label] = TYPE_META[b.type] ?? ['•', b.type];
+  const [audio, setAudio] = useState(b.audioUrl ?? null);
+  const [voicing, setVoicing] = useState(false);
+  const narrate = async () => {
+    setVoicing(true);
+    try {
+      const res = await fetch(`/api/notebooks/${nb}/blocks/${b._id}/narrate`, { method: 'POST' });
+      const d = await res.json();
+      if (res.ok && d.audioUrl) setAudio(d.audioUrl);
+    } finally {
+      setVoicing(false);
+    }
+  };
   const remove = async () => {
     await fetch(`/api/notebooks/${nb}/blocks/${b._id}`, { method: 'DELETE' });
     onChanged();
@@ -373,7 +385,13 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate }) {
         <span style={{ ...T.cap, fontWeight: 800 }}>{label.toUpperCase()}</span>
         <span title={`provenance: ${b.trust}`} style={{ fontSize: 10.5, fontWeight: 800, color: TRUST_COLOR[b.trust] ?? '#9b8465', background: `${TRUST_COLOR[b.trust] ?? '#9b8465'}14`, borderRadius: 999, padding: '2px 8px' }}>{b.trust}</span>
         {b.origin ? <span style={T.cap}>{b.origin}</span> : null}
-        <button onClick={remove} title="remove block" style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: '#c9bda1', cursor: 'pointer', fontSize: 13 }}>✕</button>
+        {!audio && ['note', 'text', 'voice'].includes(b.type) && (b.content ?? '').length > 60 ? (
+          <button onClick={narrate} disabled={voicing} title="read this block aloud (Qwen3-TTS)"
+            style={{ marginLeft: 'auto', border: '1px solid #f2e3d5', borderRadius: 999, background: '#fff', color: voicing ? '#c9bda1' : '#6b563d', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: voicing ? 'default' : 'pointer' }}>
+            {voicing ? 'voicing…' : '🔊 read to me'}
+          </button>
+        ) : null}
+        <button onClick={remove} title="remove block" style={{ marginLeft: audio || !['note', 'text', 'voice'].includes(b.type) || (b.content ?? '').length <= 60 ? 'auto' : 6, border: 'none', background: 'transparent', color: '#c9bda1', cursor: 'pointer', fontSize: 13 }}>✕</button>
       </div>
       {b.title ? <div style={{ fontSize: 14, fontWeight: 800, color: '#2b211a', marginTop: 6 }}>{b.title}</div> : null}
       {(() => {
@@ -392,6 +410,7 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate }) {
         );
       })()}
       {b.url ? <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#4477aa', fontWeight: 700 }}>{b.url}</a> : null}
+      {audio ? <audio controls src={audio} style={{ width: '100%', height: 32, marginTop: 8 }} /> : null}
     </div>
   );
 }
