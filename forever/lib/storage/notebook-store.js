@@ -179,6 +179,21 @@ export async function addAttachment(userId, notebookId, blockId, { kind, url = n
 
 // Narration attachment: the block keeps its spoken version (Sankofa's TTS-per-segment,
 // notebook-sized). URL only — bytes live under public/audio like every lesson clip.
+// Attachment layout meta (user order: images MOVE inside their block): placement
+// left|full|right + size s|m|l, stored on the attachment itself.
+export async function setAttachmentMeta(userId, notebookId, blockId, attachmentId, { placement, size } = {}) {
+  const col = await _collection();
+  if (!col || !userId) return null;
+  const set = { updatedAt: now() };
+  if (['left', 'full', 'right'].includes(placement)) set['attachments.$.placement'] = placement;
+  if (['s', 'm', 'l'].includes(size)) set['attachments.$.size'] = size;
+  const r = await col.updateOne(
+    { _id: blockId, kind: 'block', ownerId: userId, notebookId, 'attachments.id': attachmentId },
+    { $set: set },
+  );
+  return r.matchedCount > 0;
+}
+
 export async function setBlockAudio(userId, notebookId, blockId, audioUrl, durationMs) {
   const col = await _collection();
   if (!col || !userId) return null;

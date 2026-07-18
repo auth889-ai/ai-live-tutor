@@ -37,6 +37,10 @@ export function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onN
     }
     setAttaching(false);
   };
+  const patchAtt = async (attachmentId, meta) => {
+    await fetch(`/api/notebooks/${nb}/blocks/${b._id}/attach`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ attachmentId, ...meta }) });
+    onChanged();
+  };
   const attachLink = async (url) => {
     setAttaching(false);
     if (!url?.trim()) return;
@@ -186,9 +190,19 @@ export function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onN
         })()} onNavigate={onNavigate} skipTitle={(b.title ?? '').replace(/^✨\s*/, '')} />
       )}
       {(b.attachments ?? []).map((att) => att.kind === 'image' && att.url ? (
-        <img key={att.id} src={att.url} alt={att.title ?? ''} title="click to resize"
-          onClick={(e) => { e.stopPropagation(); setAttSize((v) => (v + 1) % 3); }}
-          style={{ width: ['26%', '52%', '100%'][attSize], minWidth: 160, borderRadius: 10, display: 'block', margin: '6px 0', cursor: 'zoom-in' }} />
+        <div key={att.id} onClick={(e) => e.stopPropagation()} data-att={att.id}
+          style={{ float: att.placement === 'left' ? 'left' : att.placement === 'right' ? 'right' : 'none',
+            width: { s: '26%', m: '52%', l: '100%' }[att.size ?? 'm'], minWidth: 160,
+            margin: att.placement === 'left' ? '4px 14px 6px 0' : att.placement === 'right' ? '4px 0 6px 14px' : '6px 0' }}>
+          <img src={att.url} alt={att.title ?? ''} style={{ width: '100%', borderRadius: 10, display: 'block' }} />
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 2 }}>
+            {[['left', '◧'], ['full', '▣'], ['right', '◨']].map(([pl, icon]) => (
+              <button key={pl} onClick={() => patchAtt(att.id, { placement: pl })} title={`place image ${pl}`}
+                style={{ ...ghost(), opacity: (att.placement ?? 'full') === pl ? 1 : 0.45 }}>{icon}</button>
+            ))}
+            <button onClick={() => patchAtt(att.id, { size: { s: 'm', m: 'l', l: 's' }[att.size ?? 'm'] })} title="cycle size" style={ghost()}>⤢</button>
+          </div>
+        </div>
       ) : (
         <a key={att.id} href={att.url ?? undefined} target={att.url ? '_blank' : undefined} rel="noreferrer" onClick={(e) => e.stopPropagation()}
           style={{ display: 'inline-flex', gap: 5, fontSize: 12, color: C.extracted, fontWeight: 700, textDecoration: 'none', marginRight: 10 }}>

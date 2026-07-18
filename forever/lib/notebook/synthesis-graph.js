@@ -32,6 +32,7 @@ const SynthState = Annotation.Root({
   modeText: Annotation(),
   limits: Annotation(),
   aim: Annotation(),
+  sectionRange: Annotation(),   // beat-scaled section count for huge material
   question: Annotation(),
   draftBlock: Annotation(),         // continue-mode source block
   planTitle: Annotation(),
@@ -64,13 +65,13 @@ async function planner(state) {
   const harder = state.planTries > 0 ? 'YOUR LAST PLAN FAILED THE EVIDENCE CHECK. Copy evidence phrases EXACTLY, character for character, from the blocks. ' : '';
   const planned = await runAgentChain({
     agent: 'notebook-arc-planner',
-    system: `${state.aim}${harder}You plan ${state.modeText} from the user's source blocks. Return ONLY JSON {"title": string, "sections": [{"heading": string, "focus": string, "evidence": string}]} — ${state.mode === 'detailed' ? '3 to 5' : '2 to 4'} sections. Each evidence MUST be a short phrase copied VERBATIM from the blocks (machine-checked); each focus one sharp line about that evidence. Sections about anything not literally in the blocks are forbidden. ${GROUND}`,
+    system: `${state.aim}${harder}You plan ${state.modeText} from the user's source blocks. Return ONLY JSON {"title": string, "sections": [{"heading": string, "focus": string, "evidence": string}]} — ${state.sectionRange ?? (state.mode === 'detailed' ? '3 to 5' : '2 to 4')} sections. Each evidence MUST be a short phrase copied VERBATIM from the blocks (machine-checked); each focus one sharp line about that evidence. Sections about anything not literally in the blocks are forbidden. ${GROUND}`,
     user: `MY SOURCE BLOCKS:\n\n${state.numbered}`,
     maxTokens: 600,
     temperature: 0.3,
   });
   const p = planned?.json ?? planned;
-  const sections = (Array.isArray(p?.sections) ? p.sections : []).slice(0, 5)
+  const sections = (Array.isArray(p?.sections) ? p.sections : []).slice(0, 8)
     .filter((x) => x?.heading)
     .map((x, i) => ({ index: i, heading: String(x.heading).slice(0, 120), focus: String(x.focus ?? '').slice(0, 300), evidence: String(x.evidence ?? '').slice(0, 200) }));
   return { planTitle: String(p?.title ?? 'Study note').slice(0, 200), planSections: sections, planTries: 1 };

@@ -6,7 +6,7 @@
 import path from 'node:path';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 
-import { addAttachment } from '../../../../../../../lib/storage/notebook-store.js';
+import { addAttachment, setAttachmentMeta } from '../../../../../../../lib/storage/notebook-store.js';
 import { ingestUrl } from '../../../../../../../lib/ingest/url/ingest-url.js';
 import { resolveUpload } from '../../../../../../../lib/storage/upload-store.js';
 import { parsePdfWithMineru } from '../../../../../../../lib/ingest/pdf/mineru.js';
@@ -70,4 +70,14 @@ export async function POST(request, { params }) {
   } catch (e) {
     return Response.json({ error: String(e.message ?? e).slice(0, 200) }, { status: 422 });
   }
+}
+
+export async function PATCH(request, { params }) {
+  const session = sessionFromRequest(request);
+  if (!session?.userId) return Response.json({ error: 'sign in first' }, { status: 401 });
+  const { id, blockId } = await params;
+  const body = await request.json().catch(() => ({}));
+  const ok = await setAttachmentMeta(session.userId, id, blockId, String(body.attachmentId ?? ''), { placement: body.placement, size: body.size });
+  if (!ok) return Response.json({ error: 'attachment not found' }, { status: 404 });
+  return Response.json({ ok: true });
 }

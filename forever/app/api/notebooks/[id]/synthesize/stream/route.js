@@ -112,6 +112,25 @@ export async function GET(request, { params }) {
   // per-block budget: a focused run on 1-2 blocks deserves the WHOLE block (a pasted
   // lecture transcript is 20k chars — slicing it to 2.5k made block-scoped AI useless)
   const perBlockCap = material.length <= 2 ? 20000 : 2500;
+  // Sankofa's beat law (eva narrative_planner.py): a huge single block becomes numbered
+  // PARTS cut at line boundaries, so the planner plans across the WHOLE lecture and each
+  // section quotes its own beat — the note grows with the material.
+  if (material.length <= 2) {
+    const exploded = [];
+    for (const b of material) {
+      const text = String(b.content ?? b.transcript ?? '');
+      if (text.length > 9000) {
+        const lines = text.split('\n');
+        const nParts = Math.min(4, Math.ceil(text.length / 7000));
+        const per = Math.ceil(lines.length / nParts);
+        for (let k = 0; k < nParts; k += 1) {
+          exploded.push({ ...b, title: `${b.title ?? b.type} — part ${k + 1}/${nParts}`, content: lines.slice(k * per, (k + 1) * per).join('\n'), attachments: k === 0 ? b.attachments : [] });
+        }
+      } else exploded.push(b);
+    }
+    if (exploded.length > material.length) material = exploded;
+  }
+  const sectionRange = material.length >= 3 && found.blocks.length !== material.length ? '5 to 8' : null;
   const numbered = material.slice(0, 40).map((b, i) => {
     let body = (['voice', 'moment'].includes(b.type) ? [b.transcript, b.content].filter(Boolean).join(' — ') : b.content) ?? '';
     for (const att of (b.attachments ?? []).slice(0, 5)) {
@@ -140,7 +159,7 @@ export async function GET(request, { params }) {
         const corpus = material.map((b) => `${b.title ?? ''} ${b.transcript ?? ''} ${b.content ?? ''}`).join(' ').toLowerCase().replace(/\s+/g, ' ');
         const finalState = await graph.invoke({
           numbered, corpus, materialCount: material.length,
-          mode, modeText: MODES[mode], limits: LIMITS[mode], aim: AIM, question, draftBlock,
+          mode, modeText: MODES[mode], limits: LIMITS[mode], aim: AIM, question, draftBlock, sectionRange,
           emit: send,
         }, { recursionLimit: 20 });
 
