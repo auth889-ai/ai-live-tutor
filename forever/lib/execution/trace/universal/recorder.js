@@ -121,17 +121,33 @@ def _walk_heap(locs):
         objs[oid] = rec
     return objs
 
+_budget = [0]
+HARD_BUDGET = 2000000
+
+def _count_tracer(frame, event, arg):
+    # Post-cap guard (Pyodide adoption list #2, header-free): recording stopped at MAX_EVENTS,
+    # but the RUN must not spin forever — an infinite loop would hang the sandbox (and, in the
+    # browser, the student's tab). Count on, and kill the run past a generous hard budget.
+    _budget[0] += 1
+    if _budget[0] > HARD_BUDGET:
+        raise RuntimeError('step budget exceeded - likely an infinite loop')
+    return _count_tracer
+
 def _push(ev):
     if len(_events) >= MAX_EVENTS:
         # NEVER a silent cut: the cap becomes a first-class terminal event so the compiled
-        # trace can SAY the recording stopped (the run itself continues to completion).
+        # trace can SAY the recording stopped. The run continues UNDER THE BUDGET TRACER —
+        # finite programs still finish and report their result; runaway loops die loudly.
         _events.append({'truncated': True})
-        sys.settrace(None)
+        sys.settrace(_count_tracer)
         return False
     _events.append(ev)
     return True
 
 def _tracer(frame, event, arg):
+    _budget[0] += 1
+    if _budget[0] > HARD_BUDGET:
+        raise RuntimeError('step budget exceeded - likely an infinite loop')
     if frame.f_code.co_filename != '<student>' or frame.f_code.co_name.startswith('<'):
         return _tracer
     if _events and _events[-1].get('truncated'):
