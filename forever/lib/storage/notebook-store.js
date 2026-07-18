@@ -26,7 +26,7 @@ let _collection = notebooksCollection;
 export function _setNotebookCollectionForTests(fn) { _collection = fn ?? notebooksCollection; }
 
 const now = () => new Date().toISOString();
-const BLOCK_TYPES = new Set(['note', 'text', 'link', 'pdf', 'image', 'voice', 'moment', 'drawing']);
+const BLOCK_TYPES = new Set(['note', 'text', 'link', 'pdf', 'image', 'voice', 'moment', 'drawing', 'handboard']);
 const SOURCES = new Set(['typed', 'pasted', 'url', 'upload', 'voice', 'generated', 'captured']);
 const TRUSTS = new Set(['user', 'extracted', 'ai']);
 

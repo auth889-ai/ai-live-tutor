@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { DrawingEditor, SvgDrawing, downloadDrawing } from './drawing.js';
 import { PageInk } from './ink/page-ink.js';
+import { HandBoard } from './hand-board.js';
 
 const C = {
   appBg: '#F6F3EE', surface: '#FFFFFF', ink: '#211A14', sub: '#77695B', border: '#EBE3D8',
@@ -182,6 +183,10 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
             a.download = `${notebook.title.replace(/[^\w]+/g, '-').slice(0, 50)}.md`;
             a.click();
           }} title="export this view as Markdown" style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: '#fff', color: C.sub, padding: '7px 11px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>⬇</button>
+          <button title="AI draws a handwritten note board from this notebook" onClick={async () => {
+            const r = await fetch(`/api/notebooks/${id}/handboard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: activePage ?? 'Notes' }) });
+            if (r.ok) load();
+          }} style={{ border: `1px solid ${C.border}`, borderRadius: 10, background: '#fff', color: C.sub, padding: '7px 11px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>✍️ board</button>
           <button onClick={() => runStream(`mode=${mode}`)} disabled={Boolean(live)}
             style={{ border: 'none', borderRadius: 999, background: live ? '#D8CBB9' : C.accent, color: '#fff', padding: '8px 18px', fontSize: 12.5, fontWeight: 800, cursor: live ? 'default' : 'pointer' }}>
             {live ? 'writing…' : '✨ Synthesize'}
@@ -327,6 +332,18 @@ function DocBlock({ nb, b, selected, onSelect, onChanged, onNavigate, legacyIll 
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <a href={b.url} onClick={(e) => e.stopPropagation()} style={{ borderRadius: 999, background: C.accent, color: '#fff', padding: '4px 12px', fontSize: 11.5, fontWeight: 800, textDecoration: 'none' }}>Replay moment</a>
           <span className="nbk-acts" style={{ fontSize: 11, color: C.sub, alignSelf: 'center' }}>{b.origin} · {when}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (b.type === 'handboard') {
+    return (
+      <div className={`nbk-blk${selected ? ' sel' : ''}`} onClick={onSelect} style={{ margin: '10px 0', padding: '8px 10px', cursor: 'pointer' }}>
+        <HandBoard spec={b.content} />
+        <div className="nbk-acts" style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
+          <span style={{ fontSize: 11, color: C.sub }}>hand board · AI · grounded · {when}</span>
+          <button onClick={(e) => { e.stopPropagation(); remove(); }} style={ghost()}>✕</button>
         </div>
       </div>
     );

@@ -21,6 +21,8 @@ function parseInk(block) {
 export function PageInk({ nb, page, inkBlock, active, color, penWidth = 3, onDirty }) {
   const [strokes, setStrokes] = useState(() => parseInk(inkBlock));
   const [aspect, setAspect] = useState(0.6); // height/width of the host, tracked live
+  const [tool, setTool] = useState('pen');   // 'pen' draws · 'type' puts handwriting where you click
+  const [typing, setTyping] = useState(null); // {x, y, left, top} — an open text entry on the page
   const hostRef = useRef(null);
   const blockIdRef = useRef(inkBlock?._id ?? null);
   const drawingRef = useRef(false);
@@ -69,10 +71,28 @@ export function PageInk({ nb, page, inkBlock, active, color, penWidth = 3, onDir
   const down = (e) => {
     if (!active) return;
     e.preventDefault();
+    if (tool === 'type') {
+      // typed handwriting: click the paper, type, Enter — text lands where you clicked
+      const r = hostRef.current.getBoundingClientRect();
+      const [x, y] = norm(e);
+      setTyping({ x, y, left: e.clientX - r.left, top: e.clientY - r.top });
+      return;
+    }
     e.currentTarget.setPointerCapture?.(e.pointerId);
     drawingRef.current = true;
     const [x, y] = norm(e);
     setStrokes((cur) => [...cur, { kind: 'stroke', tool: 'pen', color, width: penWidth, points: [x, y] }]);
+  };
+  const commitTyping = (text) => {
+    const t = String(text ?? '').trim();
+    if (t && typing) {
+      setStrokes((cur) => {
+        const next = [...cur, { kind: 'text', x: typing.x, y: typing.y, text: t.slice(0, 200), size: 34, color }];
+        save(next);
+        return next;
+      });
+    }
+    setTyping(null);
   };
   const move = (e) => {
     if (!active || !drawingRef.current) return;
@@ -97,15 +117,37 @@ export function PageInk({ nb, page, inkBlock, active, color, penWidth = 3, onDir
       onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
       style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: active ? 'auto' : 'none', touchAction: active ? 'none' : 'auto', cursor: active ? 'crosshair' : 'default', borderRadius: 14 }}>
       <svg viewBox={`0 0 ${VW} ${vh}`} preserveAspectRatio="xMidYMin meet" style={{ width: '100%', height: '100%', display: 'block' }}>
-        {strokes.map((s, i) => (s.points.length === 2
-          ? <circle key={i} cx={s.points[0] * VW} cy={s.points[1] * VW} r={Math.max(1.4, s.width / 1.4)} fill={s.color} />
-          : <polyline key={i}
-              points={s.points.map((v) => (v * VW).toFixed(1)).join(' ').replace(/(\S+) (\S+) ?/g, '$1,$2 ')}
-              fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" />))}
+        {strokes.map((s, i) => {
+          if (s.kind === 'text') {
+            return <text key={i} x={(s.x * VW).toFixed(1)} y={(s.y * VW).toFixed(1)} fontSize={s.size ?? 34} fill={s.color}
+              fontFamily='var(--caveat), "Segoe Script", "Comic Sans MS", cursive'>{s.text}</text>;
+          }
+          return s.points.length === 2
+            ? <circle key={i} cx={s.points[0] * VW} cy={s.points[1] * VW} r={Math.max(1.4, s.width / 1.4)} fill={s.color} />
+            : <polyline key={i}
+                points={s.points.map((v) => (v * VW).toFixed(1)).join(' ').replace(/(\S+) (\S+) ?/g, '$1,$2 ')}
+                fill="none" stroke={s.color} strokeWidth={s.width} strokeLinecap="round" strokeLinejoin="round" />;
+        })}
       </svg>
-      {active && strokes.length > 0 ? (
-        <button onClick={undo} onPointerDown={(e) => e.stopPropagation()}
-          style={{ position: 'absolute', top: 10, right: 12, border: '1px solid #EBD9C4', borderRadius: 999, background: '#FFFFFFEE', color: '#77695B', padding: '4px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>↶ undo ink</button>
+      {typing ? (
+        <input autoFocus placeholder="type — Enter to write it on the page"
+          onPointerDown={(e) => e.stopPropagation()}
+          onKeyDown={(e) => { if (e.key === 'Enter') commitTyping(e.currentTarget.value); if (e.key === 'Escape') setTyping(null); }}
+          onBlur={(e) => commitTyping(e.currentTarget.value)}
+          style={{ position: 'absolute', left: typing.left, top: typing.top - 18, width: 300, border: 'none', borderBottom: `2px dashed ${color}`, outline: 'none', background: 'transparent', color,
+            fontFamily: 'var(--caveat), "Segoe Script", "Comic Sans MS", cursive', fontSize: 25, fontWeight: 600 }} />
+      ) : null}
+      {active ? (
+        <div style={{ position: 'absolute', top: 10, right: 12, display: 'flex', gap: 6 }} onPointerDown={(e) => e.stopPropagation()}>
+          <button onClick={() => setTool('pen')}
+            style={{ border: tool === 'pen' ? 'none' : '1px solid #EBD9C4', borderRadius: 999, background: tool === 'pen' ? color : '#FFFFFFEE', color: tool === 'pen' ? '#fff' : '#77695B', padding: '4px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>✒️ draw</button>
+          <button onClick={() => setTool('type')}
+            style={{ border: tool === 'type' ? 'none' : '1px solid #EBD9C4', borderRadius: 999, background: tool === 'type' ? color : '#FFFFFFEE', color: tool === 'type' ? '#fff' : '#77695B', padding: '4px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>⌨️ type</button>
+          {strokes.length > 0 ? (
+            <button onClick={undo}
+              style={{ border: '1px solid #EBD9C4', borderRadius: 999, background: '#FFFFFFEE', color: '#77695B', padding: '4px 12px', fontSize: 11.5, fontWeight: 800, cursor: 'pointer' }}>↶ undo</button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
