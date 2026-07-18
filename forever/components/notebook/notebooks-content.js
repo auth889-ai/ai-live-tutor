@@ -45,7 +45,7 @@ export function NotebooksContent() {
       });
     });
   };
-  if (creating) return <CreateWizard onDone={async (id) => { setCreating(false); await load(); if (id) setOpenId(id); }} />;
+  if (creating) return <CreateWizard onDone={async (id) => { setCreating(false); if (id) { window.location.href = `/notebooks/${id}`; return; } await load(); }} />;
   if (openId) return <NotebookWorkspace id={openId} onBack={() => { setOpenId(null); load(); }} onNavigate={(idOrTitle) => { if (String(idOrTitle).startsWith('nbk_')) setOpenId(idOrTitle); else navigateByTitle(idOrTitle); }} />;
 
   return (
@@ -64,7 +64,7 @@ export function NotebooksContent() {
           </div>
         </div>
       </div>
-      {showGraph ? <KnowledgeGraphPanel onOpen={(id) => { setShowGraph(false); setOpenId(id); }} /> : null}
+      {showGraph ? <KnowledgeGraphPanel onOpen={(id) => { window.location.href = `/notebooks/${id}`; }} /> : null}
       {list.length === 0 ? (
         <div style={{ ...T.card, marginTop: 18, padding: '46px 20px', textAlign: 'center', color: '#9b8465' }}>
           <div style={{ fontSize: 34, marginBottom: 8 }}>📓</div>
@@ -74,7 +74,7 @@ export function NotebooksContent() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14, marginTop: 18 }}>
           {list.map((n) => (
-            <button key={n.id} onClick={() => setOpenId(n.id)} className="pcard"
+            <button key={n.id} onClick={() => { window.location.href = `/notebooks/${n.id}`; }} className="pcard"
               style={{ ...T.card, borderRadius: 18, padding: 0, textAlign: 'left', cursor: 'pointer', overflow: 'hidden' }}>
               <div style={{ position: 'relative', height: 64 }}>
                 <img src="/images/notebook-cover.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${(n.id.charCodeAt(4) * 7) % 100}% ${(n.id.charCodeAt(5) * 7) % 100}%` }} />

@@ -39,7 +39,15 @@ function Inline({ text, onNavigate }) {
 }
 
 export function Doc({ text, onNavigate, skipTitle = null }) {
-  const lines = String(text ?? '').split('\n');
+  const rawLines = String(text ?? '').split('\n');
+  // legacy notes carry doubled headings ("## X" then "X" or "# X") — collapse them at render
+  const lines = [];
+  for (const ln of rawLines) {
+    const prev = lines.filter((x) => x.trim()).at(-1) ?? '';
+    const norm = (x) => x.replace(/^#+\s*/, '').trim().toLowerCase();
+    if (ln.trim() && norm(ln) === norm(prev) && (/^#/.test(ln) || /^#/.test(prev))) continue;
+    lines.push(ln);
+  }
   const out = [];
   let list = null;
   const flush = () => { if (list) { out.push(<ul key={`u${out.length}`} style={{ margin: '4px 0 12px', paddingLeft: 22 }}>{list}</ul>); list = null; } };
@@ -119,7 +127,7 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
   const pages = [...new Set(blocks.map((b) => b.page ?? 'Notes'))];
   if (activePage && !pages.includes(activePage)) pages.push(activePage);
   const sources = blocks.filter((b) => ['image', 'pdf', 'link', 'moment'].includes(b.type));
-  const docBlocks = blocks.filter((b) => (activePage ? (b.page ?? 'Notes') === activePage : true));
+  const docBlocks = blocks.filter((b) => (activePage ? (b.page ?? 'Notes') === activePage : true) && !(b.type === 'image' && b.trust === 'ai'));
   const sel = blocks.find((b) => b._id === selected) ?? null;
 
   return (
@@ -140,6 +148,7 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
           <div style={{ fontSize: 11.5, color: C.sub }}>{pages.length} page{pages.length === 1 ? '' : 's'} · {sources.length} source{sources.length === 1 ? '' : 's'} · {blocks.length} blocks</div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <PagePager pages={pages} active={activePage} onPick={(pg) => { setView('write'); setActivePage(pg); }} />
           <select value={mode} onChange={(e) => setMode(e.target.value)} style={{ border: `1px solid ${C.border}`, borderRadius: 9, background: '#fff', color: C.sub, padding: '6px 9px', fontSize: 12, fontWeight: 700 }}>
             <option value="study_note">study note</option>
             <option value="detailed">deep-dive</option>
@@ -159,14 +168,16 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
           <div>
             <div style={{ fontSize: 10.5, fontWeight: 800, color: C.sub, letterSpacing: 0.6, marginBottom: 6 }}>PAGES</div>
             <SideItem label="All pages" on={activePage === null && view === 'write'} onClick={() => { setView('write'); setActivePage(null); }} />
-            {pages.map((pg) => <SideItem key={pg} label={pg} on={activePage === pg && view === 'write'} onClick={() => { setView('write'); setActivePage(pg); }} />)}
+            {pages.map((pg, i) => <SideItem key={pg} num={i + 1} label={pg} on={activePage === pg && view === 'write'} onClick={() => { setView('write'); setActivePage(pg); }} />)}
             <NewPage onCreate={(name) => { setView('write'); setActivePage(name); }} />
           </div>
           <div>
             <div style={{ fontSize: 10.5, fontWeight: 800, color: C.sub, letterSpacing: 0.6, marginBottom: 6 }}>SOURCES</div>
             {sources.length === 0 ? <div style={{ fontSize: 12, color: C.sub }}>none yet</div>
               : sources.slice(0, 12).map((b) => (
-                <SideItem key={b._id} label={`${{ image: '🖼', pdf: '📄', link: '🔗', moment: '▶' }[b.type]} ${(b.title ?? b.origin ?? b.type).slice(0, 24)}`} on={selected === b._id}
+                <SideItem key={b._id} label={(b.title ?? b.origin ?? b.type).slice(0, 26)} on={selected === b._id}
+                  icon={{ image: '🖼', pdf: 'PDF', link: '🔗', moment: '▶' }[b.type]}
+                  iconBg={{ image: '#F3EAFB', pdf: '#FBE9E4', link: '#E9F1FB', moment: '#FDEFE7' }[b.type]}
                   onClick={() => { setSelected(b._id); }} />
               ))}
           </div>
@@ -204,15 +215,36 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
         <ContextPanel nb={id} sel={sel} backlinks={backlinks} onNavigate={onNavigate} onChanged={load}
           onExplain={(bid) => runStream(`mode=detailed&focus=${bid}&blocks=${bid}`)}
           onContinue={(bid) => runStream(`mode=continue&blockId=${bid}`, { asDraft: false })}
+          onQuiz={() => runStream('mode=questions')}
+          onSummary={() => runStream('mode=summary')}
           onAsk={(q) => runStream(`mode=ask&question=${encodeURIComponent(q)}`, { asDraft: false })} />
       </div>
     </div>
   );
 }
 
-function SideItem({ label, on, onClick }) {
+function SideItem({ label, on, onClick, num = null, icon = null, iconBg = null }) {
   return (
-    <button onClick={onClick} style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', borderRadius: 8, background: on ? '#F1E9DE' : 'transparent', color: on ? C.ink : C.sub, padding: '6px 9px', fontSize: 12.5, fontWeight: on ? 800 : 600, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</button>
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', border: 'none', borderRadius: 8, background: on ? '#F9E9E4' : 'transparent', color: on ? C.ink : C.sub, padding: '6px 9px', fontSize: 12.5, fontWeight: on ? 800 : 600, cursor: 'pointer' }}>
+      {num != null ? <span style={{ width: 18, height: 18, borderRadius: 6, background: on ? C.accent : '#EFE7DB', color: on ? '#fff' : C.sub, fontSize: 10.5, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{num}</span> : null}
+      {icon ? <span style={{ width: 20, height: 20, borderRadius: 6, background: iconBg ?? '#EFE7DB', fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</span> : null}
+      <span style={{ minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+    </button>
+  );
+}
+
+// Page 3 of 7 pager (mockup topbar): cycles All -> page1 -> ... -> pageN
+function PagePager({ pages, active, onPick }) {
+  if (pages.length < 2) return null;
+  const seq = [null, ...pages];
+  const idx = seq.findIndex((x) => x === active);
+  const go = (d) => onPick(seq[(idx + d + seq.length) % seq.length]);
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: `1px solid ${C.border}`, borderRadius: 10, background: '#fff', padding: '4px 6px' }}>
+      <button onClick={() => go(-1)} style={{ border: 'none', background: 'transparent', color: C.sub, cursor: 'pointer', fontSize: 13 }}>‹</button>
+      <span style={{ fontSize: 12, fontWeight: 700, color: C.ink, whiteSpace: 'nowrap' }}>{active === null ? 'All pages' : `Page ${idx} of ${pages.length}`}</span>
+      <button onClick={() => go(1)} style={{ border: 'none', background: 'transparent', color: C.sub, cursor: 'pointer', fontSize: 13 }}>›</button>
+    </span>
   );
 }
 
@@ -470,7 +502,7 @@ function Composer({ id, page, onAdded }) {
 }
 
 // ---------- right: contextual intelligence ----------
-function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExplain, onContinue, onAsk }) {
+function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExplain, onContinue, onAsk, onQuiz, onSummary }) {
   const [tab, setTab] = useState('ai');
   const [q, setQ] = useState('');
   const [teachText, setTeachText] = useState('');
@@ -495,24 +527,38 @@ function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExplain, on
       <div style={{ borderBottom: `1px solid ${C.border}`, marginBottom: 12 }}>{T2('ai', 'AI')}{T2('back', 'Backlinks')}{T2('review', 'Explain back')}</div>
 
       {tab === 'ai' ? (
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: 420 }}>
           {sel ? (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 10.5, fontWeight: 800, color: C.sub, letterSpacing: 0.5 }}>SELECTED</div>
-              <div style={{ fontSize: 13, color: C.ink, margin: '4px 0 8px', fontStyle: 'italic' }}>“{(sel.title || sel.content || sel.transcript || '').slice(0, 90)}”</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <CtxBtn onClick={() => onExplain(sel._id)}>🔍 Explain in detail (draft)</CtxBtn>
-                {sel.trust === 'user' && ['note', 'text'].includes(sel.type) ? <CtxBtn onClick={() => onContinue(sel._id)}>✍️ Continue my writing</CtxBtn> : null}
-                <CtxBtn onClick={() => setTab('review')}>🎓 Explain it back</CtxBtn>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, marginBottom: 6 }}>Selected content</div>
+              <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, background: '#fff', padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'center' }}>
+                <span style={{ width: 34, height: 34, borderRadius: 8, background: '#F4EEE5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{{ image: '🖼', pdf: '📄', link: '🔗', moment: '▶', voice: '🎙' }[sel.type] ?? '📝'}</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflowe: 'ellipsis' }}>{(sel.title || sel.content || sel.transcript || '').slice(0, 40)}</div>
+                  <div style={{ fontSize: 11, color: C.sub }}>{sel.page ?? 'Notes'}</div>
+                </div>
               </div>
             </div>
-          ) : <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 12 }}>Select a block to act on it — or ask the whole notebook:</div>}
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && q.trim()) { onAsk(q.trim()); setQ(''); } }}
-              placeholder="Ask your notebook…" style={{ flex: 1, minWidth: 0, border: `1px solid ${C.border}`, borderRadius: 10, padding: '7px 10px', fontSize: 12.5 }} />
-            <button onClick={() => { if (q.trim()) { onAsk(q.trim()); setQ(''); } }} style={{ border: 'none', borderRadius: 10, background: C.ink, color: '#fff', padding: '0 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>Ask</button>
+          ) : <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 12 }}>Select any block in the document to act on it.</div>}
+
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, marginBottom: 6 }}>What would you like to do?</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <ActionRow icon="✨" title="Explain" sub="explain this in simple terms" disabled={!sel} onClick={() => sel && onExplain(sel._id)} />
+            <ActionRow icon="🎓" title="Explain it back" sub="help me teach this back" disabled={!sel} onClick={() => sel && setTab('review')} />
+            <ActionRow icon="🧠" title="Create quiz" sub="generate practice questions" onClick={() => onQuiz()} />
+            <ActionRow icon="📋" title="Summarize" sub="create a short summary" onClick={() => onSummary()} />
+            {sel && sel.trust === 'user' && ['note', 'text'].includes(sel.type) ? <ActionRow icon="✍️" title="Continue writing" sub="the AI extends your draft" onClick={() => onContinue(sel._id)} /> : null}
           </div>
-          <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>answers come only from your blocks, cited</div>
+
+          <div style={{ marginTop: 'auto', paddingTop: 16 }}>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, marginBottom: 6 }}>Ask anything about this notebook</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && q.trim()) { onAsk(q.trim()); setQ(''); } }}
+                placeholder="Ask a question…" style={{ flex: 1, minWidth: 0, border: `1px solid ${C.border}`, borderRadius: 12, padding: '9px 11px', fontSize: 12.5 }} />
+              <button onClick={() => { if (q.trim()) { onAsk(q.trim()); setQ(''); } }} style={{ border: 'none', borderRadius: 12, background: C.accent, color: '#fff', width: 34, fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>↑</button>
+            </div>
+            <div style={{ fontSize: 10.5, color: C.sub, marginTop: 6 }}>AI answers come from your sources and notes.</div>
+          </div>
         </div>
       ) : null}
 
@@ -544,6 +590,19 @@ function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExplain, on
         </div>
       ) : null}
     </div>
+  );
+}
+
+function ActionRow({ icon, title, sub, onClick, disabled = false }) {
+  return (
+    <button onClick={onClick} disabled={disabled}
+      style={{ display: 'flex', gap: 10, alignItems: 'center', textAlign: 'left', border: `1px solid ${C.border}`, borderRadius: 12, background: '#fff', padding: '9px 12px', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1 }}>
+      <span style={{ width: 28, height: 28, borderRadius: 8, background: '#FDEFE7', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{icon}</span>
+      <span style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 12.5, fontWeight: 800, color: C.ink }}>{title}</div>
+        <div style={{ fontSize: 11, color: C.sub }}>{sub}</div>
+      </span>
+    </button>
   );
 }
 
