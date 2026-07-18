@@ -107,13 +107,16 @@ export async function GET(request, { params }) {
     if (material.length === 0) material = focus ? [focus] : found.blocks.filter(TEXTY).slice(0, 10);
   }
 
+  // per-block budget: a focused run on 1-2 blocks deserves the WHOLE block (a pasted
+  // lecture transcript is 20k chars — slicing it to 2.5k made block-scoped AI useless)
+  const perBlockCap = material.length <= 2 ? 20000 : 2500;
   const numbered = material.slice(0, 40).map((b, i) => {
     let body = (['voice', 'moment'].includes(b.type) ? [b.transcript, b.content].filter(Boolean).join(' — ') : b.content) ?? '';
     for (const att of (b.attachments ?? []).slice(0, 5)) {
       if (att.content) body += `\n[attached ${att.kind}${att.title ? ` — ${att.title}` : ''}]: ${att.content.slice(0, 1000)}`;
     }
     const focusTag = focus && b._id === focus._id ? ' ★FOCUS' : '';
-    return `[${i + 1}] (${b.type}${b.title ? ` — ${b.title}` : ''}${focusTag}) ${body.slice(0, 2500)}`;
+    return `[${i + 1}] (${b.type}${b.title ? ` — ${b.title}` : ''}${focusTag}) ${body.slice(0, perBlockCap)}`;
   }).join('\n\n');
   const intent = String(found.notebook?.intent ?? '').slice(0, 300);
   let AIM = intent ? `THE USER'S GOAL for this notebook: "${intent}" — aim every heading and sentence at it. ` : '';
