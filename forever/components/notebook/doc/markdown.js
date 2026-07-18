@@ -4,6 +4,16 @@
 
 import { C } from '../theme.js';
 
+// marker palette (the reference-board look): a key term keeps ONE color everywhere —
+// deterministic hash, so "vertices" is always orange-ish, "edges" always blue, across notes
+const MARKS = ['#FDE68A88', '#FBD38D88', '#BFDBFE88', '#DDD6FE88', '#BBF7D088', '#FBCFE888'];
+export function markColor(term) {
+  let h = 0;
+  const t = String(term).trim().toLowerCase();
+  for (let i = 0; i < t.length; i += 1) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+  return MARKS[h % MARKS.length];
+}
+
 export function Inline({ text, onNavigate }) {
   const parts = [];
   let rest = String(text ?? '');
@@ -11,7 +21,7 @@ export function Inline({ text, onNavigate }) {
   const RES = [
     { re: /\[\[([^\]]+)\]\]/, r: (m) => <button key={k += 1} onClick={() => onNavigate?.(m[1].trim())} style={{ border: 'none', background: '#EDF3FB', color: C.extracted, borderRadius: 6, padding: '0 5px', font: 'inherit', fontWeight: 700, cursor: 'pointer' }}>{m[1].trim()}</button> },
     { re: /\[(\d+)\]/, r: (m) => <sup key={k += 1} style={{ background: '#EDF3FB', color: C.extracted, borderRadius: 5, padding: '0 4px', fontSize: 10, fontWeight: 800, marginLeft: 1 }}>{m[1]}</sup> },
-    { re: /\*\*([^*]+)\*\*/, r: (m) => <b key={k += 1} style={{ background: '#FDE68A66', borderRadius: 4, padding: '0 4px' }}>{m[1]}</b> },
+    { re: /\*\*([^*]+)\*\*/, r: (m) => <b key={k += 1} style={{ background: markColor(m[1]), borderRadius: 4, padding: '0 4px' }}>{m[1]}</b> },
     { re: /`([^`]+)`/, r: (m) => <code key={k += 1} style={{ background: '#F4EEE5', borderRadius: 4, padding: '0 4px', fontSize: '0.88em', fontFamily: 'ui-monospace, monospace' }}>{m[1]}</code> },
   ];
   while (rest.length) {
