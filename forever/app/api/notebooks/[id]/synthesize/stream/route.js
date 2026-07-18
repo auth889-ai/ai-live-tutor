@@ -24,6 +24,22 @@ const MODES = {
   ask: 'a direct ANSWER to the user\'s question',
   continue: 'a CONTINUATION of the user\'s own draft — extend their thinking in their direction',
 };
+// Length discipline (redesign spec): sections must be scannable, never essays.
+const LIMITS = {
+  study_note: 'STRICT LENGTH: 80-140 words for this section. No repetition.',
+  detailed: 'STRICT LENGTH: 180-300 words for this section. No repetition.',
+  summary: 'STRICT LENGTH: 30-60 words for this section.',
+  questions: 'QUESTIONS AND SHORT ANSWERS ONLY — no essay prose.',
+  ask: 'STRICT LENGTH: at most 150 words.',
+  continue: 'STRICT LENGTH: 100-200 words.',
+};
+// One source of heading truth (redesign spec): the section body must never re-state its title.
+function stripDuplicateHeading(title, md) {
+  const norm = (x) => String(x).replace(/^#+\s*/, '').trim().toLowerCase();
+  const lines = String(md).split('\n');
+  while (lines.length && (norm(lines[0]) === norm(title) || lines[0].trim() === '')) lines.shift();
+  return lines.join('\n').trim();
+}
 
 export async function GET(request, { params }) {
   const session = sessionFromRequest(request);
@@ -31,6 +47,7 @@ export async function GET(request, { params }) {
   const { id } = await params;
   const url = new URL(request.url);
   const mode = MODES[url.searchParams.get('mode')] ? url.searchParams.get('mode') : 'study_note';
+  const isDraft = url.searchParams.get('draft') === '1';
   const question = String(url.searchParams.get('question') ?? '').slice(0, 500);
 
   const found = await getNotebook(session.userId, id);
@@ -101,13 +118,13 @@ export async function GET(request, { params }) {
           send('status', { stage: 'writing', index: i + 1, total: plan.sections.length, heading: sec.heading });
           const written = await runAgentChain({
             agent: 'notebook-section-writer',
-            system: `${AIM}You write ONE section of ${MODES[mode]}: "${sec.heading}" — focus: ${sec.focus}. ${question ? `The user's question: ${question}. ` : ''}${draft ? `THE USER'S OWN DRAFT (continue it, never rewrite it): """${String(draft.content).slice(0, 3000)}""". ` : ''}Return ONLY JSON {"markdown": string, "cited": int[]}. ${GROUND}`,
+            system: `${AIM}You write ONE section of ${MODES[mode]}: "${sec.heading}" — focus: ${sec.focus}. ${LIMITS[mode]} Do NOT include the section title in the markdown. ${question ? `The user's question: ${question}. ` : ''}${draft ? `THE USER'S OWN DRAFT (continue it, never rewrite it): """${String(draft.content).slice(0, 3000)}""". ` : ''}Return ONLY JSON {"markdown": string, "cited": int[]}. ${GROUND}`,
             user: `MY SOURCE BLOCKS:\n\n${numbered}`,
             maxTokens: mode === 'detailed' ? 1500 : 900,
             temperature: 0.3,
           });
           const w = written?.json ?? written;
-          const md = String(w?.markdown ?? '').trim();
+          const md = stripDuplicateHeading(sec.heading, String(w?.markdown ?? ''));
           const refs = [...md.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
           if (!md || refs.some((n) => n < 1 || n > material.length)) {
             send('rejected', { heading: sec.heading, reason: 'cited a source that does not exist — section refused' });
@@ -129,11 +146,14 @@ export async function GET(request, { params }) {
                 const file = `nbimg_${Date.now()}_${i}.png`;
                 await writeFile(path.join(outDir, file), bytes);
                 const imgUrl = `/images/notebooks/${file}`;
-                await addBlock({
-                  userId: session.userId, notebookId: id, type: 'image',
-                  title: sec.heading, content: sec.image_prompt, url: imgUrl,
-                  source: 'generated', trust: 'ai', origin: 'illustrated by Qwen (wan t2i)',
-                });
+                if (!isDraft) {
+                  await addBlock({
+                    userId: session.userId, notebookId: id, type: 'image',
+                    title: sec.heading, content: sec.image_prompt, url: imgUrl,
+                    source: 'generated', trust: 'ai', origin: 'illustrated by Qwen (wan t2i)',
+                  });
+                }
+                kept[kept.length - 1].imageUrl = imgUrl; // the illustration belongs INSIDE its section
                 send('image', { heading: sec.heading, url: imgUrl });
               } catch (imgErr) {
                 send('status', { stage: 'image-failed', heading: sec.heading, reason: String(imgErr.message ?? imgErr).slice(0, 120) });
@@ -146,9 +166,13 @@ export async function GET(request, { params }) {
         }
         if (kept.length === 0) throw new Error('every section failed the citation gate — nothing was saved');
 
-        // ---- SAVE the assembled note as an ai block (same shape as the non-stream route) ----
+        // ---- assemble: illustrations INLINE in their sections (redesign spec) ----
         const allRefs = [...new Set(kept.flatMap((k) => k.refs))].sort((a, b) => a - b);
-        const markdown = kept.map((k) => `## ${k.heading}\n${k.markdown}`).join('\n\n');
+        const markdown = kept.map((k) => `## ${k.heading}\n${k.imageUrl ? `![${k.heading}](${k.imageUrl})\n` : ''}${k.markdown}`).join('\n\n');
+        if (isDraft) {
+          send('done', { draft: { title: plan.title, markdown: `${markdown}\n\n— grounded in your blocks: ${allRefs.map((n) => `[${n}]`).join(' ')}`, mode } });
+          return;
+        }
         const block = await addBlock({
           userId: session.userId,
           notebookId: id,

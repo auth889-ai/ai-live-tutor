@@ -10,6 +10,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ReactFlow, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
+import { NotebookWorkspace } from './workspace.js';
+
 const T = {
   card: { border: '1px solid #f2e3d5', borderRadius: 16, background: '#fff', boxShadow: '0 1px 4px rgba(58,46,34,0.05)' },
   cap: { fontSize: 11.5, color: '#9b8465' },
@@ -44,7 +46,7 @@ export function NotebooksContent() {
     });
   };
   if (creating) return <CreateWizard onDone={async (id) => { setCreating(false); await load(); if (id) setOpenId(id); }} />;
-  if (openId) return <Workspace id={openId} onBack={() => { setOpenId(null); load(); }} onNavigate={(idOrTitle) => { if (String(idOrTitle).startsWith('nbk_')) setOpenId(idOrTitle); else navigateByTitle(idOrTitle); }} />;
+  if (openId) return <NotebookWorkspace id={openId} onBack={() => { setOpenId(null); load(); }} onNavigate={(idOrTitle) => { if (String(idOrTitle).startsWith('nbk_')) setOpenId(idOrTitle); else navigateByTitle(idOrTitle); }} />;
 
   return (
     <div style={{ maxWidth: 1080 }}>
