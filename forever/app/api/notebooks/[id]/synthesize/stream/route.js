@@ -107,7 +107,7 @@ export async function GET(request, { params }) {
             if (await imagesAvailable()) {
               try {
                 send('status', { stage: 'illustrating', heading: sec.heading });
-                const { bytes } = await generateImage({ prompt: sec.image_prompt });
+                const { bytes } = await generateImage({ prompt: `${sec.image_prompt} — no text, no words, no letters, no labels in the image` });
                 const outDir = path.join('public', 'images', 'notebooks');
                 await mkdir(outDir, { recursive: true });
                 const file = `nbimg_${Date.now()}_${i}.png`;
