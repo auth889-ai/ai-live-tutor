@@ -35,15 +35,28 @@ export async function GET(request, { params }) {
 
   const found = await getNotebook(session.userId, id);
   if (!found) return Response.json({ error: 'not found' }, { status: 404 });
-  const material = found.blocks.filter((b) => ['note', 'text', 'voice', 'link', 'pdf'].includes(b.type) && (b.content || b.transcript));
-  if (material.length === 0) return Response.json({ error: 'add blocks first' }, { status: 422 });
+  const TEXTY = (b) => ['note', 'text', 'voice', 'link', 'pdf', 'moment', 'image'].includes(b.type) && (b.content || b.transcript);
+  const selectedIds = String(url.searchParams.get('blocks') ?? '').split(',').filter(Boolean);
+  const focusId = url.searchParams.get('focus');
+  // USER-AIMED synthesis (never "random topics"): when blocks are selected, ONLY they are the
+  // material; a focus block becomes the explicit subject and everything else is context.
+  let material = found.blocks.filter(TEXTY);
+  if (selectedIds.length) {
+    const chosen = material.filter((b) => selectedIds.includes(b._id));
+    if (chosen.length) material = chosen;
+  }
+  if (material.length === 0) return Response.json({ error: 'the selected blocks hold no text to work from' }, { status: 422 });
+  const focus = focusId ? material.find((b) => b._id === focusId) ?? found.blocks.find((b) => b._id === focusId && TEXTY(b)) : null;
+  if (focus && !material.some((b) => b._id === focus._id)) material = [focus, ...material];
 
   const numbered = material.slice(0, 40).map((b, i) => {
-    const body = (b.type === 'voice' ? (b.transcript || b.content) : b.content) ?? '';
-    return `[${i + 1}] (${b.type}${b.title ? ` — ${b.title}` : ''}) ${body.slice(0, 1500)}`;
+    const body = (['voice', 'moment'].includes(b.type) ? [b.transcript, b.content].filter(Boolean).join(' — ') : b.content) ?? '';
+    const focusTag = focus && b._id === focus._id ? ' ★FOCUS' : '';
+    return `[${i + 1}] (${b.type}${b.title ? ` — ${b.title}` : ''}${focusTag}) ${body.slice(0, 1500)}`;
   }).join('\n\n');
   const intent = String(found.notebook?.intent ?? '').slice(0, 300);
-  const AIM = intent ? `THE USER'S GOAL for this notebook: "${intent}" — aim every heading and sentence at it. ` : '';
+  let AIM = intent ? `THE USER'S GOAL for this notebook: "${intent}" — aim every heading and sentence at it. ` : '';
+  if (focus) AIM += `THE SUBJECT is the ★FOCUS block — explain ITS content in depth; every section must be about it; other blocks are supporting context only. `;
   const GROUND = 'HARD RULES: only facts from the numbered blocks — never outside knowledge; cite like [2] after the sentence each fact supports; omit what the blocks do not cover. Output ONLY JSON.';
 
   const encoder = new TextEncoder();

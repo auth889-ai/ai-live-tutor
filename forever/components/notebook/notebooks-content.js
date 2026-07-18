@@ -194,6 +194,8 @@ function Workspace({ id, onBack, onNavigate }) {
   const [data, setData] = useState(null);
   const [revealId, setRevealId] = useState(null);
   const [live, setLive] = useState(null); // { stage, plan, sections[], rejected[], error }
+  const [sel, setSel] = useState(() => new Set()); // block ids chosen as synthesis material
+  const toggleSel = (bid) => setSel((cur) => { const n = new Set(cur); if (n.has(bid)) n.delete(bid); else n.add(bid); return n; });
   const load = () => fetch(`/api/notebooks/${id}`).then((r) => r.json()).then(setData).catch(() => {});
   useEffect(() => { load(); }, [id]);
 
@@ -228,7 +230,8 @@ function Workspace({ id, onBack, onNavigate }) {
       <button onClick={onBack} style={{ border: 'none', background: 'transparent', color: '#9b8465', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', padding: 0 }}>← all notebooks</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: 24, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif', fontWeight: 600, margin: 0, flex: 1, minWidth: 0 }}>{notebook.title}</h1>
-        <SynthesizeButton blocks={blocks} busy={Boolean(live) && !live.done && !live.error} onRun={(mode) => runStream(`mode=${mode}`)} />
+        <SynthesizeButton blocks={blocks} selCount={sel.size} busy={Boolean(live) && !live.done && !live.error}
+          onRun={(mode) => runStream(`mode=${mode}${sel.size ? `&blocks=${[...sel].join(',')}` : ''}`)} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(260px, 340px)', gap: 14, alignItems: 'start', marginTop: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -252,7 +255,10 @@ function Workspace({ id, onBack, onNavigate }) {
             <div key={day}>
               <div style={{ ...T.cap, fontWeight: 800, margin: '6px 0 8px' }}>{day}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {dayBlocks.map((b) => <Block key={b._id} nb={id} b={b} onChanged={load} reveal={b._id === revealId} onNavigate={onNavigate} onContinue={(blockId) => runStream(`mode=continue&blockId=${blockId}`)} />)}
+                {dayBlocks.map((b) => <Block key={b._id} nb={id} b={b} onChanged={load} reveal={b._id === revealId} onNavigate={onNavigate}
+                  selected={sel.has(b._id)} onToggleSel={() => toggleSel(b._id)}
+                  onExplain={(blockId) => runStream(`mode=detailed&focus=${blockId}&blocks=${blockId}`)}
+                  onContinue={(blockId) => runStream(`mode=continue&blockId=${blockId}`)} />)}
               </div>
             </div>
           ))}
@@ -372,7 +378,7 @@ function Flashback({ blocks }) {
   );
 }
 
-function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue }) {
+function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue, onExplain, selected = false, onToggleSel }) {
   const [icon, label] = TYPE_META[b.type] ?? ['•', b.type];
   const [teach, setTeach] = useState(false);
   const [teachText, setTeachText] = useState('');
@@ -414,13 +420,25 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue }) {
   return (
     <div style={{ ...T.card, padding: '12px 16px', borderLeft: `3px solid ${isAi ? '#f0c39a' : TYPE_COLOR[b.type] ?? '#f2e3d5'}`, ...(isAi ? { background: 'linear-gradient(180deg,#fffdf9,#fff5ec)', borderColor: '#f0c39a', borderLeftColor: '#e8a03c' } : {}) }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {onToggleSel && b.trust !== 'ai' ? (
+          <button onClick={onToggleSel} title={selected ? 'remove from synthesis material' : 'select as synthesis material'}
+            style={{ width: 17, height: 17, borderRadius: 5, border: selected ? 'none' : '1.5px solid #d8cbb6', background: selected ? T.accent : '#fff', color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}>
+            {selected ? '✓' : ''}
+          </button>
+        ) : null}
         <span style={{ fontSize: 14 }}>{isAi ? '✨' : icon}</span>
         <span style={{ ...T.cap, fontWeight: 800 }}>{label.toUpperCase()}</span>
         <span title={`provenance: ${b.trust}`} style={{ fontSize: 10.5, fontWeight: 800, color: TRUST_COLOR[b.trust] ?? '#9b8465', background: `${TRUST_COLOR[b.trust] ?? '#9b8465'}14`, borderRadius: 999, padding: '2px 8px' }}>{b.trust}</span>
         {b.origin ? <span style={T.cap}>{b.origin}</span> : null}
+        {onExplain && b.trust !== 'ai' && ((b.content ?? '').length > 20 || (b.transcript ?? '').length > 20) ? (
+          <button onClick={() => onExplain(b._id)} title="the notebook explains THIS block in depth — detailed sections + an illustration, grounded in its content"
+            style={{ marginLeft: 'auto', border: '1px solid #f0c39a', borderRadius: 999, background: '#fffdf9', color: '#8a5a3a', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+            🔍 explain in detail
+          </button>
+        ) : null}
         {b.trust === 'user' && ['note', 'text', 'moment'].includes(b.type) && ((b.content ?? '').length > 20 || (b.transcript ?? '').length > 20) ? (
           <button onClick={() => setTeach((v) => !v)} title="explain this in your own words — the tutor checks it and schedules what you missed"
-            style={{ marginLeft: 'auto', border: '1px solid #cfe3d2', borderRadius: 999, background: teach ? '#eaf7ee' : '#fff', color: '#2f7d4a', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+            style={{ marginLeft: 6, border: '1px solid #cfe3d2', borderRadius: 999, background: teach ? '#eaf7ee' : '#fff', color: '#2f7d4a', padding: '2px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
             🎓 explain it back
           </button>
         ) : null}
@@ -658,7 +676,7 @@ function Intake({ id, onAdded }) {
 // The notebook's OWN act of creation (eva: inputs -> generated blocks; NotebookLM: grounded +
 // cited). The result lands back in the notebook as an ai-provenance block — visibly the
 // notebook's work, never confused with yours.
-function SynthesizeButton({ blocks, busy, onRun }) {
+function SynthesizeButton({ blocks, busy, onRun, selCount = 0 }) {
   const [mode, setMode] = useState('study_note');
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -671,7 +689,7 @@ function SynthesizeButton({ blocks, busy, onRun }) {
       </select>
       <button onClick={() => onRun(mode)} disabled={busy || blocks.length === 0}
         style={{ border: 'none', borderRadius: 999, background: busy || blocks.length === 0 ? '#c9bda1' : T.accent, color: '#fff', padding: '9px 18px', fontSize: 13, fontWeight: 800, cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
-        {busy ? 'writing live…' : '✨ Synthesize'}
+        {busy ? 'writing live…' : selCount ? `✨ Synthesize ${selCount} selected` : '✨ Synthesize'}
       </button>
     </div>
   );
