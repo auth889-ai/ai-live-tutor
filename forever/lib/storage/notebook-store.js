@@ -61,8 +61,16 @@ export async function getNotebook(userId, notebookId) {
   if (!col || !userId) return null;
   const notebook = await col.findOne({ _id: notebookId, kind: 'notebook', ownerId: userId });
   if (!notebook) return null;
-  const blocks = await col.find({ kind: 'block', ownerId: userId, notebookId }).sort({ seq: 1 }).limit(500).toArray();
+  const blocks = await col.find({ kind: 'block', ownerId: userId, notebookId }, { projection: { embedding: 0 } }).sort({ seq: 1 }).limit(500).toArray();
   return { notebook, blocks };
+}
+
+// Vectors for retrieval ONLY (the synthesis route) — never for UI payloads.
+export async function getBlockVectors(userId, notebookId) {
+  const col = await _collection();
+  if (!col || !userId) return new Map();
+  const rows = await col.find({ kind: 'block', ownerId: userId, notebookId, embedding: { $exists: true } }, { projection: { embedding: 1 } }).limit(500).toArray();
+  return new Map(rows.map((r) => [r._id, r.embedding]));
 }
 
 export async function updateNotebook(userId, notebookId, { title, intent, cover } = {}) {
@@ -80,7 +88,11 @@ export async function deleteNotebook(userId, notebookId) {
   const col = await _collection();
   if (!col || !userId) return null;
   const r = await col.deleteOne({ _id: notebookId, kind: 'notebook', ownerId: userId });
-  if (r.deletedCount > 0) await col.deleteMany({ kind: 'block', ownerId: userId, notebookId });
+  if (r.deletedCount > 0) {
+    await col.deleteMany({ kind: 'block', ownerId: userId, notebookId });
+    // cascade the knowledge graph too — dangling links are data corruption
+    await col.deleteMany({ kind: 'nblink', ownerId: userId, $or: [{ sourceNotebookId: notebookId }, { targetNotebookId: notebookId }] });
+  }
   return r.deletedCount > 0;
 }
 
@@ -94,6 +106,7 @@ export async function addBlock({ userId, notebookId, type, content = '', url = n
   if (!TRUSTS.has(trust)) throw new Error(`unknown block trust "${trust}"`);
   const owner = await col.findOne({ _id: notebookId, kind: 'notebook', ownerId: userId }, { projection: { blockCount: 1 } });
   if (!owner) return null;
+  if ((owner.blockCount ?? 0) >= 500) throw new Error('this notebook holds 500 blocks — start a new page in a fresh notebook');
   const doc = {
     _id: `blk_${randomUUID()}`,
     kind: 'block',

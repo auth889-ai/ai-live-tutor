@@ -141,6 +141,11 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
         .nbk-blk{border-radius:10px}
         .nbk-blk:hover{background:#FBF8F3}
         .nbk-blk.sel{background:#FBF4EC;outline:1.5px solid #EBD9C4}
+        @media (max-width: 1080px){
+          .nbk-grid{grid-template-columns:1fr !important}
+          .nbk-rail-left,.nbk-rail-right{border:none !important}
+          .nbk-rail-left>div,.nbk-rail-right>div{position:static !important;max-height:none !important}
+        }
       `}</style>
 
       {/* topbar — sticky: the document scrolls, the chrome does not (app-shell pattern) */}
@@ -176,9 +181,9 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '215px minmax(0, 1fr) 300px', gap: 0, alignItems: 'stretch' }}>
+      <div className="nbk-grid" style={{ display: 'grid', gridTemplateColumns: '215px minmax(0, 1fr) 300px', gap: 0, alignItems: 'stretch' }}>
         {/* ---------- left: pages + sources ---------- */}
-        <div style={{ borderRight: `1px solid ${C.border}` }}>
+        <div className="nbk-rail-left" style={{ borderRight: `1px solid ${C.border}` }}>
         <div style={{ position: 'sticky', top: 62, maxHeight: 'calc(100vh - 76px)', overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <div style={{ fontSize: 10.5, fontWeight: 800, color: C.sub, letterSpacing: 0.6, marginBottom: 6 }}>PAGES</div>
@@ -485,12 +490,17 @@ function Composer({ id, page, onAdded }) {
   const [drawOpen, setDrawOpen] = useState(false);
   const recRef = useRef(null);
 
+  const [err, setErr] = useState('');
   const post = async (payload) => {
     setBusy(true);
+    setErr('');
     try {
-      await fetch(`/api/notebooks/${id}/blocks`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, page }) });
+      const r = await fetch(`/api/notebooks/${id}/blocks`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, page }) });
+      if (!r.ok) throw new Error((await r.json()).error || `save failed (HTTP ${r.status})`);
       setV('');
       onAdded();
+    } catch (e) {
+      setErr(String(e.message ?? e));
     } finally { setBusy(false); setBusyLabel(''); }
   };
   const submit = () => {
@@ -550,6 +560,7 @@ function Composer({ id, page, onAdded }) {
           style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, color: C.ink, background: 'transparent' }} />
         <button onClick={submit} disabled={busy || !v.trim()} style={{ border: 'none', borderRadius: 10, background: busy || !v.trim() ? '#E8DFD2' : C.accent, color: '#fff', width: 30, height: 30, fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>↑</button>
       </div>
+      {err ? <div style={{ marginTop: 6, fontSize: 12, color: '#D64545', fontWeight: 700, background: '#fff', borderRadius: 8, padding: '4px 10px', display: 'inline-block' }}>{err}</div> : null}
       <input ref={fileRef} type="file" accept=".pdf,image/png,image/jpeg,image/webp" onChange={onFile} style={{ display: 'none' }} />
     </div>
   );
@@ -577,7 +588,7 @@ function ContextPanel({ nb, sel, backlinks, onNavigate, onChanged, onExplain, on
     <button key={idd} onClick={() => setTab(idd)} style={{ border: 'none', borderBottom: tab === idd ? `2px solid ${C.accent}` : '2px solid transparent', background: 'transparent', color: tab === idd ? C.ink : C.sub, fontSize: 12, fontWeight: 800, padding: '8px 2px', marginRight: 14, cursor: 'pointer' }}>{label}</button>
   );
   return (
-    <div style={{ borderLeft: `1px solid ${C.border}`, minWidth: 0 }}>
+    <div className="nbk-rail-right" style={{ borderLeft: `1px solid ${C.border}`, minWidth: 0 }}>
     <div style={{ position: 'sticky', top: 62, maxHeight: 'calc(100vh - 76px)', overflowY: 'auto', padding: '4px 16px 16px' }}>
       <div style={{ borderBottom: `1px solid ${C.border}`, marginBottom: 12 }}>{T2('ai', 'AI')}{T2('back', 'Backlinks')}{T2('review', 'Explain back')}</div>
 

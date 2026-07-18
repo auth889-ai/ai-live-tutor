@@ -9,12 +9,16 @@
 import path from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 
-import { getNotebook, addBlock } from '../../../../../../lib/storage/notebook-store.js';
+import { getNotebook, addBlock, getBlockVectors } from '../../../../../../lib/storage/notebook-store.js';
 import { buildSynthesisGraph } from '../../../../../../lib/notebook/synthesis-graph.js';
 import { embedTexts, cosine } from '../../../../../../lib/qwen/embeddings.js';
 import { sessionFromRequest } from '../../../../../../lib/auth/session.js';
 
 export const dynamic = 'force-dynamic';
+
+// One generation per notebook at a time (eva's 409 pattern): in-process lock with stale
+// release — a crashed stream can never wedge a notebook for more than 10 minutes.
+const generating = new Map();
 
 const MODES = {
   study_note: 'a tight STUDY NOTE',
@@ -50,8 +54,14 @@ export async function GET(request, { params }) {
   const isDraft = url.searchParams.get('draft') === '1';
   const question = String(url.searchParams.get('question') ?? '').slice(0, 500);
 
+  const startedAt = generating.get(id);
+  if (startedAt && Date.now() - startedAt < 10 * 60 * 1000) {
+    return Response.json({ error: 'this notebook is already generating — wait for it to finish' }, { status: 409 });
+  }
+  generating.set(id, Date.now());
+
   const found = await getNotebook(session.userId, id);
-  if (!found) return Response.json({ error: 'not found' }, { status: 404 });
+  if (!found) { generating.delete(id); return Response.json({ error: 'not found' }, { status: 404 }); }
   const TEXTY = (b) => ['note', 'text', 'voice', 'link', 'pdf', 'moment', 'image'].includes(b.type) && (b.content || b.transcript);
   const selectedIds = String(url.searchParams.get('blocks') ?? '').split(',').filter(Boolean);
   const focusId = url.searchParams.get('focus');
@@ -62,7 +72,7 @@ export async function GET(request, { params }) {
     const chosen = material.filter((b) => selectedIds.includes(b._id));
     if (chosen.length) material = chosen;
   }
-  if (material.length === 0) return Response.json({ error: 'the selected blocks hold no text to work from' }, { status: 422 });
+  if (material.length === 0) { generating.delete(id); return Response.json({ error: 'the selected blocks hold no text to work from' }, { status: 422 }); }
   const focus = focusId ? material.find((b) => b._id === focusId) ?? found.blocks.find((b) => b._id === focusId && TEXTY(b)) : null;
   if (focus && !material.some((b) => b._id === focus._id)) material = [focus, ...material];
   // RETRIEVAL (RAG-lite, deterministic): when there is a query (a question or a focus block),
@@ -75,10 +85,11 @@ export async function GET(request, { params }) {
     // with zero shared words. Lexical overlap remains the fallback for unembedded blocks.
     let ranked = null;
     try {
-      const withVec = material.filter((b) => Array.isArray(b.embedding));
+      const vectors = await getBlockVectors(session.userId, id);
+      const withVec = material.filter((b) => vectors.has(b._id));
       if (withVec.length >= 2) {
         const [qv] = await embedTexts([queryText]);
-        if (qv) ranked = withVec.map((b) => ({ b, hit: cosine(qv, b.embedding) })).filter((x) => x.hit > 0.25);
+        if (qv) ranked = withVec.map((b) => ({ b, hit: cosine(qv, vectors.get(b._id)) })).filter((x) => x.hit > 0.25);
       }
     } catch { /* fall back to lexical */ }
     if (!ranked) {
@@ -151,6 +162,7 @@ export async function GET(request, { params }) {
       } catch (e) {
         send('error', { message: String(e?.message ?? e).slice(0, 200) });
       } finally {
+        generating.delete(id);
         controller.close();
       }
     },
