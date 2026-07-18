@@ -10,8 +10,7 @@ import path from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 
 import { getNotebook, addBlock } from '../../../../../../lib/storage/notebook-store.js';
-import { runAgentChain } from '../../../../../../lib/qwen/client.js';
-import { generateImage, imagesAvailable } from '../../../../../../lib/qwen/image.js';
+import { buildSynthesisGraph } from '../../../../../../lib/notebook/synthesis-graph.js';
 import { sessionFromRequest } from '../../../../../../lib/auth/session.js';
 
 export const dynamic = 'force-dynamic';
@@ -101,109 +100,33 @@ export async function GET(request, { params }) {
       const send = (event, data) => controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
       try {
         send('status', { stage: 'reading', blocks: material.length });
+        const draftBlock = mode === 'continue' && url.searchParams.get('blockId')
+          ? found.blocks.find((b) => b._id === url.searchParams.get('blockId')) : null;
+        if (mode === 'continue' && !draftBlock?.content) throw new Error('continue needs one of your own blocks');
 
-        // ---- PLAN (eva's arc pass): sections with heading + focus, before any writing ----
-        const draftId = url.searchParams.get('blockId');
-        const draft = mode === 'continue' && draftId ? found.blocks.find((b) => b._id === draftId) : null;
-        let plan;
-        if (mode === 'continue') {
-          if (!draft?.content) throw new Error('continue needs one of your own blocks');
-          plan = { title: `Continuing: ${(draft.title || draft.content).slice(0, 80)}`, sections: [{ heading: 'Continuation', focus: `continue and deepen the user's draft, in their direction` }] };
-        } else if (mode === 'ask' && question) {
-          plan = { title: question.slice(0, 120), sections: [{ heading: 'Answer', focus: `answer: ${question}` }] };
-        } else {
-          send('status', { stage: 'planning' });
-          const planned = await runAgentChain({
-            agent: 'notebook-arc-planner',
-            system: `${AIM}You plan ${MODES[mode]} from the user's source blocks. Return ONLY JSON {"title": string, "sections": [{"heading": string, "focus": string, "evidence": string}]} — ${mode === 'detailed' ? '3 to 5' : '2 to 4'} sections. Each evidence MUST be a short phrase copied VERBATIM from the blocks (it will be checked by machine); each focus one sharp line explaining what the section says ABOUT that evidence. Sections about anything not literally in the blocks are forbidden. ${GROUND}`,
-            user: `MY SOURCE BLOCKS:\n\n${numbered}`,
-            maxTokens: 600,
-            temperature: 0.3,
-          });
-          const p = planned?.json ?? planned;
-          plan = { title: String(p?.title ?? 'Study note').slice(0, 200), sections: (Array.isArray(p?.sections) ? p.sections : []).slice(0, mode === 'detailed' ? 6 : 4).filter((x) => x?.heading) };
-          // EVIDENCE GATE (deterministic): a section lives only if its quoted evidence really
-          // appears in the material. This kills generic filler at the root.
-          const corpus = material.map((b) => `${b.title ?? ''} ${b.transcript ?? ''} ${b.content ?? ''}`).join(' ').toLowerCase().replace(/\s+/g, ' ');
-          plan.sections = plan.sections
-            .map((x) => ({ ...x, evidence: String(x.evidence ?? '').slice(0, 200) }))
-            .filter((x) => {
-              const ev = x.evidence.toLowerCase().replace(/\s+/g, ' ').trim();
-              const ok = ev.length >= 8 && corpus.includes(ev);
-              if (!ok) send('rejected', { heading: x.heading, reason: 'planned without verbatim evidence from your blocks — dropped' });
-              return ok;
-            });
-          if (plan.sections.length === 0) throw new Error('no section could quote your blocks — add more material about this topic');
-        }
-        send('plan', { title: plan.title, headings: plan.sections.map((x) => x.heading) });
+        // THE MULTI-AGENT GRAPH: planner -> evidence gate -> parallel writers -> reviewer.
+        const graph = buildSynthesisGraph();
+        const corpus = material.map((b) => `${b.title ?? ''} ${b.transcript ?? ''} ${b.content ?? ''}`).join(' ').toLowerCase().replace(/\s+/g, ' ');
+        const finalState = await graph.invoke({
+          numbered, corpus, materialCount: material.length,
+          mode, modeText: MODES[mode], limits: LIMITS[mode], aim: AIM, question, draftBlock,
+          emit: send,
+        }, { recursionLimit: 20 });
 
-        // ---- WRITE each section against its plan, streaming as they finish ----
-        const kept = [];
-        for (let i = 0; i < plan.sections.length; i += 1) {
-          const sec = plan.sections[i];
-          send('status', { stage: 'writing', index: i + 1, total: plan.sections.length, heading: sec.heading });
-          const written = await runAgentChain({
-            agent: 'notebook-section-writer',
-            system: `${AIM}You write ONE section of ${MODES[mode]}: "${sec.heading}" — focus: ${sec.focus}. ${sec.evidence ? `THE SECTION IS ABOUT THIS EXACT MATERIAL: "${sec.evidence}" — explain IT, concretely; generic advice or filler is forbidden. ` : ''}${LIMITS[mode]} Do NOT include the section title in the markdown. ${question ? `The user's question: ${question}. ` : ''}${draft ? `THE USER'S OWN DRAFT (continue it, never rewrite it): """${String(draft.content).slice(0, 3000)}""". ` : ''}Return ONLY JSON {"markdown": string, "cited": int[]}. ${GROUND}`,
-            user: `MY SOURCE BLOCKS:\n\n${numbered}`,
-            maxTokens: mode === 'detailed' ? 1500 : 900,
-            temperature: 0.3,
-          });
-          const w = written?.json ?? written;
-          const md = stripDuplicateHeading(sec.heading, String(w?.markdown ?? ''));
-          const refs = [...md.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
-          if (!md || refs.some((n) => n < 1 || n > material.length)) {
-            send('rejected', { heading: sec.heading, reason: 'cited a source that does not exist — section refused' });
-            continue;
-          }
-          kept.push({ heading: sec.heading, markdown: md, refs });
-          send('section', { heading: sec.heading, markdown: md });
-
-          // Sankofa's per-act illustration, honestly gated: only when the workspace serves an
-          // image model, and only from the PLANNED image_prompt. A region without image models
-          // reports itself once — never a placeholder, never silence.
-          if (mode !== 'ask' && (sec.evidence || sec.focus)) {
-            if (await imagesAvailable()) {
-              try {
-                send('status', { stage: 'illustrating', heading: sec.heading });
-                const { bytes } = await generateImage({ prompt: `hand-drawn watercolor study diagram visualizing exactly this idea: "${(sec.evidence || sec.focus).slice(0, 220)}" (topic: ${sec.heading}) — clear, conceptual, no text, no words, no letters, no labels` });
-                const outDir = path.join('public', 'images', 'notebooks');
-                await mkdir(outDir, { recursive: true });
-                const file = `nbimg_${Date.now()}_${i}.png`;
-                await writeFile(path.join(outDir, file), bytes);
-                const imgUrl = `/images/notebooks/${file}`;
-                if (!isDraft) {
-                  await addBlock({
-                    userId: session.userId, notebookId: id, type: 'image',
-                    title: sec.heading, content: sec.image_prompt, url: imgUrl,
-                    source: 'generated', trust: 'ai', origin: 'illustrated by Qwen (wan t2i)',
-                  });
-                }
-                kept[kept.length - 1].imageUrl = imgUrl; // the illustration belongs INSIDE its section
-                send('image', { heading: sec.heading, url: imgUrl });
-              } catch (imgErr) {
-                send('status', { stage: 'image-failed', heading: sec.heading, reason: String(imgErr.message ?? imgErr).slice(0, 120) });
-              }
-            } else if (!plan.imageNoteSent) {
-              plan.imageNoteSent = true;
-              send('status', { stage: 'images-unavailable', reason: 'this workspace region serves no image model — set ALIBABA_IMAGE_API_KEY/_BASE_URL (Singapore workspace) to enable illustrations' });
-            }
-          }
-        }
-        if (kept.length === 0) throw new Error('every section failed the citation gate — nothing was saved');
-
-        // ---- assemble: illustrations INLINE in their sections (redesign spec) ----
+        const kept = finalState.withImages ?? [];
+        if (kept.length === 0) throw new Error('every section failed the gates — nothing was saved');
         const allRefs = [...new Set(kept.flatMap((k) => k.refs))].sort((a, b) => a - b);
         const markdown = kept.map((k) => `## ${k.heading}\n${k.imageUrl ? `![${k.heading}](${k.imageUrl})\n` : ''}${k.markdown}`).join('\n\n');
+        const title = finalState.planTitle ?? 'Study note';
         if (isDraft) {
-          send('done', { draft: { title: plan.title, markdown: `${markdown}\n\n— grounded in your blocks: ${allRefs.map((n) => `[${n}]`).join(' ')}`, mode } });
+          send('done', { draft: { title, markdown: `${markdown}\n\n— grounded in your blocks: ${allRefs.map((n) => `[${n}]`).join(' ')}`, mode } });
           return;
         }
         const block = await addBlock({
           userId: session.userId,
           notebookId: id,
           type: 'note',
-          title: `✨ ${plan.title}`,
+          title: `✨ ${title}`,
           content: `${markdown}\n\n— grounded in your blocks: ${allRefs.map((n) => `[${n}]`).join(' ')}`,
           source: 'generated',
           trust: 'ai',
