@@ -37,6 +37,7 @@ export function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onN
     }
     setAttaching(false);
   };
+  const [attDrag, setAttDrag] = useState(null); // { id, dx, dy } while an image is being dragged
   const patchAtt = async (attachmentId, meta) => {
     await fetch(`/api/notebooks/${nb}/blocks/${b._id}/attach`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ attachmentId, ...meta }) });
     onChanged();
@@ -193,8 +194,31 @@ export function DocBlock({ nb, b, pages = [], selected, onSelect, onChanged, onN
         <div key={att.id} onClick={(e) => e.stopPropagation()} data-att={att.id}
           style={{ float: att.placement === 'left' ? 'left' : att.placement === 'right' ? 'right' : 'none',
             width: { s: '26%', m: '52%', l: '100%' }[att.size ?? 'm'], minWidth: 160,
-            margin: att.placement === 'left' ? '4px 14px 6px 0' : att.placement === 'right' ? '4px 0 6px 14px' : '6px 0' }}>
-          <img src={att.url} alt={att.title ?? ''} style={{ width: '100%', borderRadius: 10, display: 'block' }} />
+            margin: att.placement === 'left' ? '4px 14px 6px 0' : att.placement === 'right' ? '4px 0 6px 14px' : '6px 0',
+            transform: attDrag?.id === att.id ? `translate(${attDrag.dx}px, ${attDrag.dy}px)` : undefined,
+            opacity: attDrag?.id === att.id ? 0.75 : 1, zIndex: attDrag?.id === att.id ? 10 : undefined, position: 'relative' }}>
+          <img src={att.url} alt={att.title ?? ''} draggable={false}
+            onPointerDown={(e) => {
+              e.preventDefault(); e.stopPropagation();
+              e.currentTarget.setPointerCapture?.(e.pointerId);
+              setAttDrag({ id: att.id, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0 });
+            }}
+            onPointerMove={(e) => {
+              setAttDrag((d) => (d && d.id === att.id ? { ...d, dx: e.clientX - d.x0, dy: e.clientY - d.y0 } : d));
+            }}
+            onPointerUp={(e) => {
+              setAttDrag((d) => {
+                if (d && d.id === att.id && (Math.abs(d.dx) > 12 || Math.abs(d.dy) > 12)) {
+                  // drop zone by horizontal position inside the block: left / full / right
+                  const host = e.target.closest('.nbk-blk') ?? e.target.parentElement.parentElement;
+                  const r = host.getBoundingClientRect();
+                  const rel = (e.clientX - r.left) / r.width;
+                  patchAtt(att.id, { placement: rel < 0.34 ? 'left' : rel > 0.66 ? 'right' : 'full' });
+                }
+                return null;
+              });
+            }}
+            style={{ width: '100%', borderRadius: 10, display: 'block', cursor: attDrag?.id === att.id ? 'grabbing' : 'grab', touchAction: 'none' }} />
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 2 }}>
             {[['left', '◧'], ['full', '▣'], ['right', '◨']].map(([pl, icon]) => (
               <button key={pl} onClick={() => patchAtt(att.id, { placement: pl })} title={`place image ${pl}`}
