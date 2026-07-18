@@ -18,6 +18,7 @@ const TYPE_META = {
   pdf: ['📄', 'PDF'], image: ['🖼', 'image'], voice: ['🎙', 'voice'],
 };
 const TRUST_COLOR = { user: '#2f7d4a', extracted: '#4477aa', ai: '#c98f2d' };
+const TYPE_COLOR = { note: '#2f7d4a', text: '#6b563d', link: '#4477aa', pdf: '#c0522d', image: '#8e44ad', voice: '#c98f2d' };
 
 export function NotebooksContent() {
   const [list, setList] = useState(null);
@@ -32,12 +33,16 @@ export function NotebooksContent() {
 
   return (
     <div style={{ maxWidth: 1080 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-        <div>
-          <h1 style={{ fontSize: 27, color: '#2b211a', fontFamily: 'var(--font-newsreader), Georgia, serif', fontWeight: 600, margin: 0 }}>Notebooks</h1>
-          <p style={{ ...T.cap, margin: '4px 0 0' }}>Collect anything — notes, links, files, your voice — and your notebook writes back: grounded study notes, summaries, self-tests.</p>
+      <div style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', minHeight: 150, display: 'flex', alignItems: 'flex-end', boxShadow: '0 6px 22px rgba(58,46,34,0.12)' }}>
+        <img src="/images/notebook-cover.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(43,33,26,0.04) 30%, rgba(43,33,26,0.62))' }} />
+        <div style={{ position: 'relative', width: '100%', padding: '18px 22px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <h1 style={{ fontSize: 26, color: '#fff', fontFamily: 'var(--font-newsreader), Georgia, serif', fontWeight: 600, margin: 0, textShadow: '0 1px 6px rgba(0,0,0,0.35)' }}>Notebooks</h1>
+            <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.92)', margin: '3px 0 0' }}>Collect anything — and your notebook writes back: grounded notes, summaries, self-tests.</p>
+          </div>
+          <button onClick={() => setCreating(true)} style={{ border: 'none', borderRadius: 999, background: T.accent, color: '#fff', padding: '9px 20px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 14px rgba(232,96,76,0.45)' }}>+ New notebook</button>
         </div>
-        <button onClick={() => setCreating(true)} style={{ border: 'none', borderRadius: 999, background: T.accent, color: '#fff', padding: '9px 20px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer' }}>+ New notebook</button>
       </div>
       {list.length === 0 ? (
         <div style={{ ...T.card, marginTop: 18, padding: '46px 20px', textAlign: 'center', color: '#9b8465' }}>
@@ -49,11 +54,16 @@ export function NotebooksContent() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14, marginTop: 18 }}>
           {list.map((n) => (
             <button key={n.id} onClick={() => setOpenId(n.id)} className="pcard"
-              style={{ ...T.card, borderRadius: 18, padding: '16px 18px', textAlign: 'left', cursor: 'pointer' }}>
-              <div style={{ fontSize: 26 }}>📓</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: '#2b211a', marginTop: 8, lineHeight: 1.3 }}>{n.title}</div>
+              style={{ ...T.card, borderRadius: 18, padding: 0, textAlign: 'left', cursor: 'pointer', overflow: 'hidden' }}>
+              <div style={{ position: 'relative', height: 64 }}>
+                <img src="/images/notebook-cover.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${(n.id.charCodeAt(4) * 7) % 100}% ${(n.id.charCodeAt(5) * 7) % 100}%` }} />
+                <span style={{ position: 'absolute', left: 12, bottom: -14, width: 34, height: 34, borderRadius: 10, background: '#fff', border: '1px solid #f2e3d5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, boxShadow: '0 2px 8px rgba(58,46,34,0.15)' }}>📓</span>
+              </div>
+              <div style={{ padding: '20px 16px 14px' }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#2b211a', lineHeight: 1.3 }}>{n.title}</div>
               <div style={{ ...T.cap, marginTop: 6 }}>{n.blockCount} block{n.blockCount === 1 ? '' : 's'} · {new Date(n.updatedAt).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</div>
 
+              </div>
             </button>
           ))}
         </div>
@@ -279,7 +289,7 @@ function Block({ nb, b, onChanged, reveal = false }) {
   };
   const isAi = b.trust === 'ai';
   return (
-    <div style={{ ...T.card, padding: '12px 16px', ...(isAi ? { background: 'linear-gradient(180deg,#fffdf9,#fff5ec)', borderColor: '#f0c39a' } : {}) }}>
+    <div style={{ ...T.card, padding: '12px 16px', borderLeft: `3px solid ${isAi ? '#f0c39a' : TYPE_COLOR[b.type] ?? '#f2e3d5'}`, ...(isAi ? { background: 'linear-gradient(180deg,#fffdf9,#fff5ec)', borderColor: '#f0c39a', borderLeftColor: '#e8a03c' } : {}) }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 14 }}>{isAi ? '✨' : icon}</span>
         <span style={{ ...T.cap, fontWeight: 800 }}>{label.toUpperCase()}</span>
@@ -412,8 +422,11 @@ function Intake({ id, onAdded }) {
   );
 
   return (
-    <div style={{ ...T.card, borderRadius: 18, padding: '14px 16px', position: 'sticky', top: 12 }}>
-      <div style={{ ...T.cap, fontWeight: 800, marginBottom: 8 }}>ADD TO THIS NOTEBOOK</div>
+    <div style={{ ...T.card, borderRadius: 18, padding: '14px 16px', position: 'sticky', top: 12, borderTop: `3px solid ${T.accent}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
+        <span style={{ width: 24, height: 24, borderRadius: 8, background: '#e8604c18', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>✍️</span>
+        <span style={{ ...T.cap, fontWeight: 800 }}>ADD TO THIS NOTEBOOK</span>
+      </div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
         {prompts.map((q) => (
           <button key={q} onClick={() => { setMode('note'); setValue(q + '\n\n'); }}

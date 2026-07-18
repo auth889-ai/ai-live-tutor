@@ -41,7 +41,8 @@ export async function POST(request, { params }) {
         'You are the Notebook Synthesizer for forever, an AI tutor. You will receive the user\'s own numbered source blocks.',
         `Produce ${MODES[mode]}.`,
         'HARD RULES: every claim must come from the numbered blocks — never outside knowledge; cite blocks inline like [2] after the sentence they support; if the blocks do not cover something, do not mention it.',
-        'Return ONLY JSON: {"title": string, "markdown": string, "cited": int[]} where cited lists every block number you used.',
+        'WORK IN TWO PHASES INSIDE YOUR HEAD: first plan 2-4 sections (each with a sharp heading and one-line focus), then write each section against its focus.',
+        'Return ONLY JSON: {"title": string, "sections": [{"heading": string, "markdown": string}], "cited": int[]} — 2 to 4 sections, cited lists every block number you used.',
       ].join('\n'),
       user: `MY SOURCE BLOCKS:\n\n${numbered}`,
       maxTokens: 2500,
@@ -53,7 +54,10 @@ export async function POST(request, { params }) {
 
   const out = result?.json ?? result;
   const title = String(out?.title ?? '').slice(0, 200) || 'Study note';
-  const markdown = String(out?.markdown ?? '').trim();
+  const sections = Array.isArray(out?.sections) ? out.sections.filter((x) => x && x.heading && x.markdown) : [];
+  const markdown = sections.length
+    ? sections.map((x) => `## ${String(x.heading).slice(0, 120)}\n${String(x.markdown).trim()}`).join('\n\n')
+    : String(out?.markdown ?? '').trim();
   const cited = Array.isArray(out?.cited) ? out.cited.filter((n) => Number.isInteger(n) && n >= 1 && n <= material.length) : [];
   // Deterministic gate: no text, or citations pointing at nothing -> the note does not ship.
   const inlineRefs = [...markdown.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
