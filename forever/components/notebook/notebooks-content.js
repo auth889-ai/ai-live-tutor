@@ -194,6 +194,7 @@ function Workspace({ id, onBack, onNavigate }) {
     es.addEventListener('status', (e) => { const d = JSON.parse(e.data); setLive((cur) => ({ ...cur, stage: d.stage, statusMeta: d })); });
     es.addEventListener('plan', (e) => { const d = JSON.parse(e.data); setLive((cur) => ({ ...cur, plan: d })); });
     es.addEventListener('section', (e) => { const d = JSON.parse(e.data); setLive((cur) => ({ ...cur, sections: [...(cur?.sections ?? []), d] })); });
+    es.addEventListener('image', (e) => { const d = JSON.parse(e.data); setLive((cur) => ({ ...cur, images: [...(cur?.images ?? []), d] })); });
     es.addEventListener('rejected', (e) => { const d = JSON.parse(e.data); setLive((cur) => ({ ...cur, rejected: [...(cur?.rejected ?? []), d] })); });
     es.addEventListener('done', (e) => {
       const d = JSON.parse(e.data);
@@ -409,7 +410,7 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate }) {
           </>
         );
       })()}
-      {b.url ? <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#4477aa', fontWeight: 700 }}>{b.url}</a> : null}
+      {b.type === 'image' && b.url ? <img src={b.url} alt={b.title ?? ''} style={{ width: '100%', borderRadius: 12, marginTop: 8 }} /> : b.url ? <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#4477aa', fontWeight: 700 }}>{b.url}</a> : null}
       {audio ? <audio controls src={audio} style={{ width: '100%', height: 32, marginTop: 8 }} /> : null}
     </div>
   );
@@ -621,6 +622,9 @@ function LiveSynthesis({ live }) {
     : live.stage === 'reading' ? `reading your ${live.statusMeta?.blocks ?? ''} blocks…`
     : live.stage === 'planning' ? 'planning the sections…'
     : live.stage === 'writing' ? `writing §${live.statusMeta?.index}/${live.statusMeta?.total} — ${live.statusMeta?.heading}`
+    : live.stage === 'illustrating' ? `illustrating — ${live.statusMeta?.heading}…`
+    : live.stage === 'images-unavailable' ? 'writing (illustrations need an image-serving workspace — noted once)'
+    : live.stage === 'image-failed' ? `image failed for “${live.statusMeta?.heading}” — continuing`
     : 'connecting…';
   const doneHeadings = new Set((live.sections ?? []).map((sx) => sx.heading));
   return (
@@ -647,6 +651,9 @@ function LiveSynthesis({ live }) {
           <div style={{ fontSize: 13.5, fontWeight: 800, color: '#2b211a' }}>{sec.heading}</div>
           <Markdownish text={sec.markdown.replace(/^#+ .*$/m, '').trim()} />
         </div>
+      ))}
+      {(live.images ?? []).map((im) => (
+        <img key={im.url} src={im.url} alt={im.heading} style={{ width: '100%', borderRadius: 12, marginTop: 10, animation: 'nbSegIn .5s ease-out both' }} />
       ))}
       {(live.rejected ?? []).map((r) => (
         <div key={r.heading} style={{ marginTop: 8, fontSize: 12, color: '#a33d2e', fontWeight: 700 }}>✗ “{r.heading}” refused: {r.reason}</div>

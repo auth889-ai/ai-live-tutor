@@ -6,8 +6,12 @@
 //             · rejected {heading, reason} · done {blockId} · error {message}
 // mode=ask&question=... turns it into eva's follow-up: one grounded answer section.
 
+import path from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
+
 import { getNotebook, addBlock } from '../../../../../../lib/storage/notebook-store.js';
 import { runAgentChain } from '../../../../../../lib/qwen/client.js';
+import { generateImage, imagesAvailable } from '../../../../../../lib/qwen/image.js';
 import { sessionFromRequest } from '../../../../../../lib/auth/session.js';
 
 export const dynamic = 'force-dynamic';
@@ -53,13 +57,14 @@ export async function GET(request, { params }) {
           send('status', { stage: 'planning' });
           const planned = await runAgentChain({
             agent: 'notebook-arc-planner',
-            system: `You plan ${MODES[mode]} from the user's source blocks. Return ONLY JSON {"title": string, "sections": [{"heading": string, "focus": string}]} — 2 to 4 sections, each focus one sharp line. ${GROUND}`,
+            system: `You plan ${MODES[mode]} from the user's source blocks. Return ONLY JSON {"title": string, "sections": [{"heading": string, "focus": string, "image_prompt": string}]} — 2 to 4 sections, each focus one sharp line, each image_prompt one vivid English scene description (warm hand-drawn watercolor study-illustration style) VISUALIZING that section's idea. ${GROUND}`,
             user: `MY SOURCE BLOCKS:\n\n${numbered}`,
             maxTokens: 600,
             temperature: 0.3,
           });
           const p = planned?.json ?? planned;
           plan = { title: String(p?.title ?? 'Study note').slice(0, 200), sections: (Array.isArray(p?.sections) ? p.sections : []).slice(0, 4).filter((x) => x?.heading) };
+          plan.sections = plan.sections.map((x) => ({ ...x, image_prompt: String(x.image_prompt ?? '').slice(0, 500) }));
           if (plan.sections.length === 0) throw new Error('the planner produced no sections');
         }
         send('plan', { title: plan.title, headings: plan.sections.map((x) => x.heading) });
@@ -85,6 +90,34 @@ export async function GET(request, { params }) {
           }
           kept.push({ heading: sec.heading, markdown: md, refs });
           send('section', { heading: sec.heading, markdown: md });
+
+          // Sankofa's per-act illustration, honestly gated: only when the workspace serves an
+          // image model, and only from the PLANNED image_prompt. A region without image models
+          // reports itself once — never a placeholder, never silence.
+          if (mode !== 'ask' && sec.image_prompt) {
+            if (await imagesAvailable()) {
+              try {
+                send('status', { stage: 'illustrating', heading: sec.heading });
+                const { bytes } = await generateImage({ prompt: sec.image_prompt });
+                const outDir = path.join('public', 'images', 'notebooks');
+                await mkdir(outDir, { recursive: true });
+                const file = `nbimg_${Date.now()}_${i}.png`;
+                await writeFile(path.join(outDir, file), bytes);
+                const imgUrl = `/images/notebooks/${file}`;
+                await addBlock({
+                  userId: session.userId, notebookId: id, type: 'image',
+                  title: sec.heading, content: sec.image_prompt, url: imgUrl,
+                  source: 'generated', trust: 'ai', origin: 'illustrated by Qwen (wan t2i)',
+                });
+                send('image', { heading: sec.heading, url: imgUrl });
+              } catch (imgErr) {
+                send('status', { stage: 'image-failed', heading: sec.heading, reason: String(imgErr.message ?? imgErr).slice(0, 120) });
+              }
+            } else if (!plan.imageNoteSent) {
+              plan.imageNoteSent = true;
+              send('status', { stage: 'images-unavailable', reason: 'this workspace region serves no image model — set ALIBABA_IMAGE_API_KEY/_BASE_URL (Singapore workspace) to enable illustrations' });
+            }
+          }
         }
         if (kept.length === 0) throw new Error('every section failed the citation gate — nothing was saved');
 
