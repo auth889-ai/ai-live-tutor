@@ -15,8 +15,8 @@ let _collection = notebooksCollection;
 export function _setNotebookCollectionForTests(fn) { _collection = fn ?? notebooksCollection; }
 
 const now = () => new Date().toISOString();
-const BLOCK_TYPES = new Set(['note', 'text', 'link', 'pdf', 'image', 'voice']);
-const SOURCES = new Set(['typed', 'pasted', 'url', 'upload', 'voice', 'generated']);
+const BLOCK_TYPES = new Set(['note', 'text', 'link', 'pdf', 'image', 'voice', 'moment']);
+const SOURCES = new Set(['typed', 'pasted', 'url', 'upload', 'voice', 'generated', 'captured']);
 const TRUSTS = new Set(['user', 'extracted', 'ai']);
 
 export async function createNotebook({ userId, title, intent = '' }) {
@@ -254,10 +254,12 @@ export async function knowledgeGraph(userId) {
 // 60-char minimum is the caller's concern to surface as a friendly error).
 export function assembleNotebookText(blocks) {
   return (blocks ?? [])
-    .filter((b) => ['note', 'text', 'voice', 'link'].includes(b.type))
+    .filter((b) => ['note', 'text', 'voice', 'link', 'moment'].includes(b.type))
     .map((b) => {
       const head = b.title ? `## ${b.title}\n` : '';
-      const body = b.type === 'voice' ? (b.transcript || b.content) : b.content;
+      const body = b.type === 'voice' ? (b.transcript || b.content)
+        : b.type === 'moment' ? [b.transcript, b.content].filter(Boolean).join(' — ')
+        : b.content;
       return `${head}${body ?? ''}`.trim();
     })
     .filter(Boolean)

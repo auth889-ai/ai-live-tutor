@@ -108,6 +108,28 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
       setTimeout(() => setMarked((m) => (m === 'note' ? '' : m)), 6000);
     }).catch(() => setMarked(''));
   };
+  // 📓 one-keystroke notebook capture (Xournal++ pattern): the moment lands in the lesson's
+  // own notebook with the spoken line + a replay link back to THIS second.
+  const [nbMarked, setNbMarked] = useState('');
+  const captureToNotebook = () => {
+    if (!lessonId || nbMarked) return;
+    setNbMarked('saving');
+    let context = '';
+    try {
+      const bs = boardStateAt(scene.timeline, tMs);
+      context = (bs.activeSpeech ? scene.voiceLines.find((l) => l.id === bs.activeSpeech)?.text : '') ?? '';
+    } catch { /* best-effort */ }
+    const sceneIndex = lesson.scenes.findIndex((sc) => sc.sceneId === scene.sceneId);
+    fetch('/api/notebooks/capture', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lessonId, lessonTitle: lesson.lessonTitle, sceneIndex: Math.max(0, sceneIndex), sceneTitle: scene.title, tMs: Math.round(tMs), context }),
+    }).then((r) => {
+      if (r.status === 401) { setNbMarked('signin'); setTimeout(() => setNbMarked(''), 2600); return; }
+      setNbMarked('saved');
+      setTimeout(() => setNbMarked(''), 2200);
+    }).catch(() => setNbMarked(''));
+  };
+
   const saveNote = () => {
     bookmarkNow(noteDraft); // same id -> upsert with the note attached
     setNoteDraft('');
@@ -128,6 +150,7 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
     const onKey = (e) => {
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
       if (e.key === 'b' || e.key === 'B') { bookmarkNow(); return; }
+      if (e.key === 'n' || e.key === 'N') { captureToNotebook(); return; }
       if (e.code === 'Space') { e.preventDefault(); player.togglePlay(); }
       if (e.code === 'ArrowRight') player.skip(10_000);
       if (e.code === 'ArrowLeft') player.skip(-10_000);
@@ -280,6 +303,13 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
                 {fmt(tMs)} / {fmt(durationMs)}
               </span>
               <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                <button
+                  onClick={captureToNotebook}
+                  title="Save this moment to your notebook (N) — replayable later"
+                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 16, padding: '0 6px', opacity: nbMarked ? 1 : 0.75 }}
+                >
+                  {nbMarked === 'saved' ? '✅' : nbMarked === 'signin' ? '🔒' : '📓'}
+                </button>
                 <button
                   onClick={() => (marked === '' ? bookmarkNow() : null)}
                   title="Bookmark this moment"

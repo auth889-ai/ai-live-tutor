@@ -18,9 +18,10 @@ const T = {
 const TYPE_META = {
   note: ['📝', 'note'], text: ['📋', 'pasted'], link: ['🔗', 'link'],
   pdf: ['📄', 'PDF'], image: ['🖼', 'image'], voice: ['🎙', 'voice'],
+  moment: ['🎬', 'lesson moment'],
 };
 const TRUST_COLOR = { user: '#2f7d4a', extracted: '#4477aa', ai: '#c98f2d' };
-const TYPE_COLOR = { note: '#2f7d4a', text: '#6b563d', link: '#4477aa', pdf: '#c0522d', image: '#8e44ad', voice: '#c98f2d' };
+const TYPE_COLOR = { note: '#2f7d4a', text: '#6b563d', link: '#4477aa', pdf: '#c0522d', image: '#8e44ad', voice: '#c98f2d', moment: '#e8604c' };
 
 export function NotebooksContent() {
   const [list, setList] = useState(null);
@@ -427,7 +428,10 @@ function Block({ nb, b, onChanged, reveal = false, onNavigate, onContinue }) {
           </>
         );
       })()}
-      {b.type === 'image' && b.url ? <img src={b.url} alt={b.title ?? ''} style={{ width: '100%', borderRadius: 12, marginTop: 8 }} /> : b.url ? <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#4477aa', fontWeight: 700 }}>{b.url}</a> : null}
+      {b.type === 'moment' && b.transcript ? <div style={{ fontSize: 12.5, color: '#6b563d', fontStyle: 'italic', marginTop: 6 }}>“{b.transcript}”</div> : null}
+      {b.type === 'moment' && b.url ? (
+        <a href={b.url} style={{ display: 'inline-block', marginTop: 8, border: 'none', borderRadius: 999, background: T.accent, color: '#fff', padding: '5px 14px', fontSize: 12, fontWeight: 800, textDecoration: 'none' }}>▶ replay this moment</a>
+      ) : b.type === 'image' && b.url ? <img src={b.url} alt={b.title ?? ''} style={{ width: '100%', borderRadius: 12, marginTop: 8 }} /> : b.url ? <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#4477aa', fontWeight: 700 }}>{b.url}</a> : null}
       {audio ? <audio controls src={audio} style={{ width: '100%', height: 32, marginTop: 8 }} /> : null}
     </div>
   );
