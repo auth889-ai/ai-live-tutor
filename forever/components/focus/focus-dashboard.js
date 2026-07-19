@@ -20,19 +20,16 @@ export function FocusDashboard({ deviceId = 'device' }) {
       .catch(() => setErr('offline'));
   }, [deviceId]);
 
-  if (err) return <Empty text={`Could not load focus data (${err}). Start a session in the extension.`} />;
+  if (err) return <><InstallCard /><Empty text={`Could not load focus data (${err}).`} /></>;
   if (!data) return <Empty text="Loading your focus data…" />;
   const t = data.totals;
-  if (!t || t.total === 0) return <Empty text="No focus activity yet. Install the extension, set a goal, and start studying — your survey appears here." />;
+  if (!t || t.total === 0) return <><Header /><InstallCard /><Empty text="No focus activity yet — once the extension is running and you start studying, your survey appears here." /></>;
 
   const topDomains = Object.entries(t.byDomain ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, color: V('--ink', '#2b2320'), margin: '0 0 4px' }}>Focus Report</h1>
-      <p style={{ fontSize: 13, color: V('--ink-muted', '#8a7d76'), margin: '0 0 18px' }}>
-        Where your study time actually went — classified by the AI against your goal, saved automatically by the Study Focus extension.
-      </p>
+      <Header />
 
       {/* hero cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
@@ -99,6 +96,32 @@ function Section({ title, children }) {
     <div style={{ border: `1px solid ${V('--border', '#eadfd8')}`, borderRadius: 14, padding: 16, background: V('--surface', '#fbf6f2'), marginBottom: 16 }}>
       <div style={{ fontSize: 14, fontWeight: 800, color: V('--ink', '#2b2320'), marginBottom: 8 }}>{title}</div>
       {children}
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <>
+      <h1 style={{ fontSize: 22, fontWeight: 800, color: V('--ink', '#2b2320'), margin: '0 0 4px' }}>🎯 Focus Guard</h1>
+      <p style={{ fontSize: 13, color: V('--ink-muted', '#8a7d76'), margin: '0 0 18px' }}>
+        The AI watches for when you drift from studying to a distracting page and nudges you back. Here is where your study time actually went.
+      </p>
+    </>
+  );
+}
+
+// Tells the user how to turn on distraction detection (the Chrome extension).
+function InstallCard() {
+  return (
+    <div style={{ border: '1px solid #d8c4b8', borderRadius: 14, padding: 16, background: 'rgba(176,106,46,.06)', marginBottom: 18 }}>
+      <div style={{ fontSize: 14, fontWeight: 800, color: V('--ink', '#2b2320'), marginBottom: 6 }}>Turn on distraction detection</div>
+      <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: V('--ink-muted', '#6f635c'), lineHeight: 1.7 }}>
+        <li>Open Chrome → <b>Extensions</b> → enable <b>Developer mode</b> (top-right toggle).</li>
+        <li>Click <b>Load unpacked</b> and select the <code style={{ background: '#f0e8e2', padding: '1px 5px', borderRadius: 4 }}>forever/extension-focus</code> folder.</li>
+        <li>Click the <b>Forever Focus</b> icon, set your <b>study goal</b>, and press <b>Start session</b>.</li>
+        <li>Study normally. When you drift to a distracting page, the AI pops a nudge — and every page is logged here.</li>
+      </ol>
     </div>
   );
 }

@@ -16,6 +16,7 @@ export function DashboardSidebar({ email, active = 'home' }) {
     { key: 'bookmarks', icon: '🔖', label: 'Bookmarks', href: '/bookmarks' },
     { key: 'notebooks', icon: '📓', label: 'Notebooks', href: '/notebooks' },
     { key: 'notebook', icon: '📖', label: 'Lesson pages', href: '/notebook' },
+    { key: 'focus', icon: '🎯', label: 'Focus Guard', href: '/focus' },
   ];
   const soon = [
     ['🧠', 'Quizzes'],
