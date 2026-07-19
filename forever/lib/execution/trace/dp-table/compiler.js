@@ -142,7 +142,7 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
           if (vs.length >= 2 && val === Math.min(...vs)) ops.push('min of reads');
           if (vs.length >= 2 && val === Math.min(...vs) + 1) ops.push('min of reads + 1');
           if (vs.length >= 2 && val === Math.max(...vs) + 1) ops.push('max of reads + 1');
-          if (ops.length === 1) rule = ops[0];
+          if (ops.length === 1 && informative) rule = ops[0]; // constant-output runs earn no op name
         }
         proved = { rule: rule ?? 'from read cells', reads: cells.map((c) => c.p) };
         provedByCell.set(`${wr},${wc}`, { rule: proved.rule, cells });
@@ -165,7 +165,7 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
 
     const parts = [];
     for (const [r, c, old] of writes.slice(0, 2)) {
-      parts.push(narrateWrite({ r, c, value: known.get(`${r},${c}`), old, isBase: r === 0 || c === 0, proved: Boolean(proved) }));
+      parts.push(narrateWrite({ r, c, value: known.get(`${r},${c}`), old, isBase: r === 0 || c === 0, proved: Boolean(proved) && informative }));
     }
     if (writes.length > 2) parts.push(narrateBatch({ count: writes.length - 2 }));
     for (const [r, c] of writes) filled.push([r, c]);
