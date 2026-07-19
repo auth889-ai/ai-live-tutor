@@ -20,6 +20,9 @@ import { SimulationView } from './simulation-view.js';
 import { MoleculeView } from './molecule-view.js';
 import { LiveChartView } from './live-chart-view.js';
 import { SqlPlayground } from './sql-playground.js';
+import { GraphViewCyto } from './graph-view-cyto.js';
+import { MLLossExplorer } from './ml-loss-explorer.js';
+import { TerminalView } from './terminal-view.js';
 import { QuizView } from './quiz-view.js';
 import { TryItPanel } from './try-it-panel.js';
 import { AuditTrailView } from './audit-trail-view.js';
@@ -162,6 +165,18 @@ function Focus({ object, state, focusRef, activeStep, setHold, onQuizAnswered, p
     // The curve primitive: legend, ghost curves, shift arrows, marked equilibria — the
     // things Mermaid xychart cannot draw (why it is banned for curve teaching).
     return <ChartView content={object.content} />;
+  }
+  if (object.renderHint === 'relgraph') {
+    // Cytoscape relationship map — networking topology/AS, history connections, law citations, agent graphs.
+    return <GraphViewCyto content={object.content} />;
+  }
+  if (object.renderHint === 'mltrainer') {
+    // Live gradient descent the student steers with learning-rate/epochs sliders.
+    return <MLLossExplorer content={object.content} />;
+  }
+  if (object.renderHint === 'terminal') {
+    // xterm replay of the scheduler/OS engine trace, step-through.
+    return <TerminalView content={object.content} />;
   }
   if (object.renderHint === 'sqlplayground') {
     // REAL in-browser SQLite: the student writes and runs SQL against the seeded schema.
