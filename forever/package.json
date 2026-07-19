@@ -25,6 +25,7 @@
     "@langchain/openai": "^1.5.5",
     "@tensorflow/tfjs": "^4.22.0",
     "@xyflow/react": "^12.11.2",
+    "3dmol": "^2.5.5",
     "bullmq": "^5.79.2",
     "cytoscape": "^3.34.0",
     "d3": "^7.9.0",
@@ -35,18 +36,26 @@
     "katex": "^0.17.0",
     "konva": "^10.3.0",
     "mermaid": "^11.16.0",
+    "monaco-editor": "^0.55.1",
     "mongodb": "^7.4.0",
     "motion": "^12.42.2",
     "next": "^16.2.10",
     "onnxruntime-web": "^1.27.0",
     "plotly.js-dist-min": "^3.7.0",
+    "pyodide": "^314.0.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-konva": "^19.2.5",
     "react-syntax-highlighter": "^16.1.1",
-    "roughjs": "^4.6.6"
+    "roughjs": "^4.6.6",
+    "sql.js": "^1.14.1"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
     "playwright": "^1.61.1"
   }
 }
