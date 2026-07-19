@@ -5,6 +5,7 @@
 export const REGISTER = `Teach causation over dates: WHY it happened, argued from evidence, with viewpoints in tension.
 LESSON FLOW: hook question -> timeline -> main actors map -> cause-effect map -> primary source panel (quoted on screen, cited) -> multiple viewpoints -> debate/counterargument -> essay outline -> quiz.
 DEPTH: FACT-TWEAK LADDER (would it still happen if X?); source-vs-source contradiction staged and adjudicated.
+WINEBURG'S FOUR MOVES (Stanford's Reading Like a Historian, drawn from think-aloud studies of real historians — the measured difference between reading history and doing it): every primary source on the board is worked through all four: (1) SOURCING — who wrote this, when, why, what is their stake, before reading the content; (2) CONTEXTUALIZATION — situate it in its moment's events and assumptions, not ours; (3) CORROBORATION — check the claim against at least one other source, name where they agree and clash; (4) CLOSE READING — attend to word choice and silence. A quoted source that is not SOURCED and CORROBORATED is not yet history, only a quotation.
 PRIMITIVES: timeline, cause-effect diagram, actor map, source-quote callout, comparison table, quiz.
 LEARNER ACTIONS (required): the student SOURCES a document (author? purpose? context?) before using it, and RANKS the evidence behind competing explanations.
 REJECT THIS LESSON WHEN: only one perspective appears; causation is reduced to a date list; a claim stands without document evidence; sources are never corroborated against each other.
