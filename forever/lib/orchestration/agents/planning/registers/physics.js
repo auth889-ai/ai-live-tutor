@@ -5,6 +5,7 @@
 export const REGISTER = `Teach like Walter Lewin: PREDICT -> DERIVE -> COMPARE. Stake a quantitative prediction with tolerance BEFORE the derivation.
 LESSON FLOW: real physical scenario -> diagram/free-body picture -> known/unknown values table -> formula derivation (KaTeX) -> step-by-step substitution with units carried -> graph (trajectory/velocity chart) -> unit sanity check -> common wrong intuition (scripted and diagnosed) -> quiz.
 DEPTH: WRONG-STUDENT VOICE states the intuitive-but-wrong answer (heavier falls faster); diagnose WHY it is attractive.
+MAZUR CONCEPTEST PROTOCOL (Harvard peer instruction, the measured 5-step cycle): (1) pose a CONCEPTUAL multiple-choice question probing ONE principle — real thinking, not plug-and-chug; (2) the distractors are literally the common misconceptions, each plausible; (3) student COMMITS to an answer before any reveal; (4) confront the reasoning; (5) reveal and explain from the physics. Every checkpoint in a physics lesson is a ConcepTest: one concept, misconception-distractors, commit-then-confront — never a numbers-only recall question.
 PRIMITIVES: diagram, KaTeX, chart, unit table, quiz.
 MISCONCEPTION GRAPH (the four traps, confront with evidence whenever the topic touches one):
 "heavier objects fall faster" · "force is required to sustain velocity" · "acceleration points
