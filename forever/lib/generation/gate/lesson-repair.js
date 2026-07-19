@@ -18,6 +18,9 @@ import { runSimEvidence } from '../../orchestration/agents/authoring/evidence/si
 import { runSchedEvidence } from '../../orchestration/agents/authoring/evidence/sched-evidence.js';
 import { geneticsEvidence } from '../../orchestration/agents/authoring/evidence/genetics-evidence.js';
 import { networkEvidence } from '../../orchestration/agents/authoring/evidence/network-evidence.js';
+import { pubchemEvidence } from '../../orchestration/agents/authoring/evidence/pubchem.js';
+import { primarySourceEvidence } from '../../orchestration/agents/authoring/evidence/primary-sources.js';
+import { caseLawEvidence } from '../../orchestration/agents/authoring/evidence/case-law.js';
 import { runAgentChain as runAgentChainDefault } from '../../qwen/client.js';
 
 const numbersIn = (t) => (String(t ?? '').match(/\d+(?:[.,]\d+)?%?/g) ?? [])
@@ -55,7 +58,50 @@ export async function repairLessonPayload(payload, {
 } = {}) {
   const chain = agents.runAgentChain ?? runAgentChainDefault;
   const before = gateLesson(payload, { sourceText, domain });
-  if (before.ok) return { before, after: before, changed: false };
+  // ---- SOURCE ENRICHMENT (history/law): attach a REAL external source the lesson can work
+  // from — a genuine period newspaper (Library of Congress) or a real precedent (CourtListener).
+  // Runs when the lesson has no such object yet; a fetch miss is silent (never fabricates).
+  if ((domain === 'history' || domain === 'law') && (agents.enrichSources ?? true)) {
+    try {
+      const already = payload.scenes.some((sc) => (sc.objects ?? []).some((o) => o.sourceRef?.provenance === 'chronicling-america' || o.sourceRef?.provenance === 'courtlistener'));
+      if (!already) {
+        // ask the model for a good search query from the lesson's own topic
+        const qRes = await chain({
+          agent: 'source-query',
+          system: `Give ONE short search query (3-6 words) to find a REAL ${domain === 'law' ? 'US court opinion (legal precedent)' : 'historic US newspaper article'} relevant to this lesson. Return ONLY JSON {"query": string}.`,
+          user: `LESSON: ${lessonTitle}\nTOPICS: ${payload.scenes.map((s) => s.title).join(' | ').slice(0, 500)}`,
+          maxTokens: 60,
+          temperature: 0.2,
+        });
+        const query = (qRes?.json ?? qRes)?.query ?? lessonTitle;
+        const fetched = domain === 'law'
+          ? await (agents.caseLawEvidence ?? caseLawEvidence)(query, { rows: 2 })
+          : await (agents.primarySourceEvidence ?? primarySourceEvidence)(query, { rows: 2 });
+        if (fetched.length) {
+          const rows = fetched.map((f) => domain === 'law'
+            ? [f.caseName, f.court ?? '', `${f.date}${f.citation ? ' · ' + f.citation : ''}`]
+            : [f.title, f.place ?? '', f.date]);
+          const objId = domain === 'law' ? 'real_precedents' : 'real_primary_sources';
+          const target = payload.scenes.find((sc) => /source|evidence|worked|example|rule|application/i.test(sc.pedagogicalRole ?? '')) ?? payload.scenes[Math.min(1, payload.scenes.length - 1)];
+          if (target && !target.objects.some((o) => o.id === objId)) {
+            target.objects.push({
+              id: objId,
+              objectType: domain === 'law' ? 'real case list' : 'real primary sources',
+              renderHint: 'table',
+              region: 'notebook_area',
+              content: { title: domain === 'law' ? 'Real precedents (CourtListener)' : 'Real period sources (Library of Congress)', rows, links: fetched.map((f) => f.url).filter(Boolean) },
+              sourceRef: { engine: domain === 'law' ? 'courtlistener' : 'chronicling-america', provenance: domain === 'law' ? 'courtlistener' : 'chronicling-america' },
+            });
+            target.voiceLines.push({ id: `${objId}_v`, text: domain === 'law' ? 'These are real cited precedents, not hypotheticals — pulled from the case-law database.' : 'These are genuine period sources, not paraphrases — pulled from the Library of Congress archive.', targetObjectId: objId });
+            target.timeline?.actions?.push({ id: `act_${objId}`, kind: 'point', startMs: 0, durationMs: 600, targetObjectId: objId });
+          }
+        }
+      }
+    } catch (e) { log(`  source enrichment failed: ${String(e.message).slice(0, 100)}`); }
+  }
+
+  const stillOk = gateLesson(payload, { sourceText, domain });
+  if (before.ok) return { before, after: stillOk, changed: false };
   const numViol = before.violations.filter((v) => v.rule === 'number-unsourced' || v.rule === 'board-number-unsourced');
   const beatViol = before.violations.filter((v) => v.rule === 'beat-missing' && /misconception/.test(v.detail));
 
@@ -122,7 +168,7 @@ export async function repairLessonPayload(payload, {
       } else {
         const world = await chain({
           agent: 'calc-evidence-designer',
-          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]${domain === 'networking' ? ', optionally "network": {"latencyFloor": {"distanceKm"}, "packetCount": {"payloadBytes","mtuBytes"}, "slowStart": {"rounds","ssthresh"?}} — REAL protocol-timing computation; the RTT floor, packet count and slow-start windows become citable evidence' : ''}${domain === 'biology' ? ', optionally "genetics": {"punnett": {"parent1","parent2","dominant"}, "hardyWeinberg": {"p"}} — REAL Punnett cross + Hardy-Weinberg computation; the genotype/phenotype ratios become citable evidence (proves 3:1 by counting the cross)' : ''}${domain === 'os_arch' ? ', optionally "sched": {"processes": [{"id","arrival","burst"}], "policies": [{"policy": "fcfs"|"sjf"|"rr", "quantum"?}]} — REAL scheduler simulations; each policy\'s computed average waiting time becomes citable evidence (proves SJF beats FCFS by RUNNING both)' : ''}${domain === 'physics' ? ', optionally "sim": {"model": "kinematics_1d"|"projectile_2d", "params": {"v0","a"|"angleDeg","g","dt","steps"}, "record": [step ints]} — a REAL numeric motion simulation the engine integrates; its trajectory rows and summary (range, final velocity) become citable evidence' : ''}${domain === 'ml_ai' ? ', optionally "train": {"lr": number, "epochs": int, "record": [epoch ints]} — a REAL gradient-descent run (linear model, columns = x then y) the engine executes; its recorded losses and final w/b become citable evidence (use this when the lesson narrates loss curves or trained parameters)' : ''}} — HARD RULE: every dataset number must literally appear in the SOURCE below (the dataset IS the source's data); the formulas then DERIVE the teaching numbers by arithmetic. Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
+          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]${domain === 'chemistry' ? ', optionally "pubchem": [compound names] — the engine looks up REAL molecular weights/formulas from the NIH PubChem database (no key); each becomes citable evidence' : ''}${domain === 'networking' ? ', optionally "network": {"latencyFloor": {"distanceKm"}, "packetCount": {"payloadBytes","mtuBytes"}, "slowStart": {"rounds","ssthresh"?}} — REAL protocol-timing computation; the RTT floor, packet count and slow-start windows become citable evidence' : ''}${domain === 'biology' ? ', optionally "genetics": {"punnett": {"parent1","parent2","dominant"}, "hardyWeinberg": {"p"}} — REAL Punnett cross + Hardy-Weinberg computation; the genotype/phenotype ratios become citable evidence (proves 3:1 by counting the cross)' : ''}${domain === 'os_arch' ? ', optionally "sched": {"processes": [{"id","arrival","burst"}], "policies": [{"policy": "fcfs"|"sjf"|"rr", "quantum"?}]} — REAL scheduler simulations; each policy\'s computed average waiting time becomes citable evidence (proves SJF beats FCFS by RUNNING both)' : ''}${domain === 'physics' ? ', optionally "sim": {"model": "kinematics_1d"|"projectile_2d", "params": {"v0","a"|"angleDeg","g","dt","steps"}, "record": [step ints]} — a REAL numeric motion simulation the engine integrates; its trajectory rows and summary (range, final velocity) become citable evidence' : ''}${domain === 'ml_ai' ? ', optionally "train": {"lr": number, "epochs": int, "record": [epoch ints]} — a REAL gradient-descent run (linear model, columns = x then y) the engine executes; its recorded losses and final w/b become citable evidence (use this when the lesson narrates loss curves or trained parameters)' : ''}} — HARD RULE: every dataset number must literally appear in the SOURCE below (the dataset IS the source's data); the formulas then DERIVE the teaching numbers by arithmetic. Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
           user: `SOURCE:\n${sourceText.slice(0, 3000)}\n\nLESSON SCENES:\n${sceneTexts.slice(0, 2500)}\n\nUNSOURCED NUMBERS TO GROUND:\n${offending.slice(0, 1500)}`,
           maxTokens: 1400,
           temperature: 0.2,
@@ -156,6 +202,10 @@ export async function repairLessonPayload(payload, {
             });
             spec = fixed?.json ?? fixed;
           }
+        }
+        let pubRows = [];
+        if (spec.pubchem && domain === 'chemistry') {
+          try { pubRows = await pubchemEvidence(spec.pubchem); } catch (e) { log(`  pubchem lookup failed: ${String(e.message).slice(0, 80)}`); }
         }
         let netRows = [];
         if (spec.network && domain === 'networking') {
@@ -195,10 +245,10 @@ export async function repairLessonPayload(payload, {
             ];
           } catch (e) { log(`  train run failed: ${String(e.message).slice(0, 80)}`); }
         }
-        evBlobStr = JSON.stringify([...cev.results.map((r) => [r.label, r.expr, r.value]), ...trainRows, ...simRows, ...schedRows, ...genRows, ...netRows]);
+        evBlobStr = JSON.stringify([...cev.results.map((r) => [r.label, r.expr, r.value]), ...trainRows, ...simRows, ...schedRows, ...genRows, ...netRows, ...pubRows]);
         evContentObj = {
           title: 'Computed by executing the formulas (real arithmetic)',
-          rows: [...cev.results.map((r) => [r.label, r.expr, String(r.value)]), ...trainRows, ...simRows, ...schedRows, ...genRows, ...netRows],
+          rows: [...cev.results.map((r) => [r.label, r.expr, String(r.value)]), ...trainRows, ...simRows, ...schedRows, ...genRows, ...netRows, ...pubRows],
           dataset: cev.dataset,
         };
         provenanceEngine = 'calc-evidence';
