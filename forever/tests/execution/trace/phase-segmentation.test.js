@@ -29,7 +29,7 @@ test('build-loop events claim no teaching moments; the stale loop variable is no
   // never as a relaxation "through" the stale build-loop u.
   const takeSteps = trace.steps.filter((s) => / is taken /.test(s.explanation));
   assert.ok(!trace.steps.some((s) => /Through 2 we reach 2/.test(s.explanation)), 'no self-relaxation nonsense');
-  const init = trace.steps.find((s) => /table starts with 2 = 0/.test(s.explanation));
+  const init = trace.steps.find((s) => /Initialization: 2 starts at 0/.test(s.explanation));
   assert.ok(init, 'dist init narrated as the table starting (not attributed to a stale current)');
   assert.equal(init.graph.current, null, 'no red ring on a node the algorithm never took');
   // The relaxations to 1 and 3 come from the REAL walk step and light only DECLARED edges.

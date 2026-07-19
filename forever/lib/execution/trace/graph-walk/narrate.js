@@ -16,13 +16,25 @@ export function narrateTake({ node, via, dist }) {
 }
 
 // A distance-table entry improves (or appears): THE relaxation beat, old -> new with the why.
-export function narrateRelax({ from, to, oldValue, newValue }) {
+export function narrateRelax({ from, to, oldValue, newValue, everTaken = true }) {
+  // VERIFIED-TEMPLATES LAW (external review, reproduced 2026-07-20): before any node has
+  // been taken there IS no current node — dist writes are SETUP, and narrating them as
+  // relaxations invented a router ("through the current node, 0 is reachable in 0").
+  if (!everTaken) {
+    if (newValue === 0) {
+      return `Initialization: ${to} starts at 0 — the walk will begin here. This is setup, not a relaxation; no edge has been looked at yet.`;
+    }
+    return `Initialization: ${to} starts at ${JSON.stringify(newValue)} — unknown until the walk actually reaches it.`;
+  }
   if (oldValue === undefined) {
     return from
       ? `Through ${from} we reach ${to} for the first time: its distance becomes ${JSON.stringify(newValue)}. A blank cell in the table just got its first real number — watch it, it may still improve.`
-      : `The table starts with ${to} = ${JSON.stringify(newValue)} — the starting point costs nothing to reach, and every other node begins unknown.`;
+      : `${to}'s distance gets its first value: ${JSON.stringify(newValue)}. The recording does not attribute this write to a specific edge, so none is claimed.`;
   }
-  return `Relaxation: through ${from ?? 'the current node'}, ${to} is reachable in ${JSON.stringify(newValue)} — better than the ${JSON.stringify(oldValue)} we knew before, so the table is UPDATED. This one comparison, repeated everywhere, is the entire algorithm.`;
+  if (from) {
+    return `Relaxation: through ${from}, ${to} is reachable in ${JSON.stringify(newValue)} — better than the ${JSON.stringify(oldValue)} we knew before, so the table is UPDATED. This one comparison, repeated everywhere, is the entire algorithm.`;
+  }
+  return `${to}'s distance improves to ${JSON.stringify(newValue)} (was ${JSON.stringify(oldValue)}). The recording does not attribute this update to a specific edge, so none is claimed.`;
 }
 
 // A node is finalized (added to the visited/done set): the invariant beat.

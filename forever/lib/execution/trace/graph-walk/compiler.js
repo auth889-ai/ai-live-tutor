@@ -205,6 +205,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
   // behind (u=3 after `for u,v in times`), and the first algorithm event must not narrate that
   // leftover as "taken from the frontier" nor attribute relaxations "through" it.
   let currentClaimed = false;
+  let everTaken = false; // no take yet -> dist writes are SETUP, never relaxations
   let seededAfterBuild = buildEndIndex < 0; // no build phase -> nothing stale to absorb
   const visitOrder = []; // finalize ORDER is ours to track — sets are unordered (research pitfall)
   let knownDist = {};
@@ -278,6 +279,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     if (isNode(curRaw) && String(curRaw) !== current) {
       current = String(curRaw);
       currentClaimed = true;
+      everTaken = true;
       emit('visit', { semanticRole: 'frontier_take', target: { entityId: `graphNode:${current}` } });
       const distNow = plainObj(locals[roles.dist]);
       parts.push(narrateTake({ node: name(current), via: frontierRole === 'stack' ? 'stack' : frontierRole ? 'queue' : null, dist: distNow?.[curRaw] }));
@@ -290,7 +292,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
       for (const [k, v] of changes.slice(0, 3)) {
         // "Through X we reach Y" only when X is a CLAIMED take — a stale build-loop leftover
         // must not be credited with relaxations (the dist init reads as the table starting).
-        parts.push(narrateRelax({ from: currentClaimed && current && String(k) !== current ? name(current) : null, to: name(k), oldValue: knownDist[k], newValue: v }));
+        parts.push(narrateRelax({ from: currentClaimed && current && String(k) !== current ? name(current) : null, to: name(k), oldValue: knownDist[k], newValue: v, everTaken }));
         emit('relax', {
           semanticRole: knownDist[k] === undefined ? 'first_discovery' : 'improvement',
           target: { entityId: `graphNode:${String(k)}`, field: roles.dist },
