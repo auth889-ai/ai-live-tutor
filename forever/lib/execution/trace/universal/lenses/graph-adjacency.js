@@ -63,6 +63,11 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
     }
     const cand = isPlainObj(final) ? adjFromDict(dictView ?? final) : Array.isArray(final) ? adjFromLists(final, snaps) : null;
     if (!cand || cand.edges.length === 0) continue;
+    // EVIDENCE RULE (provenance piece 2, 2026-07-20): a real walk READS its adjacency —
+    // adj[u] shows up as a recorded subscript read. A structure that is never indexed is a
+    // result ACCUMULATOR wearing adjacency shape (subsets' [[],[1],[1,2],...] misread as a
+    // graph). Only enforced when the recording carries direct reads.
+    if (Array.isArray(recording?.reads) && !recording.reads.some((r) => r.n === name)) continue;
     if (!adj || cand.edges.length > adj.edges.length) adj = { name, ...cand };
   }
   if (!adj) return null;

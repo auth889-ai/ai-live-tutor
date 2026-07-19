@@ -49,6 +49,16 @@ tree = build()`;
 
 const PROBLEMS = [
   // ——— arrays / two pointers / sliding window ———
+  ['arrays', 'LC53 class-Solution Kadane (LC submission shape)', `class Solution:
+    def maxSubArray(self, nums):
+        best = nums[0]
+        cur = nums[0]
+        for i in range(1, len(nums)):
+            cur = max(nums[i], cur + nums[i])
+            best = max(best, cur)
+        return best
+
+sol = Solution()`, 'sol.maxSubArray([-2, 1, -3, 4, -1, 2, 1, -5, 4])'],
   ['arrays', 'LC704 Binary Search', `def bs(arr, t):
     lo, hi = 0, len(arr) - 1
     while lo <= hi:
@@ -262,6 +272,19 @@ def levels(root):
     return out`, 'levels(tree)'],
 
   // ——— recursion / backtracking ———
+  ['recursion', 'LC78 Subsets (closure backtracking)', `def subsets(nums):
+    result = []
+    path = []
+
+    def search(index):
+        result.append(path[:])
+        for i in range(index, len(nums)):
+            path.append(nums[i])
+            search(i + 1)
+            path.pop()
+
+    search(0)
+    return result`, 'subsets([1, 2, 3])'],
   ['recursion', 'LC509 Fibonacci (naive)', `def fib(n):
     if n <= 1:
         return n
@@ -865,29 +888,16 @@ def last_stone(stones):
 const FRONTIER = [
   // Reported by external review 2026-07-19, reproduced same day. Both run CORRECTLY —
   // the gap is lens choice, not accuracy:
-  ['Subsets via closure backtracking (should be recursion-tree, reads graph-adjacency)', `def subsets(nums):
-    result = []
-    path = []
-
-    def search(index):
-        result.append(path[:])
-        for i in range(index, len(nums)):
-            path.append(nums[i])
-            search(i + 1)
-            path.pop()
-
-    search(0)
-    return result`, 'subsets([1, 2, 3])'],
-  ['Kadane inside class Solution (should be pointer-array, falls to line-floor)', `class Solution:
-    def maxSubArray(self, nums):
-        best = nums[0]
-        cur = nums[0]
-        for x in nums[1:]:
-            cur = max(x, cur + x)
-            best = max(best, cur)
-        return best
-
-sol = Solution()`, 'sol.maxSubArray([-2, 1, -3, 4, -1, 2, 1, -5, 4])'],
+  // RESOLVED 2026-07-20: class Solution was never the problem — an INDEXED Kadane inside a
+  // class gets pointer-array (battery row 'LC53 class-Solution'). The floor case was SLICE
+  // iteration (for x in nums[1:]) — no indices means no pointer story; floor is honest there.
+  ['Kadane via slice iteration (index-free — floor is the honest view)', `def max_sub(nums):
+    best = nums[0]
+    cur = nums[0]
+    for x in nums[1:]:
+        cur = max(x, cur + x)
+        best = max(best, cur)
+    return best`, 'max_sub([-2, 1, -3, 4, -1, 2, 1, -5, 4])'],
 ];
 
 const rows = [];

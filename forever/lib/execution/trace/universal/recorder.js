@@ -27,8 +27,13 @@ def __tr_read__(name, obj, *keys):
     for k in keys:
         val = val[k]
     try:
-        if len(_reads) < 4000 and all(isinstance(k, int) and not isinstance(k, bool) for k in keys) and isinstance(val, (int, float, str, bool)):
-            _reads.append({'i': len(_events), 'n': name, 'p': list(keys), 'v': _safe(val)})
+        if len(_reads) < 4000 and all(isinstance(k, (int, str)) and not isinstance(k, bool) for k in keys):
+            if isinstance(val, (int, float, str, bool)):
+                _reads.append({'i': len(_events), 'n': name, 'p': list(keys), 'v': _safe(val)})
+            elif isinstance(val, (list, dict, set, tuple)):
+                # non-scalar read: value omitted, but the ACCESS itself is the evidence —
+                # a walked adjacency is indexed (adj[u]); a result accumulator never is
+                _reads.append({'i': len(_events), 'n': name, 'p': [k if isinstance(k, int) else str(k) for k in keys], 't': 'o'})
     except Exception:
         pass
     return val

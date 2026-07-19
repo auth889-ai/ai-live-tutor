@@ -21,7 +21,7 @@ test('a bitmask-BFS seen-set of pairs is never classified as a DP table (sets ha
 test('a ragged backtracking result accumulator is never a DP table', async () => {
   const code = ['def subsets(nums):', '    result = []', '    path = []', '', '    def search(index):', '        result.append(path[:])', '        for i in range(index, len(nums)):', '            path.append(nums[i])', '            search(i + 1)', '            path.pop()', '', '    search(0)', '    return result'].join('\n');
   const { lens } = await traceUniversal({ code, entry: 'subsets([1, 2, 3])', exec });
-  assert.notEqual(lens?.key ?? lens, 'dp-table');
+  assert.equal(lens?.key ?? lens, 'recursion-tree'); // promoted 2026-07-20: choose/recurse/undo IS the lesson
 });
 
 test('a constant fill claims ZERO dependency arrows — coincidence rules are suppressed', async () => {
