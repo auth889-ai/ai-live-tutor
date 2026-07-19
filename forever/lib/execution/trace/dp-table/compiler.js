@@ -138,7 +138,9 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
         const lastReadQ = Math.max(0, ...cells.map((x) => x.q ?? 0));
         // only ops that executed AFTER the last RHS read can be the combining op — index
         // arithmetic (i - 1) runs before its read and must never name the rule
-        const certain = rhsOps.filter((o) => o.r === val && (o.q ?? 0) > lastReadQ);
+        // a MULTI-op expression (x * 0 + 1) cannot be summarized by one operator without a
+        // real expression DAG — no single-op rule is named for it (review lib18 #3)
+        const certain = rhsOps.length === 1 ? rhsOps.filter((o) => o.r === val && (o.q ?? 0) > lastReadQ) : [];
         if (certain.length) {
           const o = certain[certain.length - 1];
           rule = ({ Add: 'sum (recorded op)', Sub: 'difference (recorded op)', Mult: 'product (recorded op)', FloorDiv: 'floor-div (recorded op)', Mod: 'mod (recorded op)', max: 'max (recorded op)', min: 'min (recorded op)' })[o.op] ?? `${o.op} (recorded op)`;
@@ -242,7 +244,7 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
   // the last-written cell along the PROVED read edges of THIS run — no problem knowledge,
   // no direction assumptions. A '+' rule marks a contributing cell; a max/min rule follows
   // the donor whose recorded value equals the cell's value.
-  if (directReads && lastWrite && provedByCell.size >= 3) {
+  if (directReads && informative && lastWrite && provedByCell.size >= 3) {
     let cur = [lastWrite[0], lastWrite[1]];
     const hops = [];
     const seenCells = new Set();

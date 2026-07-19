@@ -25,6 +25,26 @@ const isCoordPair = (v, rows, cols) =>
 // Decide the lens from the recording. Returns null (not our family) or a plan:
 //   { lens: 'grid-walk', confidence, grid: {name, rows, cols}, queue: {name, kind}|null, counters: [name] }
 export function detectGridWalk(recording, { code = '' } = {}) {
+  // TRAVERSAL EVIDENCE RULE (review lib18 #1): a transform (transpose, doubling) mutates a
+  // board without walking it. With provenance available, grid-walk needs at least one of:
+  // queue/stack collection ops, recursion, or a board that is BOTH read and mutated —
+  // reading the source table you copy from does not count. Otherwise the floor's honest
+  // grid owns the run (values without traversal narration).
+  if (Array.isArray(recording?.writes)) {
+    const hasCollops = (recording.collops ?? []).some((o) => ['append', 'appendleft', 'popleft', 'pop'].includes(o.op));
+    const fnCounts = {};
+    for (const e of recording.events ?? []) if (e.ev === 'call') fnCounts[e.fn] = (fnCounts[e.fn] ?? 0) + 1;
+    const recursive = Object.values(fnCounts).some((c) => c > 1);
+    const lineEvs = (recording.events ?? []).filter((e) => e.ev === 'line');
+    const mutated = (name) => {
+      const snaps = lineEvs.map((e) => e.locals?.[name]).filter((v) => v !== undefined);
+      return snaps.length >= 2 && JSON.stringify(snaps[0]) !== JSON.stringify(snaps[snaps.length - 1]);
+    };
+    const readNames = new Set((recording.reads ?? []).filter((r) => r.p.length === 2).map((r) => r.n));
+    const readAndMutated = [...readNames].some((n) => mutated(n));
+    if (!hasCollops && !recursive && !readAndMutated) return null;
+  }
+
   const lines = (recording?.events ?? []).filter((e) => e.ev === 'line');
   if (lines.length === 0) return null;
 
