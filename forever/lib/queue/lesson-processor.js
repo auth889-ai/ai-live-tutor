@@ -184,12 +184,23 @@ async function produceLesson({ sourcePack, outlineLesson = null, episode = null,
     report(makeProgress({ phase: 'saving', message: 'Gate: verifying numbers, beats and references', ...watchable() }));
     try {
       const sourceText = (pack.chunks ?? []).map((c) => c.text ?? '').join(' ');
-      const { before, after } = await (deps.repair ?? repairLessonPayload)(finalLesson, {
-        sourceText, domain: finalLesson.domain, lessonTitle: finalLesson.lessonTitle, env,
-      });
+      // repair to CONVERGENCE, not one round: measured live (ML course lesson 1), one round
+      // healed 25 -> 8 and a second round was never given; the script loop converges in 2-6.
+      // Stop when clean, when a round stops improving, or after 4 rounds (cost ceiling).
+      let firstCount = null;
+      let verdict = null;
+      for (let round = 0; round < 4; round += 1) {
+        const { before, after } = await (deps.repair ?? repairLessonPayload)(finalLesson, {
+          sourceText, domain: finalLesson.domain, lessonTitle: finalLesson.lessonTitle, env,
+        });
+        firstCount = firstCount ?? before.violations.length;
+        verdict = after;
+        if (after.ok || after.violations.length >= before.violations.length) break;
+        report(makeProgress({ phase: 'saving', message: `Gate: ${after.violations.length} issue${after.violations.length === 1 ? '' : 's'} left after repair round ${round + 1}`, ...watchable() }));
+      }
       finalLesson = {
         ...finalLesson,
-        gate: { ok: after.ok, violations: after.violations.length, repaired: before.violations.length - after.violations.length, rules: [...new Set(after.violations.map((v) => v.rule))] },
+        gate: { ok: verdict.ok, violations: verdict.violations.length, repaired: firstCount - verdict.violations.length, rules: [...new Set(verdict.violations.map((v) => v.rule))] },
       };
     } catch (e) {
       console.error(`[gate] self-repair failed open: ${String(e?.message ?? e).slice(0, 160)}`);
