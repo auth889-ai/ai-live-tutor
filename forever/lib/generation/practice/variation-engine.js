@@ -18,6 +18,20 @@ import { runCalcEvidence } from '../../orchestration/agents/authoring/evidence/c
 
 const DEFAULT_FACTORS = [2, 5, 0.5];
 
+// GRADUATED HINTS (IntelliCode's five-level ladder, deterministic): each level narrows
+// without disclosing — the answer appears ONLY at level 5. Derived from the executed spec
+// itself (columns, label, formula), so a hint can never mislead: it is the real structure.
+export function hintLadder({ label, expr, answer, columns = [] }) {
+  const quantities = columns.length ? columns.join(', ') : 'the given values';
+  return [
+    { level: 1, hint: `Which quantities matter here? Look at: ${quantities}. Which of them does "${label}" depend on?` },
+    { level: 2, hint: `Name the relationship: you are computing ${label}. Say in words how the quantities combine before touching numbers.` },
+    { level: 3, hint: `The formula has this shape: ${String(expr).replace(/\[\d+\]/g, '[…]')} — identify which value goes where.` },
+    { level: 4, hint: `Set it up exactly: ${expr} — now substitute the data values and evaluate carefully.` },
+    { level: 5, hint: `Worked answer: ${expr} = ${answer}.` },
+  ];
+}
+
 const scaleDataset = (dataset, factor) => ({
   columns: dataset.columns,
   rows: dataset.rows.map((row) => row.map((cell) => (typeof cell === 'number' ? Math.round(cell * factor * 10000) / 10000 : cell))),
@@ -37,6 +51,7 @@ export function generateVariations({ dataset, formulas }, { factors = DEFAULT_FA
       prompt: `From the lesson's own data: compute ${r.label}.`,
       expr: r.expr,
       answer: r.value,
+      hints: hintLadder({ label: r.label, expr: r.expr, answer: r.value, columns: dataset.columns }),
     })),
   }];
 
@@ -60,6 +75,7 @@ export function generateVariations({ dataset, formulas }, { factors = DEFAULT_FA
         expr: r.expr,
         answer: r.value,
         invariant: r.value === baseline.get(r.id),
+        hints: hintLadder({ label: r.label, expr: r.expr, answer: r.value, columns: scaled.columns }),
       })),
     });
     variants.push({
