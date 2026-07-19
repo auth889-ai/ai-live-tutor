@@ -12,6 +12,7 @@
 
 import { gateLesson } from './lesson-gate.js';
 import { runSqlEvidence } from '../../orchestration/agents/authoring/evidence/sql-evidence.js';
+import { runCalcEvidence } from '../../orchestration/agents/authoring/evidence/calc-evidence.js';
 import { runAgentChain as runAgentChainDefault } from '../../qwen/client.js';
 
 const numbersIn = (t) => (String(t ?? '').match(/\d+(?:[.,]\d+)?%?/g) ?? [])
@@ -53,8 +54,11 @@ export async function repairLessonPayload(payload, {
   const numViol = before.violations.filter((v) => v.rule === 'number-unsourced');
   const beatViol = before.violations.filter((v) => v.rule === 'beat-missing' && /misconception/.test(v.detail));
 
-  // ---- FIX 1: unsourced numbers -> executed evidence (SQL engine — data/DB domain only) ----
-  if (numViol.length && (domain === 'data_db' || agents.forceSqlEvidence)) {
+  // ---- FIX 1: unsourced numbers -> EXECUTED evidence ----
+  // data_db speaks SQL (sql-evidence: real SQLite, joins, opcodes); every other domain
+  // speaks arithmetic (calc-evidence: dataset + formulas executed in python) — the econ
+  // register's law generalized: a narrated number must come out of an engine or the source.
+  if (numViol.length) {
     try {
       const srcNoCommas = sourceText.replace(/,/g, '');
       const offenders = [];
@@ -68,40 +72,83 @@ export async function repairLessonPayload(payload, {
       }
       const offending = offenders.map((o) => `${o.sceneId}/${o.voiceLineId}: number ${o.number} in: ${o.text.slice(0, 120)}`).join('\n');
       const sceneTexts = payload.scenes.map((s) => `[${s.sceneId}] ${(s.voiceLines ?? []).map((l) => l.text).join(' ')}`).join('\n').slice(0, 6000);
-      const world = await chain({
-        agent: 'db-evidence-designer',
-        system: `You design the SQLite world that PROVES this database lesson's narrated numbers. Return ONLY JSON {"schemaSql": string (CREATE TABLE + INSERT seed data), "queries": [{"id": string, "label": string, "sql": string}]} — seed the data so the queries' results CONTAIN the teaching numbers the lesson narrates (or the closest defensible values). Max 6 queries, tiny tables (<=12 rows each). Plain SQLite SQL only. IMPORTANT: when a narrated number is a SCALE illustration too big to seed (10000 rows, 3125 combinations), DERIVE it with an arithmetic query over stated factors — e.g. {"id":"q_scale","label":"rows at scale = 200 customers x 50 orders each","sql":"SELECT 200*50 AS rows_at_scale"} — so the engine literally computes it.`,
-        user: `LESSON SCENES:\n${sceneTexts}\n\nUNSOURCED NUMBERS TO GROUND:\n${offending.slice(0, 1500)}`,
-        maxTokens: 1400,
-        temperature: 0.2,
-      });
-      let spec = world?.json ?? world;
-      let ev = null;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        try {
-          ev = runSqlEvidence(normalizeSpec(spec));
-          break;
-        } catch (sqlErr) {
-          if (attempt === 2) throw sqlErr;
-          const fixed = await chain({
-            agent: 'db-evidence-designer',
-            system: `Your SQL failed to execute. Fix it and return ONLY the corrected JSON {"schemaSql": string, "queries": [{"id","label","sql"}]} — same intent, every INSERT matching its table's column count, plain SQLite.`,
-            user: `ERROR:\n${String(sqlErr.message ?? sqlErr).slice(0, 800)}\n\nYOUR SPEC:\n${JSON.stringify(spec).slice(0, 2500)}`,
-            maxTokens: 1400,
-            temperature: 0.2,
-          });
-          spec = fixed?.json ?? fixed;
+
+      let evBlobStr = null;   // what the rewriter cites and the verifier checks against
+      let evContentObj = null; // what lands on the board (the gate reads object content)
+      let provenanceEngine = null;
+      if (domain === 'data_db' || agents.forceSqlEvidence) {
+        const world = await chain({
+          agent: 'db-evidence-designer',
+          system: `You design the SQLite world that PROVES this database lesson's narrated numbers. Return ONLY JSON {"schemaSql": string (CREATE TABLE + INSERT seed data), "queries": [{"id": string, "label": string, "sql": string}]} — seed the data so the queries' results CONTAIN the teaching numbers the lesson narrates (or the closest defensible values). Max 6 queries, tiny tables (<=12 rows each). Plain SQLite SQL only. IMPORTANT: when a narrated number is a SCALE illustration too big to seed (10000 rows, 3125 combinations), DERIVE it with an arithmetic query over stated factors — e.g. {"id":"q_scale","label":"rows at scale = 200 customers x 50 orders each","sql":"SELECT 200*50 AS rows_at_scale"} — so the engine literally computes it.`,
+          user: `LESSON SCENES:\n${sceneTexts}\n\nUNSOURCED NUMBERS TO GROUND:\n${offending.slice(0, 1500)}`,
+          maxTokens: 1400,
+          temperature: 0.2,
+        });
+        let spec = world?.json ?? world;
+        let ev = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            ev = runSqlEvidence(normalizeSpec(spec));
+            break;
+          } catch (sqlErr) {
+            if (attempt === 2) throw sqlErr;
+            const fixed = await chain({
+              agent: 'db-evidence-designer',
+              system: `Your SQL failed to execute. Fix it and return ONLY the corrected JSON {"schemaSql": string, "queries": [{"id","label","sql"}]} — same intent, every INSERT matching its table's column count, plain SQLite.`,
+              user: `ERROR:\n${String(sqlErr.message ?? sqlErr).slice(0, 800)}\n\nYOUR SPEC:\n${JSON.stringify(spec).slice(0, 2500)}`,
+              maxTokens: 1400,
+              temperature: 0.2,
+            });
+            spec = fixed?.json ?? fixed;
+          }
         }
+        evBlobStr = evidenceBlob(ev);
+        evContentObj = evidenceContent(ev);
+        provenanceEngine = 'sql-evidence';
+      } else {
+        const world = await chain({
+          agent: 'calc-evidence-designer',
+          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]} — the formulas' VALUES must equal the teaching numbers the lesson narrates (or the closest defensible values). Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
+          user: `LESSON SCENES:\n${sceneTexts}\n\nUNSOURCED NUMBERS TO GROUND:\n${offending.slice(0, 1500)}`,
+          maxTokens: 1400,
+          temperature: 0.2,
+        });
+        let spec = world?.json ?? world;
+        let cev = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            cev = runCalcEvidence({ dataset: spec.dataset, formulas: spec.formulas });
+            break;
+          } catch (calcErr) {
+            if (attempt === 2) throw calcErr;
+            const fixed = await chain({
+              agent: 'calc-evidence-designer',
+              system: `Your formulas failed to execute. Fix them and return ONLY the corrected JSON {"dataset": {...}, "formulas": [...]} — same intent, plain arithmetic Python expressions, columns are lists.`,
+              user: `ERROR:\n${String(calcErr.message ?? calcErr).slice(0, 800)}\n\nYOUR SPEC:\n${JSON.stringify(spec).slice(0, 2500)}`,
+              maxTokens: 1400,
+              temperature: 0.2,
+            });
+            spec = fixed?.json ?? fixed;
+          }
+        }
+        evBlobStr = JSON.stringify(cev.results.map((r) => [r.label, r.expr, r.value]));
+        evContentObj = {
+          title: 'Computed by executing the formulas (real arithmetic)',
+          rows: cev.results.map((r) => [r.label, r.expr, String(r.value)]),
+          dataset: cev.dataset,
+        };
+        provenanceEngine = 'calc-evidence';
       }
+
       const rewrite = await chain({
         agent: 'db-evidence-rewriter',
         system: `You rewrite narration lines so every number cites the EXECUTED evidence. Return ONLY JSON {"rewrites": [{"sceneId": string, "voiceLineId": string, "newText": string}]} — same meaning, same length feel, but every figure must literally appear in the evidence. Rewrite ONLY the listed lines.`,
-        user: `EXECUTED EVIDENCE (label, columns, rows, joinCount, opcodes):\n${evidenceBlob(ev).slice(0, 3000)}\n\nLINES TO REWRITE (sceneId/voiceLineId: offending number: current text):\n${offending.slice(0, 2500)}`,
+        user: `EXECUTED EVIDENCE:\n${evBlobStr.slice(0, 3000)}\n\nLINES TO REWRITE (sceneId/voiceLineId: offending number: current text):\n${offending.slice(0, 2500)}`,
         maxTokens: 1200,
         temperature: 0.2,
       });
       const rw = (rewrite?.json ?? rewrite)?.rewrites ?? [];
-      const evText = evidenceBlob(ev).replace(/,/g, ' ');
+      const evText = evBlobStr.replace(/,/g, ' ');
       for (const r of rw) {
         const scene = payload.scenes.find((s) => s.sceneId === r.sceneId);
         const line = scene?.voiceLines?.find((l) => l.id === r.voiceLineId);
@@ -114,7 +161,7 @@ export async function repairLessonPayload(payload, {
       }
       if (env.REPAIR_DEBUG === '1') {
         log(`  [debug] rewrites returned: ${rw.length} for offenders: ${offenders.length}`);
-        log(`  [debug] evidence: ${evidenceBlob(ev).slice(0, 700)}`);
+        log(`  [debug] evidence: ${evBlobStr.slice(0, 700)}`);
       }
       // the evidence table lands on the FIRST affected scene, referenced so coverage passes
       const firstScene = payload.scenes.find((s) => numViol.some((v) => v.sceneId === s.sceneId));
@@ -122,14 +169,14 @@ export async function repairLessonPayload(payload, {
         const objId = 'computed_evidence';
         const existing = firstScene.objects.find((o) => o.id === objId);
         if (existing) {
-          existing.content = evidenceContent(ev);
+          existing.content = evContentObj;
         } else {
           firstScene.objects.push({
             id: objId, objectType: 'computed evidence table', renderHint: 'table', region: 'notebook_area',
-            content: evidenceContent(ev),
-            sourceRef: { engine: 'sql-evidence', provenance: 'executed' },
+            content: evContentObj,
+            sourceRef: { engine: provenanceEngine, provenance: 'executed' },
           });
-          firstScene.voiceLines.push({ id: 'computed_evidence_v', text: 'Every number here was measured by actually running the queries — nothing is estimated.', targetObjectId: objId });
+          firstScene.voiceLines.push({ id: 'computed_evidence_v', text: 'Every number here was measured by actually running the computation — nothing is estimated.', targetObjectId: objId });
           firstScene.timeline?.actions?.push({ id: 'act_evidence', kind: 'point', startMs: 0, durationMs: 600, targetObjectId: objId });
         }
       }
