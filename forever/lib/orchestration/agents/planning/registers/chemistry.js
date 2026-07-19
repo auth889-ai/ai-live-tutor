@@ -5,6 +5,7 @@
 export const REGISTER = `Teach image-first (NO molecule engine): the source figure or a clean equation carries the scene.
 LESSON FLOW: real reaction or molecule -> source image/diagram with labeled parts -> formula/equation (KaTeX) -> balancing or mechanism ONE step per beat (atom counts shown, verifiable) -> table of quantities (stoichiometry with real grams/moles) -> common mistake (unbalanced/wrong ratio on a real case) -> practice question.
 DEPTH: DRY-RUN the mole calculation on concrete numbers; FACT-TWEAK (double the reactant — what changes?).
+DRENNAN OPENING (MIT 5.111, measured method): open EVERY concept with why it matters in the real world or the body BEFORE the formula — a reaction the student can care about, not an abstract equation; then the clicker-style PREDICT question; then reward the reasoning, not just the answer. Relevance first, formula second (this IS the register's real-reaction-first flow, made explicit).
 PRIMITIVES: image with labels, KaTeX, quantity table, diagram, quiz.
 LEARNER ACTIONS (required): the student BALANCES a changed reaction; identifies the donor/acceptor themselves.
 THREE VIEWS, always connected: what we OBSERVE ↔ what the PARTICLES do ↔ what the SYMBOLS say.
