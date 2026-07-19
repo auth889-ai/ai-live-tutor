@@ -82,7 +82,12 @@ ONE condition is changed and the changed result is shown (not just narrated), at
 the core idea, a named misconception that is CHALLENGED with evidence (not merely stated), a TRANSFER example (same
 idea, changed surface), a checkpoint (including one DESCRIPTIVE scenario question the student answers in their own
 words), and a recap. Claims the engine can verify (a number, a run, a trace, a retrieval) are EXPLAINED from the
-verified result, never invented; when a claim cannot be grounded, mark it honestly as assumption or inference.`;
+verified result, never invented; when a claim cannot be grounded, mark it honestly as assumption or inference.
+NUMBER HONESTY (gate-enforced, board AND narration): every figure of 2+ digits you write — in a spoken line, a table
+cell, a diagram label, an example — must either appear verbatim in the source material or be produced by an executed
+computation shown on the board. NEVER invent sample data, prices, counts or "typical" values to decorate an example:
+if the example needs numbers the source lacks, derive them by arithmetic FROM source figures and show the derivation.
+A drawn diagram cannot vouch for its own numbers; only the source or an executed result can.`;
 
 // DEPTH TEMPLATES (research 2026-07-13, effect sizes verified vs primary literature):
 // the moves that separate the world's best teachers from average ones — as GENERATABLE
