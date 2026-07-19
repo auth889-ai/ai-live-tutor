@@ -8,6 +8,8 @@
 // rather than duplicate.
 
 import { generateLessonFromSourcePack } from '../generation/lesson/generate-lesson.js';
+import { repairLessonPayload } from '../generation/gate/lesson-repair.js';
+import { isCodingDomain } from '../orchestration/agents/planning/coding-instructor.js';
 import { buildSourcePackFromInput } from '../source-pack/build/dispatch-source-pack.js';
 import { focusSourcePack } from '../source-pack/build/focus-source-pack.js';
 import { designCourseOutline } from '../orchestration/agents/planning/dean.js';
@@ -172,6 +174,27 @@ async function produceLesson({ sourcePack, outlineLesson = null, episode = null,
 
   const coverImage = await (deps.findTopicImage ?? findTopicImage)(finalLesson.lessonTitle).catch(() => null);
   if (coverImage) finalLesson = { ...finalLesson, coverImage };
+
+  // GATE AT THE DOOR (Universal Course Build step 1): every non-coding lesson is verified
+  // and SELF-REPAIRED before the canonical save — unsourced numbers get executed evidence,
+  // a missing misconception beat gets its scene, and the verdict is stored on the lesson so
+  // course tooling can rank quality without re-gating. Fails OPEN (a broken repair never
+  // blocks shipping the lesson the society built). LESSON_GATE=0 disables.
+  if (env.LESSON_GATE !== '0' && finalLesson.domain && !isCodingDomain(finalLesson.domain)) {
+    report(makeProgress({ phase: 'saving', message: 'Gate: verifying numbers, beats and references', ...watchable() }));
+    try {
+      const sourceText = (pack.chunks ?? []).map((c) => c.text ?? '').join(' ');
+      const { before, after } = await (deps.repair ?? repairLessonPayload)(finalLesson, {
+        sourceText, domain: finalLesson.domain, lessonTitle: finalLesson.lessonTitle, env,
+      });
+      finalLesson = {
+        ...finalLesson,
+        gate: { ok: after.ok, violations: after.violations.length, repaired: before.violations.length - after.violations.length, rules: [...new Set(after.violations.map((v) => v.rule))] },
+      };
+    } catch (e) {
+      console.error(`[gate] self-repair failed open: ${String(e?.message ?? e).slice(0, 160)}`);
+    }
+  }
 
   // Wait out any in-flight partial write, then the FINAL save replaces the building shell
   // with the canonical lesson (status ready, no sceneIndex bookkeeping, drops resolved).

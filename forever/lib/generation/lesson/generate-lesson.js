@@ -4,6 +4,7 @@
 // for deterministic testing.
 
 import { isTransient } from '../../qwen/client.js';
+import { ROLE_ALIASES } from '../gate/lesson-gate.js';
 import { buildTextSourcePack } from '../../source-pack/build/source-pack.js';
 import { focusSourcePack } from '../../source-pack/build/focus-source-pack.js';
 import { mapWithConcurrency } from '../../util/concurrency.js';
@@ -128,6 +129,26 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
     done = sceneTotal - retryable.length;
     onProgress({ phase: 'generating', message: `Retrying ${retryable.length} scenes lost to a flaky provider window`, sceneDone: done, sceneTotal });
     await runPass(retryable, Math.min(2, Number(process.env.SCENE_CONCURRENCY || 3)));
+  }
+
+  // REQUIRED-BEAT RESCUE: a scene carrying a required beat (worked example, misconception,
+  // checkpoint, recap) that died for ANY reason — including an honest grounding-consensus
+  // refusal — gets ONE more attempt: scene generation is stochastic (fresh sampling passes
+  // where a bad draft spiraled), and a lesson missing a required beat fails the deterministic
+  // gate anyway, so the retry is cheaper than shipping a structurally broken lesson.
+  const beatOf = (role) => Object.keys(ROLE_ALIASES)
+    .find((b) => ROLE_ALIASES[b].some((a) => String(role ?? '').includes(a))) ?? null;
+  const coveredBeats = new Set(results.filter(Boolean).map((s) => beatOf(s.pedagogicalRole)).filter(Boolean));
+  const beatRescue = failures
+    .map((e, i) => {
+      const beat = e ? beatOf(briefs[i].pedagogicalRole) : null;
+      return beat && !coveredBeats.has(beat) ? i : null;
+    })
+    .filter((i) => i !== null);
+  if (beatRescue.length > 0) {
+    done = sceneTotal - beatRescue.length;
+    onProgress({ phase: 'generating', message: `Rescuing ${beatRescue.length} required-beat scene(s)`, sceneDone: done, sceneTotal });
+    await runPass(beatRescue, 1);
   }
 
   const scenes = results.filter(Boolean);

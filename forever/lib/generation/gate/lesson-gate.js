@@ -13,7 +13,7 @@ const MAX_QUESTIONS_PER_CHECKIN = 2;   // more reads as a quiz wall, not a check
 // Universal required beats (a domain pack may extend, never shrink).
 export const REQUIRED_BEATS = Object.freeze(['worked_example', 'misconception', 'checkpoint', 'recap']);
 
-const ROLE_ALIASES = {
+export const ROLE_ALIASES = {
   worked_example: ['worked_example', 'example', 'case', 'demonstration'],
   misconception: ['misconception', 'pitfall', 'common_error', 'refutation'],
   checkpoint: ['checkpoint', 'quiz', 'retrieval', 'practice', 'learner_action', 'check_in'],
