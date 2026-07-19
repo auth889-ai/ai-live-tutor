@@ -15,6 +15,7 @@ import { runSqlEvidence } from '../../orchestration/agents/authoring/evidence/sq
 import { runCalcEvidence } from '../../orchestration/agents/authoring/evidence/calc-evidence.js';
 import { runTrainEvidence } from '../../orchestration/agents/authoring/evidence/train-evidence.js';
 import { runSimEvidence } from '../../orchestration/agents/authoring/evidence/sim-evidence.js';
+import { runSchedEvidence } from '../../orchestration/agents/authoring/evidence/sched-evidence.js';
 import { runAgentChain as runAgentChainDefault } from '../../qwen/client.js';
 
 const numbersIn = (t) => (String(t ?? '').match(/\d+(?:[.,]\d+)?%?/g) ?? [])
@@ -119,7 +120,7 @@ export async function repairLessonPayload(payload, {
       } else {
         const world = await chain({
           agent: 'calc-evidence-designer',
-          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]${domain === 'physics' ? ', optionally "sim": {"model": "kinematics_1d"|"projectile_2d", "params": {"v0","a"|"angleDeg","g","dt","steps"}, "record": [step ints]} — a REAL numeric motion simulation the engine integrates; its trajectory rows and summary (range, final velocity) become citable evidence' : ''}${domain === 'ml_ai' ? ', optionally "train": {"lr": number, "epochs": int, "record": [epoch ints]} — a REAL gradient-descent run (linear model, columns = x then y) the engine executes; its recorded losses and final w/b become citable evidence (use this when the lesson narrates loss curves or trained parameters)' : ''}} — HARD RULE: every dataset number must literally appear in the SOURCE below (the dataset IS the source's data); the formulas then DERIVE the teaching numbers by arithmetic. Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
+          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]${domain === 'os_arch' ? ', optionally "sched": {"processes": [{"id","arrival","burst"}], "policies": [{"policy": "fcfs"|"sjf"|"rr", "quantum"?}]} — REAL scheduler simulations; each policy\'s computed average waiting time becomes citable evidence (proves SJF beats FCFS by RUNNING both)' : ''}${domain === 'physics' ? ', optionally "sim": {"model": "kinematics_1d"|"projectile_2d", "params": {"v0","a"|"angleDeg","g","dt","steps"}, "record": [step ints]} — a REAL numeric motion simulation the engine integrates; its trajectory rows and summary (range, final velocity) become citable evidence' : ''}${domain === 'ml_ai' ? ', optionally "train": {"lr": number, "epochs": int, "record": [epoch ints]} — a REAL gradient-descent run (linear model, columns = x then y) the engine executes; its recorded losses and final w/b become citable evidence (use this when the lesson narrates loss curves or trained parameters)' : ''}} — HARD RULE: every dataset number must literally appear in the SOURCE below (the dataset IS the source's data); the formulas then DERIVE the teaching numbers by arithmetic. Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
           user: `SOURCE:\n${sourceText.slice(0, 3000)}\n\nLESSON SCENES:\n${sceneTexts.slice(0, 2500)}\n\nUNSOURCED NUMBERS TO GROUND:\n${offending.slice(0, 1500)}`,
           maxTokens: 1400,
           temperature: 0.2,
@@ -154,6 +155,16 @@ export async function repairLessonPayload(payload, {
             spec = fixed?.json ?? fixed;
           }
         }
+        let schedRows = [];
+        if (spec.sched && domain === 'os_arch') {
+          try {
+            const each = (spec.sched.policies ?? [spec.sched]).map((sp) => {
+              const ev = runSchedEvidence({ processes: spec.sched.processes, policy: sp.policy ?? sp, quantum: sp.quantum });
+              return [`${(sp.policy ?? sp).toUpperCase()} average waiting time (simulated scheduler)`, `${(sp.policy ?? sp)} avg wait`, String(ev.avgWaiting)];
+            });
+            schedRows = each;
+          } catch (e) { log(`  sched run failed: ${String(e.message).slice(0, 80)}`); }
+        }
         let simRows = [];
         if (spec.sim && domain === 'physics') {
           try {
@@ -174,10 +185,10 @@ export async function repairLessonPayload(payload, {
             ];
           } catch (e) { log(`  train run failed: ${String(e.message).slice(0, 80)}`); }
         }
-        evBlobStr = JSON.stringify([...cev.results.map((r) => [r.label, r.expr, r.value]), ...trainRows, ...simRows]);
+        evBlobStr = JSON.stringify([...cev.results.map((r) => [r.label, r.expr, r.value]), ...trainRows, ...simRows, ...schedRows]);
         evContentObj = {
           title: 'Computed by executing the formulas (real arithmetic)',
-          rows: [...cev.results.map((r) => [r.label, r.expr, String(r.value)]), ...trainRows, ...simRows],
+          rows: [...cev.results.map((r) => [r.label, r.expr, String(r.value)]), ...trainRows, ...simRows, ...schedRows],
           dataset: cev.dataset,
         };
         provenanceEngine = 'calc-evidence';
@@ -509,6 +520,24 @@ export async function repairLessonPayload(payload, {
         for (const o of sc.objects ?? []) { try { const j = JSON.stringify(o.content); if (j.includes(r.find)) o.content = JSON.parse(j.split(r.find).join(r.replace)); } catch { /* leave */ } }
       }
     } catch (e) { log(`  balance fix failed: ${String(e.message).slice(0, 100)}`); }
+  }
+
+  // ---- FIX 8: law lesson missing the IRAC application step -> insert an application scene ----
+  if (before.violations.some((v) => v.rule === 'irac-no-application')) {
+    try {
+      const made = await chain({
+        agent: 'irac-application-writer',
+        system: `Write ONE scene that supplies the missing IRAC APPLICATION step for this law lesson. Return ONLY JSON {"sceneId": "sc_application", "title": string, "pedagogicalRole": "worked_example", "layout": "teacher_notebook_code", "objects": [{"id": "application_map", "objectType": "application table", "renderHint": "table", "region": "notebook_area", "content": {"title": string, "rows": [[ "rule element", "fact that satisfies (or fails) it" ] ...]}}], "voiceLines": [{"id": "app_1", "text": string (<=45 words, map EACH rule element to a specific fact — "applying the rule here, ..."), "targetObjectId": "application_map"}], "timeline": {"sceneId": "sc_application", "timingSource": "provisional", "actions": [{"id": "act_app", "kind": "point", "startMs": 0, "durationMs": 600, "targetObjectId": "application_map"}, {"id": "act_app_sp", "kind": "speech", "startMs": 200, "durationMs": 6000, "voiceLineId": "app_1"}]}, "durationMs": 8000}`,
+        user: `LESSON: ${lessonTitle}\nSCENES: ${payload.scenes.map((s) => s.title).join(' | ').slice(0, 600)}`,
+        maxTokens: 700,
+        temperature: 0.3,
+      });
+      const scene = made?.json ?? made;
+      if (scene?.sceneId && scene.objects?.length && scene.voiceLines?.length && scene.voiceLines.every((l) => scene.objects.some((o) => o.id === l.targetObjectId))) {
+        // insert before the concluding scene
+        payload.scenes.splice(Math.max(payload.scenes.length - 1, 1), 0, scene);
+      }
+    } catch (e) { log(`  IRAC fix failed: ${String(e.message).slice(0, 100)}`); }
   }
 
   const after = gateLesson(payload, { sourceText, domain });

@@ -9,6 +9,7 @@
 
 import { earsViolations } from './ears-check.js';
 import { balanceViolations } from './chem-balance.js';
+import { iracViolations } from './irac-check.js';
 
 const WORD_CAP_PER_LINE = 60;          // TeachLM lint: a spoken line stays speakable
 const MAX_QUESTIONS_PER_CHECKIN = 2;   // more reads as a quiz wall, not a check-in
@@ -186,6 +187,8 @@ export function gateLesson(payload, { sourceText = '', requiredBeats = REQUIRED_
   violations.push(...earsViolations(payload, { domain }));
   // chemistry: every equation on the board/narration must balance (atom conservation)
   violations.push(...balanceViolations(payload, { domain }));
+  // law: a legal conclusion requires an element-by-element application step (IRAC)
+  violations.push(...iracViolations(payload, { domain }));
 
   return { ok: violations.length === 0, violations };
 }
