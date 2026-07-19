@@ -18,7 +18,7 @@ import { groundAnnotations } from '../vision/ground-annotations.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 import { structureViolation } from '../../../board/structures/structure-rules.js';
 
-const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram', 'chart', 'math', 'image', 'callout', 'quiz', 'manipulable', 'simulation']; // grows as the renderer grows
+const SUPPORTED_HINTS = ['text', 'list', 'code', 'diagram', 'chart', 'math', 'image', 'callout', 'quiz', 'manipulable', 'simulation', 'molecule', 'livechart']; // grows as the renderer grows
 
 function boardSystemPrompt(regions, brief) {
   const teachingFocus = brief
@@ -107,6 +107,8 @@ Rules you must never break:
   Order them to match your narration (first thing you mention = first annotation). 2-5 marks, each on the
   exact region it refers to. Prefer a "figure" when one
   matches; use a "page" render when the page's own layout/pictures ARE the lesson (a diagram beside its text).
+- Use "molecule" for a REAL 3D structure the student rotates (chemistry/biology). content is {"cid": <PubChem compound id>, "title", "caption"} for a small molecule, or {"pdbId": <4-char RCSB Protein Data Bank id, e.g. 1HHO>, "title", "caption"} for a protein. Use at the "manipulate it" beat when a structure IS the concept. grounding is "analogy".
+- Use "livechart" for REAL measured time-series (economics FRED data, engine output). content is {"title", "xData": [labels], "series": [{"name", "data": [numbers]}], "yName", "source"}. Only real fetched/computed data, never invented numbers.
 - Use "simulation" for a REAL interactive the student MANIPULATES (physics/chemistry/biology/math). content is {"provider": "phet"|"desmos", "sim": <one of: projectile-motion, forces-and-motion-basics, energy-skate-park-basics, masses-and-springs-basics, balancing-chemical-equations, build-a-molecule, concentration, natural-selection, gene-expression-essentials, graphing-lines, graphing-slope-intercept, trig-tour> (phet only), "title", "why" (why manipulating THIS teaches the concept), "caption"}. Use ONE per lesson at the "manipulate it" beat, only when a listed sim genuinely matches the concept — the student drags it, then predicts. An unmatched sim name renders nothing, so pick from the list or omit. grounding is "analogy" (it is a teaching device, not a source fact).
 - Use "callout" for a striking teacher card. content is {"variant": one of mistake|checkpoint|recap|tip|analogy|insight, "body": string or [items]}. Use "mistake" for the common-mistake beat, "recap" for key takeaways, "checkpoint" to pause and think. Use sparingly, for emphasis.
 - Use "quiz" for a checkpoint question (practice/checkpoint scenes). content is {"question": string, "choices": ['A','B',...], "answerIndex": int, "explanation": string}. The lesson pauses until the student answers.
