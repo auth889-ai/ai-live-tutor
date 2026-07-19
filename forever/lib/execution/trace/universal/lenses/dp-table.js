@@ -169,6 +169,17 @@ export function compileDpTableLens({ recording, plan, code, entry = null, langua
   // DURING the line event at index L-1 — attach each line's reads of the DP table so the
   // compiler can prove arrows from provenance instead of arithmetic coincidence.
   const hasDirectReads = Array.isArray(recording?.reads);
+  // RHS-scoped write events outrank the line window: when present, arrow evidence is the
+  // reads INSIDE the assignment expression itself (read -> expression -> write lineage)
+  const hasWriteEvents = Array.isArray(recording?.writes);
+  const rhsByEvent = new Map();
+  for (const wv of recording?.writes ?? []) {
+    const idx = wv.i - 1;
+    const cells = (wv.rhs ?? []).filter((x) => x.n === plan.name && (plan.oneD ? x.p.length === 1 : x.p.length === 2))
+      .map((x) => ({ p: plan.oneD ? [0, x.p[0]] : x.p, v: x.v }));
+    if (!rhsByEvent.has(idx)) rhsByEvent.set(idx, []);
+    rhsByEvent.get(idx).push(...cells);
+  }
   const readsByEvent = new Map();
   // the mockup's X[i-1]/Y[j-1] columns, provably: scalar reads of OTHER variables on the
   // writing line (the strings being compared) ride along as that step's inputs
@@ -201,7 +212,7 @@ export function compileDpTableLens({ recording, plan, code, entry = null, langua
     }
     const ev = { line: e.line, table, locals };
     if (hasDirectReads) {
-      ev.reads = readsByEvent.get(idx) ?? [];
+      ev.reads = hasWriteEvents ? (rhsByEvent.get(idx) ?? []) : (readsByEvent.get(idx) ?? []);
       ev.inputs = inputsByEvent.get(idx) ?? [];
     }
     events.push(ev);
