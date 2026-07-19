@@ -20,6 +20,19 @@ const numbersIn = (t) => (String(t ?? '').match(/\d+(?:[.,]\d+)?%?/g) ?? [])
 
 const evidenceBlob = (ev) => JSON.stringify(ev.queries.map((q) => [q.label, q.columns, q.rows, q.joinCount, q.opcodes]));
 
+// Models often pack "CREATE ...; SELECT ..." into one query — SQLite executes one statement
+// at a time, so setup statements are moved into the schema and the LAST statement is the
+// measured query. Deterministic; the retry-with-error loop stays as the backstop.
+const normalizeSpec = (sp) => {
+  const extra = [];
+  const queries = (sp?.queries ?? []).map((q) => {
+    const parts = String(q.sql ?? '').split(';').map((x) => x.trim()).filter(Boolean);
+    if (parts.length > 1) { extra.push(...parts.slice(0, -1)); return { ...q, sql: parts.at(-1) }; }
+    return { ...q, sql: parts[0] ?? '' };
+  }).filter((q) => q.sql);
+  return { schemaSql: [sp?.schemaSql, ...extra].filter(Boolean).join(';\n'), queries };
+};
+
 const evidenceContent = (ev) => ({
   title: 'Measured by executing the queries (SQLite)',
   rows: ev.queries.map((q) => [q.label, `${q.joinCount} joins`, `${q.opcodes} opcodes`, `${q.rowCount} rows`]),
@@ -66,7 +79,7 @@ export async function repairLessonPayload(payload, {
       let ev = null;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
-          ev = runSqlEvidence({ schemaSql: spec.schemaSql, queries: spec.queries });
+          ev = runSqlEvidence(normalizeSpec(spec));
           break;
         } catch (sqlErr) {
           if (attempt === 2) throw sqlErr;
