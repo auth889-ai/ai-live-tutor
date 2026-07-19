@@ -144,7 +144,7 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
           if (vs.length >= 2 && val === Math.max(...vs) + 1) ops.push('max of reads + 1');
           if (ops.length === 1 && informative) rule = ops[0]; // constant-output runs earn no op name
         }
-        proved = { rule: rule ?? 'from read cells', reads: cells.map((c) => c.p) };
+        proved = { rule: rule ?? (informative ? 'from read cells' : 'reads recorded — value not derived from them'), reads: cells.map((c) => c.p) };
         provedByCell.set(`${wr},${wc}`, { rule: proved.rule, cells });
       }
     } else if (informative && writes.length === 1) {
@@ -165,7 +165,7 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
 
     const parts = [];
     for (const [r, c, old] of writes.slice(0, 2)) {
-      parts.push(narrateWrite({ r, c, value: known.get(`${r},${c}`), old, isBase: r === 0 || c === 0, proved: Boolean(proved) && informative }));
+      parts.push(narrateWrite({ r, c, value: known.get(`${r},${c}`), old, isBase: r === 0 || c === 0, proved: Boolean(proved), informative }));
     }
     if (writes.length > 2) parts.push(narrateBatch({ count: writes.length - 2 }));
     for (const [r, c] of writes) filled.push([r, c]);
@@ -254,7 +254,7 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
           line: snapshots.at(-1)?.line ?? 1,
           explanation: h.contributes
             ? `Reconstruction: dp[${h.cur[0]}][${h.cur[1]}] = ${JSON.stringify(h.val)} was PROVED as ${h.rule} from dp[${h.next[0]}][${h.next[1]}] — this cell CONTRIBUTES to the answer. We step back along that recorded read.`
-            : `Reconstruction: dp[${h.cur[0]}][${h.cur[1]}] = ${JSON.stringify(h.val)} came by ${h.rule} — its value was carried from dp[${h.next[0]}][${h.next[1]}] (recorded read), not created here. Step back.`,
+            : `Reconstruction: dp[${h.cur[0]}][${h.cur[1]}] = ${JSON.stringify(h.val)} was written after reading dp[${h.next[0]}][${h.next[1]}] (recorded). No value flow is claimed beyond that read. Step back along it.`,
           writes: [],
           current: h.cur,
           variables: {},

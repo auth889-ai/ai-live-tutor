@@ -30,6 +30,13 @@ export function detectDpTable(recording, ctx = {}) {
     // snapshot shows insertion shifts that read as in-place writes. seen = set() in a
     // bitmask BFS classified as a DP table. If the code builds this name as a set, skip it.
     if (ctx?.code && new RegExp(`\\b${name}\\s*=\\s*set\\s*\\(|\\b${name}\\.add\\s*\\(`).test(ctx.code)) continue;
+    // DP EVIDENCE RULE (review #4): a DP table's interior writes READ THE SAME TABLE.
+    // Transpose/copy/constant fills write a 2D scaffold row-major but never read it —
+    // they are matrix transforms, and the grid/floor views own them.
+    if (Array.isArray(recording?.writes)) {
+      const selfDeps = recording.writes.filter((wv) => (wv.rhs ?? []).some((x) => x.n === name)).length;
+      if (selfDeps < 2) continue;
+    }
     const snaps = lines.map((e) => e.locals[name]).filter(isTable);
     if (snaps.length < 2) continue;
     const final = snaps.at(-1);

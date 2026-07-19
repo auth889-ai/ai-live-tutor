@@ -11,7 +11,7 @@ export function narrateInit({ rows, cols }) {
   return `The table is created: ${rows} row${rows === 1 ? '' : 's'} × ${cols} column${cols === 1 ? '' : 's'}, seeded with its starting values. These are not answers yet — they are the scaffold the real answers will be built on.`;
 }
 
-export function narrateWrite({ r, c, value, old, isBase , proved = false }) {
+export function narrateWrite({ r, c, value, old, isBase , proved = false , informative = true }) {
   if (isBase) {
     return `Base case: dp[${r}][${c}] is set to ${JSON.stringify(value)}. Row 0 and column 0 are the "empty problem" answers — they cost nothing to know, and every harder cell will lean on them.`;
   }
@@ -21,6 +21,9 @@ export function narrateWrite({ r, c, value, old, isBase , proved = false }) {
   // (dp[i][j] = 1) uses no neighbours, and saying otherwise is a false explanation.
   if (!proved) {
     return `dp[${r}][${c}] becomes ${JSON.stringify(value)}${was}. No reads of other cells were recorded for this write — the value was assigned directly. Watch WHERE the filled region grows: the order tells you how the loop sweeps the table.`;
+  }
+  if (!informative) {
+    return `dp[${r}][${c}] becomes ${JSON.stringify(value)}${was}. The write's expression read other cells (recorded — they light up), but the written value is constant across the run, so no value flow is claimed from them.`;
   }
   return `dp[${r}][${c}] becomes ${JSON.stringify(value)}${was} — computed from already-filled neighbours (the recorded reads light up), never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.`;
 }
