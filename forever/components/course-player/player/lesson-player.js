@@ -20,6 +20,7 @@ import { boardStateAt } from '../../../lib/playback/engine/action-engine.js';
 import { StallOverlay } from './live/stall-overlay.js';
 import { PendingSceneRows, PendingSceneChips } from './live/pending-scenes.js';
 import { AskTutor } from './ask/ask-tutor.js';
+import { PracticePanel } from '../panels/practice-panel.js';
 
 const fmt = (ms) => {
   const s = Math.max(0, Math.round(ms / 1000));
@@ -388,6 +389,15 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
             <PendingSceneChips pending={pending} startNumber={lesson.scenes.length + 1} />
           </div>
         </section>
+
+        {/* PRACTICE — engine-checked variations + graduated hints, shown once the student
+            reaches the final scene (or the lesson is fully built). Only renders when the
+            lesson carries a practice pack. */}
+        {lesson.practice && !live && sceneIndex >= lesson.scenes.length - 1 && (
+          <section style={{ padding: '18px 20px 40px', maxWidth: 820, margin: '0 auto', width: '100%' }}>
+            <PracticePanel practice={lesson.practice} lessonId={lessonId} />
+          </section>
+        )}
       </main>
     </div>
   );
