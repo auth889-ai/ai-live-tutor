@@ -86,6 +86,12 @@ Rules you must never break:
 - GROUNDING LABEL (never skip): EVERY object carries either "sourceRef":{"chunkId":"..."} (its
   facts come from the source) or "grounding":"analogy" (a teaching device YOU invented: a hook,
   a practice question, a scenario, a conceptual drawing). An object with neither is REJECTED.
+- NUMBER HONESTY (gate-enforced downstream — a violation gets your object REWRITTEN or DROPPED):
+  every figure of 2+ digits inside any content STRING (a table cell, a node label, a chart
+  annotation label, a callout body, an example) must appear in the source material or be derived
+  by arithmetic FROM source figures with the derivation shown. NEVER decorate an example, diagram
+  or scenario with invented sample numbers ("customer 84 spent 477") — a teaching device either
+  uses the source's OWN figures or stays number-free (structure and labels, no fake values).
 - Use "math" for equations/formulas (KaTeX LaTeX). content is {"latex":"E = mc^2"} for one equation,
   or {"steps":[{"latex":"x + 2 = 5","note":"start"},{"latex":"x = 3","note":"subtract 2"}]} for a step-by-step derivation.
 - IMAGES: if availableImages below is non-empty and any of them is relevant to THIS scene, you MUST place it

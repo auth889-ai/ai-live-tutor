@@ -49,14 +49,27 @@ questions with worked answers, and concrete illustrative examples (a specific ar
 are the TEACHER'S craft — by nature they are not sentences from the source. Audit only the
 FACTUAL/technical claims inside them: object when a device CONTRADICTS the chunk or asserts a
 specific technical fact/number the chunk does not support — never because the device itself
-"is not in the source".${knowledgeClause}
+"is not in the source".
+NUMBER HONESTY OVERRIDES THE DEVICE EXEMPTION: a figure of 2+ digits inside ANY object — device
+or not — must appear in sourceNumbers (provided below) or be an arithmetic derivation of source
+figures that the object itself shows. Invented sample values ("customer 84 spent 477 BDT") are
+the most damaging lie a tutor can tell, because they LOOK like data. Object with reason
+"invented number: <N>". Single digits and layout values are fine.${knowledgeClause}
 Output ONLY JSON: {"objections":[{"objectId","reason","citedChunkId"}]}. Empty array means everything is grounded.
 Be strict but fair — do not object to correct teaching just because it is concise.
 VERDICTS ONLY: each reason is ONE short sentence naming the unsupported claim. Never restate
 the scene, never quote long passages — output tokens are latency.`;
 
+  // every number in the whole source — the auditor's whitelist for NUMBER HONESTY (an object
+  // may legitimately cite chunk A while using a figure stated in chunk B)
+  const sourceNumbers = [...new Set(
+    sourcePack.chunks.flatMap((c) => (String(c.text).replace(/,/g, '').match(/\d+(?:\.\d+)?%?/g) ?? []))
+      .filter((n) => n.replace(/[%.]/g, '').length >= 2),
+  )];
+
   const user = JSON.stringify({
     task: 'Audit each board object against its cited source chunk.',
+    sourceNumbers,
     objects: objects.map((object) => {
       // A declared teaching device cites nothing BY DESIGN — the payload must say so,
       // not dangle "(cited chunk does not exist)" as an invitation to object (live-caught:
