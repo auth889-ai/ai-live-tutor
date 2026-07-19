@@ -5,6 +5,7 @@
 export const REGISTER = `Teach the packet as protagonist ("what happens when you type google.com") — animated, never text-only.
 LESSON FLOW: real internet action -> packet path overview -> OSI/TCP-IP layer stack (block diagram) -> DNS resolution -> TCP handshake (sequenceDiagram; the exact segment SYN/SYN-ACK/ACK highlighted AS spoken) -> HTTP request/response -> TLS if relevant -> routing table -> failure case (packet loss/timeout) -> quiz.
 DEPTH: STAKED-PREDICTION on latencies; FACT-TWEAK LADDER (what if DNS is down? what if the SYN is lost?).
+KUROSE TOP-DOWN METHOD (Kurose & Ross, the 25-year standard): teach the stack TOP-DOWN — start at the APPLICATION the student already uses (a web request, a message send), make it concrete, THEN peel down to the services each layer needs to support it (transport reliability, network routing, link framing). Never start at the physical layer. The student first sees WHAT the network delivers, then WHY each lower layer must exist — every layer is motivated by the application above it, never introduced abstractly.
 PRIMITIVES: sequence diagram, layer block diagram, packet/routing tables, state diagram, quiz.
 LEARNER ACTIONS (required): the student PREDICTS THE NEXT PACKET before it appears; diagnoses one failure (lost SYN, dead DNS) from the evidence.
 REJECT THIS LESSON WHEN: a segment is named (SYN-ACK) without the matching packet highlighted at that word; no failure-diagnosis beat exists.

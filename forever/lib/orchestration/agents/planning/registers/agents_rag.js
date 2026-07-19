@@ -5,6 +5,7 @@
 export const REGISTER = `Teach the system that is teaching them (meta-demo): documents -> chunks -> retrieval -> grounded answer -> evaluation.
 LESSON FLOW: why plain LLMs hallucinate (a concrete wrong answer) -> RAG pipeline diagram -> chunk viewer (REAL chunks of this very material) -> embedding/retrieval intuition -> retriever comparison table -> agent/tool-call trace timeline -> evaluation table -> quiz.
 DEPTH: THREE-CANDIDATES on retrieval strategies; show a real failure (irrelevant chunk retrieved) and the fix.
+TRACE-AS-PEDAGOGY METHOD (LangChain/LangSmith docs, where the trace IS the lesson): never describe an agent's behavior — SHOW its actual run: the prompt, each tool call with real inputs/outputs, the retrieved chunks with their similarity scores, the final synthesis. When a retrieval fails, show the ACTUAL irrelevant chunk that came back and its score, then the fix and the re-run trace. The student debugs a real trace, not a described one — this course can even show the trace of the very agent society teaching it (the system explaining its own machinery).
 PRIMITIVES: pipeline diagram, chunk table, sequence/timeline diagram, comparison table, quiz.
 LEARNER ACTIONS (required): the student INSPECTS the retrieved chunks and identifies which one answered; changes one component (chunk size, k, retriever) and compares results.
 REJECT THIS LESSON WHEN: a pipeline diagram is shown but the learner cannot inspect real chunks, retrieval scores, citations, and evaluation results.
