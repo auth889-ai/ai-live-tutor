@@ -44,6 +44,8 @@ export function qwenConfig(env = process.env) {
   return { apiKey, baseUrl };
 }
 
+import { cacheGet, cachePut } from '../generation/cache/response-cache.js';
+
 export async function runAgentChain({
   agent,
   system,
@@ -68,6 +70,10 @@ export async function runAgentChain({
   // the Arbiter's ruling prompt lacked it and a Training scene died for it). Guarded at the
   // ONE door so no agent can ever hit this again.
   if (!/json/i.test(system) && !/json/i.test(user)) system = `${system}\nOutput ONLY JSON.`;
+  // EXACT-MATCH CACHE (QWEN_CACHE=1, default off): identical prompt -> stored result.
+  const cacheParams = { agent, model, system, user, temperature, maxTokens };
+  const cached = await cacheGet(cacheParams, { env });
+  if (cached) return cached;
   let lastError;
   // Retry transient failures (timeout/abort, network, 429/5xx) with backoff — the workspace
   // API is intermittently slow, and a whole lesson shouldn't die on one flaky call.
@@ -146,7 +152,9 @@ export async function runAgentChain({
       throw new Error(`Qwen call failed for agent "${agent}": ${status ? `HTTP ${status} — ` : ''}${String(error?.message ?? error).slice(0, 500)}`);
     }
     recordUsage(agent, usage);
-    return { json, usage, model };
+    const out = { json, usage, model };
+    await cachePut(cacheParams, out, { env });
+    return out;
   } finally {
     clearTimeout(timer);
   }

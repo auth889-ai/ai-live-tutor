@@ -56,6 +56,10 @@ export async function coursesCollection(env = process.env) {
   return (await getDb(env)).collection('courses');
 }
 
+export async function qwenCacheCollection(env = process.env) {
+  return (await getDb(env)).collection('qwen_cache');
+}
+
 export async function closeDb() {
   if (client) {
     const closing = client.close();
