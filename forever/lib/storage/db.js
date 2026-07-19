@@ -31,6 +31,13 @@ function getDb(env = process.env) {
   return dbPromise;
 }
 
+// Safe accessor: returns the db or null when MONGODB_URI is unset (never throws) — for
+// optional features like the focus store that must degrade gracefully offline.
+export async function getDbSafe(env = process.env) {
+  if (!dbEnabled(env)) return null;
+  try { return await getDb(env); } catch { return null; }
+}
+
 export async function usersCollection(env = process.env) {
   return (await getDb(env)).collection('users');
 }
