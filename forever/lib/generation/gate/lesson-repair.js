@@ -21,6 +21,7 @@ import { networkEvidence } from '../../orchestration/agents/authoring/evidence/n
 import { pubchemEvidence } from '../../orchestration/agents/authoring/evidence/pubchem.js';
 import { primarySourceEvidence } from '../../orchestration/agents/authoring/evidence/primary-sources.js';
 import { caseLawEvidence } from '../../orchestration/agents/authoring/evidence/case-law.js';
+import { fredEvidence } from '../../orchestration/agents/authoring/evidence/fred.js';
 import { runAgentChain as runAgentChainDefault } from '../../qwen/client.js';
 
 const numbersIn = (t) => (String(t ?? '').match(/\d+(?:[.,]\d+)?%?/g) ?? [])
@@ -168,7 +169,7 @@ export async function repairLessonPayload(payload, {
       } else {
         const world = await chain({
           agent: 'calc-evidence-designer',
-          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]${domain === 'chemistry' ? ', optionally "pubchem": [compound names] — the engine looks up REAL molecular weights/formulas from the NIH PubChem database (no key); each becomes citable evidence' : ''}${domain === 'networking' ? ', optionally "network": {"latencyFloor": {"distanceKm"}, "packetCount": {"payloadBytes","mtuBytes"}, "slowStart": {"rounds","ssthresh"?}} — REAL protocol-timing computation; the RTT floor, packet count and slow-start windows become citable evidence' : ''}${domain === 'biology' ? ', optionally "genetics": {"punnett": {"parent1","parent2","dominant"}, "hardyWeinberg": {"p"}} — REAL Punnett cross + Hardy-Weinberg computation; the genotype/phenotype ratios become citable evidence (proves 3:1 by counting the cross)' : ''}${domain === 'os_arch' ? ', optionally "sched": {"processes": [{"id","arrival","burst"}], "policies": [{"policy": "fcfs"|"sjf"|"rr", "quantum"?}]} — REAL scheduler simulations; each policy\'s computed average waiting time becomes citable evidence (proves SJF beats FCFS by RUNNING both)' : ''}${domain === 'physics' ? ', optionally "sim": {"model": "kinematics_1d"|"projectile_2d", "params": {"v0","a"|"angleDeg","g","dt","steps"}, "record": [step ints]} — a REAL numeric motion simulation the engine integrates; its trajectory rows and summary (range, final velocity) become citable evidence' : ''}${domain === 'ml_ai' ? ', optionally "train": {"lr": number, "epochs": int, "record": [epoch ints]} — a REAL gradient-descent run (linear model, columns = x then y) the engine executes; its recorded losses and final w/b become citable evidence (use this when the lesson narrates loss curves or trained parameters)' : ''}} — HARD RULE: every dataset number must literally appear in the SOURCE below (the dataset IS the source's data); the formulas then DERIVE the teaching numbers by arithmetic. Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
+          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]${domain === 'economics' ? ', optionally "fred": [series keys from: inflation_cpi, unemployment, gdp, real_gdp, fed_funds_rate, gas_price, median_income, 30yr_mortgage] — the engine fetches REAL latest Federal Reserve (FRED) data; each becomes citable evidence (use when the lesson references actual economic indicators)' : ''}${domain === 'chemistry' ? ', optionally "pubchem": [compound names] — the engine looks up REAL molecular weights/formulas from the NIH PubChem database (no key); each becomes citable evidence' : ''}${domain === 'networking' ? ', optionally "network": {"latencyFloor": {"distanceKm"}, "packetCount": {"payloadBytes","mtuBytes"}, "slowStart": {"rounds","ssthresh"?}} — REAL protocol-timing computation; the RTT floor, packet count and slow-start windows become citable evidence' : ''}${domain === 'biology' ? ', optionally "genetics": {"punnett": {"parent1","parent2","dominant"}, "hardyWeinberg": {"p"}} — REAL Punnett cross + Hardy-Weinberg computation; the genotype/phenotype ratios become citable evidence (proves 3:1 by counting the cross)' : ''}${domain === 'os_arch' ? ', optionally "sched": {"processes": [{"id","arrival","burst"}], "policies": [{"policy": "fcfs"|"sjf"|"rr", "quantum"?}]} — REAL scheduler simulations; each policy\'s computed average waiting time becomes citable evidence (proves SJF beats FCFS by RUNNING both)' : ''}${domain === 'physics' ? ', optionally "sim": {"model": "kinematics_1d"|"projectile_2d", "params": {"v0","a"|"angleDeg","g","dt","steps"}, "record": [step ints]} — a REAL numeric motion simulation the engine integrates; its trajectory rows and summary (range, final velocity) become citable evidence' : ''}${domain === 'ml_ai' ? ', optionally "train": {"lr": number, "epochs": int, "record": [epoch ints]} — a REAL gradient-descent run (linear model, columns = x then y) the engine executes; its recorded losses and final w/b become citable evidence (use this when the lesson narrates loss curves or trained parameters)' : ''}} — HARD RULE: every dataset number must literally appear in the SOURCE below (the dataset IS the source's data); the formulas then DERIVE the teaching numbers by arithmetic. Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
           user: `SOURCE:\n${sourceText.slice(0, 3000)}\n\nLESSON SCENES:\n${sceneTexts.slice(0, 2500)}\n\nUNSOURCED NUMBERS TO GROUND:\n${offending.slice(0, 1500)}`,
           maxTokens: 1400,
           temperature: 0.2,
@@ -202,6 +203,10 @@ export async function repairLessonPayload(payload, {
             });
             spec = fixed?.json ?? fixed;
           }
+        }
+        let fredRows = [];
+        if (spec.fred && domain === 'economics') {
+          try { fredRows = await fredEvidence(spec.fred, { env }); } catch (e) { log(`  FRED lookup failed: ${String(e.message).slice(0, 80)}`); }
         }
         let pubRows = [];
         if (spec.pubchem && domain === 'chemistry') {
@@ -245,10 +250,10 @@ export async function repairLessonPayload(payload, {
             ];
           } catch (e) { log(`  train run failed: ${String(e.message).slice(0, 80)}`); }
         }
-        evBlobStr = JSON.stringify([...cev.results.map((r) => [r.label, r.expr, r.value]), ...trainRows, ...simRows, ...schedRows, ...genRows, ...netRows, ...pubRows]);
+        evBlobStr = JSON.stringify([...cev.results.map((r) => [r.label, r.expr, r.value]), ...trainRows, ...simRows, ...schedRows, ...genRows, ...netRows, ...pubRows, ...fredRows]);
         evContentObj = {
           title: 'Computed by executing the formulas (real arithmetic)',
-          rows: [...cev.results.map((r) => [r.label, r.expr, String(r.value)]), ...trainRows, ...simRows, ...schedRows, ...genRows, ...netRows, ...pubRows],
+          rows: [...cev.results.map((r) => [r.label, r.expr, String(r.value)]), ...trainRows, ...simRows, ...schedRows, ...genRows, ...netRows, ...pubRows, ...fredRows],
           dataset: cev.dataset,
         };
         provenanceEngine = 'calc-evidence';
