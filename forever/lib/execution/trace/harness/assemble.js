@@ -64,7 +64,7 @@ export function buildTracedProgram({ constants = {}, trackerPy, code, entry, mar
     'import typing as _typing_mod',
     `_maybe_tree = _INSTRUMENT(_src) if '_INSTRUMENT' in globals() else _src`,
     `_compiled = compile(_maybe_tree, '<student>', 'exec')`,
-    "_ns = {k: globals()[k] for k in ('__tr_read__', '__tr_begin__', '__tr_write__', '__tr_binop__', '__tr_minmax__', '__tr_meth__', '__tr_heap__') if k in globals()}",
+    "_ns = {k: globals()[k] for k in ('__tr_read__', '__tr_begin__', '__tr_write__', '__tr_binop__', '__tr_minmax__', '__tr_meth__', '__tr_heap__', '__tr_name__') if k in globals()}",
     "for _tn in ('List', 'Optional', 'Dict', 'Tuple', 'Set', 'Union', 'Deque', 'Any', 'DefaultDict', 'Counter', 'FrozenSet', 'Iterator', 'Callable'):",
     '    if hasattr(_typing_mod, _tn):',
     '        _ns.setdefault(_tn, getattr(_typing_mod, _tn))',

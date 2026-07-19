@@ -110,15 +110,29 @@ class _InstrReads(_ast_mod.NodeTransformer):
                 chain.append(cur.slice)
                 cur = cur.value
             if ok and isinstance(cur, _ast_mod.Name) and 1 <= len(chain) <= 2:
+                rhs_names = sorted({n.id for n in _ast_mod.walk(node.value)
+                                    if isinstance(n, _ast_mod.Name) and isinstance(n.ctx, _ast_mod.Load)})[:4]
                 rhs = self.visit(node.value)
                 mark = _ast_mod.Assign(
                     targets=[_ast_mod.Name(id='_trm_', ctx=_ast_mod.Store())],
                     value=_ast_mod.Call(func=_ast_mod.Name(id='__tr_begin__', ctx=_ast_mod.Load()), args=[], keywords=[]))
                 node.value = _ast_mod.Call(
                     func=_ast_mod.Name(id='__tr_write__', ctx=_ast_mod.Load()),
-                    args=[_ast_mod.Name(id='_trm_', ctx=_ast_mod.Load()), rhs], keywords=[])
+                    args=[_ast_mod.Name(id='_trm_', ctx=_ast_mod.Load()), rhs,
+                          _ast_mod.Tuple(elts=[_ast_mod.Constant(value=x) for x in rhs_names], ctx=_ast_mod.Load())], keywords=[])
                 self.generic_visit(node.targets[0])
                 return [_ast_mod.copy_location(mark, node), node]
+        # simple Name target: record its RHS reads/ops as tempflow for one-hop lineage
+        if (len(node.targets) == 1 and isinstance(node.targets[0], _ast_mod.Name)
+                and not node.targets[0].id.startswith('_')):
+            rhs = self.visit(node.value)
+            mark = _ast_mod.Assign(
+                targets=[_ast_mod.Name(id='_trm_', ctx=_ast_mod.Store())],
+                value=_ast_mod.Call(func=_ast_mod.Name(id='__tr_begin__', ctx=_ast_mod.Load()), args=[], keywords=[]))
+            node.value = _ast_mod.Call(
+                func=_ast_mod.Name(id='__tr_name__', ctx=_ast_mod.Load()),
+                args=[_ast_mod.Name(id='_trm_', ctx=_ast_mod.Load()), _ast_mod.Constant(value=node.targets[0].id), rhs], keywords=[])
+            return [_ast_mod.copy_location(mark, node), node]
         self.generic_visit(node)
         return node
 
@@ -190,16 +204,41 @@ def __tr_heap__(kind, name, heap, *args):
         pass
     return ret
 
+_tempflow = {}
+
+def __tr_name__(mark, name, val):
+    # TEMP DATAFLOW (frontier fix): nd = dp[m][u] + w stores its reads/ops under 'nd';
+    # a later subscript write whose RHS mentions nd inherits them — lineage crosses one
+    # simple assignment hop, so read-into-temp DP idioms keep their proofs.
+    try:
+        r0, o0 = mark if isinstance(mark, tuple) else (mark, len(_ops))
+        rs = [dict(r) for r in _reads[r0:]][:6]
+        os_ = [dict(o) for o in _ops[o0:]][:4]
+        if rs or os_:
+            _tempflow[name] = {'rhs': rs, 'ops': os_}
+        else:
+            _tempflow.pop(name, None)
+    except Exception:
+        pass
+    return val
+
 def __tr_begin__():
     return (len(_reads), len(_ops))
 
-def __tr_write__(mark, val):
+def __tr_write__(mark, val, names=()):
     # RHS-scoped write event: reads recorded between mark and now are EXACTLY the reads
     # inside this assignment's right-hand side — the only legal evidence for an arrow.
     try:
         if len(_writes) < 3000:
             r0, o0 = mark if isinstance(mark, tuple) else (mark, len(_ops))
-            _writes.append({'i': len(_events), 'rhs': [dict(r) for r in _reads[r0:]][:6], 'ops': [dict(o) for o in _ops[o0:]][:4]})
+            rhs = [dict(r) for r in _reads[r0:]][:6]
+            ops = [dict(o) for o in _ops[o0:]][:4]
+            for nm in names:
+                flow = _tempflow.get(nm)
+                if flow:
+                    rhs = (rhs + flow['rhs'])[:6]
+                    ops = (ops + flow['ops'])[:4]
+            _writes.append({'i': len(_events), 'rhs': rhs, 'ops': ops})
     except Exception:
         pass
     return val
