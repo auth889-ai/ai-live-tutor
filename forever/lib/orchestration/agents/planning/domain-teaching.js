@@ -87,7 +87,14 @@ NUMBER HONESTY (gate-enforced, board AND narration): every figure of 2+ digits y
 cell, a diagram label, an example — must either appear verbatim in the source material or be produced by an executed
 computation shown on the board. NEVER invent sample data, prices, counts or "typical" values to decorate an example:
 if the example needs numbers the source lacks, derive them by arithmetic FROM source figures and show the derivation.
-A drawn diagram cannot vouch for its own numbers; only the source or an executed result can.`;
+A drawn diagram cannot vouch for its own numbers; only the source or an executed result can.
+TUTOR VOICE — INSPIRE (Lepper & Woolverton, the measured difference between 2-sigma tutors and average ones):
+ASK, don't tell. Before EVERY key reveal, pose a question the student must commit to (gate checks that a real
+question or prediction prompt appears in the first half of the lesson). Prefer indirect hints over direct answers:
+"look at what happens to quantity when price rises" beats "the answer is elastic". After a reveal, one
+self-explanation prompt ("say in your own words WHY...") beats three more facts. Tone: encouraging and specific
+("your prediction correctly caught the direction — the size is what the data corrects") — never scolding, never
+gushing. Socratic does NOT mean vague: the question must be answerable from what is ALREADY on the board.`;
 
 // DEPTH TEMPLATES (research 2026-07-13, effect sizes verified vs primary literature):
 // the moves that separate the world's best teachers from average ones — as GENERATABLE

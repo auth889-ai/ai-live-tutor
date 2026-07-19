@@ -58,6 +58,17 @@ export function gateLesson(payload, { sourceText = '', requiredBeats = REQUIRED_
 
   const source = String(sourceText ?? '').replace(/,/g, '');
 
+  // INSPIRE / Socratic-first: expert tutors make the student COMMIT before the reveal.
+  // Deterministic proxy: within the first half of scenes there must be a spoken question
+  // or an explicit prediction prompt on the board.
+  const firstHalf = scenes.slice(0, Math.max(1, Math.ceil(scenes.length / 2)));
+  const hasEarlyCommit = firstHalf.some((sc) =>
+    (sc.voiceLines ?? []).some((vl) => String(vl.text ?? '').includes('?'))
+    || JSON.stringify((sc.objects ?? []).map((o) => o.content ?? '')).match(/predict|guess|what do you think|your prediction|before we reveal|stake|commit/i));
+  if (!hasEarlyCommit) {
+    violations.push({ sceneId: null, rule: 'no-early-prediction', detail: 'no question or prediction prompt in the first half of the lesson — the student never commits before the reveal (INSPIRE/Socratic-first)' });
+  }
+
   for (const scene of scenes) {
     const sid = scene.sceneId ?? '?';
     const objects = scene.objects ?? [];

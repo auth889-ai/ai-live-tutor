@@ -281,11 +281,13 @@ export async function repairLessonPayload(payload, {
     recap: { objType: 'recap list', content: '{"points": [3 to 5 short takeaway strings]}', voiceHint: 'restate the biggest takeaways in plain words, no new facts', atEnd: true },
     checkpoint: { objType: 'checkpoint quiz', content: '{"questions": [{"q": string, "answer": string}] (MAX 2 questions)}', voiceHint: 'ask at most 2 retrieval questions then give the answers', atEnd: false },
     worked_example: { objType: 'worked example steps', content: '{"steps": [4 to 6 short step strings]}', voiceHint: 'walk one concrete example step by step using only numbers already in the lesson', atEnd: false },
+    predict: { objType: 'prediction prompt', content: '{"variant": "checkpoint", "title": string, "body": string (ask the student to COMMIT to a prediction answerable from the lesson board — one question, indirect, no reveal)}', voiceHint: 'pose the prediction question and tell the student to commit before scrolling on — do NOT answer it', atEnd: false, atStart: true },
   };
   const missingBeats = before.violations
     .filter((v) => v.rule === 'beat-missing')
     .map((v) => (v.detail.match(/"(\w+)" beat/) ?? [])[1])
     .filter((b) => BEAT_SPECS[b]);
+  if (before.violations.some((v) => v.rule === 'no-early-prediction')) missingBeats.push('predict');
   for (const beat of missingBeats) {
     try {
       const spec = BEAT_SPECS[beat];
@@ -314,6 +316,7 @@ export async function repairLessonPayload(payload, {
         scene.pedagogicalRole = beat;
         if (!scene.timeline?.actions) scene.timeline = { sceneId: scene.sceneId, timingSource: 'provisional', actions: [{ id: `act_${beat}`, kind: 'point', startMs: 0, durationMs: 600, targetObjectId: scene.objects[0].id }] };
         if (spec.atEnd) payload.scenes.push(scene);
+        else if (spec.atStart) payload.scenes.splice(1, 0, scene);
         else payload.scenes.splice(Math.max(payload.scenes.length - 1, 1), 0, scene);
       }
     } catch (e) { log(`  ${beat} beat fix failed: ${String(e.message).slice(0, 100)}`); }

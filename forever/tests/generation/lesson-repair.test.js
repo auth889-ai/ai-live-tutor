@@ -25,7 +25,7 @@ const scene = (sceneId, role) => ({
   pedagogicalRole: role,
   layout: 'teacher_notebook_code',
   objects: [{ id: 'o1', objectType: 't', renderHint: 'text', region: 'notebook_area', content: 'alpha explains the basic starting point', sourceRef: { chunkId: 'c1' } }],
-  voiceLines: [{ id: 'v1', text: 'Alpha explains the basic starting point clearly.', targetObjectId: 'o1' }],
+  voiceLines: [{ id: 'v1', text: 'What does alpha explain? The basic starting point, clearly.', targetObjectId: 'o1' }],
   timeline: { sceneId, timingSource: 'provisional', actions: [{ id: 'a1', kind: 'point', startMs: 0, durationMs: 500, targetObjectId: 'o1' }] },
   durationMs: 5000,
 });

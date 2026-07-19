@@ -10,7 +10,7 @@ const goodScene = (sceneId, role, extra = {}) => ({
   sceneId,
   pedagogicalRole: role,
   objects: [{ id: 'main', objectType: 'display', renderHint: 'list', content: 'joins drop from 3 to 0 with 45 opcodes' }],
-  voiceLines: [{ id: `${sceneId}_v1`, text: 'Watch the join count drop from 3 to 0 here.', targetObjectId: 'main' }],
+  voiceLines: [{ id: `${sceneId}_v1`, text: 'What happens to the join count? Watch it drop from 3 to 0 here.', targetObjectId: 'main' }],
   timeline: { sceneId, actions: [{ id: `${sceneId}_a1`, kind: 'speech', voiceLineId: `${sceneId}_v1`, targetObjectId: 'main' }] },
   ...extra,
 });
@@ -69,7 +69,7 @@ test('the REAL stored Kid-Shop scene shape passes structural parsing (schema fid
     sceneId: 'sc_04', pedagogicalRole: 'worked_example', layout: 'teacher_notebook_code',
     objects: [{ id: 'title', renderHint: 'text', content: 'The Two-Database Architecture', decorative: true },
               { id: 'benefits_list', renderHint: 'list', content: { items: ['ETL sync at 6:00 AM'] } }],
-    voiceLines: [{ id: 'title_1', text: 'Let me explain the two-database architecture.', targetObjectId: 'title' },
+    voiceLines: [{ id: 'title_1', text: 'Why would one database not be enough? Let me show the two-database architecture.', targetObjectId: 'title' },
                  { id: 'b1', text: 'The sync lands by morning.', targetObjectId: 'benefits_list' }],
     timeline: { sceneId: 'sc_04', timingSource: 'provisional', actions: [
       { id: 'act_point_title', kind: 'point', startMs: 0, durationMs: 600, targetObjectId: 'title' },
@@ -105,4 +105,16 @@ test('board laundering is caught: an invented number on an AI-drawn diagram cann
   proven.scenes[0].voiceLines.push({ id: 's1_v3', text: 'Measured, not guessed.', targetObjectId: 'computed_evidence' });
   const r2 = gateLesson(proven, { sourceText: 'joins drop from 3 to 0 with 45 opcodes' });
   assert.ok(!r2.violations.some((v) => v.rule === 'board-number-unsourced'), JSON.stringify(r2.violations));
+});
+
+test('Socratic-first: a lesson that never asks in its first half fails; an early question passes', () => {
+  const didactic = JSON.parse(JSON.stringify(GOOD));
+  for (const sc of didactic.scenes) for (const vl of sc.voiceLines) vl.text = 'The join count drops from 3 to 0 here.';
+  const d = gateLesson(didactic, { sourceText: 'joins drop from 3 to 0 with 45 opcodes' });
+  assert.ok(d.violations.some((v) => v.rule === 'no-early-prediction'));
+
+  const socratic = JSON.parse(JSON.stringify(didactic));
+  socratic.scenes[0].voiceLines[0].text = 'Before we reveal it: what do you predict happens to the join count? It drops from 3 to 0.';
+  const r = gateLesson(socratic, { sourceText: 'joins drop from 3 to 0 with 45 opcodes' });
+  assert.ok(!r.violations.some((v) => v.rule === 'no-early-prediction'), JSON.stringify(r.violations));
 });
