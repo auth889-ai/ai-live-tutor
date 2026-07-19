@@ -31,7 +31,11 @@ const PLAN_SCHEMA = z.object({
   })).min(1),
 });
 
-export async function designPedagogy({ sourcePack, minScenes = 5, maxScenes = 9, domain = 'general', register = null }) {
+export async function designPedagogy({ sourcePack, minScenes, maxScenes, domain = 'general', register = null }) {
+  // Scene budget: explicit args win; else env (MIN_SCENES/MAX_SCENES — for cheap test builds);
+  // else the production default. 4 is the floor that can still carry all four required beats.
+  minScenes = minScenes ?? (process.env.MIN_SCENES ? Math.max(4, Number(process.env.MIN_SCENES)) : 5);
+  maxScenes = maxScenes ?? (process.env.MAX_SCENES ? Math.max(minScenes, Number(process.env.MAX_SCENES)) : 9);
   const chunkIds = new Set(sourcePack.chunks.map((chunk) => chunk.id));
   const { teachingFor, UNIVERSAL_TEACHING_LAW, depthFor, DEPTH_TEMPLATES } = await import('./domain-teaching.js');
 
