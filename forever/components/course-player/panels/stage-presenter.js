@@ -19,6 +19,7 @@ import { ChartView } from './chart-view.js';
 import { SimulationView } from './simulation-view.js';
 import { MoleculeView } from './molecule-view.js';
 import { LiveChartView } from './live-chart-view.js';
+import { SqlPlayground } from './sql-playground.js';
 import { QuizView } from './quiz-view.js';
 import { TryItPanel } from './try-it-panel.js';
 import { AuditTrailView } from './audit-trail-view.js';
@@ -161,6 +162,10 @@ function Focus({ object, state, focusRef, activeStep, setHold, onQuizAnswered, p
     // The curve primitive: legend, ghost curves, shift arrows, marked equilibria — the
     // things Mermaid xychart cannot draw (why it is banned for curve teaching).
     return <ChartView content={object.content} />;
+  }
+  if (object.renderHint === 'sqlplayground') {
+    // REAL in-browser SQLite: the student writes and runs SQL against the seeded schema.
+    return <SqlPlayground content={object.content} />;
   }
   if (object.renderHint === 'molecule') {
     // REAL 3D structure (PubChem CID or RCSB PDB id) the student rotates.
