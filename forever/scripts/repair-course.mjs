@@ -30,14 +30,19 @@ await mapWithConcurrency(lessonIds, Number(process.env.REPAIR_CONCURRENCY || 4),
   const beatViol = pre.violations.filter((v) => v.rule === 'beat-missing' && /misconception/.test(v.detail));
   console.log(`[repair] ${String(doc.title).slice(0, 50)} | ${pre.violations.length} violations (${numViol.length} unsourced numbers, misconception missing: ${beatViol.length > 0})`);
 
-  const { before, after, changed } = await repairLessonPayload(payload, {
-    sourceText, domain: doc.payload?.domain ?? 'data_db', lessonTitle: doc.title,
-  });
-  if (changed) {
-    await col.updateOne({ _id: lessonId }, { $set: { payload, voiced: false } });
-    console.log(`  saved: ${before.violations.length} -> ${after.violations.length} violations${after.ok ? ' (GATE CLEAN)' : ''}`);
-  } else {
-    console.log(`  NOT saved: ${before.violations.length} -> ${after.violations.length} (no improvement)`);
+  // converge PER LESSON: the worst lessons carry 35-69 board violations and need 5-10
+  // rounds — fixed course-wide passes starved them (measured: DB stuck at 2/16 over 3 passes)
+  const firstCount = pre.violations.length;
+  let lastCount = firstCount;
+  for (let round = 1; round <= Number(process.env.REPAIR_ROUNDS || 8); round += 1) {
+    const { after, changed } = await repairLessonPayload(payload, {
+      sourceText, domain: doc.payload?.domain ?? 'data_db', lessonTitle: doc.title,
+    });
+    if (changed) await col.updateOne({ _id: lessonId }, { $set: { payload, voiced: false } });
+    if (after.ok) { console.log(`  CONVERGED: ${firstCount} -> 0 in ${round} round${round === 1 ? '' : 's'} (GATE CLEAN)`); return; }
+    if (after.violations.length >= lastCount) { console.log(`  plateau: ${firstCount} -> ${after.violations.length} after ${round} round${round === 1 ? '' : 's'}`); return; }
+    lastCount = after.violations.length;
   }
+  console.log(`  round-cap: ${firstCount} -> ${lastCount}`);
 });
 process.exit(0);
