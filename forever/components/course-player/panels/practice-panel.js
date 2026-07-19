@@ -22,13 +22,30 @@ function isCorrect(given, answer) {
   return Math.abs(n - a) <= tol;
 }
 
-function Question({ q }) {
+function Question({ q, lessonId }) {
   const [given, setGiven] = useState('');
   const [checked, setChecked] = useState(false);
   const [hintLevel, setHintLevel] = useState(0); // 0 = no hint shown; up to hints.length
+  const [diagnosis, setDiagnosis] = useState(null); // adaptive re-teach on a wrong answer
+  const [diagnosing, setDiagnosing] = useState(false);
   const hints = q.hints ?? [];
   const right = checked && isCorrect(given, q.answer);
   const wrong = checked && !right;
+
+  // THE 2-SIGMA MOVE: a wrong answer is not just "wrong" — ask the tutor to diagnose WHY and
+  // re-teach targeting this student's actual error. Live, because it depends on their answer.
+  const diagnose = async () => {
+    setDiagnosing(true);
+    try {
+      const res = await fetch('/api/tutor/diagnose', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q.prompt, correctAnswer: q.answer, studentAnswer: given, concept: q.label, lessonId }),
+      });
+      const j = await res.json();
+      if (!j.error) setDiagnosis(j);
+    } catch { /* offline — the worked answer is still shown */ }
+    setDiagnosing(false);
+  };
 
   return (
     <div style={{ border: `1px solid ${V('--border', '#eadfd8')}`, borderRadius: 12, padding: '14px 16px', background: V('--card', '#fffdfb'), marginBottom: 12 }}>
@@ -58,6 +75,20 @@ function Question({ q }) {
       {checked && (
         <div style={{ marginTop: 8, fontSize: 13, fontWeight: 650, color: right ? '#2b7a3f' : '#c0522d' }}>
           {right ? '✓ Correct — that is the executed value.' : `Not yet. The engine-computed answer is ${q.answer}.`}
+          {wrong && !diagnosis && (
+            <button onClick={diagnose} disabled={diagnosing} style={{ ...btn('#b06a2e', true), marginLeft: 10, fontSize: 12 }}>
+              {diagnosing ? 'thinking…' : 'Why did I get it wrong?'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {diagnosis && (
+        <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 10, background: 'rgba(176,106,46,.07)', border: '1px solid rgba(176,106,46,.25)' }}>
+          {diagnosis.encouragement && <div style={{ fontSize: 12.5, fontWeight: 700, color: '#2b7a3f', marginBottom: 6 }}>{diagnosis.encouragement}</div>}
+          {diagnosis.misconception && <div style={{ fontSize: 12.5, color: '#8a3a12', marginBottom: 6 }}><b>What likely happened:</b> {diagnosis.misconception}</div>}
+          {diagnosis.explanation && <div style={{ fontSize: 13, color: V('--ink', '#2b2320'), lineHeight: 1.5, marginBottom: 6 }}>{diagnosis.explanation}</div>}
+          {diagnosis.followUp && <div style={{ fontSize: 12.5, color: V('--ink-muted', '#6f635c'), fontStyle: 'italic' }}>Check yourself: {diagnosis.followUp}</div>}
         </div>
       )}
 
@@ -119,7 +150,7 @@ export function PracticePanel({ practice, lessonId = null }) {
       </div>
       <div style={{ fontSize: 12.5, color: V('--ink-muted', '#6f635c'), marginBottom: 12, fontStyle: 'italic' }}>{blurb[level]}</div>
 
-      {questions.map((q) => <Question key={q.id} q={q} />)}
+      {questions.map((q) => <Question key={q.id} q={q} lessonId={lessonId} />)}
     </div>
   );
 }
