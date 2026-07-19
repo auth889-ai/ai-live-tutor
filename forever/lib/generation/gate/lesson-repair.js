@@ -477,6 +477,29 @@ export async function repairLessonPayload(payload, {
     } catch (e) { log(`  EARS fix failed: ${String(e.message).slice(0, 100)}`); }
   }
 
+  // ---- FIX 7: unbalanced chemical equations -> rebalanced, checker-verified ----
+  const balViol = before.violations.filter((v) => v.rule === 'equation-unbalanced');
+  if (balViol.length) {
+    try {
+      const { checkBalance } = await import('./chem-balance.js');
+      const items = balViol.map((v) => `${v.sceneId}: ${v.detail}`).join('\n').slice(0, 2000);
+      const rewrite = await chain({
+        agent: 'equation-balancer',
+        system: `Each chemical equation below is UNBALANCED. Return ONLY JSON {"rewrites": [{"sceneId": string, "find": string (the exact unbalanced equation substring), "replace": string (the same reaction, correctly balanced with integer coefficients)}]}. Balance by adjusting coefficients only; never change the chemical formulas.`,
+        user: items,
+        maxTokens: 800,
+        temperature: 0.1,
+      });
+      for (const r of (rewrite?.json ?? rewrite)?.rewrites ?? []) {
+        if (!r.replace || !checkBalance(r.replace).ok) continue; // the fix must actually balance
+        const sc = payload.scenes.find((x) => x.sceneId === r.sceneId);
+        if (!sc || !r.find) continue;
+        for (const vl of sc.voiceLines ?? []) if (vl.text.includes(r.find)) vl.text = vl.text.replace(r.find, r.replace);
+        for (const o of sc.objects ?? []) { try { const j = JSON.stringify(o.content); if (j.includes(r.find)) o.content = JSON.parse(j.split(r.find).join(r.replace)); } catch { /* leave */ } }
+      }
+    } catch (e) { log(`  balance fix failed: ${String(e.message).slice(0, 100)}`); }
+  }
+
   const after = gateLesson(payload, { sourceText, domain });
   return { before, after, changed: after.violations.length < before.violations.length };
 }
