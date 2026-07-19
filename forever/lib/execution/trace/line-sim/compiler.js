@@ -171,6 +171,40 @@ export function compileLineTrace({ events, result, code, entry = null, language 
     }
   }
 
+  // FLOOR DRAWS GRIDS TOO (provenance plan, the user's 'line sim, table or grid'): a 2D
+  // scalar list in a floor run renders as the real grid — full table seeded first, then each
+  // changed cell flashes as current and stays filled. Every cell value is from the recording.
+  const hero2d = detectHeroTable(steps);
+  if (hero2d) {
+    views.array2d = { rows: hero2d.rows, cols: hero2d.cols };
+    let prevT = null;
+    const filledSoFar = [];
+    for (const s of steps) {
+      const t = s.variables?.[hero2d.name];
+      const isT = Array.isArray(t) && t.length > 0 && t.every((r) => Array.isArray(r) && r.every((v) => v === null || ['number', 'string', 'boolean'].includes(typeof v)));
+      if (!isT) { prevT = null; continue; }
+      const cell = { values: [] };
+      if (!prevT) {
+        for (let r = 0; r < t.length; r += 1) for (let c = 0; c < t[r].length; c += 1) cell.values.push([r, c, t[r][c]]);
+      } else {
+        let last = null;
+        for (let r = 0; r < t.length; r += 1) {
+          for (let c = 0; c < (t[r]?.length ?? 0); c += 1) {
+            if (JSON.stringify(prevT?.[r]?.[c]) !== JSON.stringify(t[r][c])) {
+              cell.values.push([r, c, t[r][c]]);
+              filledSoFar.push([r, c]);
+              last = [r, c];
+            }
+          }
+        }
+        if (last) cell.current = last;
+      }
+      if (filledSoFar.length) cell.filled = filledSoFar.map((x) => [...x]);
+      s.array2d = cell;
+      prevT = t;
+    }
+  }
+
   return validateExecutionTrace({ language, code: String(code ?? ''), views, steps }, 'line-sim trace');
 }
 
@@ -182,14 +216,42 @@ function detectHeroList(steps) {
     for (const [k, v] of Object.entries(s.variables ?? {})) {
       if (!Array.isArray(v) || v.length < 2) continue;
       if (!v.every((x) => x === null || ['number', 'string', 'boolean'].includes(typeof x))) continue;
-      const slot = seen.get(k) ?? { count: 0, first: v };
+      const slot = seen.get(k) ?? { count: 0, first: v, stable: true };
       slot.count += 1;
+      // a GROWING list is an accumulator, not an array being worked on — and the validator
+      // (rightly) rejects a hero whose length changes mid-run (reproduced on spiral order)
+      if (v.length !== slot.first.length) slot.stable = false;
       seen.set(k, slot);
     }
   }
   let best = null;
-  for (const [name, { count, first }] of seen) {
+  for (const [name, { count, first, stable }] of seen) {
+    if (!stable) continue;
     if (!best || count > best.count || (count === best.count && first.length > best.first.length)) best = { name, count, first };
   }
   return best && best.count >= Math.max(2, steps.length / 3) ? best : null;
+}
+
+
+// The 2D scalar list present in the most steps (>=2x2) — the floor's grid hero. Null when
+// the run has no table to draw.
+function detectHeroTable(steps) {
+  const counts = new Map();
+  for (const s of steps) {
+    for (const [k, v] of Object.entries(s.variables ?? {})) {
+      if (Array.isArray(v) && v.length >= 2 && v.every((r) => Array.isArray(r) && r.length >= 1 && r.every((x) => x === null || ['number', 'string', 'boolean'].includes(typeof x)))) {
+        const e = counts.get(k) ?? { n: 0, rows: 0, cols: 0 };
+        e.n += 1;
+        e.rows = Math.max(e.rows, v.length);
+        e.cols = Math.max(e.cols, ...v.map((r) => r.length));
+        counts.set(k, e);
+      }
+    }
+  }
+  let best = null;
+  for (const [name, e] of counts) {
+    if (e.cols < 2) continue;
+    if (!best || e.n > best.n) best = { name, rows: e.rows, cols: e.cols, n: e.n };
+  }
+  return best;
 }
