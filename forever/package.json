@@ -20,10 +20,13 @@
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
+    "@duckdb/duckdb-wasm": "^1.33.1-dev57.0",
     "@langchain/core": "^1.2.2",
     "@langchain/langgraph": "^1.4.7",
     "@langchain/openai": "^1.5.5",
     "@tensorflow/tfjs": "^4.22.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "@xyflow/react": "^12.11.2",
     "3dmol": "^2.5.5",
     "bullmq": "^5.79.2",
@@ -51,6 +54,8 @@
     "sql.js": "^1.14.1"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/jest-runner": "^9.6.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
