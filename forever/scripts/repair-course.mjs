@@ -57,13 +57,29 @@ for (const lessonId of lessonIds) {
       const sceneTexts = payload.scenes.map((s) => `[${s.sceneId}] ${(s.voiceLines ?? []).map((l) => l.text).join(' ')}`).join('\n').slice(0, 6000);
       const world = await runAgentChain({
         agent: 'db-evidence-designer',
-        system: `You design the SQLite world that PROVES this database lesson's narrated numbers. Return ONLY JSON {"schemaSql": string (CREATE TABLE + INSERT seed data), "queries": [{"id": string, "label": string, "sql": string}]} — seed the data so the queries' results CONTAIN the teaching numbers the lesson narrates (or the closest defensible values). Max 6 queries, tiny tables (<=12 rows each). Plain SQLite SQL only.`,
+        system: `You design the SQLite world that PROVES this database lesson's narrated numbers. Return ONLY JSON {"schemaSql": string (CREATE TABLE + INSERT seed data), "queries": [{"id": string, "label": string, "sql": string}]} — seed the data so the queries' results CONTAIN the teaching numbers the lesson narrates (or the closest defensible values). Max 6 queries, tiny tables (<=12 rows each). Plain SQLite SQL only. IMPORTANT: when a narrated number is a SCALE illustration too big to seed (10000 rows, 3125 combinations), DERIVE it with an arithmetic query over stated factors — e.g. {"id":"q_scale","label":"rows at scale = 200 customers x 50 orders each","sql":"SELECT 200*50 AS rows_at_scale"} — so the engine literally computes it.`,
         user: `LESSON SCENES:\n${sceneTexts}\n\nUNSOURCED NUMBERS TO GROUND:\n${offending.slice(0, 1500)}`,
         maxTokens: 1400,
         temperature: 0.2,
       });
-      const spec = world?.json ?? world;
-      const ev = runSqlEvidence({ schemaSql: spec.schemaSql, queries: spec.queries });
+      let spec = world?.json ?? world;
+      let ev = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          ev = runSqlEvidence({ schemaSql: spec.schemaSql, queries: spec.queries });
+          break;
+        } catch (sqlErr) {
+          if (attempt === 2) throw sqlErr;
+          const fixed = await runAgentChain({
+            agent: 'db-evidence-designer',
+            system: `Your SQL failed to execute. Fix it and return ONLY the corrected JSON {"schemaSql": string, "queries": [{"id","label","sql"}]} — same intent, every INSERT matching its table's column count, plain SQLite.`,
+            user: `ERROR:\n${String(sqlErr.message ?? sqlErr).slice(0, 800)}\n\nYOUR SPEC:\n${JSON.stringify(spec).slice(0, 2500)}`,
+            maxTokens: 1400,
+            temperature: 0.2,
+          });
+          spec = fixed?.json ?? fixed;
+        }
+      }
       const rewrite = await runAgentChain({
         agent: 'db-evidence-rewriter',
         system: `You rewrite narration lines so every number cites the EXECUTED evidence. Return ONLY JSON {"rewrites": [{"sceneId": string, "voiceLineId": string, "newText": string}]} — same meaning, same length feel, but every figure must literally appear in the evidence. Rewrite ONLY the listed lines.`,
@@ -79,13 +95,26 @@ for (const lessonId of lessonIds) {
         if (!scene || !line) continue;
         // deterministic re-verify: every >=2-digit number in the new text must be in evidence
         const nums = (String(r.newText).match(/\d+(?:[.,]\d+)?%?/g) ?? []).map((n) => n.replace(/,/g, '')).filter((n) => n.replace(/[%.]/g, '').length >= 2);
-        if (nums.every((n) => evText.includes(n) || sourceText.replace(/,/g, '').includes(n))) line.text = r.newText;
+        const missing = nums.filter((n) => !evText.includes(n) && !sourceText.replace(/,/g, '').includes(n));
+        if (!missing.length) line.text = r.newText;
+        else if (process.env.REPAIR_DEBUG === '1') console.log(`  [debug] rewrite ${r.sceneId}/${r.voiceLineId} REJECTED — not in evidence: ${missing.join(', ')} | new: ${String(r.newText).slice(0, 110)}`);
+      }
+      if (process.env.REPAIR_DEBUG === '1') {
+        console.log('  [debug] rewrites returned:', rw.length, 'for offenders:', offenders.length);
+        console.log('  [debug] evidence:', evidenceBlob(ev).slice(0, 700));
       }
       // the evidence table lands on the FIRST affected scene, referenced so coverage passes
       const firstScene = payload.scenes.find((s) => numViol.some((v) => v.sceneId === s.sceneId));
       if (firstScene) {
         const objId = 'computed_evidence';
-        if (!firstScene.objects.some((o) => o.id === objId)) {
+        const existing = firstScene.objects.find((o) => o.id === objId);
+        if (existing) {
+          existing.content = {
+            title: 'Measured by executing the queries (SQLite)',
+            rows: ev.queries.map((q) => [q.label, `${q.joinCount} joins`, `${q.opcodes} opcodes`, `${q.rowCount} rows`]),
+            results: Object.fromEntries(ev.queries.map((q) => [q.id, { columns: q.columns, rows: q.rows }])),
+          };
+        } else {
           firstScene.objects.push({
             id: objId, objectType: 'computed evidence table', renderHint: 'table', region: 'notebook_area',
             content: {

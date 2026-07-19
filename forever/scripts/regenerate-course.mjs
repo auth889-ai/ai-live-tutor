@@ -19,7 +19,9 @@ const RUN_TAG = 'elite-regen-20jul';
 const course = await loadCourse(courseId);
 if (!course) { console.error('course not found'); process.exit(1); }
 const ownerId = course.ownerId ?? null;
-const lessons = (course.outline?.episodes ?? []).flatMap((ep) => ep.lessons.map((l) => ({ ep, l })));
+const only = (process.env.ONLY ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+const lessons = (course.outline?.episodes ?? []).flatMap((ep) => ep.lessons.map((l) => ({ ep, l })))
+  .filter(({ l }) => !only.length || only.includes(l.id));
 console.log(`[regen] course ${courseId}: ${lessons.length} lessons | TTS disabled: ${process.env.DISABLE_TTS === '1'}`);
 
 const col = await lessonsCollection();
@@ -32,8 +34,11 @@ for (const { ep, l } of lessons) {
   try {
     if (linked) {
       const existing = await col.findOne({ _id: linked }, { projection: { [`backups.${RUN_TAG}`]: 1, payload: 1 } });
-      if (existing?.backups?.[RUN_TAG] && process.env.FORCE !== '1') {
-        // resumable: already regenerated in this run
+      if (existing?.backups?.[RUN_TAG] && process.env.FORCE !== '1' && !only.length) {
+        done += 1;
+        console.log(`[${done}/${lessons.length}] ${String(l.title ?? l.id).slice(0, 48)} | SKIP (already regenerated this run-tag)`);
+        results.push({ lesson: l.id, skipped: true });
+        continue;
       } else if (existing?.payload) {
         await col.updateOne({ _id: linked }, { $set: { [`backups.${RUN_TAG}`]: existing.payload } });
       }
