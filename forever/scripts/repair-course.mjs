@@ -42,7 +42,18 @@ for (const lessonId of lessonIds) {
   // ---- FIX 1: unsourced numbers -> executed evidence ----
   if (numViol.length) {
     try {
-      const offending = numViol.map((v) => v.detail).join('\n');
+      const numbersIn = (t) => (String(t ?? '').match(/\d+(?:[.,]\d+)?%?/g) ?? []).map((n) => n.replace(/,/g, '')).filter((n) => n.replace(/[%.]/g, '').length >= 2);
+      const srcNoCommas = sourceText.replace(/,/g, '');
+      const offenders = [];
+      for (const sc of payload.scenes) {
+        const evText0 = JSON.stringify((sc.objects ?? []).map((o) => o.content ?? '')).replace(/,/g, ' ');
+        for (const vl of sc.voiceLines ?? []) {
+          for (const n of numbersIn(vl.text)) {
+            if (!srcNoCommas.includes(n) && !evText0.includes(n)) offenders.push({ sceneId: sc.sceneId, voiceLineId: vl.id, number: n, text: vl.text });
+          }
+        }
+      }
+      const offending = offenders.map((o) => `${o.sceneId}/${o.voiceLineId}: number ${o.number} in: ${o.text.slice(0, 120)}`).join('\n');
       const sceneTexts = payload.scenes.map((s) => `[${s.sceneId}] ${(s.voiceLines ?? []).map((l) => l.text).join(' ')}`).join('\n').slice(0, 6000);
       const world = await runAgentChain({
         agent: 'db-evidence-designer',
@@ -56,7 +67,7 @@ for (const lessonId of lessonIds) {
       const rewrite = await runAgentChain({
         agent: 'db-evidence-rewriter',
         system: `You rewrite narration lines so every number cites the EXECUTED evidence. Return ONLY JSON {"rewrites": [{"sceneId": string, "voiceLineId": string, "newText": string}]} — same meaning, same length feel, but every figure must literally appear in the evidence. Rewrite ONLY the listed lines.`,
-        user: `EXECUTED EVIDENCE (label, columns, rows, joinCount, opcodes):\n${evidenceBlob(ev).slice(0, 3000)}\n\nLINES TO REWRITE:\n${numViol.map((v) => `${v.sceneId} :: ${v.detail}`).join('\n').slice(0, 1500)}\n\nCURRENT LINES:\n${payload.scenes.flatMap((s) => (s.voiceLines ?? []).filter((l) => numViol.some((v) => v.detail.includes(`"${l.id}"`))).map((l) => `${s.sceneId}/${l.id}: ${l.text}`)).join('\n').slice(0, 2000)}`,
+        user: `EXECUTED EVIDENCE (label, columns, rows, joinCount, opcodes):\n${evidenceBlob(ev).slice(0, 3000)}\n\nLINES TO REWRITE (sceneId/voiceLineId: offending number: current text):\n${offending.slice(0, 2500)}`,
         maxTokens: 1200,
         temperature: 0.2,
       });
@@ -77,7 +88,11 @@ for (const lessonId of lessonIds) {
         if (!firstScene.objects.some((o) => o.id === objId)) {
           firstScene.objects.push({
             id: objId, objectType: 'computed evidence table', renderHint: 'table', region: 'notebook_area',
-            content: { title: 'Measured by executing the queries (SQLite)', rows: ev.queries.map((q) => [q.label, `${q.joinCount} joins`, `${q.opcodes} opcodes`, `${q.rowCount} rows`]) },
+            content: {
+              title: 'Measured by executing the queries (SQLite)',
+              rows: ev.queries.map((q) => [q.label, `${q.joinCount} joins`, `${q.opcodes} opcodes`, `${q.rowCount} rows`]),
+              results: Object.fromEntries(ev.queries.map((q) => [q.id, { columns: q.columns, rows: q.rows }])),
+            },
             sourceRef: { engine: 'sql-evidence', provenance: 'executed' },
           });
           firstScene.voiceLines.push({ id: 'computed_evidence_v', text: 'Every number here was measured by actually running the queries — nothing is estimated.', targetObjectId: objId });
@@ -97,8 +112,21 @@ for (const lessonId of lessonIds) {
         maxTokens: 700,
         temperature: 0.3,
       });
-      const scene = made?.json ?? made;
-      if (scene?.sceneId && scene.objects?.length && scene.voiceLines?.length) {
+      let scene = made?.json ?? made;
+      const validScene = (sc) => sc?.sceneId && Array.isArray(sc.objects) && sc.objects.length && Array.isArray(sc.voiceLines) && sc.voiceLines.length && sc.voiceLines.every((l) => sc.objects.some((o) => o.id === l.targetObjectId));
+      if (!validScene(scene)) {
+        const retry = await runAgentChain({
+          agent: 'db-misconception-writer',
+          system: 'Your previous scene JSON was structurally invalid (objects/voiceLines missing or a voiceLine targeted a missing object id). Return ONLY the corrected JSON, exact same schema.',
+          user: JSON.stringify(scene).slice(0, 1500),
+          maxTokens: 700,
+          temperature: 0.2,
+        });
+        scene = retry?.json ?? retry;
+      }
+      if (validScene(scene)) {
+        scene.pedagogicalRole = 'misconception';
+        if (!scene.timeline?.actions) scene.timeline = { sceneId: scene.sceneId, timingSource: 'provisional', actions: [{ id: 'act_mis', kind: 'point', startMs: 0, durationMs: 600, targetObjectId: scene.objects[0].id }] };
         payload.scenes.splice(Math.max(payload.scenes.length - 1, 1), 0, scene);
       }
     } catch (e) { console.log(`  misconception fix failed: ${String(e.message).slice(0, 100)}`); }
