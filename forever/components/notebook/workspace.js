@@ -27,6 +27,7 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
   const [view, setView] = useState('write'); // write | journal
   const [activePage, setActivePage] = useState(null);
   const [inkMode, setInkMode] = useState(false);
+  const [dragBlk, setDragBlk] = useState(null); // { id, y0, dy } while a block is being dragged
   const [dragOver, setDragOver] = useState(false);
   const [dropBusy, setDropBusy] = useState(false);
   const [selected, setSelected] = useState(null); // block id for the context panel
@@ -219,7 +220,37 @@ export function NotebookWorkspace({ id, onBack, onNavigate }) {
               <div style={{ color: C.sub, fontSize: 14, padding: '30px 0' }}>An empty page. Write below — or bring in a link, file, or voice note with ＋.</div>
             ) : (
               docBlocks.map((b) => (
-                <div key={b._id} id={`blk-${b._id}`}>
+                <div key={b._id} id={`blk-${b._id}`}
+                  style={{ position: 'relative', opacity: dragBlk?.id === b._id ? 0.55 : 1, transform: dragBlk?.id === b._id ? `translateY(${dragBlk.dy}px)` : undefined, zIndex: dragBlk?.id === b._id ? 20 : undefined }}>
+                <span data-drag-handle={b._id} title="drag to reorder"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.setPointerCapture?.(e.pointerId);
+                    setDragBlk({ id: b._id, y0: e.clientY, dy: 0 });
+                  }}
+                  onPointerMove={(e) => setDragBlk((d) => (d && d.id === b._id ? { ...d, dy: e.clientY - d.y0 } : d))}
+                  onPointerUp={async (e) => {
+                    const d = dragBlk;
+                    setDragBlk(null);
+                    if (!d || Math.abs(d.dy) < 14) return;
+                    const slots = docBlocks.map((x) => {
+                      const el = document.getElementById(`blk-${x._id}`);
+                      const r = el.getBoundingClientRect();
+                      return { id: x._id, mid: r.top + r.height / 2 };
+                    });
+                    const from = slots.findIndex((x) => x.id === b._id);
+                    const to = slots.filter((x) => x.id !== b._id).filter((x) => x.mid < e.clientY).length;
+                    if (to === from) return;
+                    const order = docBlocks.map((x) => x._id).filter((x) => x !== b._id);
+                    order.splice(to, 0, b._id);
+                    await Promise.all(order.map((bid, idx) => {
+                      const cur = docBlocks.find((x) => x._id === bid);
+                      if (cur.seq === idx) return null;
+                      return fetch(`/api/notebooks/${id}/blocks/${bid}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seq: idx }) });
+                    }).filter(Boolean));
+                    load();
+                  }}
+                  style={{ position: 'absolute', left: -20, top: 12, cursor: dragBlk?.id === b._id ? 'grabbing' : 'grab', color: '#C9BDA1', fontSize: 14, touchAction: 'none', userSelect: 'none', padding: '2px 4px', zIndex: 6 }}>⠿</span>
                 <DocBlock nb={id} b={b} pages={pages} selected={selected === b._id} legacyIll={legacyIll}
                   onSelect={() => setSelected(selected === b._id ? null : b._id)}
                   onChanged={load} onNavigate={onNavigate} />
