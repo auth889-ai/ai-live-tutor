@@ -13,6 +13,7 @@
 import { gateLesson, claimNumbersIn } from './lesson-gate.js';
 import { runSqlEvidence } from '../../orchestration/agents/authoring/evidence/sql-evidence.js';
 import { runCalcEvidence } from '../../orchestration/agents/authoring/evidence/calc-evidence.js';
+import { runTrainEvidence } from '../../orchestration/agents/authoring/evidence/train-evidence.js';
 import { runAgentChain as runAgentChainDefault } from '../../qwen/client.js';
 
 const numbersIn = (t) => (String(t ?? '').match(/\d+(?:[.,]\d+)?%?/g) ?? [])
@@ -117,7 +118,7 @@ export async function repairLessonPayload(payload, {
       } else {
         const world = await chain({
           agent: 'calc-evidence-designer',
-          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]} — HARD RULE: every dataset number must literally appear in the SOURCE below (the dataset IS the source's data); the formulas then DERIVE the teaching numbers by arithmetic. Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
+          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]${domain === 'ml_ai' ? ', optionally "train": {"lr": number, "epochs": int, "record": [epoch ints]} — a REAL gradient-descent run (linear model, columns = x then y) the engine executes; its recorded losses and final w/b become citable evidence (use this when the lesson narrates loss curves or trained parameters)' : ''}} — HARD RULE: every dataset number must literally appear in the SOURCE below (the dataset IS the source's data); the formulas then DERIVE the teaching numbers by arithmetic. Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
           user: `SOURCE:\n${sourceText.slice(0, 3000)}\n\nLESSON SCENES:\n${sceneTexts.slice(0, 2500)}\n\nUNSOURCED NUMBERS TO GROUND:\n${offending.slice(0, 1500)}`,
           maxTokens: 1400,
           temperature: 0.2,
@@ -146,10 +147,20 @@ export async function repairLessonPayload(payload, {
             spec = fixed?.json ?? fixed;
           }
         }
-        evBlobStr = JSON.stringify(cev.results.map((r) => [r.label, r.expr, r.value]));
+        let trainRows = [];
+        if (spec.train && domain === 'ml_ai') {
+          try {
+            const tev = runTrainEvidence({ dataset: spec.dataset, train: spec.train });
+            trainRows = [
+              ...tev.losses.map((l) => [`MSE after epoch ${l.epoch} (executed gradient descent, lr=${spec.train.lr})`, `epoch ${l.epoch}`, String(l.mse)]),
+              [`trained parameters after ${spec.train.epochs} epochs`, 'w, b', `w=${tev.final.w} b=${tev.final.b}`],
+            ];
+          } catch (e) { log(`  train run failed: ${String(e.message).slice(0, 80)}`); }
+        }
+        evBlobStr = JSON.stringify([...cev.results.map((r) => [r.label, r.expr, r.value]), ...trainRows]);
         evContentObj = {
           title: 'Computed by executing the formulas (real arithmetic)',
-          rows: cev.results.map((r) => [r.label, r.expr, String(r.value)]),
+          rows: [...cev.results.map((r) => [r.label, r.expr, String(r.value)]), ...trainRows],
           dataset: cev.dataset,
         };
         provenanceEngine = 'calc-evidence';
