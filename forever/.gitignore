@@ -20,6 +20,10 @@ test-results/
 eval/out/
 app/dev/lesson/generated-lesson.json
 public/audio/
+# generated runtime content (published lesson assets, notebook uploads/illustrations)
+public/assets/
+public/images/notebooks/
+
 .data/
 
 /tree/
