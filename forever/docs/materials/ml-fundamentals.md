@@ -48,15 +48,16 @@ learning rate of 0.01, training from w = 0, b = 0, the loss falls epoch by epoch
 
 | Epoch | MSE |
 |---|---|
-| 1 | 23562.5 |
-| 5 | 1250.0 |
-| 10 | 310.0 |
-| 20 | 85.0 |
-| 40 | 46.0 |
-| 80 | 41.0 |
+| 1 | 1267.65 |
+| 5 | 189.35 |
+| 10 | 181.79 |
+| 20 | 167.60 |
+| 40 | 142.58 |
+| 80 | 103.55 |
 
-The curve drops fast at first and then flattens — the model is converging near the best
-line, roughly w = 19.8, b = 33.3 for this data. A learning rate too large (say 0.5) makes
+The curve drops fast at first — from 1267.65 down to 189.35 in the first 5 epochs — then
+flattens into a slow crawl as it approaches the best line, reaching w = 22.91, b = 12.00 by
+epoch 80 and still inching toward the least-squares ideal of w = 19.85, b = 33.3. A learning rate too large (say 0.5) makes
 the loss DIVERGE: each step overshoots the valley and the numbers grow without bound. A
 learning rate too small wastes epochs crawling.
 
