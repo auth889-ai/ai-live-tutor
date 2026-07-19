@@ -170,6 +170,16 @@ export function compileDpTableLens({ recording, plan, code, entry = null, langua
   // compiler can prove arrows from provenance instead of arithmetic coincidence.
   const hasDirectReads = Array.isArray(recording?.reads);
   const readsByEvent = new Map();
+  // the mockup's X[i-1]/Y[j-1] columns, provably: scalar reads of OTHER variables on the
+  // writing line (the strings being compared) ride along as that step's inputs
+  const inputsByEvent = new Map();
+  for (const r of recording?.reads ?? []) {
+    if (r.n !== plan.name && r.v !== undefined && r.p.length === 1) {
+      const idx = r.i - 1;
+      if (!inputsByEvent.has(idx)) inputsByEvent.set(idx, []);
+      if (inputsByEvent.get(idx).length < 4) inputsByEvent.get(idx).push({ n: r.n, p: r.p, v: r.v });
+    }
+  }
   for (const r of recording?.reads ?? []) {
     if (r.n !== plan.name) continue;
     const path = plan.oneD ? (r.p.length === 1 ? [0, r.p[0]] : null) : (r.p.length === 2 ? r.p : null);
@@ -190,7 +200,10 @@ export function compileDpTableLens({ recording, plan, code, entry = null, langua
       if (['number', 'string', 'boolean'].includes(typeof v)) locals[k] = v;
     }
     const ev = { line: e.line, table, locals };
-    if (hasDirectReads) ev.reads = readsByEvent.get(idx) ?? [];
+    if (hasDirectReads) {
+      ev.reads = readsByEvent.get(idx) ?? [];
+      ev.inputs = inputsByEvent.get(idx) ?? [];
+    }
     events.push(ev);
   });
   if (recording?.events?.at(-1)?.truncated === true) events.push({ truncated: true });

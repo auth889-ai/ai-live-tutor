@@ -164,13 +164,25 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
     if (writes.length > 2) parts.push(narrateBatch({ count: writes.length - 2 }));
     for (const [r, c] of writes) filled.push([r, c]);
     lastWrite = writes[writes.length - 1];
+    // provable input columns (the reference ledger's X[i-1] / Y[j-1]): scalar reads of
+    // non-table variables recorded on the WRITING line — shown only when they exist
+    // the compare usually runs one line BEFORE the write (if X[i-1] == Y[j-1]: / dp[i][j] =)
+    // — gather inputs from the write line AND its immediate predecessor
+    const evAt = snapshots.indexOf(ev);
+    const inputReads = directReads
+      ? [...(snapshots[evAt - 2]?.inputs ?? []), ...(snapshots[evAt - 1]?.inputs ?? [])].slice(0, 4)
+      : [];
+    const inputNote = inputReads.length
+      ? ` Inputs read: ${inputReads.map((x) => `${x.n}[${x.p[0]}] = ${JSON.stringify(x.v)}`).join(', ')}.`
+      : '';
     const stepObj = snap({
       line,
-      explanation: proved ? `${parts.join(' ')} (rule: ${proved.rule})` : parts.join(' '),
+      explanation: (proved ? `${parts.join(' ')} (rule: ${proved.rule})` : parts.join(' ')) + inputNote,
       writes: writes.map(([r, c]) => [r, c]),
       current: [lastWrite[0], lastWrite[1]],
       variables: ev.locals ?? {},
     });
+    if (inputReads.length) stepObj.inputs = inputReads;
     if (proved) {
       stepObj.array2d.highlight = proved.reads;
       stepObj.array2d.rule = proved.rule;
