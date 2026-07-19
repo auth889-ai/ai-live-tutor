@@ -9,6 +9,8 @@
 
 import { generateLessonFromSourcePack } from '../generation/lesson/generate-lesson.js';
 import { repairLessonPayload } from '../generation/gate/lesson-repair.js';
+import { generateVariations, calcSpecFromLesson } from '../generation/practice/variation-engine.js';
+import { deckFromQuestions } from '../retention/sm2.js';
 import { isCodingDomain } from '../orchestration/agents/planning/coding-instructor.js';
 import { buildSourcePackFromInput } from '../source-pack/build/dispatch-source-pack.js';
 import { focusSourcePack } from '../source-pack/build/focus-source-pack.js';
@@ -205,6 +207,23 @@ async function produceLesson({ sourcePack, outlineLesson = null, episode = null,
     } catch (e) {
       console.error(`[gate] self-repair failed open: ${String(e?.message ?? e).slice(0, 160)}`);
     }
+  }
+
+  // PRACTICE PACK (zero tokens, deterministic): when the lesson carries an executed calc
+  // spec, every student gets leveled variations with engine-computed answers, graduated
+  // hints, and an SM-2 review deck — attached at save time, regenerated identically on
+  // rebuild. Fails open: a lesson without an executed spec simply has no pack.
+  try {
+    const calcSpec = calcSpecFromLesson(finalLesson);
+    if (calcSpec) {
+      const variants = generateVariations(calcSpec);
+      const questions = variants.filter((v) => v.level <= 2).flatMap((v) => v.questions);
+      if (questions.length) {
+        finalLesson = { ...finalLesson, practice: { variants, deck: deckFromQuestions(questions) } };
+      }
+    }
+  } catch (e) {
+    console.error(`[practice] pack generation failed open: ${String(e?.message ?? e).slice(0, 120)}`);
   }
 
   // Wait out any in-flight partial write, then the FINAL save replaces the building shell
