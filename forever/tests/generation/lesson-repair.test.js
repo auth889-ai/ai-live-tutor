@@ -42,7 +42,7 @@ test('self-repair writes the missing misconception scene through the injected ch
     log: () => {},
   });
   assert.ok(before.violations.some((v) => v.rule === 'beat-missing'));
-  assert.equal(calls.includes('db-misconception-writer'), true);
+  assert.equal(calls.includes('beat-scene-writer'), true);
   assert.equal(changed, true);
   assert.equal(after.violations.filter((v) => v.rule === 'beat-missing' && /misconception/.test(v.detail)).length, 0);
   assert.equal(payload.scenes.some((s) => s.pedagogicalRole === 'misconception'), true);
