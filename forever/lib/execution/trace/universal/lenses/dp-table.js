@@ -180,12 +180,17 @@ export function compileDpTableLens({ recording, plan, code, entry = null, langua
   // reads INSIDE the assignment expression itself (read -> expression -> write lineage)
   const hasWriteEvents = Array.isArray(recording?.writes);
   const rhsByEvent = new Map();
+  const opsByEvent = new Map();
   for (const wv of recording?.writes ?? []) {
     const idx = wv.i - 1;
     const cells = (wv.rhs ?? []).filter((x) => x.n === plan.name && (plan.oneD ? x.p.length === 1 : x.p.length === 2))
-      .map((x) => ({ p: plan.oneD ? [0, x.p[0]] : x.p, v: x.v }));
+      .map((x) => ({ p: plan.oneD ? [0, x.p[0]] : x.p, v: x.v, q: x.q }));
     if (!rhsByEvent.has(idx)) rhsByEvent.set(idx, []);
     rhsByEvent.get(idx).push(...cells);
+    if (Array.isArray(wv.ops) && wv.ops.length) {
+      if (!opsByEvent.has(idx)) opsByEvent.set(idx, []);
+      opsByEvent.get(idx).push(...wv.ops);
+    }
   }
   const readsByEvent = new Map();
   // the mockup's X[i-1]/Y[j-1] columns, provably: scalar reads of OTHER variables on the
@@ -220,6 +225,7 @@ export function compileDpTableLens({ recording, plan, code, entry = null, langua
     const ev = { line: e.line, table, locals };
     if (hasDirectReads) {
       ev.reads = hasWriteEvents ? (rhsByEvent.get(idx) ?? []) : (readsByEvent.get(idx) ?? []);
+      ev.rhsOps = opsByEvent.get(idx) ?? [];
       ev.inputs = inputsByEvent.get(idx) ?? [];
     }
     events.push(ev);

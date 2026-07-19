@@ -132,7 +132,17 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
         const vs = cells.map((c) => c.v);
         const nums = vs.every((v) => typeof v === 'number') && typeof val === 'number';
         let rule = null;
-        if (nums) {
+        // RECORDED OPERATOR (phase 2): if the RHS executed an op whose result IS the written
+        // value, the rule is a fact — no consensus needed, valid even in constant runs
+        const rhsOps = snapshots[snapshots.indexOf(ev) - 1]?.rhsOps ?? [];
+        const lastReadQ = Math.max(0, ...cells.map((x) => x.q ?? 0));
+        // only ops that executed AFTER the last RHS read can be the combining op — index
+        // arithmetic (i - 1) runs before its read and must never name the rule
+        const certain = rhsOps.filter((o) => o.r === val && (o.q ?? 0) > lastReadQ);
+        if (certain.length) {
+          const o = certain[certain.length - 1];
+          rule = ({ Add: 'sum (recorded op)', Sub: 'difference (recorded op)', Mult: 'product (recorded op)', FloorDiv: 'floor-div (recorded op)', Mod: 'mod (recorded op)', max: 'max (recorded op)', min: 'min (recorded op)' })[o.op] ?? `${o.op} (recorded op)`;
+        } else if (nums) {
           // the same honesty rule as arrows: if MORE than one op reproduces the value from
           // these reads (max(0,1) === 0+1), no op is named — the reads stay, the claim doesn't
           const ops = [];

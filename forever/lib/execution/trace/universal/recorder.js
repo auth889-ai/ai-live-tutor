@@ -29,7 +29,8 @@ def __tr_read__(name, obj, *keys):
     try:
         if len(_reads) < 4000 and all(isinstance(k, (int, str)) and not isinstance(k, bool) for k in keys):
             if isinstance(val, (int, float, str, bool)):
-                _reads.append({'i': len(_events), 'n': name, 'p': list(keys), 'v': _safe(val)})
+                _seq[0] += 1
+                _reads.append({'i': len(_events), 'n': name, 'p': list(keys), 'v': _safe(val), 'q': _seq[0]})
             elif isinstance(val, (list, dict, set, tuple)):
                 # non-scalar read: value omitted, but the ACCESS itself is the evidence —
                 # a walked adjacency is indexed (adj[u]); a result accumulator never is
@@ -61,6 +62,25 @@ class _InstrReads(_ast_mod.NodeTransformer):
         self.generic_visit(node)
         return node
 
+    def visit_BinOp(self, node):
+        self.generic_visit(node)
+        opname = type(node.op).__name__
+        if opname in ('Add', 'Sub', 'Mult', 'FloorDiv', 'Mod'):
+            return _ast_mod.copy_location(_ast_mod.Call(
+                func=_ast_mod.Name(id='__tr_binop__', ctx=_ast_mod.Load()),
+                args=[_ast_mod.Constant(value=opname), node.left, node.right], keywords=[]), node)
+        return node
+
+    def visit_Call(self, node):
+        self.generic_visit(node)
+        if (isinstance(node.func, _ast_mod.Name) and node.func.id in ('max', 'min')
+                and len(node.args) >= 2 and not node.keywords
+                and not any(isinstance(a, _ast_mod.Starred) for a in node.args)):
+            return _ast_mod.copy_location(_ast_mod.Call(
+                func=_ast_mod.Name(id='__tr_minmax__', ctx=_ast_mod.Load()),
+                args=[_ast_mod.Constant(value=node.func.id)] + node.args, keywords=[]), node)
+        return node
+
     def visit_Assign(self, node):
         # dp[i][j] = RHS  ->  _trm_ = __tr_begin__(); dp[i][j] = __tr_write__(_trm_, RHS')
         if (len(node.targets) == 1 and isinstance(node.targets[0], _ast_mod.Subscript)):
@@ -87,16 +107,46 @@ class _InstrReads(_ast_mod.NodeTransformer):
         return node
 
 _writes = []
+_ops = []
+_seq = [0]  # shared order stamp across reads and ops — value-ops execute AFTER the reads they consume
+
+_OPMAP = {
+    'Add': lambda a, b: a + b, 'Sub': lambda a, b: a - b, 'Mult': lambda a, b: a * b,
+    'FloorDiv': lambda a, b: a // b, 'Mod': lambda a, b: a % b,
+}
+
+def __tr_binop__(opname, a, b):
+    # BINARY_OP event: the operator ACTUALLY executed, with its real operands and result —
+    # rule names downstream become recorded facts, never arithmetic consensus.
+    r = _OPMAP[opname](a, b)
+    try:
+        if len(_ops) < 4000 and all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in (a, b, r)):
+            _seq[0] += 1
+            _ops.append({'i': len(_events), 'op': opname, 'a': a, 'b': b, 'r': r, 'q': _seq[0]})
+    except Exception:
+        pass
+    return r
+
+def __tr_minmax__(fname, *args):
+    r = (max if fname == 'max' else min)(*args)
+    try:
+        if len(_ops) < 4000 and all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in list(args) + [r]):
+            _seq[0] += 1
+            _ops.append({'i': len(_events), 'op': fname, 'args': list(args)[:4], 'r': r, 'q': _seq[0]})
+    except Exception:
+        pass
+    return r
 
 def __tr_begin__():
-    return len(_reads)
+    return (len(_reads), len(_ops))
 
 def __tr_write__(mark, val):
     # RHS-scoped write event: reads recorded between mark and now are EXACTLY the reads
     # inside this assignment's right-hand side — the only legal evidence for an arrow.
     try:
         if len(_writes) < 3000:
-            _writes.append({'i': len(_events), 'rhs': [dict(r) for r in _reads[mark:]][:6]})
+            r0, o0 = mark if isinstance(mark, tuple) else (mark, len(_ops))
+            _writes.append({'i': len(_events), 'rhs': [dict(r) for r in _reads[r0:]][:6], 'ops': [dict(o) for o in _ops[o0:]][:4]})
     except Exception:
         pass
     return val
