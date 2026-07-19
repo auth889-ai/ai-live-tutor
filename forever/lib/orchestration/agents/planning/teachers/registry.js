@@ -16,13 +16,14 @@ import * as agentsRag from './agents-rag-teacher.js';
 import * as history from './history-teacher.js';
 import * as law from './law-teacher.js';
 import * as economics from './econ-teacher.js';
+import * as dataDb from './db-teacher.js';
 import * as universal from './universal-teacher.js';
 
 const TEACHERS = new Map([
   ['architecture', architecture], ['networking', networking], ['srs', srs], ['sqa', sqa],
   ['os_arch', osArch], ['math', math], ['physics', physics], ['chemistry', chemistry],
   ['biology', biology], ['ml_ai', mlAi], ['agents_rag', agentsRag], ['history', history],
-  ['law', law], ['economics', economics],
+  ['law', law], ['economics', economics], ['data_db', dataDb],
 ]);
 
 export function teacherFor(domain) {

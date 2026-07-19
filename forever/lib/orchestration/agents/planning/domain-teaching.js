@@ -30,11 +30,12 @@ import { REGISTER as HISTORY } from './registers/history.js';
 import { REGISTER as LAW } from './registers/law.js';
 import { REGISTER as ECONOMICS } from './registers/economics.js';
 import { REGISTER as GENERAL } from './registers/general.js';
+import { REGISTER as DATA_DB } from './registers/data_db.js';
 
 export const DOMAINS = Object.freeze([
   // the 14 course domains (one specialist teacher agent each — teachers/registry.js)
   'architecture', 'networking', 'srs', 'sqa', 'os_arch', 'math', 'physics', 'chemistry',
-  'biology', 'ml_ai', 'agents_rag', 'history', 'law', 'economics',
+  'biology', 'ml_ai', 'agents_rag', 'history', 'law', 'economics', 'data_db',
   // coding (the Coding Instructor + trace engines) and legacy/general buckets
   'dsa', 'programming', 'science', 'systems_swe', 'history_humanities', 'business_finance', 'general',
 ]);
@@ -63,6 +64,7 @@ export const DOMAIN_TEACHING = Object.freeze({
   history: HISTORY,
   law: LAW,
   economics: ECONOMICS,
+  data_db: DATA_DB,
   general: GENERAL,
 });
 

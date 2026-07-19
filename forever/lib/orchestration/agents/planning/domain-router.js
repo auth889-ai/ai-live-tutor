@@ -15,7 +15,8 @@ Domains: ${DOMAINS.join(', ')}.
 - ml_ai: machine learning, deep learning, AI, data science
 - math: pure math (algebra, calculus, linear algebra, probability, proofs)
 - science: physics, chemistry, biology
-- systems_swe: software architecture, databases, networking, OS, system design
+- data_db: databases, SQL, schema design, normalization/denormalization, star/snowflake schemas, data warehousing, OLTP/OLAP, ETL
+- systems_swe: software architecture, networking, OS, system design (NOT database-focused material)
 - history_humanities: history, law, literature, social science
 - business_finance: economics, business, finance, accounting
 - general: anything else
