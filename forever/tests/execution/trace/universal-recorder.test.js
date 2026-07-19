@@ -19,7 +19,7 @@ const record = ({ code, entry }) => {
 
 test('assembleUniversalProgram: student code compiled under <student>, entry hardened', () => {
   const program = assembleUniversalProgram({ code: 'def f(x):\n    return x', entry: 'f(1)' });
-  for (const marker of ['sys.settrace(_tracer)', "compile(_src, '<student>', 'exec')", '@@UNIREC', 'MAX_EVENTS']) {
+  for (const marker of ['sys.settrace(_tracer)', "compile(_maybe_tree, '<student>', 'exec')", '@@UNIREC', 'MAX_EVENTS']) {
     assert.ok(program.includes(marker), `program carries ${marker}`);
   }
   assert.throws(() => assembleUniversalProgram({ code: 'def f(x):\n    return x', entry: 'x = 1\nimport os' }), /single expression/);

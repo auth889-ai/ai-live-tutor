@@ -14,7 +14,7 @@ import { validateExecutionTrace } from '../../../board/execution/execution-trace
 import { narrateStart, narrateInit, narrateWrite, narrateBatch, narrateDone } from './narrate.js';
 
 // compileDpTable({ events, result, code, entry?, rowLabels?, colLabels?, language })
-export function compileDpTable({ events, result, code, entry = null, rowLabels = null, colLabels = null, language = 'python' } = {}) {
+export function compileDpTable({ events, result, code, entry = null, rowLabels = null, colLabels = null, language = 'python' , directReads = false } = {}) {
   if (!Array.isArray(events) || events.length === 0) throw new Error('dp-table tracker recorded no events');
   if (events.some((e) => e?.too_big === true)) {
     throw new Error('the dp table exceeds 24x24 — pick a smaller teaching example (a dry run must stay readable)');
@@ -114,7 +114,34 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
     // non-base writes only. Candidates from the PRE-write state; exactly one matching rule
     // -> highlight those reads + name the rule; zero or several matches -> nothing.
     let proved = null;
-    if (informative && writes.length === 1) {
+    if (directReads && writes.length === 1) {
+      // PROVENANCE MODE: arrows come ONLY from recorded reads executed on the writing line
+      // (the previous snapshot's line — line events fire before their line runs). No reads
+      // recorded -> no arrows, whatever the arithmetic looks like.
+      const [wr, wc] = writes[0];
+      const prevReads = snapshots[snapshots.indexOf(ev) - 1]?.reads ?? [];
+      const seen = new Set();
+      const cells = [];
+      for (const rd of prevReads) {
+        const key = `${rd.p[0]},${rd.p[1]}`;
+        if ((rd.p[0] !== wr || rd.p[1] !== wc) && !seen.has(key)) { seen.add(key); cells.push(rd); }
+      }
+      if (cells.length >= 1 && cells.length <= 3) {
+        const val = ev.table[wr]?.[wc];
+        const vs = cells.map((c) => c.v);
+        const nums = vs.every((v) => typeof v === 'number') && typeof val === 'number';
+        let rule = null;
+        if (nums) {
+          if (vs.length === 1 && val === vs[0] + 1) rule = 'read + 1';
+          else if (vs.length >= 2 && val === vs.reduce((a, b) => a + b, 0)) rule = 'sum of reads';
+          else if (vs.length >= 2 && val === Math.max(...vs)) rule = 'max of reads';
+          else if (vs.length >= 2 && val === Math.min(...vs)) rule = 'min of reads';
+          else if (vs.length >= 2 && val === Math.min(...vs) + 1) rule = 'min of reads + 1';
+          else if (vs.length >= 2 && val === Math.max(...vs) + 1) rule = 'max of reads + 1';
+        }
+        proved = { rule: rule ?? 'from read cells', reads: cells.map((c) => c.p) };
+      }
+    } else if (informative && writes.length === 1) {
       const [r, c] = writes[0];
       if (r > 0 || c > 0) {
         const val = ev.table[r]?.[c];

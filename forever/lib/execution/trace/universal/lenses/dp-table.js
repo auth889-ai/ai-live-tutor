@@ -165,19 +165,34 @@ export function detectDpTable(recording, ctx = {}) {
 // Adapt the recording to the proven dp-table compiler: one {line, table, locals} per sighting.
 export function compileDpTableLens({ recording, plan, code, entry = null, language = 'python' }) {
   if (!plan || plan.lens !== 'dp-table') throw new Error('compileDpTableLens needs a plan from detectDpTable');
+  // DIRECT READS (external review 2026-07-19): a read logged at _events length L happened
+  // DURING the line event at index L-1 — attach each line's reads of the DP table so the
+  // compiler can prove arrows from provenance instead of arithmetic coincidence.
+  const hasDirectReads = Array.isArray(recording?.reads);
+  const readsByEvent = new Map();
+  for (const r of recording?.reads ?? []) {
+    if (r.n !== plan.name) continue;
+    const path = plan.oneD ? (r.p.length === 1 ? [0, r.p[0]] : null) : (r.p.length === 2 ? r.p : null);
+    if (!path) continue;
+    const idx = r.i - 1;
+    if (!readsByEvent.has(idx)) readsByEvent.set(idx, []);
+    readsByEvent.get(idx).push({ p: path, v: r.v });
+  }
   const events = [];
-  for (const e of (recording?.events ?? [])) {
-    if (e.ev !== 'line') continue;
+  (recording?.events ?? []).forEach((e, idx) => {
+    if (e.ev !== 'line') return;
     let table = e.locals?.[plan.name];
     // 1-D DP renders as a single-row table — same lens, same reads/deps coloring.
     if (plan.oneD && Array.isArray(table) && !isTable(table)) table = [table];
-    if (!isTable(table)) continue;
+    if (!isTable(table)) return;
     const locals = {};
     for (const [k, v] of Object.entries(e.locals)) {
       if (['number', 'string', 'boolean'].includes(typeof v)) locals[k] = v;
     }
-    events.push({ line: e.line, table, locals });
-  }
+    const ev = { line: e.line, table, locals };
+    if (hasDirectReads) ev.reads = readsByEvent.get(idx) ?? [];
+    events.push(ev);
+  });
   if (recording?.events?.at(-1)?.truncated === true) events.push({ truncated: true });
-  return compileDpTable({ events, result: recording.result, code, entry, language });
+  return compileDpTable({ events, result: recording.result, code, entry, language, directReads: hasDirectReads });
 }

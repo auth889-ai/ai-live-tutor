@@ -7,7 +7,7 @@ const CODE = 'def linear_search(arr, target):\n    for i in range(len(arr)):\n  
 
 test('assembleLineProgram: student code compiled under <student>, entry hardened', () => {
   const program = assembleLineProgram({ code: CODE, entry: 'linear_search([4, 7, 9], 9)' });
-  for (const marker of ['sys.settrace(_tracer)', "compile(_src, '<student>', 'exec')", '@@LINESIM', 'MAX_EVENTS']) {
+  for (const marker of ['sys.settrace(_tracer)', "compile(_maybe_tree, '<student>', 'exec')", '@@LINESIM', 'MAX_EVENTS']) {
     assert.ok(program.includes(marker), `program carries ${marker}`);
   }
   assert.throws(() => assembleLineProgram({ code: CODE, entry: 'x = 1\nimport os' }), /single expression/);

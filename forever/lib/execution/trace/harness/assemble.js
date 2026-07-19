@@ -59,8 +59,9 @@ export function buildTracedProgram({ constants = {}, trackerPy, code, entry, mar
     '    return v',
     '',
     `_src = ${JSON.stringify(String(code))}`,
-    `_compiled = compile(_src, '<student>', 'exec')`,
-    '_ns = {}',
+    `_maybe_tree = _INSTRUMENT(_src) if '_INSTRUMENT' in globals() else _src`,
+    `_compiled = compile(_maybe_tree, '<student>', 'exec')`,
+    "_ns = {'__tr_read__': globals()['__tr_read__']} if '__tr_read__' in globals() else {}",
     'exec(_compiled, _ns)',
     'sys.settrace(_tracer)',
     'try:',
@@ -68,7 +69,10 @@ export function buildTracedProgram({ constants = {}, trackerPy, code, entry, mar
     'finally:',
     '    sys.settrace(None)',
     resultLine,
-    `print('${marker} ' + json.dumps(_finite({'events': _events, 'result': _out})))`,
+    '_payload = {"events": _events, "result": _out}',
+    "if '_reads' in globals():",
+    '    _payload["reads"] = _reads',
+    `print('${marker} ' + json.dumps(_finite(_payload)))`,
   ].join('\n');
 }
 

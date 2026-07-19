@@ -15,6 +15,55 @@ import { buildTracedProgram, parseTracedEvents } from '../harness/assemble.js';
 
 export const UNIVERSAL_TRACKER_PY = `
 import json, sys, math
+import ast as _ast_mod
+
+# DIRECT OPERATION PROVENANCE (external review 2026-07-19): subscript LOADS are rewritten
+# by _INSTRUMENT into recorded reads — dependency arrows downstream may ONLY come from
+# these events, never from arithmetic coincidence.
+_reads = []
+
+def __tr_read__(name, obj, *keys):
+    val = obj
+    for k in keys:
+        val = val[k]
+    try:
+        if len(_reads) < 4000 and all(isinstance(k, int) and not isinstance(k, bool) for k in keys) and isinstance(val, (int, float, str, bool)):
+            _reads.append({'i': len(_events), 'n': name, 'p': list(keys), 'v': _safe(val)})
+    except Exception:
+        pass
+    return val
+
+class _InstrReads(_ast_mod.NodeTransformer):
+    # rewrite 1-2 level subscript LOADS with a simple Name base (a[i], dp[i][j]); stores and
+    # slices untouched, index expressions visited recursively (dp[a[i]] records both reads)
+    def visit_Subscript(self, node):
+        if isinstance(node.ctx, _ast_mod.Load):
+            chain = []
+            cur = node
+            ok = True
+            while isinstance(cur, _ast_mod.Subscript):
+                if not isinstance(cur.ctx, _ast_mod.Load) or isinstance(cur.slice, _ast_mod.Slice):
+                    ok = False
+                    break
+                chain.append(cur.slice)
+                cur = cur.value
+            if ok and isinstance(cur, _ast_mod.Name) and 1 <= len(chain) <= 2:
+                args = [_ast_mod.Constant(value=cur.id), _ast_mod.Name(id=cur.id, ctx=_ast_mod.Load())]
+                for sl in reversed(chain):
+                    args.append(self.visit(sl))
+                new = _ast_mod.Call(func=_ast_mod.Name(id='__tr_read__', ctx=_ast_mod.Load()), args=args, keywords=[])
+                return _ast_mod.copy_location(new, node)
+        self.generic_visit(node)
+        return node
+
+def _INSTRUMENT(src):
+    try:
+        tree = _InstrReads().visit(_ast_mod.parse(src))
+        _ast_mod.fix_missing_locations(tree)
+        return tree
+    except Exception:
+        return src
+
 
 MAX_EVENTS = 1200
 MAX_NODES = 40

@@ -71,7 +71,7 @@ test('detach: a node that becomes unreachable is taught as the garbage moment', 
 test('harness assembly is hardened: roots/attrs validated, entry must be one expression', () => {
   const ok = assembleListProgram({ code: 'def f():\n    return None', entry: 'f()', roots: ['head', 'curr'] });
   assert.ok(ok.includes('ROOTS = ["head", "curr"]'));
-  assert.ok(ok.includes("compile(_src, '<student>', 'exec')"), 'student code traced under its own filename');
+  assert.ok(ok.includes("compile(_maybe_tree, '<student>', 'exec')"), 'student code traced under its own filename');
   assert.throws(() => assembleListProgram({ code: 'x', entry: 'f();g()', roots: ['head'] }), /single expression/);
   assert.throws(() => assembleListProgram({ code: 'x', entry: 'f()', roots: [] }), /pointer root names/);
   assert.throws(() => assembleListProgram({ code: 'x', entry: 'f()', roots: ['he ad'] }), /pointer root names/);
