@@ -7,6 +7,9 @@
 //   DISABLE_TTS=1 node scripts/regenerate-course.mjs course_sp84f7ca7fedef
 
 import 'dotenv/config';
+// batch runs blow LangSmith's monthly trace cap and spam 429s — tracing off here
+process.env.LANGCHAIN_TRACING_V2 = 'false';
+process.env.LANGSMITH_TRACING = 'false';
 import { loadCourse } from '../lib/storage/course-store.js';
 import { lessonsCollection } from '../lib/storage/db.js';
 import { processLessonJob } from '../lib/queue/lesson-processor.js';

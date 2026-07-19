@@ -5,6 +5,9 @@
 //   node scripts/repair-course.mjs <courseId> [onlyLessonId]
 
 import 'dotenv/config';
+// batch runs blow LangSmith's monthly trace cap and spam 429s — tracing off here
+process.env.LANGCHAIN_TRACING_V2 = 'false';
+process.env.LANGSMITH_TRACING = 'false';
 import { loadCourse } from '../lib/storage/course-store.js';
 import { lessonsCollection } from '../lib/storage/db.js';
 import { gateLesson } from '../lib/generation/gate/lesson-gate.js';

@@ -130,9 +130,15 @@ export async function repairLessonPayload(payload, {
             // anti-laundering: the dataset may contain ONLY numbers the source contains —
             // an invented seed would let the engine "prove" whatever the writer made up
             const srcNC2 = sourceText.replace(/,/g, '');
-            const seedNums = (spec.dataset?.rows ?? []).flat().map((x) => String(x)).filter((x) => x.replace(/[-.%]/g, '').length >= 2);
-            const invented = seedNums.filter((x) => !srcNC2.includes(x.replace(/^-/, '')));
-            if (invented.length) throw new Error(`dataset invents numbers not present in the source: ${invented.slice(0, 8).join(', ')} — use ONLY the source's own figures as data`);
+            const rowOk = (row) => row.every((x) => String(x).replace(/[-.%]/g, '').length < 2 || srcNC2.includes(String(x).replace(/^-/, '')));
+            const goodRows = (spec.dataset?.rows ?? []).filter(rowOk);
+            // salvage before rejecting: drop invented rows, keep the source-true ones
+            if (goodRows.length >= 2) {
+              spec = { ...spec, dataset: { ...spec.dataset, rows: goodRows } };
+            } else {
+              const invented = (spec.dataset?.rows ?? []).flat().map((x) => String(x)).filter((x) => x.replace(/[-.%]/g, '').length >= 2 && !srcNC2.includes(x.replace(/^-/, '')));
+              if (invented.length) throw new Error(`dataset invents numbers not present in the source: ${invented.slice(0, 8).join(', ')} — ALLOWED seed numbers (use ONLY these): ${[...new Set(srcNC2.match(/\d+(?:\.\d+)?/g) ?? [])].filter((n) => n.length >= 2).slice(0, 60).join(', ')}`);
+            }
             cev = runCalcEvidence({ dataset: spec.dataset, formulas: spec.formulas });
             break;
           } catch (calcErr) {
@@ -232,7 +238,7 @@ export async function repairLessonPayload(payload, {
           try {
             const fixedObj = await chain({
               agent: 'board-content-fixer',
-              system: `A board object shows numbers that are neither in the source nor in the executed evidence: ${bad.join(', ')}. Return ONLY the corrected content JSON (same structure, same keys) with every wrong number replaced by the correct value from the SOURCE or EVIDENCE below. Change numbers only, keep all layout keys (x, y, sizes) exactly.`,
+              system: `A board object shows numbers that are neither in the source nor in the executed evidence: ${bad.join(', ')}. Return ONLY the corrected content JSON (same structure, same keys) with every wrong number replaced by the correct value from the SOURCE or EVIDENCE below. If an element's number has NO source/evidence counterpart at all (an invented what-if ladder), REMOVE that element (drop the row/node/label) — a smaller true object beats a fuller false one. Change numbers/remove elements only, keep all layout keys (x, y, sizes) exactly.`,
               user: `OBJECT CONTENT:\n${JSON.stringify(o.content).slice(0, 2000)}\n\nSOURCE EXCERPT:\n${sourceText.slice(0, 2500)}\n\nEXECUTED EVIDENCE:\n${execT.slice(0, 1500)}`,
               maxTokens: 1500,
               temperature: 0.2,
@@ -322,6 +328,15 @@ export async function repairLessonPayload(payload, {
           temperature: 0.2,
         });
         scene = retry?.json ?? retry;
+      }
+      // deterministic number check on the WRITER'S OWN scene — the observed 69->78
+      // regression was repair inserting scenes whose numbers were themselves unsourced
+      const sceneNums = [...new Set(claimNumbersIn(scene?.objects?.map((o) => o.content) ?? [])), ...((scene?.voiceLines ?? []).flatMap((l) => claimNumbersIn(l.text)))];
+      const srcNC4 = sourceText.replace(/,/g, '');
+      const dirty = sceneNums.filter((n) => !srcNC4.includes(n));
+      if (dirty.length) {
+        if (env.REPAIR_DEBUG === '1') log(`  [debug] ${beat} scene rejected — unsourced numbers: ${dirty.join(', ')}`);
+        scene = null;
       }
       if (validScene(scene)) {
         scene.pedagogicalRole = beat;

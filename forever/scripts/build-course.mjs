@@ -8,6 +8,9 @@
 // Resumable: rerunning skips outline lessons whose lesson doc already exists with scenes.
 
 import 'dotenv/config';
+// batch runs blow LangSmith's monthly trace cap and spam 429s — tracing off here
+process.env.LANGCHAIN_TRACING_V2 = 'false';
+process.env.LANGSMITH_TRACING = 'false';
 import { readFileSync } from 'node:fs';
 import { processLessonJob } from '../lib/queue/lesson-processor.js';
 import { loadCourse } from '../lib/storage/course-store.js';
