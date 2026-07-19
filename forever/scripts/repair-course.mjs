@@ -24,7 +24,7 @@ await mapWithConcurrency(lessonIds, Number(process.env.REPAIR_CONCURRENCY || 4),
   const doc = await col.findOne({ _id: lessonId });
   if (!doc?.payload) return;
   const payload = doc.payload;
-  const pre = gateLesson(payload, { sourceText });
+  const pre = gateLesson(payload, { sourceText, domain: doc.payload?.domain ?? null });
   if (pre.ok) { console.log(`[ok] ${doc.title}`); return; }
   const numViol = pre.violations.filter((v) => v.rule === 'number-unsourced');
   const beatViol = pre.violations.filter((v) => v.rule === 'beat-missing' && /misconception/.test(v.detail));

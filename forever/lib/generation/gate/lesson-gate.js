@@ -43,7 +43,19 @@ export const claimNumbersIn = (content) => {
   return found.filter((n) => n[0] !== '0' || n[1] === '.');
 };
 
-export function gateLesson(payload, { sourceText = '', requiredBeats = REQUIRED_BEATS } = {}) {
+// Humanities/law teach by SOURCING — a quotation presented as quotation must exist verbatim.
+// (Formal domains may quote textbook laws from teacher knowledge; these fields stay strict.)
+const QUOTE_STRICT_DOMAINS = new Set(['history', 'law', 'history_humanities']);
+const normalizeQuote = (t) => String(t ?? '').toLowerCase().replace(/[\s\u00a0]+/g, ' ').trim();
+const quotedSpansIn = (t) => {
+  const spans = [];
+  for (const m of String(t ?? '').matchAll(/["\u201c]([^"\u201d]{20,300})["\u201d]/g)) {
+    if (m[1].trim().split(/\s+/).length >= 5) spans.push(m[1].trim());
+  }
+  return spans;
+};
+
+export function gateLesson(payload, { sourceText = '', requiredBeats = REQUIRED_BEATS, domain = null } = {}) {
   const violations = [];
   const scenes = payload?.scenes ?? [];
   if (scenes.length === 0) {
@@ -57,6 +69,27 @@ export function gateLesson(payload, { sourceText = '', requiredBeats = REQUIRED_
   }
 
   const source = String(sourceText ?? '').replace(/,/g, '');
+
+  // QUOTE HONESTY (history/law): every quoted span of 5+ words, spoken or on the board,
+  // must exist verbatim in the source. Paraphrase freely — but quotation marks are a
+  // CLAIM OF VERBATIMNESS, and a fabricated quote is the humanities' laundered number.
+  if (QUOTE_STRICT_DOMAINS.has(domain)) {
+    const normSource = normalizeQuote(sourceText);
+    for (const scene of scenes) {
+      const sid = scene.sceneId ?? '?';
+      const texts = [
+        ...(scene.voiceLines ?? []).map((vl) => ({ where: `voiceLine "${vl.id}"`, text: vl.text })),
+        ...(scene.objects ?? []).filter((o) => !o.decorative).map((o) => ({ where: `object "${o.id}"`, text: JSON.stringify(o.content ?? '') })),
+      ];
+      for (const { where, text } of texts) {
+        for (const span of quotedSpansIn(text)) {
+          if (!normSource.includes(normalizeQuote(span))) {
+            violations.push({ sceneId: sid, rule: 'quote-unsourced', detail: `${where} quotes "${span.slice(0, 80)}..." which is not verbatim in the source — quote the source exactly or paraphrase without quotation marks` });
+          }
+        }
+      }
+    }
+  }
 
   // INSPIRE / Socratic-first: expert tutors make the student COMMIT before the reveal.
   // Deterministic proxy: within the first half of scenes there must be a spoken question

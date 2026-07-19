@@ -118,3 +118,27 @@ test('Socratic-first: a lesson that never asks in its first half fails; an early
   const r = gateLesson(socratic, { sourceText: 'joins drop from 3 to 0 with 45 opcodes' });
   assert.ok(!r.violations.some((v) => v.rule === 'no-early-prediction'), JSON.stringify(r.violations));
 });
+
+test('quote honesty (history/law): a fabricated quotation fails; verbatim or unquoted paraphrase passes', () => {
+  const SRC = 'joins drop from 3 to 0 with 45 opcodes. The judge wrote that the statute must be read in light of its evident purpose and history.';
+  const lesson = JSON.parse(JSON.stringify(GOOD));
+  lesson.scenes[0].voiceLines[0].text = 'What did the court say? The judge wrote: "the constitution demands absolute deference to executive power in all matters".';
+  const fabricated = gateLesson(lesson, { sourceText: SRC, domain: 'law' });
+  assert.ok(fabricated.violations.some((v) => v.rule === 'quote-unsourced'));
+
+  // the same fabricated quote in a NON-strict domain is not a quote violation
+  const relaxed = gateLesson(lesson, { sourceText: SRC, domain: 'physics' });
+  assert.ok(!relaxed.violations.some((v) => v.rule === 'quote-unsourced'));
+
+  // verbatim quotation passes strict domains
+  const verbatim = JSON.parse(JSON.stringify(GOOD));
+  verbatim.scenes[0].voiceLines[0].text = 'What did the court say? The judge wrote that "the statute must be read in light of its evident purpose and history".';
+  const ok1 = gateLesson(verbatim, { sourceText: SRC, domain: 'law' });
+  assert.ok(!ok1.violations.some((v) => v.rule === 'quote-unsourced'), JSON.stringify(ok1.violations));
+
+  // honest paraphrase without quotation marks passes
+  const para = JSON.parse(JSON.stringify(GOOD));
+  para.scenes[0].voiceLines[0].text = 'What did the court say? The judge held that purpose and history control the reading.';
+  const ok2 = gateLesson(para, { sourceText: SRC, domain: 'law' });
+  assert.ok(!ok2.violations.some((v) => v.rule === 'quote-unsourced'));
+});

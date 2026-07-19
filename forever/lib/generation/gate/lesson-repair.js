@@ -50,7 +50,7 @@ export async function repairLessonPayload(payload, {
   log = (m) => console.log(m),
 } = {}) {
   const chain = agents.runAgentChain ?? runAgentChainDefault;
-  const before = gateLesson(payload, { sourceText });
+  const before = gateLesson(payload, { sourceText, domain });
   if (before.ok) return { before, after: before, changed: false };
   const numViol = before.violations.filter((v) => v.rule === 'number-unsourced' || v.rule === 'board-number-unsourced');
   const beatViol = before.violations.filter((v) => v.rule === 'beat-missing' && /misconception/.test(v.detail));
@@ -401,6 +401,36 @@ export async function repairLessonPayload(payload, {
     } catch (e) { log(`  check-in fix failed: ${String(e.message).slice(0, 100)}`); }
   }
 
-  const after = gateLesson(payload, { sourceText });
+  // ---- FIX 5: fabricated quotations (history/law) -> verbatim source or honest paraphrase ----
+  const quoteViol = before.violations.filter((v) => v.rule === 'quote-unsourced');
+  if (quoteViol.length) {
+    try {
+      const items = quoteViol.map((v) => `${v.sceneId}: ${v.detail}`).join('\n').slice(0, 2500);
+      const rewrite = await chain({
+        agent: 'quote-fixer',
+        system: `Lines below present quotations that are NOT verbatim in the source — in this field a quotation is a claim of verbatimness. For each, either (a) replace the quoted span with the EXACT source wording, or (b) remove the quotation marks and paraphrase honestly. Return ONLY JSON {"rewrites": [{"sceneId": string, "voiceLineId": string|null, "objectId": string|null, "newText": string (the FULL corrected line; for an object, the corrected content JSON as a string)}]}.`,
+        user: `SOURCE:\n${sourceText.slice(0, 4000)}\n\nOFFENDING QUOTES:\n${items}`,
+        maxTokens: 1600,
+        temperature: 0.2,
+      });
+      const normSource2 = sourceText.toLowerCase().replace(/\s+/g, ' ');
+      const spansOf = (t) => [...String(t ?? '').matchAll(/["\u201c]([^"\u201d]{20,300})["\u201d]/g)].map((m) => m[1].trim()).filter((x) => x.split(/\s+/).length >= 5);
+      for (const r of (rewrite?.json ?? rewrite)?.rewrites ?? []) {
+        const sc = payload.scenes.find((x) => x.sceneId === r.sceneId);
+        if (!sc) continue;
+        const bad = spansOf(r.newText).filter((sp) => !normSource2.includes(sp.toLowerCase().replace(/\s+/g, ' ')));
+        if (bad.length) continue; // the fix itself fabricates — reject
+        if (r.voiceLineId) {
+          const vl = sc.voiceLines?.find((l) => l.id === r.voiceLineId);
+          if (vl) vl.text = r.newText;
+        } else if (r.objectId) {
+          const o = sc.objects?.find((x) => x.id === r.objectId);
+          if (o) { try { o.content = JSON.parse(r.newText); } catch { o.content = r.newText; } }
+        }
+      }
+    } catch (e) { log(`  quote fix failed: ${String(e.message).slice(0, 100)}`); }
+  }
+
+  const after = gateLesson(payload, { sourceText, domain });
   return { before, after, changed: after.violations.length < before.violations.length };
 }
