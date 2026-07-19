@@ -64,7 +64,7 @@ export function buildTracedProgram({ constants = {}, trackerPy, code, entry, mar
     'import typing as _typing_mod',
     `_maybe_tree = _INSTRUMENT(_src) if '_INSTRUMENT' in globals() else _src`,
     `_compiled = compile(_maybe_tree, '<student>', 'exec')`,
-    "_ns = {'__tr_read__': globals()['__tr_read__']} if '__tr_read__' in globals() else {}",
+    "_ns = {k: globals()[k] for k in ('__tr_read__', '__tr_begin__', '__tr_write__') if k in globals()}",
     "for _tn in ('List', 'Optional', 'Dict', 'Tuple', 'Set', 'Union', 'Deque', 'Any', 'DefaultDict', 'Counter', 'FrozenSet', 'Iterator', 'Callable'):",
     '    if hasattr(_typing_mod, _tn):',
     '        _ns.setdefault(_tn, getattr(_typing_mod, _tn))',
@@ -78,6 +78,8 @@ export function buildTracedProgram({ constants = {}, trackerPy, code, entry, mar
     '_payload = {"events": _events, "result": _out}',
     "if '_reads' in globals():",
     '    _payload["reads"] = _reads',
+    "if '_writes' in globals():",
+    '    _payload["writes"] = _writes',
     `print('${marker} ' + json.dumps(_finite(_payload)))`,
   ].join('\n');
 }

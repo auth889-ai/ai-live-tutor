@@ -61,6 +61,46 @@ class _InstrReads(_ast_mod.NodeTransformer):
         self.generic_visit(node)
         return node
 
+    def visit_Assign(self, node):
+        # dp[i][j] = RHS  ->  _trm_ = __tr_begin__(); dp[i][j] = __tr_write__(_trm_, RHS')
+        if (len(node.targets) == 1 and isinstance(node.targets[0], _ast_mod.Subscript)):
+            chain = []
+            cur = node.targets[0]
+            ok = True
+            while isinstance(cur, _ast_mod.Subscript):
+                if isinstance(cur.slice, _ast_mod.Slice):
+                    ok = False
+                    break
+                chain.append(cur.slice)
+                cur = cur.value
+            if ok and isinstance(cur, _ast_mod.Name) and 1 <= len(chain) <= 2:
+                rhs = self.visit(node.value)
+                mark = _ast_mod.Assign(
+                    targets=[_ast_mod.Name(id='_trm_', ctx=_ast_mod.Store())],
+                    value=_ast_mod.Call(func=_ast_mod.Name(id='__tr_begin__', ctx=_ast_mod.Load()), args=[], keywords=[]))
+                node.value = _ast_mod.Call(
+                    func=_ast_mod.Name(id='__tr_write__', ctx=_ast_mod.Load()),
+                    args=[_ast_mod.Name(id='_trm_', ctx=_ast_mod.Load()), rhs], keywords=[])
+                self.generic_visit(node.targets[0])
+                return [_ast_mod.copy_location(mark, node), node]
+        self.generic_visit(node)
+        return node
+
+_writes = []
+
+def __tr_begin__():
+    return len(_reads)
+
+def __tr_write__(mark, val):
+    # RHS-scoped write event: reads recorded between mark and now are EXACTLY the reads
+    # inside this assignment's right-hand side — the only legal evidence for an arrow.
+    try:
+        if len(_writes) < 3000:
+            _writes.append({'i': len(_events), 'rhs': [dict(r) for r in _reads[mark:]][:6]})
+    except Exception:
+        pass
+    return val
+
 def _INSTRUMENT(src):
     try:
         tree = _InstrReads().visit(_ast_mod.parse(src))
