@@ -886,6 +886,28 @@ def last_stone(stones):
 // from the headline elite % (they document the boundary, they don't inflate or deflate it);
 // when a frontier row goes structural, its lens just landed — promote it into PROBLEMS.
 const FRONTIER = [
+  // Found 2026-07-20 probing bitmask coverage: the READ-INTO-TEMP idiom (nd = dp[mask][u] + w;
+  // dp[nm][v] = nd) hides the same-table dependency from the write's RHS — dp-table declines
+  // (correctly cautious) and grid-walk shows the mask table spatially. Correct, not elite.
+  // Fix direction: dataflow through simple name assignments (temp lineage).
+  ['TSP bitmask DP via temp variable (elite target: dp-table; lands grid-walk)', `def tsp(dist):
+    n = len(dist)
+    dp = [[10 ** 9] * n for _ in range(1 << n)]
+    dp[1][0] = 0
+    for mask in range(1, 1 << n):
+        for u in range(n):
+            if not (mask >> u) & 1:
+                continue
+            if dp[mask][u] >= 10 ** 9:
+                continue
+            for v in range(n):
+                if (mask >> v) & 1:
+                    continue
+                nm = mask | (1 << v)
+                nd = dp[mask][u] + dist[u][v]
+                if nd < dp[nm][v]:
+                    dp[nm][v] = nd
+    return min(dp[(1 << n) - 1][u] + dist[u][0] for u in range(n))`, 'tsp([[0, 2, 9], [2, 0, 6], [9, 6, 0]])'],
   // Reported by external review 2026-07-19, reproduced same day. Both run CORRECTLY —
   // the gap is lens choice, not accuracy:
   // RESOLVED 2026-07-20: class Solution was never the problem — an INDEXED Kadane inside a
