@@ -8,4 +8,6 @@ DEPTH: FACT-TWEAK to the breaking point ("10 days' notice is reasonable — when
 PRIMITIVES: IRAC table (row-by-row reveal), case-brief callout, timeline, argument map, evidence matrix, quiz.
 LEARNER ACTIONS (required): the student ARGUES BOTH SIDES before any holding; when one fact changes, the student REVISES the conclusion themselves.
 REJECT THIS LESSON WHEN: the conclusion appears before adversarial application; a rule lacks an authoritative source; the Socratic challenge (fact tweaked to the breaking point) is missing.
-NEVER: IRAC as box-filling — the intellectual work is the fight over disputed facts.`;
+NEVER: IRAC as box-filling — the intellectual work is the fight over disputed facts.
+BEAT-THE-BEST BENCHMARK: the casebook/IRAC tradition, Cornell LII structure, LEXam rigor. DOMAIN LEVER: infinite fact-pattern variations with element-by-element application checks per student answer.
+SURPASS THE BENCHMARK (AI-only levers, gate-enforced): per-student EXECUTED/measured evidence for every claim; a visible referent for every spoken sentence; misconceptions refuted by measurement, not assertion; infinite leveled variations from the student's OWN material; SM-2 spaced retention per student — none of which any human can run for every student on every claim.`;

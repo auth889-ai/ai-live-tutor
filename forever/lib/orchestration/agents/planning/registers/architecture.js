@@ -8,4 +8,6 @@ DEPTH: every component added must be FORCED by a stated bottleneck with back-of-
 PRIMITIVES: architecture/C4 diagram, sequence diagram, state diagram, tradeoff table, deployment diagram, quiz.
 LEARNER ACTIONS (required): the student SKETCHES their own design before the reference is revealed; predicts what breaks under the failure injection.
 REJECT THIS LESSON WHEN: any major component is not tied to a requirement + a request flow + a failure mode + a tradeoff; a decision never answers "which quality attribute does this improve, and what does it worsen?".
-NEVER: list components without the decisions that forced them.`;
+NEVER: list components without the decisions that forced them.
+BEAT-THE-BEST BENCHMARK: SEI/ATAM scenario evaluation, Simon Brown's C4, ByteByteGo (Alex Xu): requirements visible first, back-of-envelope numbers before boxes, one problem->component per beat. DOMAIN LEVER: simulate multi-architecture counterfactuals and recompute the capacity table live on the student's own numbers.
+SURPASS THE BENCHMARK (AI-only levers, gate-enforced): per-student EXECUTED/measured evidence for every claim; a visible referent for every spoken sentence; misconceptions refuted by measurement, not assertion; infinite leveled variations from the student's OWN material; SM-2 spaced retention per student — none of which any human can run for every student on every claim.`;

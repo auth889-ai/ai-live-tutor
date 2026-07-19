@@ -13,4 +13,6 @@ SIM HONESTY: a simulation or computed plot is never presented as a real experime
 VECTORS: any drawn vector's direction must match the motion the words describe — a mismatch is a REJECT.
 LEARNER ACTIONS (required): PREDICT-AND-COMMIT before every simulation/derivation (Mazur peer instruction); the student explains WHY horizontal and vertical motion separate.
 REJECT THIS LESSON WHEN: equation-solving happens without a diagram + units + a PRIOR student prediction; a result never confronts the wrong intuition it disproves.
-NEVER: solve without a staked prediction — the conflict with intuition IS the lesson.`;
+NEVER: solve without a staked prediction — the conflict with intuition IS the lesson.
+BEAT-THE-BEST BENCHMARK: Eric Mazur's peer instruction (predict->confront->revise), MIT OCW mechanics, PhET simulations. DOMAIN LEVER: the predict-then-simulate loop ENFORCED per student with numeric simulation on their own values.
+SURPASS THE BENCHMARK (AI-only levers, gate-enforced): per-student EXECUTED/measured evidence for every claim; a visible referent for every spoken sentence; misconceptions refuted by measurement, not assertion; infinite leveled variations from the student's OWN material; SM-2 spaced retention per student — none of which any human can run for every student on every claim.`;

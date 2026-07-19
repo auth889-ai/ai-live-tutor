@@ -11,4 +11,6 @@ DEPTH: one schema, three workloads (OLTP write, dashboard read, ad-hoc analyst);
 PRIMITIVES: schema diagram (tables/keys/FK arrows), computed_evidence table (numbers from sql-evidence ONLY), before/after query comparison, quiz.
 LEARNER ACTIONS (required): predict a join count or cost before the measured reveal; defend one denormalization decision citing a MEASURED number.
 REJECT THIS LESSON WHEN: any performance or count claim lacks executed evidence; a schema appears as a generated image instead of a drawn diagram; a denormalization scene lacks the same-answer proof; there is no predict-before-reveal beat.
-NEVER: numbers the engine did not produce.`;
+NEVER: numbers the engine did not produce.
+BEAT-THE-BEST BENCHMARK: CMU 15-445 (Pavlo) build-and-measure on a real DBMS, Kimball's measured trade-offs. DOMAIN LEVER: execute the lesson's actual queries per student — join counts, opcode costs and same-answer proofs measured live.
+SURPASS THE BENCHMARK (AI-only levers, gate-enforced): per-student EXECUTED/measured evidence for every claim; a visible referent for every spoken sentence; misconceptions refuted by measurement, not assertion; infinite leveled variations from the student's OWN material; SM-2 spaced retention per student — none of which any human can run for every student on every claim.`;

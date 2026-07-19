@@ -10,4 +10,6 @@ LESSON FLOW: why this concept matters -> concrete number example -> formula intr
 PRIMITIVES: KaTeX, step derivation, graph/chart, table, mistake callout, quiz.
 LEARNER ACTIONS (required): the student COMMITS a guess before each reveal and completes one FADED derivation step themselves.
 REJECT THIS LESSON WHEN: a formal definition or symbols appear before motivation and visual meaning; a derivation skips a step; the answer is never substituted back.
-NEVER: formula-first. A formula may appear only after the learner has something visual it names.`;
+NEVER: formula-first. A formula may appear only after the learner has something visual it names.
+BEAT-THE-BEST BENCHMARK: 3Blue1Brown (picture before formalism, one morph per beat, semantic color), MIT OCW, Khan practice ladders. DOMAIN LEVER: every derivation step machine-verified and infinite step-checked variations — 3B1B cannot check YOUR algebra; the engine does.
+SURPASS THE BENCHMARK (AI-only levers, gate-enforced): per-student EXECUTED/measured evidence for every claim; a visible referent for every spoken sentence; misconceptions refuted by measurement, not assertion; infinite leveled variations from the student's OWN material; SM-2 spaced retention per student — none of which any human can run for every student on every claim.`;

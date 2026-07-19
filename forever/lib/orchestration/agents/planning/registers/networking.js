@@ -8,4 +8,6 @@ DEPTH: STAKED-PREDICTION on latencies; FACT-TWEAK LADDER (what if DNS is down? w
 PRIMITIVES: sequence diagram, layer block diagram, packet/routing tables, state diagram, quiz.
 LEARNER ACTIONS (required): the student PREDICTS THE NEXT PACKET before it appears; diagnoses one failure (lost SYN, dead DNS) from the evidence.
 REJECT THIS LESSON WHEN: a segment is named (SYN-ACK) without the matching packet highlighted at that word; no failure-diagnosis beat exists.
-NEVER: text-only protocol walls — the packet is the protagonist.`;
+NEVER: text-only protocol walls — the packet is the protagonist.
+BEAT-THE-BEST BENCHMARK: Kurose & Ross top-down, Stanford CS144 labs, Practical Networking packet-journey, Wireshark evidence. DOMAIN LEVER: replay real packet traces per student and inject failures on demand — every hop, header change and table lookup shown at its exact moment.
+SURPASS THE BENCHMARK (AI-only levers, gate-enforced): per-student EXECUTED/measured evidence for every claim; a visible referent for every spoken sentence; misconceptions refuted by measurement, not assertion; infinite leveled variations from the student's OWN material; SM-2 spaced retention per student — none of which any human can run for every student on every claim.`;
