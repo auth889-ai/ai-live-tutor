@@ -16,6 +16,7 @@ import { MathView } from './math-view.js';
 import { ImageView } from './image-view.js';
 import { CalloutView } from './callout-view.js';
 import { ChartView } from './chart-view.js';
+import { SimulationView } from './simulation-view.js';
 import { QuizView } from './quiz-view.js';
 import { TryItPanel } from './try-it-panel.js';
 import { AuditTrailView } from './audit-trail-view.js';
@@ -158,6 +159,10 @@ function Focus({ object, state, focusRef, activeStep, setHold, onQuizAnswered, p
     // The curve primitive: legend, ghost curves, shift arrows, marked equilibria — the
     // things Mermaid xychart cannot draw (why it is banned for curve teaching).
     return <ChartView content={object.content} />;
+  }
+  if (object.renderHint === 'simulation') {
+    // REAL interactive: a PhET sim or Desmos graph the student manipulates (allowlisted origin).
+    return <SimulationView content={object.content} />;
   }
   if (object.renderHint === 'manipulable') {
     // The "manipulate it" spine step: predict -> drag ONE parameter -> the curve recomputes
