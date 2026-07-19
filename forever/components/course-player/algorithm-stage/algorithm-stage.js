@@ -197,8 +197,26 @@ function StepControls({ index, total, exploring, onStep, onJump, onFollow }) {
     color: disabled ? '#c9bda1' : '#2b211a', padding: '4px 10px', fontSize: 13, fontWeight: 800,
     cursor: disabled ? 'default' : 'pointer',
   });
+  // TIME-TRAVEL PLAYBACK (dStruct-style polish): autoplay with speed control. The interval
+  // simply calls the same onStep(1) the button uses — playback is stepping, nothing new.
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  useEffect(() => {
+    if (!playing) return undefined;
+    if (index >= total - 1) { setPlaying(false); return undefined; }
+    const t = setInterval(() => onStep(1), 900 / speed);
+    return () => clearInterval(t);
+  }, [playing, speed, index, total, onStep]);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', border: '1px solid #f0dcd5', borderRadius: 10, background: '#fffcfa', flexWrap: 'wrap' }}>
+      <button
+        onClick={() => setPlaying((v) => (index >= total - 1 ? (onJump(0), true) : !v))}
+        title={playing ? 'Pause (space)' : 'Play the dry run'}
+        style={{ border: 'none', borderRadius: 999, background: playing ? '#8a6d3b' : '#e8604c', color: '#fff', padding: '5px 13px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>
+        {playing ? '⏸' : '▶ play'}
+      </button>
+      <button onClick={() => setSpeed((v) => (v === 1 ? 2 : v === 2 ? 0.5 : 1))} title="Playback speed"
+        style={{ ...btn(false), fontSize: 11.5 }}>{speed}×</button>
       <button style={btn(index === 0)} disabled={index === 0} onClick={() => onJump(0)} title="First step">⏮</button>
       <button style={btn(index === 0)} disabled={index === 0} onClick={() => onStep(-1)} title="Previous step (←)">◀</button>
       <input
