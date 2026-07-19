@@ -16,6 +16,7 @@ import { runCalcEvidence } from '../../orchestration/agents/authoring/evidence/c
 import { runTrainEvidence } from '../../orchestration/agents/authoring/evidence/train-evidence.js';
 import { runSimEvidence } from '../../orchestration/agents/authoring/evidence/sim-evidence.js';
 import { runSchedEvidence } from '../../orchestration/agents/authoring/evidence/sched-evidence.js';
+import { geneticsEvidence } from '../../orchestration/agents/authoring/evidence/genetics-evidence.js';
 import { runAgentChain as runAgentChainDefault } from '../../qwen/client.js';
 
 const numbersIn = (t) => (String(t ?? '').match(/\d+(?:[.,]\d+)?%?/g) ?? [])
@@ -120,7 +121,7 @@ export async function repairLessonPayload(payload, {
       } else {
         const world = await chain({
           agent: 'calc-evidence-designer',
-          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]${domain === 'os_arch' ? ', optionally "sched": {"processes": [{"id","arrival","burst"}], "policies": [{"policy": "fcfs"|"sjf"|"rr", "quantum"?}]} — REAL scheduler simulations; each policy\'s computed average waiting time becomes citable evidence (proves SJF beats FCFS by RUNNING both)' : ''}${domain === 'physics' ? ', optionally "sim": {"model": "kinematics_1d"|"projectile_2d", "params": {"v0","a"|"angleDeg","g","dt","steps"}, "record": [step ints]} — a REAL numeric motion simulation the engine integrates; its trajectory rows and summary (range, final velocity) become citable evidence' : ''}${domain === 'ml_ai' ? ', optionally "train": {"lr": number, "epochs": int, "record": [epoch ints]} — a REAL gradient-descent run (linear model, columns = x then y) the engine executes; its recorded losses and final w/b become citable evidence (use this when the lesson narrates loss curves or trained parameters)' : ''}} — HARD RULE: every dataset number must literally appear in the SOURCE below (the dataset IS the source's data); the formulas then DERIVE the teaching numbers by arithmetic. Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
+          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]${domain === 'biology' ? ', optionally "genetics": {"punnett": {"parent1","parent2","dominant"}, "hardyWeinberg": {"p"}} — REAL Punnett cross + Hardy-Weinberg computation; the genotype/phenotype ratios become citable evidence (proves 3:1 by counting the cross)' : ''}${domain === 'os_arch' ? ', optionally "sched": {"processes": [{"id","arrival","burst"}], "policies": [{"policy": "fcfs"|"sjf"|"rr", "quantum"?}]} — REAL scheduler simulations; each policy\'s computed average waiting time becomes citable evidence (proves SJF beats FCFS by RUNNING both)' : ''}${domain === 'physics' ? ', optionally "sim": {"model": "kinematics_1d"|"projectile_2d", "params": {"v0","a"|"angleDeg","g","dt","steps"}, "record": [step ints]} — a REAL numeric motion simulation the engine integrates; its trajectory rows and summary (range, final velocity) become citable evidence' : ''}${domain === 'ml_ai' ? ', optionally "train": {"lr": number, "epochs": int, "record": [epoch ints]} — a REAL gradient-descent run (linear model, columns = x then y) the engine executes; its recorded losses and final w/b become citable evidence (use this when the lesson narrates loss curves or trained parameters)' : ''}} — HARD RULE: every dataset number must literally appear in the SOURCE below (the dataset IS the source's data); the formulas then DERIVE the teaching numbers by arithmetic. Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
           user: `SOURCE:\n${sourceText.slice(0, 3000)}\n\nLESSON SCENES:\n${sceneTexts.slice(0, 2500)}\n\nUNSOURCED NUMBERS TO GROUND:\n${offending.slice(0, 1500)}`,
           maxTokens: 1400,
           temperature: 0.2,
@@ -155,6 +156,10 @@ export async function repairLessonPayload(payload, {
             spec = fixed?.json ?? fixed;
           }
         }
+        let genRows = [];
+        if (spec.genetics && domain === 'biology') {
+          try { genRows = geneticsEvidence(spec.genetics); } catch (e) { log(`  genetics run failed: ${String(e.message).slice(0, 80)}`); }
+        }
         let schedRows = [];
         if (spec.sched && domain === 'os_arch') {
           try {
@@ -185,10 +190,10 @@ export async function repairLessonPayload(payload, {
             ];
           } catch (e) { log(`  train run failed: ${String(e.message).slice(0, 80)}`); }
         }
-        evBlobStr = JSON.stringify([...cev.results.map((r) => [r.label, r.expr, r.value]), ...trainRows, ...simRows, ...schedRows]);
+        evBlobStr = JSON.stringify([...cev.results.map((r) => [r.label, r.expr, r.value]), ...trainRows, ...simRows, ...schedRows, ...genRows]);
         evContentObj = {
           title: 'Computed by executing the formulas (real arithmetic)',
-          rows: [...cev.results.map((r) => [r.label, r.expr, String(r.value)]), ...trainRows, ...simRows, ...schedRows],
+          rows: [...cev.results.map((r) => [r.label, r.expr, String(r.value)]), ...trainRows, ...simRows, ...schedRows, ...genRows],
           dataset: cev.dataset,
         };
         provenanceEngine = 'calc-evidence';
