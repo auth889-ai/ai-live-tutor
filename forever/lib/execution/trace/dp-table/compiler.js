@@ -83,6 +83,7 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
   }
   const informative = !(totalWrites >= 3 && distinctWritten.size < 2);
 
+  const provedByCell = new Map(); // write cell -> { rule, cells:[{p,v}] } — the recon graph
   for (const ev of snapshots) {
     const line = Number(ev.line);
     const writes = [];
@@ -132,14 +133,19 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
         const nums = vs.every((v) => typeof v === 'number') && typeof val === 'number';
         let rule = null;
         if (nums) {
-          if (vs.length === 1 && val === vs[0] + 1) rule = 'read + 1';
-          else if (vs.length >= 2 && val === vs.reduce((a, b) => a + b, 0)) rule = 'sum of reads';
-          else if (vs.length >= 2 && val === Math.max(...vs)) rule = 'max of reads';
-          else if (vs.length >= 2 && val === Math.min(...vs)) rule = 'min of reads';
-          else if (vs.length >= 2 && val === Math.min(...vs) + 1) rule = 'min of reads + 1';
-          else if (vs.length >= 2 && val === Math.max(...vs) + 1) rule = 'max of reads + 1';
+          // the same honesty rule as arrows: if MORE than one op reproduces the value from
+          // these reads (max(0,1) === 0+1), no op is named — the reads stay, the claim doesn't
+          const ops = [];
+          if (vs.length === 1 && val === vs[0] + 1) ops.push('read + 1');
+          if (vs.length >= 2 && val === vs.reduce((a, b) => a + b, 0)) ops.push('sum of reads');
+          if (vs.length >= 2 && val === Math.max(...vs)) ops.push('max of reads');
+          if (vs.length >= 2 && val === Math.min(...vs)) ops.push('min of reads');
+          if (vs.length >= 2 && val === Math.min(...vs) + 1) ops.push('min of reads + 1');
+          if (vs.length >= 2 && val === Math.max(...vs) + 1) ops.push('max of reads + 1');
+          if (ops.length === 1) rule = ops[0];
         }
         proved = { rule: rule ?? 'from read cells', reads: cells.map((c) => c.p) };
+        provedByCell.set(`${wr},${wc}`, { rule: proved.rule, cells });
       }
     } else if (informative && writes.length === 1) {
       const [r, c] = writes[0];
@@ -222,6 +228,49 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
       variables: {},
     });
   }
+  // RECONSTRUCTION (the reference mockup's final episode), fully dynamic: walk BACKWARD from
+  // the last-written cell along the PROVED read edges of THIS run — no problem knowledge,
+  // no direction assumptions. A '+' rule marks a contributing cell; a max/min rule follows
+  // the donor whose recorded value equals the cell's value.
+  if (directReads && lastWrite && provedByCell.size >= 3) {
+    let cur = [lastWrite[0], lastWrite[1]];
+    const hops = [];
+    const seenCells = new Set();
+    while (cur && provedByCell.has(`${cur[0]},${cur[1]}`) && hops.length < rows + cols + 4 && !seenCells.has(`${cur[0]},${cur[1]}`)) {
+      seenCells.add(`${cur[0]},${cur[1]}`);
+      const proof = provedByCell.get(`${cur[0]},${cur[1]}`);
+      const val = known.get(`${cur[0]},${cur[1]}`);
+      const donor = proof.cells.length === 1
+        ? proof.cells[0]
+        : (proof.cells.find((x) => x.v === val) ?? proof.cells[0]);
+      const contributes = proof.rule === 'read + 1' || proof.rule === 'sum of reads';
+      hops.push({ cur: [...cur], next: donor.p, rule: proof.rule, val, contributes });
+      cur = [...donor.p];
+    }
+    if (hops.length >= 2) {
+      const contributing = hops.filter((h) => h.contributes).length;
+      for (const h of hops) {
+        const st = snap({
+          line: snapshots.at(-1)?.line ?? 1,
+          explanation: h.contributes
+            ? `Reconstruction: dp[${h.cur[0]}][${h.cur[1]}] = ${JSON.stringify(h.val)} was PROVED as ${h.rule} from dp[${h.next[0]}][${h.next[1]}] — this cell CONTRIBUTES to the answer. We step back along that recorded read.`
+            : `Reconstruction: dp[${h.cur[0]}][${h.cur[1]}] = ${JSON.stringify(h.val)} came by ${h.rule} — its value was carried from dp[${h.next[0]}][${h.next[1]}] (recorded read), not created here. Step back.`,
+          writes: [],
+          current: h.cur,
+          variables: {},
+        });
+        st.array2d.highlight = [h.next];
+        st.array2d.rule = 'reconstruction';
+        steps.push(st);
+      }
+      steps.push(snap({
+        line: snapshots.at(-1)?.line ?? 1,
+        explanation: `Answer path complete: ${hops.length} hops walked backward, ${contributing} contributing cells — every single hop follows a read this run actually recorded, so the path cannot be invented.`,
+        writes: [], current: null, variables: {},
+      }));
+    }
+  }
+
   const answer = lastWrite ? { r: lastWrite[0], c: lastWrite[1], value: known.get(`${lastWrite[0]},${lastWrite[1]}`) } : { r: null, c: null, value: undefined };
   steps.push(snap({
     line: steps[steps.length - 1].line,
