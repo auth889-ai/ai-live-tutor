@@ -446,6 +446,37 @@ export async function repairLessonPayload(payload, {
     } catch (e) { log(`  quote fix failed: ${String(e.message).slice(0, 100)}`); }
   }
 
+  // ---- FIX 6: malformed EARS requirements (srs) -> rewritten to the Mavin template ----
+  const earsViol = before.violations.filter((v) => v.rule === 'ears-malformed');
+  if (earsViol.length) {
+    try {
+      const items = earsViol.map((v) => `${v.sceneId}: ${v.detail}`).join('\n').slice(0, 2500);
+      const rewrite = await chain({
+        agent: 'ears-fixer',
+        system: `Rewrite each requirement into EARS syntax (Mavin): "While <precondition>, when <trigger>, the <system> shall <single testable response>". Exactly one "shall" per requirement; conditional requirements put a comma before "the <system> shall". Return ONLY JSON {"rewrites": [{"sceneId": string, "voiceLineId": string|null, "objectId": string|null, "find": string (the exact bad requirement substring), "replace": string (EARS form)}]}. Keep the meaning; only fix the form.`,
+        user: `MALFORMED REQUIREMENTS:\n${items}`,
+        maxTokens: 1400,
+        temperature: 0.2,
+      });
+      const { checkEarsRequirement } = await import('./ears-check.js');
+      for (const r of (rewrite?.json ?? rewrite)?.rewrites ?? []) {
+        if (!r.replace || !checkEarsRequirement(r.replace).ok) continue; // fix must itself be valid EARS
+        const sc = payload.scenes.find((x) => x.sceneId === r.sceneId);
+        if (!sc) continue;
+        if (r.voiceLineId) {
+          const vl = sc.voiceLines?.find((l) => l.id === r.voiceLineId);
+          if (vl && r.find && vl.text.includes(r.find)) vl.text = vl.text.replace(r.find, r.replace);
+        } else if (r.objectId) {
+          const o = sc.objects?.find((x) => x.id === r.objectId);
+          if (o && r.find) { try { o.content = JSON.parse(JSON.stringify(o.content).replace(r.find, r.replace)); } catch { /* leave */ } }
+        } else {
+          // no target: replace across the scene's voice lines
+          for (const vl of sc.voiceLines ?? []) if (r.find && vl.text.includes(r.find)) vl.text = vl.text.replace(r.find, r.replace);
+        }
+      }
+    } catch (e) { log(`  EARS fix failed: ${String(e.message).slice(0, 100)}`); }
+  }
+
   const after = gateLesson(payload, { sourceText, domain });
   return { before, after, changed: after.violations.length < before.violations.length };
 }

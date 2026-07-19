@@ -7,6 +7,8 @@
 //
 // Pure functions only: lesson payload in, verdict out. No model, no I/O.
 
+import { earsViolations } from './ears-check.js';
+
 const WORD_CAP_PER_LINE = 60;          // TeachLM lint: a spoken line stays speakable
 const MAX_QUESTIONS_PER_CHECKIN = 2;   // more reads as a quiz wall, not a check-in
 
@@ -178,6 +180,9 @@ export function gateLesson(payload, { sourceText = '', requiredBeats = REQUIRED_
       }
     }
   }
+
+  // SRS domain: every requirement must be well-formed EARS (Mavin syntax)
+  violations.push(...earsViolations(payload, { domain }));
 
   return { ok: violations.length === 0, violations };
 }
