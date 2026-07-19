@@ -9,14 +9,17 @@
 const BASE = 'https://www.courtlistener.com/api/rest/v4/search/';
 
 // Search real opinions. Returns [{ caseName, court, date, citation, url }] — real records only.
-export async function searchCases(query, { fetchImpl = fetch, rows = 3, timeoutMs = 10000 } = {}) {
+export async function searchCases(query, { fetchImpl = fetch, rows = 3, timeoutMs = 10000, env = process.env } = {}) {
   const q = String(query ?? '').trim();
   if (!q) return [];
   const params = new URLSearchParams({ q, type: 'o', order_by: 'score desc' });
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-    const res = await fetchImpl(`${BASE}?${params.toString()}`, { signal: ctrl.signal, headers: { Accept: 'application/json' } });
+    // token is OPTIONAL — search works keyless; a token only raises rate limits.
+    const headers = { Accept: 'application/json' };
+    if (env.COURTLISTENER_API_TOKEN) headers.Authorization = `Token ${env.COURTLISTENER_API_TOKEN}`;
+    const res = await fetchImpl(`${BASE}?${params.toString()}`, { signal: ctrl.signal, headers });
     clearTimeout(timer);
     if (!res.ok) return [];
     const json = await res.json();
