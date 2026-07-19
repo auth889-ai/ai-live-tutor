@@ -73,6 +73,22 @@ class _InstrReads(_ast_mod.NodeTransformer):
 
     def visit_Call(self, node):
         self.generic_visit(node)
+        # collection methods on a simple name: q.append(x), q.popleft(), seen.add(x)
+        if (isinstance(node.func, _ast_mod.Attribute) and isinstance(node.func.value, _ast_mod.Name)
+                and node.func.attr in _COLL_ATTRS_AST and not node.keywords
+                and not any(isinstance(a, _ast_mod.Starred) for a in node.args)):
+            base = node.func.value
+            return _ast_mod.copy_location(_ast_mod.Call(
+                func=_ast_mod.Name(id='__tr_meth__', ctx=_ast_mod.Load()),
+                args=[_ast_mod.Constant(value=base.id), _ast_mod.Constant(value=node.func.attr),
+                      _ast_mod.Name(id=base.id, ctx=_ast_mod.Load())] + node.args, keywords=[]), node)
+        # heapq.heappush(pq, v) / heappop(pq) — module-attr or from-import name
+        fname = node.func.attr if (isinstance(node.func, _ast_mod.Attribute) and isinstance(node.func.value, _ast_mod.Name) and node.func.value.id == 'heapq') else (node.func.id if isinstance(node.func, _ast_mod.Name) else None)
+        if fname in ('heappush', 'heappop') and node.args and isinstance(node.args[0], _ast_mod.Name) and not node.keywords:
+            return _ast_mod.copy_location(_ast_mod.Call(
+                func=_ast_mod.Name(id='__tr_heap__', ctx=_ast_mod.Load()),
+                args=[_ast_mod.Constant(value=fname), _ast_mod.Constant(value=node.args[0].id),
+                      _ast_mod.Name(id=node.args[0].id, ctx=_ast_mod.Load())] + node.args[1:], keywords=[]), node)
         if (isinstance(node.func, _ast_mod.Name) and node.func.id in ('max', 'min')
                 and len(node.args) >= 2 and not node.keywords
                 and not any(isinstance(a, _ast_mod.Starred) for a in node.args)):
@@ -136,6 +152,43 @@ def __tr_minmax__(fname, *args):
     except Exception:
         pass
     return r
+
+_collops = []
+_COLL_ATTRS = ('append', 'appendleft', 'pop', 'popleft', 'add', 'remove', 'discard')
+_COLL_ATTRS_AST = _COLL_ATTRS
+
+def __tr_meth__(name, attr, obj, *args):
+    # COLLECTION OP event: q.popleft() / q.append(x) / seen.add(x) recorded as the operation
+    # it is — queue/heap/set semantics become facts, not snapshot reconstructions.
+    ret = getattr(obj, attr)(*args)
+    try:
+        if len(_collops) < 4000:
+            _seq[0] += 1
+            ev = {'i': len(_events), 'q': _seq[0], 'n': name, 'op': attr}
+            if args:
+                ev['arg'] = _safe(args[0])
+            if ret is not None:
+                ev['ret'] = _safe(ret)
+            _collops.append(ev)
+    except Exception:
+        pass
+    return ret
+
+def __tr_heap__(kind, name, heap, *args):
+    import heapq as _hq
+    ret = _hq.heappush(heap, args[0]) if kind == 'heappush' else _hq.heappop(heap)
+    try:
+        if len(_collops) < 4000:
+            _seq[0] += 1
+            ev = {'i': len(_events), 'q': _seq[0], 'n': name, 'op': kind}
+            if args:
+                ev['arg'] = _safe(args[0])
+            if kind == 'heappop':
+                ev['ret'] = _safe(ret)
+            _collops.append(ev)
+    except Exception:
+        pass
+    return ret
 
 def __tr_begin__():
     return (len(_reads), len(_ops))
