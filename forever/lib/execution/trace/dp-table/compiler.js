@@ -165,7 +165,7 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
 
     const parts = [];
     for (const [r, c, old] of writes.slice(0, 2)) {
-      parts.push(narrateWrite({ r, c, value: known.get(`${r},${c}`), old, isBase: r === 0 || c === 0 }));
+      parts.push(narrateWrite({ r, c, value: known.get(`${r},${c}`), old, isBase: r === 0 || c === 0, proved: Boolean(proved) }));
     }
     if (writes.length > 2) parts.push(narrateBatch({ count: writes.length - 2 }));
     for (const [r, c] of writes) filled.push([r, c]);

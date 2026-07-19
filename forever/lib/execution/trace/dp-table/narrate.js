@@ -11,12 +11,18 @@ export function narrateInit({ rows, cols }) {
   return `The table is created: ${rows} row${rows === 1 ? '' : 's'} × ${cols} column${cols === 1 ? '' : 's'}, seeded with its starting values. These are not answers yet — they are the scaffold the real answers will be built on.`;
 }
 
-export function narrateWrite({ r, c, value, old, isBase }) {
+export function narrateWrite({ r, c, value, old, isBase , proved = false }) {
   if (isBase) {
     return `Base case: dp[${r}][${c}] is set to ${JSON.stringify(value)}. Row 0 and column 0 are the "empty problem" answers — they cost nothing to know, and every harder cell will lean on them.`;
   }
   const was = old !== undefined && old !== null ? ` (it was ${JSON.stringify(old)})` : '';
-  return `dp[${r}][${c}] becomes ${JSON.stringify(value)}${was} — computed from already-filled neighbours, never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.`;
+  // VERIFIED-TEMPLATES LAW (external review #2, reproduced 2026-07-20): 'computed from
+  // neighbours' may only be said when neighbour reads were RECORDED — a constant write
+  // (dp[i][j] = 1) uses no neighbours, and saying otherwise is a false explanation.
+  if (!proved) {
+    return `dp[${r}][${c}] becomes ${JSON.stringify(value)}${was}. No reads of other cells were recorded for this write — the value was assigned directly. Watch WHERE the filled region grows: the order tells you how the loop sweeps the table.`;
+  }
+  return `dp[${r}][${c}] becomes ${JSON.stringify(value)}${was} — computed from already-filled neighbours (the recorded reads light up), never from the future. Watch WHERE the filled region grows: the order is not decoration, it is the guarantee that everything a cell needs exists before the cell does.`;
 }
 
 export function narrateBatch({ count }) {

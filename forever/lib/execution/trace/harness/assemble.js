@@ -59,9 +59,15 @@ export function buildTracedProgram({ constants = {}, trackerPy, code, entry, mar
     '    return v',
     '',
     `_src = ${JSON.stringify(String(code))}`,
+    // LC submission shape: typing names used in annotations (nums: List[int]) raise
+    // NameError at def-time unless present — inject the standard set into the namespace
+    'import typing as _typing_mod',
     `_maybe_tree = _INSTRUMENT(_src) if '_INSTRUMENT' in globals() else _src`,
     `_compiled = compile(_maybe_tree, '<student>', 'exec')`,
     "_ns = {'__tr_read__': globals()['__tr_read__']} if '__tr_read__' in globals() else {}",
+    "for _tn in ('List', 'Optional', 'Dict', 'Tuple', 'Set', 'Union', 'Deque', 'Any', 'DefaultDict', 'Counter', 'FrozenSet', 'Iterator', 'Callable'):",
+    '    if hasattr(_typing_mod, _tn):',
+    '        _ns.setdefault(_tn, getattr(_typing_mod, _tn))',
     'exec(_compiled, _ns)',
     'sys.settrace(_tracer)',
     'try:',
