@@ -75,6 +75,34 @@ test('the REAL stored Kid-Shop scene shape passes structural parsing (schema fid
       { id: 'act_point_title', kind: 'point', startMs: 0, durationMs: 600, targetObjectId: 'title' },
       { id: 'act_speak', kind: 'speech', startMs: 200, durationMs: 6460, voiceLineId: 'title_1' }] },
   }, goodScene('s2', 'misconception'), goodScene('s3', 'checkpoint'), goodScene('s4', 'recap')] };
-  const r = gateLesson(real, { sourceText: 'ETL sync at 6:00 AM two-database' });
+  const r = gateLesson(real, { sourceText: 'ETL sync at 6:00 AM two-database joins drop from 3 to 0 with 45 opcodes' });
   assert.equal(r.ok, true, JSON.stringify(r.violations));
+});
+
+test('board laundering is caught: an invented number on an AI-drawn diagram cannot vouch for itself', () => {
+  const laundered = { scenes: [
+    goodScene('s1', 'worked_example', {
+      objects: [
+        { id: 'main', objectType: 'display', renderHint: 'list', content: 'joins drop from 3 to 0 with 45 opcodes' },
+        { id: 'fake_graph', objectType: 'diagram', renderHint: 'diagram', content: { nodes: [{ label: 'demand 2200', x: 140, y: 90 }] }, sourceRef: { chunkId: 'chunk_1' } },
+      ],
+      voiceLines: [
+        { id: 's1_v1', text: 'Watch the join count drop from 3 to 0 here.', targetObjectId: 'main' },
+        { id: 's1_v2', text: 'Demand jumps to 2200 cups.', targetObjectId: 'fake_graph' },
+      ],
+    }),
+    goodScene('s2', 'misconception'), goodScene('s3', 'checkpoint'), goodScene('s4', 'recap'),
+  ] };
+  const r = gateLesson(laundered, { sourceText: 'joins drop from 3 to 0 with 45 opcodes' });
+  assert.equal(r.ok, false);
+  assert.ok(r.violations.some((v) => v.rule === 'board-number-unsourced' && v.detail.includes('2200')));
+  // layout coordinates (numeric-typed x/y) are NOT flagged
+  assert.ok(!r.violations.some((v) => v.detail.includes('"140"') || v.detail.includes('"90"')));
+
+  // the SAME number vouched by an EXECUTED evidence object passes
+  const proven = JSON.parse(JSON.stringify(laundered));
+  proven.scenes[0].objects.push({ id: 'computed_evidence', objectType: 'computed evidence table', renderHint: 'table', content: { rows: [['demand after shift', '1600 + 600', '2200']] }, sourceRef: { engine: 'calc-evidence', provenance: 'executed' } });
+  proven.scenes[0].voiceLines.push({ id: 's1_v3', text: 'Measured, not guessed.', targetObjectId: 'computed_evidence' });
+  const r2 = gateLesson(proven, { sourceText: 'joins drop from 3 to 0 with 45 opcodes' });
+  assert.ok(!r2.violations.some((v) => v.rule === 'board-number-unsourced'), JSON.stringify(r2.violations));
 });

@@ -30,7 +30,7 @@ for (const lessonId of lessonIds) {
   console.log(`[repair] ${String(doc.title).slice(0, 50)} | ${pre.violations.length} violations (${numViol.length} unsourced numbers, misconception missing: ${beatViol.length > 0})`);
 
   const { before, after, changed } = await repairLessonPayload(payload, {
-    sourceText, domain: 'data_db', lessonTitle: doc.title,
+    sourceText, domain: doc.payload?.domain ?? 'data_db', lessonTitle: doc.title,
   });
   if (changed) {
     await col.updateOne({ _id: lessonId }, { $set: { payload, voiced: false } });

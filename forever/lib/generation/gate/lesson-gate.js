@@ -21,9 +21,27 @@ export const ROLE_ALIASES = {
 };
 
 const words = (t) => String(t ?? '').trim().split(/\s+/).filter(Boolean);
-const numbersIn = (t) => (String(t ?? '').match(/\d+(?:[.,]\d+)?%?/g) ?? [])
-  .map((n) => n.replace(/,/g, ''))
+const numbersIn = (t) => (String(t ?? '').match(/\d[\d,]*(?:\.\d+)?%?/g) ?? [])
+  .flatMap((n) => (/^\d{1,3}(?:,\d{3})+(?:\.\d+)?%?$/.test(n)
+    ? [n.replace(/,/g, '')]        // true thousands separator: 10,000 -> 10000
+    : n.split(',').filter(Boolean) // coordinate pair "140,1600" -> two claims, not 1401600
+  ))
   .filter((n) => n.replace(/[%.]/g, '').length >= 2); // single digits narrate freely ("two tables")
+
+// CLAIM numbers inside board content: numbers living in STRING values (labels, cells, prose)
+// are teaching claims; numeric-typed values (x, y, startMs, sizes) are layout, not claims.
+export const claimNumbersIn = (content) => {
+  const found = [];
+  const walk = (v) => {
+    if (typeof v === 'string') found.push(...numbersIn(v));
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === 'object') Object.values(v).forEach(walk);
+  };
+  walk(content);
+  // leading-zero runs ("0003", the "00" of 6:00, hex-color fragments) are ids/formatting,
+  // never taught figures — a real claim number starts with 1-9 or is a 0.x decimal
+  return found.filter((n) => n[0] !== '0' || n[1] === '.');
+};
 
 export function gateLesson(payload, { sourceText = '', requiredBeats = REQUIRED_BEATS } = {}) {
   const violations = [];
@@ -46,6 +64,23 @@ export function gateLesson(payload, { sourceText = '', requiredBeats = REQUIRED_
     const objIds = new Set(objects.map((o) => o.id));
     const voiceLines = scene.voiceLines ?? [];
     const evidenceText = JSON.stringify(objects.map((o) => o.content ?? '')).replace(/,/g, ' ');
+    // ONLY engine-executed objects may vouch for numbers the source doesn't contain —
+    // otherwise the writer can launder an invented figure through its own diagram
+    // (observed live: "demand jumps from 1800 to 2200" backed by an AI-drawn graph).
+    const executedText = JSON.stringify(
+      objects.filter((o) => o.sourceRef?.provenance === 'executed').map((o) => o.content ?? ''),
+    ).replace(/,/g, ' ');
+
+    // board honesty: every claim number ON the board must itself trace to source or an
+    // executed-evidence object in this scene
+    for (const o of objects) {
+      if (o.decorative || o.sourceRef?.provenance === 'executed') continue;
+      for (const num of new Set(claimNumbersIn(o.content))) {
+        if (!source.includes(num) && !executedText.includes(num)) {
+          violations.push({ sceneId: sid, rule: 'board-number-unsourced', detail: `object "${o.id}" shows "${num}" which appears in neither source nor executed evidence` });
+        }
+      }
+    }
 
     // the known empty-board bug: a scene that talks over nothing
     if (objects.filter((o) => !o.decorative).length === 0) {

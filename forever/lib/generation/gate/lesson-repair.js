@@ -10,7 +10,7 @@
 // Mutates payload.scenes in place; returns both gate verdicts so callers decide what to keep.
 // Repair NEVER throws past its fixes: a failed fix logs and leaves the payload as it was.
 
-import { gateLesson } from './lesson-gate.js';
+import { gateLesson, claimNumbersIn } from './lesson-gate.js';
 import { runSqlEvidence } from '../../orchestration/agents/authoring/evidence/sql-evidence.js';
 import { runCalcEvidence } from '../../orchestration/agents/authoring/evidence/calc-evidence.js';
 import { runAgentChain as runAgentChainDefault } from '../../qwen/client.js';
@@ -51,7 +51,7 @@ export async function repairLessonPayload(payload, {
   const chain = agents.runAgentChain ?? runAgentChainDefault;
   const before = gateLesson(payload, { sourceText });
   if (before.ok) return { before, after: before, changed: false };
-  const numViol = before.violations.filter((v) => v.rule === 'number-unsourced');
+  const numViol = before.violations.filter((v) => v.rule === 'number-unsourced' || v.rule === 'board-number-unsourced');
   const beatViol = before.violations.filter((v) => v.rule === 'beat-missing' && /misconception/.test(v.detail));
 
   // ---- FIX 1: unsourced numbers -> EXECUTED evidence ----
@@ -70,7 +70,16 @@ export async function repairLessonPayload(payload, {
           }
         }
       }
-      const offending = offenders.map((o) => `${o.sceneId}/${o.voiceLineId}: number ${o.number} in: ${o.text.slice(0, 120)}`).join('\n');
+      for (const sc of payload.scenes) {
+        const execT = JSON.stringify((sc.objects ?? []).filter((o) => o.sourceRef?.provenance === 'executed').map((o) => o.content ?? '')).replace(/,/g, ' ');
+        for (const o of sc.objects ?? []) {
+          if (o.decorative || o.sourceRef?.provenance === 'executed') continue;
+          for (const n of new Set(claimNumbersIn(o.content))) {
+            if (!srcNoCommas.includes(n) && !execT.includes(n)) offenders.push({ sceneId: sc.sceneId, objectId: o.id, number: n, text: `board object ${o.id}` });
+          }
+        }
+      }
+      const offending = offenders.map((o) => `${o.sceneId}/${o.voiceLineId ?? o.objectId}: number ${o.number} in: ${String(o.text).slice(0, 120)}`).join('\n');
       const sceneTexts = payload.scenes.map((s) => `[${s.sceneId}] ${(s.voiceLines ?? []).map((l) => l.text).join(' ')}`).join('\n').slice(0, 6000);
 
       let evBlobStr = null;   // what the rewriter cites and the verifier checks against
@@ -108,8 +117,8 @@ export async function repairLessonPayload(payload, {
       } else {
         const world = await chain({
           agent: 'calc-evidence-designer',
-          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]} — the formulas' VALUES must equal the teaching numbers the lesson narrates (or the closest defensible values). Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
-          user: `LESSON SCENES:\n${sceneTexts}\n\nUNSOURCED NUMBERS TO GROUND:\n${offending.slice(0, 1500)}`,
+          system: `You design the tiny dataset and formulas that PROVE this ${domain ?? ''} lesson's narrated numbers by real arithmetic. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id": string, "label": string (name the real-world meaning), "expr": string (a Python expression over the columns-as-lists and earlier formula ids)}]} — HARD RULE: every dataset number must literally appear in the SOURCE below (the dataset IS the source's data); the formulas then DERIVE the teaching numbers by arithmetic. Max 10 formulas, dataset <= 12 rows. Only arithmetic and sum/min/max/len/round/abs — no imports.`,
+          user: `SOURCE:\n${sourceText.slice(0, 3000)}\n\nLESSON SCENES:\n${sceneTexts.slice(0, 2500)}\n\nUNSOURCED NUMBERS TO GROUND:\n${offending.slice(0, 1500)}`,
           maxTokens: 1400,
           temperature: 0.2,
         });
@@ -117,6 +126,12 @@ export async function repairLessonPayload(payload, {
         let cev = null;
         for (let attempt = 0; attempt < 3; attempt += 1) {
           try {
+            // anti-laundering: the dataset may contain ONLY numbers the source contains —
+            // an invented seed would let the engine "prove" whatever the writer made up
+            const srcNC2 = sourceText.replace(/,/g, '');
+            const seedNums = (spec.dataset?.rows ?? []).flat().map((x) => String(x)).filter((x) => x.replace(/[-.%]/g, '').length >= 2);
+            const invented = seedNums.filter((x) => !srcNC2.includes(x.replace(/^-/, '')));
+            if (invented.length) throw new Error(`dataset invents numbers not present in the source: ${invented.slice(0, 8).join(', ')} — use ONLY the source's own figures as data`);
             cev = runCalcEvidence({ dataset: spec.dataset, formulas: spec.formulas });
             break;
           } catch (calcErr) {
@@ -140,10 +155,41 @@ export async function repairLessonPayload(payload, {
         provenanceEngine = 'calc-evidence';
       }
 
+      // the evidence table lands on EVERY affected scene: the gate (and the student's eyes)
+      // are scene-scoped — a number's proof must be on the board WHILE it is spoken.
+      const affected = payload.scenes.filter((s) => numViol.some((v) => v.sceneId === s.sceneId));
+      for (const sc of affected) {
+        const objId = 'computed_evidence';
+        const existing = sc.objects.find((o) => o.id === objId);
+        if (existing) {
+          // MERGE, never overwrite: earlier rounds' evidence still vouches for lines already
+          // repaired — replacing it wholesale un-sources them and the gate count regresses
+          const oldC = existing.content ?? {};
+          const rows = [...(oldC.rows ?? []), ...(evContentObj.rows ?? [])];
+          existing.content = {
+            ...oldC,
+            ...evContentObj,
+            rows: rows.filter((r, i) => rows.findIndex((x) => JSON.stringify(x) === JSON.stringify(r)) === i),
+            ...((oldC.results || evContentObj.results) ? { results: { ...(oldC.results ?? {}), ...(evContentObj.results ?? {}) } } : {}),
+          };
+        } else {
+          sc.objects.push({
+            id: objId, objectType: 'computed evidence table', renderHint: 'table', region: 'notebook_area',
+            content: evContentObj,
+            sourceRef: { engine: provenanceEngine, provenance: 'executed' },
+          });
+          sc.voiceLines.push({ id: 'computed_evidence_v', text: 'Every number here was measured by actually running the computation — nothing is estimated.', targetObjectId: objId });
+          sc.timeline?.actions?.push({ id: 'act_evidence', kind: 'point', startMs: 0, durationMs: 600, targetObjectId: objId });
+        }
+      }
+
+      // voice rewrites verify like the GATE does: source + the scene's whole board — the
+      // board itself is held honest by the board-number-unsourced rule, so it may vouch
+      const sceneBoard = (sc) => JSON.stringify((sc?.objects ?? []).map((x) => x.content ?? '')).replace(/,/g, ' ');
       const rewrite = await chain({
         agent: 'db-evidence-rewriter',
-        system: `You rewrite narration lines so every number cites the EXECUTED evidence. Return ONLY JSON {"rewrites": [{"sceneId": string, "voiceLineId": string, "newText": string}]} — same meaning, same length feel, but every figure must literally appear in the evidence. Rewrite ONLY the listed lines.`,
-        user: `EXECUTED EVIDENCE:\n${evBlobStr.slice(0, 3000)}\n\nLINES TO REWRITE (sceneId/voiceLineId: offending number: current text):\n${offending.slice(0, 2500)}`,
+        system: `You rewrite narration lines so every number cites the EXECUTED evidence. Return ONLY JSON {"rewrites": [{"sceneId": string, "voiceLineId": string, "newText": string}]} — same meaning, same length feel, but every figure must literally appear in the evidence or board content provided. THE LISTED NUMBER IN EACH LINE IS WRONG OR UNPROVEN: never keep it — find the CORRECT value in the evidence/board (e.g. the line says 2200 but the verified board shows the shifted demand at that price is 2000 -> write 2000). Rewrite ONLY the listed lines.`,
+        user: `EXECUTED EVIDENCE:\n${evBlobStr.slice(0, 2200)}\n\nBOARD CONTENT ALREADY ON THE AFFECTED SCENES (numbers here are verified — you may cite them):\n${affected.map((sc) => sceneBoard(sc)).join(' ').slice(0, 1500)}\n\nLINES TO REWRITE (sceneId/voiceLineId: offending number: current text):\n${offending.slice(0, 2200)}`,
         maxTokens: 1200,
         temperature: 0.2,
       });
@@ -155,7 +201,8 @@ export async function repairLessonPayload(payload, {
         if (!scene || !line) continue;
         // deterministic re-verify: every >=2-digit number in the new text must be in evidence
         const nums = numbersIn(r.newText);
-        const missing = nums.filter((n) => !evText.includes(n) && !srcNoCommas.includes(n));
+        const evScene = evText + ' ' + sceneBoard(scene);
+        const missing = nums.filter((n) => !evScene.includes(n) && !srcNoCommas.includes(n));
         if (!missing.length) line.text = r.newText;
         else if (env.REPAIR_DEBUG === '1') log(`  [debug] rewrite ${r.sceneId}/${r.voiceLineId} REJECTED — not in evidence: ${missing.join(', ')} | new: ${String(r.newText).slice(0, 110)}`);
       }
@@ -163,22 +210,66 @@ export async function repairLessonPayload(payload, {
         log(`  [debug] rewrites returned: ${rw.length} for offenders: ${offenders.length}`);
         log(`  [debug] evidence: ${evBlobStr.slice(0, 700)}`);
       }
-      // the evidence table lands on EVERY affected scene: the gate (and the student's eyes)
-      // are scene-scoped — a number's proof must be on the board WHILE it is spoken.
-      const affected = payload.scenes.filter((s) => numViol.some((v) => v.sceneId === s.sceneId));
-      for (const sc of affected) {
-        const objId = 'computed_evidence';
-        const existing = sc.objects.find((o) => o.id === objId);
-        if (existing) {
-          existing.content = evContentObj;
-        } else {
-          sc.objects.push({
-            id: objId, objectType: 'computed evidence table', renderHint: 'table', region: 'notebook_area',
-            content: evContentObj,
-            sourceRef: { engine: provenanceEngine, provenance: 'executed' },
-          });
-          sc.voiceLines.push({ id: 'computed_evidence_v', text: 'Every number here was measured by actually running the computation — nothing is estimated.', targetObjectId: objId });
-          sc.timeline?.actions?.push({ id: 'act_evidence', kind: 'point', startMs: 0, durationMs: 600, targetObjectId: objId });
+      // board objects whose claim numbers STILL lack proof get their content corrected to
+      // the sourced/executed values — the diagram must tell the same truth the engine does
+      for (const sc of payload.scenes) {
+        const execT = JSON.stringify((sc.objects ?? []).filter((o) => o.sourceRef?.provenance === 'executed').map((o) => o.content ?? '')).replace(/,/g, ' ');
+        for (const o of sc.objects ?? []) {
+          if (o.decorative || o.sourceRef?.provenance === 'executed') continue;
+          const bad = [...new Set(claimNumbersIn(o.content))].filter((n) => !sourceText.replace(/,/g, '').includes(n) && !execT.includes(n));
+          if (!bad.length) continue;
+          try {
+            const fixedObj = await chain({
+              agent: 'board-content-fixer',
+              system: `A board object shows numbers that are neither in the source nor in the executed evidence: ${bad.join(', ')}. Return ONLY the corrected content JSON (same structure, same keys) with every wrong number replaced by the correct value from the SOURCE or EVIDENCE below. Change numbers only, keep all layout keys (x, y, sizes) exactly.`,
+              user: `OBJECT CONTENT:\n${JSON.stringify(o.content).slice(0, 2000)}\n\nSOURCE EXCERPT:\n${sourceText.slice(0, 2500)}\n\nEXECUTED EVIDENCE:\n${execT.slice(0, 1500)}`,
+              maxTokens: 1500,
+              temperature: 0.2,
+            });
+            const newContent = fixedObj?.json ?? fixedObj;
+            if (newContent) {
+              const srcNC3 = sourceText.replace(/,/g, '');
+              let execNow = execT;
+              let still = [...new Set(claimNumbersIn(newContent))].filter((n) => !srcNC3.includes(n) && !execNow.includes(n));
+              if (still.length) {
+                // ground-the-proposal: the fixer's numbers are often DERIVABLE (2800 = 2400
+                // + the source's 400 shift) — ask the calc engine to derive exactly them
+                // from source figures; only a real execution can admit them
+                const supp = await chain({
+                  agent: 'calc-evidence-designer',
+                  system: `Derive the TARGET NUMBERS below by arithmetic from figures that appear in the SOURCE. Return ONLY JSON {"dataset": {"columns": [string], "rows": [[number]]}, "formulas": [{"id", "label", "expr"}]} — HARD RULE: every dataset number must literally appear in the SOURCE; each formula value must equal one target number. Plain arithmetic only.`,
+                  user: `TARGET NUMBERS: ${still.join(', ')}\n\nSOURCE:\n${sourceText.slice(0, 3000)}`,
+                  maxTokens: 1000,
+                  temperature: 0.2,
+                });
+                const sp = supp?.json ?? supp;
+                const seeds = (sp?.dataset?.rows ?? []).flat().map((x) => String(x)).filter((x) => x.replace(/[-.%]/g, '').length >= 2);
+                if (sp && !seeds.some((x) => !srcNC3.includes(x.replace(/^-/, '')))) {
+                  try {
+                    const cev2 = runCalcEvidence({ dataset: sp.dataset, formulas: sp.formulas });
+                    const addRows = cev2.results.map((r) => [r.label, r.expr, String(r.value)]);
+                    let evObj = sc.objects.find((x) => x.id === 'computed_evidence');
+                    if (evObj) {
+                      evObj.content = { ...evObj.content, rows: [...(evObj.content?.rows ?? []), ...addRows] };
+                    } else {
+                      evObj = {
+                        id: 'computed_evidence', objectType: 'computed evidence table', renderHint: 'table', region: 'notebook_area',
+                        content: { title: 'Computed by executing the formulas (real arithmetic)', rows: addRows, dataset: cev2.dataset },
+                        sourceRef: { engine: 'calc-evidence', provenance: 'executed' },
+                      };
+                      sc.objects.push(evObj);
+                      sc.voiceLines.push({ id: 'computed_evidence_v', text: 'Every number here was measured by actually running the computation — nothing is estimated.', targetObjectId: 'computed_evidence' });
+                      sc.timeline?.actions?.push({ id: 'act_evidence', kind: 'point', startMs: 0, durationMs: 600, targetObjectId: 'computed_evidence' });
+                    }
+                    execNow = JSON.stringify((sc.objects ?? []).filter((x) => x.sourceRef?.provenance === 'executed').map((x) => x.content ?? '')).replace(/,/g, ' ');
+                    still = [...new Set(claimNumbersIn(newContent))].filter((n) => !srcNC3.includes(n) && !execNow.includes(n));
+                  } catch { /* derivation failed — proposal stays rejected */ }
+                }
+              }
+              if (!still.length) o.content = newContent;
+              else if (env.REPAIR_DEBUG === '1') log(`  [debug] board fix ${sc.sceneId}/${o.id} rejected, still unsourced: ${still.join(', ')}`);
+            }
+          } catch (e) { log(`  board fix failed on ${o.id}: ${String(e.message).slice(0, 80)}`); }
         }
       }
     } catch (e) { log(`  evidence fix failed: ${String(e.message).slice(0, 100)}`); }
