@@ -161,6 +161,10 @@ export function detectDpTable(recording, ctx = {}) {
     for (let i = 1; i < writes.length; i += 1) if (writes[i] >= writes[i - 1]) ordered += 1;
     // EVIDENCE OUTRANKS SHAPE: with 3+ proved same-table dependencies the sweep-order
     // fingerprint is waived — bitmask DP fills by mask transitions, not row-major.
+    let provedSelfDeps = 0;
+    if (Array.isArray(recording?.writes)) {
+      provedSelfDeps = recording.writes.filter((wv) => (wv.rhs ?? []).some((x) => x.n === name)).length;
+    }
     if (provedSelfDeps < 3 && ordered / (writes.length - 1) < 0.8) continue;
     if (!bestRow || writes.length > bestRow.writes) bestRow = { name, cols: len, writes: writes.length };
   }
