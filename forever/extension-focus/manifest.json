@@ -1,0 +1,59 @@
+{
+  "manifest_version": 3,
+  "name": "Forever Focus \u2014 AI Study Guard",
+  "version": "1.2.1",
+  "description": "Detects when you drift from studying and an AI tutor nudges you back \u2014 powered by forever.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "notifications"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Study Focus AI"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "exclude_matches": [
+        "http://localhost:*/*",
+        "http://127.0.0.1:*/*",
+        "http://0.0.0.0:*/*"
+      ],
+      "js": [
+        "vendor/socket.io.min.js",
+        "core/apiClient.js",
+        "core/offlineQueue.js",
+        "core/overlayChat.js",
+        "core/refocusTimer.js",
+        "core/sessionBridge.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "vendor/socket.io.min.js"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Study Focus AI</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+
+  <body>
+    <main class="app">
+      <section class="hero">
+        <div class="logo">AI</div>
+        <div>
+          <h1>Study Focus AI</h1>
+          <p>Real-time study monitoring</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <label>Backend API URL</label>
+        <input
+          id="apiBaseUrl"
+          type="text"
+          placeholder="http://localhost:3000/api or https://your-ngrok/api"
+        />
+
+        <div class="grid">
+          <div>
+            <label>Signal ms</label>
+            <input id="signalIntervalMs" type="number" min="5000" />
+          </div>
+
+          <div>
+            <label>Screenshot ms</label>
+            <input id="screenshotIntervalMs" type="number" min="30000" />
+          </div>
+        </div>
+
+        <button id="saveSettings">Save Settings</button>
+      </section>
+
+      <section class="card">
+        <label>Your study goal</label>
+        <textarea id="goal" placeholder="I want to study IELTS Writing"></textarea>
+
+        <button id="saveGoal">Save Goal</button>
+      </section>
+
+      <section class="card session-card">
+        <div class="row-between">
+          <div>
+            <h2>Study Session</h2>
+            <p id="sessionStatus">Loading...</p>
+          </div>
+
+          <span id="sessionBadge" class="badge paused">PAUSED</span>
+        </div>
+
+        <div class="session-actions">
+          <button id="startSession" class="success">Start Session</button>
+          <button id="endSession" class="danger">End Session</button>
+          <button id="refreshSession" class="ghost">Refresh</button>
+        </div>
+
+        <div class="mini-grid">
+          <div>
+            <span>Socket</span>
+            <strong id="socketStatus">unknown</strong>
+          </div>
+
+          <div>
+            <span>Offline queue</span>
+            <strong id="offlineQueueCount">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="status">
+        <div>
+          <span>Device</span>
+          <strong id="deviceId">...</strong>
+        </div>
+
+        <div>
+          <span>Status</span>
+          <strong id="status">Loading...</strong>
+        </div>
+      </section>
+    </main>
+
+    <script src="core/popupSession.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
