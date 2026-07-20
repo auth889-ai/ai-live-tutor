@@ -17,7 +17,7 @@ function deviceId() {
 }
 
 export function AudioNotes() {
-  const [mode, setMode] = useState('audio'); // audio | transcript
+  const [mode, setMode] = useState('live'); // live | audio | transcript
   const [title, setTitle] = useState('');
   const [transcript, setTranscript] = useState('');
   const [file, setFile] = useState(null);
@@ -25,8 +25,41 @@ export function AudioNotes() {
   const [note, setNote] = useState(null);
   const [error, setError] = useState(null);
   const [past, setPast] = useState([]);
+  const [listening, setListening] = useState(false);
+  const recRef = useState(() => ({ current: null }))[0];
 
   const hdr = () => ({ 'x-device-id': deviceId() });
+
+  // LIVE IN CLASS: the browser's speech recognition transcribes the lecture in real time; the
+  // running transcript fills below, and "stop & generate" turns it into structured notes.
+  const startListening = () => {
+    const SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+    if (!SR) { setError('Live listening needs Chrome (Web Speech API). Use "Upload audio" or "Paste transcript" instead.'); return; }
+    setError(null);
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
+    let finalText = transcript ? transcript + ' ' : '';
+    rec.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i += 1) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += t + ' '; else interim += t;
+      }
+      setTranscript(finalText + interim);
+    };
+    rec.onerror = (e) => { if (e.error !== 'no-speech') setError(`mic: ${e.error}`); };
+    rec.onend = () => { if (recRef.current) rec.start(); }; // keep going through pauses until stopped
+    recRef.current = rec;
+    rec.start();
+    setListening(true);
+  };
+  const stopListening = () => {
+    const rec = recRef.current; recRef.current = null;
+    try { rec?.stop(); } catch { /* */ }
+    setListening(false);
+  };
 
   const loadPast = async () => {
     try {
@@ -42,7 +75,14 @@ export function AudioNotes() {
     setError(null); setNote(null); setBusy(true);
     try {
       let res;
-      if (mode === 'transcript') {
+      if (mode === 'live') {
+        if (listening) stopListening();
+        if (!transcript.trim()) { setError('Nothing captured yet — press "Start listening" during the lecture.'); setBusy(false); return; }
+        res = await fetch('/api/live-lecture-notes/from-transcript', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', ...hdr() },
+          body: JSON.stringify({ transcript, title: title || 'Live lecture' }),
+        });
+      } else if (mode === 'transcript') {
         if (!transcript.trim()) { setError('Paste a transcript first.'); setBusy(false); return; }
         res = await fetch('/api/live-lecture-notes/from-transcript', {
           method: 'POST', headers: { 'Content-Type': 'application/json', ...hdr() },
@@ -70,15 +110,30 @@ export function AudioNotes() {
       </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        {['audio', 'transcript'].map((m) => (
-          <button key={m} onClick={() => setMode(m)} style={chip(mode === m)}>{m === 'audio' ? 'Upload audio' : 'Paste transcript'}</button>
+        {[['live', '🎧 Listen in class'], ['audio', 'Upload audio'], ['transcript', 'Paste transcript']].map(([m, label]) => (
+          <button key={m} onClick={() => setMode(m)} style={chip(mode === m)}>{label}</button>
         ))}
       </div>
 
       <div style={{ border: `1px solid ${V('--border', '#eadfd8')}`, borderRadius: 14, padding: 16, background: V('--card', '#fffdfb'), marginBottom: 18 }}>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional)"
           style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: `1px solid ${V('--border', '#eadfd8')}`, fontSize: 13.5, marginBottom: 10, fontFamily: 'inherit' }} />
-        {mode === 'audio' ? (
+        {mode === 'live' ? (
+          <div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+              {!listening ? (
+                <button onClick={startListening} style={{ border: 'none', borderRadius: 999, background: '#c0522d', color: '#fff', padding: '8px 16px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>● Start listening</button>
+              ) : (
+                <button onClick={stopListening} style={{ border: 'none', borderRadius: 999, background: '#2b7a3f', color: '#fff', padding: '8px 16px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>■ Stop listening</button>
+              )}
+              <span style={{ fontSize: 12, color: listening ? '#c0522d' : V('--ink-muted', '#8a7d76'), fontWeight: 600 }}>
+                {listening ? '🔴 listening — the lecture is being transcribed live…' : 'Open this in class and press Start — it writes the transcript as the teacher speaks.'}
+              </span>
+            </div>
+            <textarea value={transcript} onChange={(e) => setTranscript(e.target.value)} rows={7} placeholder="The live transcript appears here as you listen… (you can edit it before generating notes)"
+              style={{ width: '100%', padding: 11, borderRadius: 8, border: `1px solid ${listening ? '#c0522d' : V('--border', '#eadfd8')}`, fontSize: 13, fontFamily: 'inherit', resize: 'vertical' }} />
+          </div>
+        ) : mode === 'audio' ? (
           <input type="file" accept="audio/*,video/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} style={{ fontSize: 13 }} />
         ) : (
           <textarea value={transcript} onChange={(e) => setTranscript(e.target.value)} rows={7} placeholder="Paste the lecture transcript here…"
@@ -86,7 +141,7 @@ export function AudioNotes() {
         )}
         <div style={{ marginTop: 12 }}>
           <button onClick={generate} disabled={busy} style={{ border: 'none', borderRadius: 999, background: busy ? '#c9bda1' : '#2b7a3f', color: '#fff', padding: '8px 18px', fontSize: 13, fontWeight: 800, cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit' }}>
-            {busy ? 'Generating notes… (transcription can take a minute)' : '✨ Generate notes'}
+            {busy ? 'AI is writing your notes…' : (mode === 'live' ? '✨ Stop & write notes' : '✨ Generate notes')}
           </button>
         </div>
         {error && <div style={{ marginTop: 10, color: '#c0522d', fontSize: 12.5 }}>{error}</div>}
