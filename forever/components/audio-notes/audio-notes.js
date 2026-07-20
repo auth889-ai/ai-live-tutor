@@ -6,6 +6,7 @@
 // A stable device id is kept in localStorage so notes persist and list across visits.
 
 import { useEffect, useState } from 'react';
+import { NoteBook } from './note-book.js';
 
 const V = (n, f) => `var(${n}, ${f})`;
 
@@ -147,7 +148,7 @@ export function AudioNotes() {
         {error && <div style={{ marginTop: 10, color: '#c0522d', fontSize: 12.5 }}>{error}</div>}
       </div>
 
-      {note && <NoteCard note={note} />}
+      {note && <NoteBook note={note} />}
 
       {past.length > 0 && (
         <div style={{ marginTop: 20 }}>
