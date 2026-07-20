@@ -1,0 +1,49 @@
+# Self-contained deploy for a single Alibaba Cloud ECS box:
+#   web (Next.js) + worker (the agent society) + Redis + MongoDB.
+#
+# Production note: swap the `redis` and `mongo` services for Alibaba managed
+# services — Tair (Redis) and ApsaraDB for MongoDB — by pointing REDIS_URL and
+# MONGODB_URI in .env at them, then delete those two service blocks. Model calls
+# always go to Qwen Cloud (DashScope) via DASHSCOPE_API_KEY.
+services:
+  web:
+    build: .
+    command: npm run start
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MONGODB_URI=mongodb://mongo:27017/forever
+    depends_on:
+      - redis
+      - mongo
+
+  worker:
+    build: .
+    command: node lib/queue/worker.js
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MONGODB_URI=mongodb://mongo:27017/forever
+    depends_on:
+      - redis
+      - mongo
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  redis-data:
+  mongo-data:

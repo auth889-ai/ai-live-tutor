@@ -265,6 +265,10 @@ flowchart TB
 - Backend on **Alibaba Cloud ECS**; **MongoDB** (ApsaraDB-compatible), **Redis/BullMQ**
   (Tair-compatible), media to **OSS** behind the storage seams in
   [`forever/lib/storage/`](forever/lib/storage/).
+- **Deploy it:** containerized ([`forever/Dockerfile`](forever/Dockerfile),
+  [`forever/docker-compose.yml`](forever/docker-compose.yml)) with a step-by-step ECS runbook —
+  [`forever/infra/deploy-alibaba-ecs.md`](forever/infra/deploy-alibaba-ecs.md) — and a one-command
+  [`forever/infra/deploy.sh`](forever/infra/deploy.sh).
 
 ## Run it
 

@@ -266,6 +266,9 @@ Two benchmarks, every number measured, none asserted:
 - Backend deploys on **Alibaba Cloud ECS**; records in **MongoDB (ApsaraDB-compatible)**;
   queue on **Redis (Tair-compatible)**; media to **OSS** behind the storage seams
   (`lib/storage/`).
+- **Deploy it:** [`Dockerfile`](Dockerfile) + [`docker-compose.yml`](docker-compose.yml) +
+  a step-by-step ECS runbook [`infra/deploy-alibaba-ecs.md`](infra/deploy-alibaba-ecs.md) and a
+  one-command [`infra/deploy.sh`](infra/deploy.sh).
 
 ## Run it
 
