@@ -1,8 +1,4 @@
-import { dashboard } from '../../../../../lib/focus/focus-store.js';
-const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
-export async function OPTIONS() { return new Response(null, { status: 204, headers: cors }); }
-export async function GET(_request, { params }) {
-  const { deviceId } = await params;
-  const data = await dashboard({ deviceId: deviceId ?? 'device' });
-  return Response.json({ ok: true, data }, { headers: cors });
-}
+import { proxyFocus, focusOptions } from '../../../../../lib/focus/proxy.js';
+export async function OPTIONS() { return focusOptions(); }
+export async function GET(request, { params }) { const { deviceId } = await params; return proxyFocus(request, 'dashboard/' + deviceId); }
+export async function POST(request, { params }) { const { deviceId } = await params; return proxyFocus(request, 'dashboard/' + deviceId); }
