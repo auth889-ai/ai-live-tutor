@@ -17,6 +17,7 @@ export function DashboardSidebar({ email, active = 'home' }) {
     { key: 'notebooks', icon: '📓', label: 'Notebooks', href: '/notebooks' },
     { key: 'notebook', icon: '📖', label: 'Lesson pages', href: '/notebook' },
     { key: 'focus', icon: '🎯', label: 'Focus Guard', href: '/focus' },
+    { key: 'audio-notes', icon: '🎙️', label: 'Audio → Notes', href: '/audio-notes' },
   ];
   const soon = [
     ['🧠', 'Quizzes'],
