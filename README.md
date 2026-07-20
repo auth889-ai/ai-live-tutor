@@ -124,7 +124,7 @@ flowchart LR
         API[API routes<br/>auth · jobs · courses · uploads · run]
         Q[(BullMQ queue<br/>Redis)]
         W[Worker<br/>concurrency N]
-        SB[Docker sandbox<br/>real code execution<br/>--network none]
+        SB[Docker sandbox<br/>real code execution<br/>network-isolated]
     end
     subgraph Society["The agent society (all Qwen on DashScope / Model Studio)"]
         R[🧭 Domain Router]
@@ -150,7 +150,7 @@ flowchart LR
     CR --> SB
     W --> M
     VW --> F
-    API -->|student "Try it" code| SB
+    API -->|student try-it code| SB
 ```
 
 ## Track 3: Agent Society — how it maps
