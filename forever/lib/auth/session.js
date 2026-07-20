@@ -48,8 +48,9 @@ export function sessionFromRequest(request, opts = {}) {
 
 export function sessionCookie(token) {
   // HttpOnly (no JS access), SameSite=Lax (CSRF-resistant for top-level nav), Path=/; Secure is
-  // added in production where HTTPS terminates.
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  // added in production where HTTPS terminates. Set COOKIE_INSECURE=1 when serving over plain
+  // HTTP (e.g. an IP-only ECS demo) so the browser will actually store the session cookie.
+  const secure = (process.env.NODE_ENV === 'production' && process.env.COOKIE_INSECURE !== '1') ? '; Secure' : '';
   return `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${WEEK_MS / 1000}${secure}`;
 }
 
