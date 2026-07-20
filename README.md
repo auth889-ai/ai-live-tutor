@@ -49,8 +49,9 @@ alone.** The AI tools that promise to help just ask **one model to imagine a les
 ## How Forever answers it
 
 Forever turns **your own material** — the exact slides and PDFs you're stuck on — into a course
-taught by a **society of Qwen agents**, and you **pay only for what you actually generate**, not a
-monthly subscription for content you never open.
+taught by a **society of Qwen agents**. And because it's **open source (AGPL-3.0)** and runs on
+**your own Qwen usage**, there's **no subscription** — you spend only when you actually generate a
+lesson, instead of paying every month for a platform you barely open.
 
 - 🎓 A **Dean** and a domain **Teacher** turn your slides into a real lesson plan.
 - 🖊️ A **Board Director** writes it on a board **in sync with a spoken voice** — like a human tutor explaining, not a wall of text.

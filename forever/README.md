@@ -18,7 +18,8 @@ a **society of Qwen-powered AI teachers** turns it into a **narrated, interactiv
 course**: a tutor that writes on a board in sync with its voice, **really executes** the code it
 teaches, animates algorithms step by step from **real execution traces** (never imagined frames),
 pauses for quizzes, proves every claim against your source — and lets the student edit and run the
-lesson's code themselves in a sandbox. You pay only for what you generate, not a monthly fee.
+lesson's code themselves in a sandbox. It's **open source** and runs on **your own Qwen usage**, so
+there's no subscription — you spend only when you actually generate a lesson.
 
 ![Forever home dashboard](screenshots/01-home.png)
 
