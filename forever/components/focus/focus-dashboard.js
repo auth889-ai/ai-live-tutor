@@ -53,18 +53,15 @@ export function FocusDashboard() {
 
       {deviceId && data && acts.length > 0 && (
         <>
-          {/* hero */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, margin: '16px 0 20px' }}>
-            <Stat label="Focus score" value={`${score}`} accent={score >= 70 ? '#2b7a3f' : score >= 40 ? '#b06a2e' : '#c0522d'} big sub="/ 100" />
-            <Stat label="On task" value={`${data.studyCount ?? 0}`} sub="pages" accent="#2b7a3f" />
-            <Stat label="Distractions" value={`${data.distractionCount ?? 0}`} sub="pages" accent="#c0522d" />
-            <Stat label="Uncertain" value={`${data.partialCount ?? 0}`} sub="checked in" accent="#b06a2e" />
-          </div>
-
-          {/* focus bar */}
-          <div style={{ height: 14, borderRadius: 999, overflow: 'hidden', border: `1px solid ${V('--border', '#eadfd8')}`, marginBottom: 20, display: 'flex' }}>
-            <div style={{ width: `${score}%`, background: '#2b7a3f' }} />
-            <div style={{ width: `${100 - score}%`, background: '#e8c9c0' }} />
+          {/* PREMIUM HERO: circular focus gauge + stat cards */}
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center', margin: '16px 0 22px',
+            padding: 22, borderRadius: 18, background: 'linear-gradient(135deg, #fbf6f2, #fff)', border: `1px solid ${V('--border', '#eadfd8')}`, boxShadow: '0 10px 30px rgba(60,40,30,.08)' }}>
+            <FocusGauge score={score} />
+            <div style={{ flex: 1, minWidth: 220, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              <MiniStat icon="✅" label="On task" value={data.studyCount ?? 0} accent="#2b7a3f" />
+              <MiniStat icon="⚠️" label="Distractions" value={data.distractionCount ?? 0} accent="#c0522d" />
+              <MiniStat icon="🤔" label="Uncertain" value={data.partialCount ?? 0} accent="#b06a2e" />
+            </div>
           </div>
 
           {/* insights */}
@@ -122,12 +119,36 @@ function DeviceInput({ deviceId, onSet }) {
   );
 }
 
-function Stat({ label, value, sub, accent, big }) {
+// Circular SVG focus gauge — premium, animated stroke, color by score.
+function FocusGauge({ score }) {
+  const r = 52, C = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, score));
+  const color = pct >= 70 ? '#2b7a3f' : pct >= 40 ? '#b06a2e' : '#c0522d';
+  const label = pct >= 70 ? 'Focused' : pct >= 40 ? 'Mixed' : 'Distracted';
   return (
-    <div style={{ border: `1px solid ${V('--border', '#eadfd8')}`, borderRadius: 14, padding: 16, background: V('--card', '#fffdfb') }}>
-      <div style={{ fontSize: 11.5, color: V('--ink-muted', '#8a7d76'), fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>{label}</div>
-      <div style={{ fontSize: big ? 34 : 26, fontWeight: 800, color: accent, lineHeight: 1.1, marginTop: 4 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11.5, color: V('--ink-muted', '#8a7d76') }}>{sub}</div>}
+    <div style={{ position: 'relative', width: 132, height: 132, flexShrink: 0 }}>
+      <svg width="132" height="132" viewBox="0 0 132 132">
+        <circle cx="66" cy="66" r={r} fill="none" stroke="#efe6de" strokeWidth="12" />
+        <circle cx="66" cy="66" r={r} fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
+          strokeDasharray={C} strokeDashoffset={C * (1 - pct / 100)} transform="rotate(-90 66 66)"
+          style={{ transition: 'stroke-dashoffset 1s ease' }} />
+      </svg>
+      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
+        <div>
+          <div style={{ fontSize: 32, fontWeight: 800, color, lineHeight: 1 }}>{pct}</div>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: V('--ink-muted', '#8a7d76'), letterSpacing: 0.5 }}>FOCUS · {label}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ icon, label, value, accent }) {
+  return (
+    <div style={{ borderRadius: 12, padding: '12px 10px', background: '#fff', border: `1px solid ${V('--border', '#eadfd8')}`, textAlign: 'center' }}>
+      <div style={{ fontSize: 18 }}>{icon}</div>
+      <div style={{ fontSize: 24, fontWeight: 800, color: accent, lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: 10.5, color: V('--ink-muted', '#8a7d76'), fontWeight: 600 }}>{label}</div>
     </div>
   );
 }
