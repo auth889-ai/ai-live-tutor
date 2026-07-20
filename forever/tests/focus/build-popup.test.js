@@ -6,6 +6,7 @@ test('a non-study decision produces popup.shouldShow=true (the field the extensi
   const r = buildSignalResponse({ type: 'non-study', voiceText: 'back to it', chatMessage: 'You drifted — reopen notes.', suggestedAction: 'reopen notes', reason: 'off goal' }, { url: 'https://tiktok.com' });
   assert.equal(r.popup.shouldShow, true);
   assert.equal(r.popup.type, 'intervention');
+  assert.ok(r.popup.activityId && r.popup.activityId.length > 8, 'popup.activityId is REQUIRED — content.js renderRealtimePopup returns early without it');
   assert.equal(r.popup.chatMessage, 'You drifted — reopen notes.');
   assert.equal(r.popup.page.url, 'https://tiktok.com');
   assert.equal(r.popup.ai.type, 'non-study');
