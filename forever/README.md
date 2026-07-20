@@ -34,10 +34,11 @@ Build / Practice**, each with its own quiz.
 
 ## 2 · The signature feature — algorithms animated from *really-executed* code
 
-No LLM-imagined frames. The engine records ONE real execution (`sys.settrace`) and drives the
-screen from it: the grid, the **highlighted active line**, node state, and a step-by-step trace
-table are all reconciled to the run. The student can re-run the exact code in their own browser
-(CPython / WebAssembly).
+No LLM-imagined frames. The engine runs the algorithm **for real in a sandbox** (Judge0 or
+Docker) — the traced program emits structured step events as it executes — and drives the screen
+from that recording: the grid, the **highlighted active line**, node state, and a step-by-step
+trace table are all reconciled to the run. The student can re-run the exact code in their own
+browser (CPython / WebAssembly).
 
 **Flood-fill / DFS** — grid cells fill as the recursion sinks each island; the code panel marks
 the live line; the trace table logs every `sink` call:
