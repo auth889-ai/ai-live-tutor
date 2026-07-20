@@ -76,30 +76,54 @@ export function FocusDashboard() {
             </Section>
           )}
 
-          {/* activity timeline (the survey) */}
-          <Section title="Activity timeline">
-            {acts.map((a) => {
-              const type = a.decision?.finalType || a.decision?.action || a.ai?.type || 'checked';
-              const isStudy = /study/.test(String(type)) && !/non/.test(String(type));
-              return (
-                <div key={a.id || a.activityId} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: `1px solid ${V('--border', '#f0e8e2')}`, fontSize: 12.5 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 999, marginTop: 5, flexShrink: 0, background: isStudy ? '#2b7a3f' : '#c0522d' }} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ color: V('--ink', '#2b2320'), fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {a.page?.title || a.page?.domain || a.page?.url || 'page'}
-                    </div>
-                    <div style={{ color: V('--ink-muted', '#8a7d76'), fontSize: 11.5 }}>
-                      <b style={{ color: isStudy ? '#2b7a3f' : '#c0522d' }}>{String(type)}</b>
-                      {a.decision?.reason ? ` — ${a.decision.reason}` : ''}
-                      {a.createdAt ? ` · ${new Date(a.createdAt).toLocaleTimeString()}` : ''}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </Section>
+          {/* PREMIUM activity feed — each with the AI's dynamic motivation */}
+          <div style={{ fontSize: 14, fontWeight: 800, color: V('--ink', '#2b2320'), margin: '4px 0 10px' }}>Activity & AI coaching</div>
+          {acts.map((a) => <ActivityCard key={a.id || a.activityId} a={a} />)}
         </>
       )}
+    </div>
+  );
+}
+
+// PREMIUM ACTIVITY CARD — page + type badge + the AI's dynamic motivation + confidence.
+function ActivityCard({ a }) {
+  const rawType = String(a.ai?.type || a.decision?.finalType || a.decision?.action || 'checked').toLowerCase();
+  const kind = /non|distract/.test(rawType) ? 'distraction' : /partial|ask|uncertain/.test(rawType) ? 'uncertain' : 'study';
+  const theme = kind === 'study' ? { c: '#2b7a3f', bg: 'rgba(43,122,63,.06)', b: '#bfebd5', badge: 'On task', icon: '✅' }
+    : kind === 'distraction' ? { c: '#c0522d', bg: 'rgba(192,82,45,.06)', b: '#ffd4cf', badge: 'Distraction', icon: '⚠️' }
+    : { c: '#b06a2e', bg: 'rgba(176,106,46,.06)', b: '#ffe1a8', badge: 'Uncertain', icon: '🤔' };
+  const motivation = a.ai?.motivation || a.ai?.voiceText || a.decision?.reason || a.ai?.reason || '';
+  const conf = Math.round((a.ai?.confidence ?? 0) * 100);
+
+  return (
+    <div style={{ display: 'flex', gap: 0, marginBottom: 12, borderRadius: 14, overflow: 'hidden', border: `1px solid ${theme.b}`, background: theme.bg, boxShadow: '0 4px 14px rgba(60,40,30,.05)' }}>
+      <div style={{ width: 5, background: theme.c, flexShrink: 0 }} />
+      <div style={{ padding: '13px 16px', flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 15 }}>{theme.icon}</span>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: V('--ink', '#2b2320'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 320 }}>
+            {a.page?.title || a.page?.domain || a.page?.url || 'page'}
+          </span>
+          <span style={{ fontSize: 10.5, fontWeight: 800, color: '#fff', background: theme.c, padding: '2px 8px', borderRadius: 999, letterSpacing: 0.3 }}>{theme.badge}</span>
+          {a.page?.domain && <span style={{ fontSize: 11, color: V('--ink-muted', '#8a7d76') }}>{a.page.domain}</span>}
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: V('--ink-muted', '#8a7d76') }}>{a.createdAt ? new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+        </div>
+        {motivation && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', background: '#fff', borderRadius: 10, padding: '9px 12px', border: `1px solid ${theme.b}` }}>
+            <span style={{ fontSize: 14, flexShrink: 0 }}>💬</span>
+            <div style={{ fontSize: 13, color: V('--ink', '#2b2320'), lineHeight: 1.5, fontStyle: 'italic' }}>&ldquo;{motivation}&rdquo;</div>
+          </div>
+        )}
+        {conf > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+            <span style={{ fontSize: 10.5, color: V('--ink-muted', '#8a7d76'), fontWeight: 600 }}>AI confidence</span>
+            <div style={{ flex: 1, maxWidth: 140, height: 5, borderRadius: 999, background: '#efe6de', overflow: 'hidden' }}>
+              <div style={{ width: `${conf}%`, height: '100%', background: theme.c }} />
+            </div>
+            <span style={{ fontSize: 10.5, color: theme.c, fontWeight: 700 }}>{conf}%</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
