@@ -492,8 +492,31 @@ async function rememberLatePopupSkipped(tabId, data = {}, currentUrl = "") {
   } catch {}
 }
 
+
+// GUARANTEED-VISIBLE popup: a Chrome notification that shows even if a site (YouTube CSP) blocks
+// the in-page overlay, and even if the URL shifted (bypasses the stale-popup guard).
+function showFocusNotification(popup = {}) {
+  try {
+    if (!popup || !popup.shouldShow) return;
+    const msg = popup.chatMessage || popup.message || popup.voiceText || "Time to get back to studying.";
+    chrome.notifications.create("sfai-" + Date.now(), {
+      type: "basic",
+      iconUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAKklEQVR42mNgGAWjYBSMglEwCkbBKBgFo2AUjIJRMApGwSgYBaNgFAAAB2QAAeJX0ZoAAAAASUVORK5CYII=",
+      title: popup.title || "Study Focus AI",
+      message: String(msg).slice(0, 250),
+      priority: 2,
+      requireInteraction: false,
+    });
+  } catch (e) {
+    console.info("Study Focus AI notification skipped:", e?.message || e);
+  }
+}
+
 async function safeSendPopupToTab(tabId, data) {
   const popup = extractPopupFromBackendData(data);
+
+  // fire the guaranteed notification FIRST, before any tab/URL check can suppress it
+  showFocusNotification(popup);
 
   if (!tabId || !popup?.shouldShow) return false;
 
