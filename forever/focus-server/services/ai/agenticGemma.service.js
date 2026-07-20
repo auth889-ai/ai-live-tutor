@@ -1,4 +1,5 @@
 import { studyRuntimeConfig } from "../../config/studyRuntime.config.js";
+import { qwenEnabled, callQwenGenerate } from "../qwenCompat.service.js";
 
 /**
  * server/services/ai/agenticGemma.service.js
@@ -420,6 +421,12 @@ async function callOllama({
 }) {
   if (!url || !model) {
     throw new Error(`${label} URL/model missing`);
+  }
+
+  // FOREVER: route the study classification to Qwen (text or vision) instead of Ollama/Gemma.
+  if (qwenEnabled()) {
+    const q = await callQwenGenerate({ prompt, images, json: true, temperature: mode === "deep" ? 0.2 : 0.1, timeoutMs });
+    return { text: q.text, raw: q.raw, model: q.model, latencyMs: q.latencyMs };
   }
 
   const finalUrl = normalizeOllamaGenerateUrl(url);
