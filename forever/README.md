@@ -54,6 +54,10 @@ receipt (`12 steps · 9 objections · 1 repair · verified ✓`) and per-claim s
 
 ![Course player with The Society's Work receipt and citations](screenshots/08-course-player-society.png)
 
+Recap scenes are written on a **handwritten board** — the tutor's own summary, in its own hand:
+
+![Handwritten recap board: from infinite DFS to O(n·2ⁿ) BFS with bitmask states](screenshots/24-recap-handwritten.png)
+
 ## 3 · Grounded in *your* source — figures and claims are cited, never invented
 
 Real figures are lifted from the uploaded PDF and shown with a **"Source · page N"** stamp; an
@@ -228,7 +232,7 @@ lib/
   playback/             the one clock: audio-backed, reconciled timelines, action engine
   qwen/                 the single Qwen Cloud (DashScope) client — every model call
   storage/              mongo/fs dual stores: lessons, courses, users, uploads, assets
-screenshots/            the 23 images used in this README
+screenshots/            the 24 images used in this README
 ```
 
 ---

@@ -64,6 +64,10 @@ receipt (`12 steps · 9 objections · 1 repair · verified ✓`) and per-claim s
 
 ![Course player with The Society's Work receipt and citations](forever/screenshots/08-course-player-society.png)
 
+Recap scenes are written on a **handwritten board** — the tutor's own summary, in its own hand:
+
+![Handwritten recap board: from infinite DFS to O(n·2ⁿ) BFS with bitmask states](forever/screenshots/24-recap-handwritten.png)
+
 ## 3 · Grounded in *your* source — figures and claims are cited, never invented
 
 Real figures are lifted from the uploaded PDF and shown with a **"Source · page N"** stamp; an
