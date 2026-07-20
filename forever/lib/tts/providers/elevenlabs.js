@@ -2,6 +2,8 @@
 // word-level sync directly (no separate ASR alignment). Activated by ELEVENLABS_API_KEY.
 // Returns audio bytes + measured duration + per-word timings for the reconciler.
 
+import { ttsCacheGet, ttsCachePut } from '../tts-cache.js';
+
 const DEFAULT_VOICE = 'JBFqnCBsd6RMkjVDRZzb'; // a stock ElevenLabs voice id
 
 export async function synthesizeWithTimestamps({
@@ -14,6 +16,11 @@ export async function synthesizeWithTimestamps({
   const apiKey = env.ELEVENLABS_API_KEY;
   if (!apiKey?.trim()) throw new Error('ELEVENLABS_API_KEY is not set');
   if (!text?.trim()) throw new Error('synthesizeWithTimestamps: text is required');
+
+  // TTS cache: identical line + voice + model -> stored audio, no provider call
+  const cacheParams = { text, voiceId, modelId };
+  const cached = await ttsCacheGet(cacheParams, { env });
+  if (cached) return cached;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -29,7 +36,9 @@ export async function synthesizeWithTimestamps({
     const bytes = Buffer.from(payload.audio_base64, 'base64');
     const words = charsToWordTimings(payload.alignment);
     const durationMs = words.length ? words[words.length - 1].endMs : 0;
-    return { bytes, wordTimings: words, durationMs };
+    const _out = { bytes, wordTimings: words, durationMs };
+    await ttsCachePut(cacheParams, _out, { env });
+    return _out;
   } finally {
     clearTimeout(timer);
   }

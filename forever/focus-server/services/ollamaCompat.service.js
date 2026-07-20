@@ -1,3 +1,4 @@
+import { qwenEnabled, callQwenGenerate } from "./qwenCompat.service.js";
 // server/services/ollamaCompat.service.js
 // Fixed Ollama compatibility service.
 // Supports BOTH env styles safely:
@@ -250,6 +251,12 @@ async function callOllamaGenerateOnce({
   format = undefined,
   json = false,
 } = {}) {
+  // FOREVER: route to Qwen instead of Ollama/Gemma when enabled (USE_QWEN=1).
+  if (qwenEnabled()) {
+    const q = await callQwenGenerate({ prompt, system, temperature, images, json, format, timeoutMs });
+    return { text: q.text, raw: q.raw, model: q.model, baseUrl: "qwen", url: "qwen", latencyMs: q.latencyMs };
+  }
+
   const finalBaseUrl = cleanUrl(baseUrl);
 
   if (!finalBaseUrl) {
