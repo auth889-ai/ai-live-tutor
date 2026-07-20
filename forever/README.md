@@ -114,50 +114,96 @@ a specific, goal-aware nudge to pull you back; the dashboard scores every page y
 
 ## Architecture
 
+### System — one repo, two processes, all state on Alibaba Cloud
+
+The web process serves the player/studio/API; a **separate BullMQ worker** runs the agent
+society. `POST /api/jobs` enqueues and returns `202 { jobId }` — nothing generates inline — and
+the Studio streams the live faculty debate over SSE.
+
 ```mermaid
-flowchart LR
-    subgraph Client["Next.js + React (player, studio, syllabus)"]
-        UI[Course player<br/>one audio clock drives<br/>board · trace · subtitles]
+flowchart TB
+    subgraph Browser["Browser — Next.js 16"]
+        Studio["Studio: upload / paste / import<br/>live faculty log via SSE"]
+        Player["Course Player: one audio clock drives<br/>board, code, subtitles, quizzes"]
     end
-    subgraph Backend["Node.js backend (Alibaba Cloud ECS)"]
-        API[API routes<br/>auth · jobs · courses · uploads · run]
-        Q[(BullMQ queue<br/>Redis)]
-        W[Worker<br/>concurrency N]
-        SB[Docker sandbox<br/>real code execution<br/>network-isolated]
+    subgraph Cloud["Alibaba Cloud"]
+        API["Next.js API routes<br/>POST /api/jobs then 202 jobId"]
+        Q[("Redis + BullMQ<br/>lesson and per-scene jobs")]
+        WK["BullMQ worker process<br/>processLessonJob"]
+        DB[("MongoDB<br/>users, lessons, courses, study, notebooks, qwen_cache")]
+        OSS[("OSS object storage<br/>audio, page images, uploads")]
+        SBX["Code sandbox<br/>Judge0 or Docker, network-isolated"]
+        DS["DashScope / Model Studio<br/>Qwen LLMs, vision, TTS"]
     end
-    subgraph Society["The agent society (all Qwen on DashScope / Model Studio)"]
-        R[🧭 Domain Router<br/>qwen flash]
-        D[🎓 Dean<br/>course outline · qwen max]
-        CI[👨‍🏫 Coding Instructor /<br/>📚 Teacher · qwen max]
-        BD[🖊️ Board Director<br/>qwen plus]
-        ET[⚙️ Execution Tracer]
-        CR[💻 Code Runner]
-        VW[🎙 Voice Writer]
-        GA[🔍 Grounding Auditor<br/>qwen flash]
-        PC[🎓 Pedagogy Critic]
-        AR[⚖️ Arbiter verdict]
-    end
-    subgraph Data["Storage"]
-        M[(MongoDB<br/>users · lessons · courses)]
-        F[(OSS / static<br/>audio · images)]
-    end
-    UI -->|SSE progress| API --> Q --> W
-    W --> R --> CI --> BD
-    D --> CI
-    BD <-->|objections / revisions| GA & PC --> AR
-    ET --> SB
-    CR --> SB
-    W --> M
-    VW --> F
-    API -->|student try-it code| SB
+    Studio --> API --> Q --> WK
+    WK <--> DS
+    WK <--> DB
+    WK --> OSS
+    WK --> SBX
+    Player --> API
+    Player --> OSS
 ```
 
-**Task division:** every agent has ONE job (its own file under `lib/orchestration/agents/`).
-**Dialogue & negotiation:** the Board Director proposes; the Grounding Auditor and Pedagogy
-Critic object with evidence; the board revises; a bounded debate ends with an Arbiter verdict
-— grounded-or-dropped, never fake. **Conflict resolution is structural too:** hand-authored
-animation is stripped (the Execution Tracer, which ran the real algorithm, owns motion), and
-a dry-run scene without a real trace refuses to ship.
+### The agent society — the real generation pipeline
+
+The orchestrator is **deterministic code** (BullMQ + a LangGraph state machine); intelligence
+lives in the agents. The **Dean** runs only for course jobs (fans out one job per lesson). Per
+lesson, the **Domain Router** picks **one** planner — the Coding Instructor, one of 14 domain
+Teachers, or the Universal Teacher. Each scene is produced in parallel, and its board goes
+through a **real LangGraph review cycle**: propose → audit → revise → (arbitrate).
+
+```mermaid
+flowchart TB
+    SP["SourcePack: chunks, page images, sourceRefs<br/>PDF via MinerU · URL · image · text"]
+    DEAN["Dean — qwen3.7-max<br/>course outline (course jobs only)"]
+    R["Domain Router — qwen3.6-flash"]
+    PL["Planner, ONE by domain:<br/>Coding Instructor OR Domain Teacher x14 OR Universal<br/>qwen3.7-max"]
+    SP --> DEAN
+    DEAN -.->|one job per lesson| R
+    SP --> R --> PL --> SCENES
+
+    subgraph SCENES["Per scene — parallel (SCENE_CONCURRENCY) — LangGraph review cycle"]
+        direction LR
+        BD["Board Director<br/>qwen3.7-plus"]
+        GA["Grounding Auditor<br/>qwen3.6-flash — HARD gate"]
+        PC["Pedagogy Critic<br/>qwen3.6-flash — advisory"]
+        AR["Arbiter<br/>qwen3.7-max — only on deadlock"]
+        BD --> GA
+        BD --> PC
+        GA -->|objection| BD
+        GA -->|survives at round cap| AR
+        AR --> BD
+    end
+
+    SCENES --> ET["Execution Tracer — qwen3-coder-plus<br/>dry-run coding scenes only<br/>real run in Judge0 / Docker"]
+    SCENES --> VW["Voice Writer — qwen3.7-plus<br/>narrates non-algorithm objects"]
+    ET --> TL["Timeline compile — deterministic<br/>provisional, then reconciled to real TTS"]
+    VW --> TL
+    TL --> TTS["Qwen TTS — qwen3-tts-flash"]
+    TTS --> GATE["Quality gate + repair loop<br/>honest failure, no fake fallback"]
+    GATE --> SAVE["Save manifest to MongoDB<br/>publish audio + images to OSS"]
+```
+
+**Task division:** each agent has ONE focused job with its own schema, under
+`lib/orchestration/agents/`. **Dialogue & negotiation:** every scene has a blackboard with an
+append-only, typed message log (proposal / objection / evidence / revision / verdict); the
+**Grounding Auditor is a hard gate**, the **Pedagogy Critic is advisory**, they run in parallel,
+and the Board Director revises against their objections — an objection without evidence is
+rejected, so debates stay grounded. **Conflict resolution:** bounded by `MAX_DEBATE_ROUNDS` — if
+grounding objections survive at the round cap, the **Arbiter** issues a binding verdict
+(strict-consensus fallback if its own call fails); only the failed stage re-runs. Structurally, a
+dry-run scene without a real execution trace refuses to ship — no fabricated animation.
+
+### Model routing (one model per job — all on Qwen Cloud)
+
+| Agent | Model | Why |
+|---|---|---|
+| Dean · Teacher · Coding Instructor · Arbiter | `qwen3.7-max` | long-horizon planning & binding verdicts |
+| Board Director · Voice Writer | `qwen3.7-plus` | multimodal scene authoring (sees page images) |
+| Domain Router · Grounding Auditor · Pedagogy Critic | `qwen3.6-flash` | fast classify & review |
+| Execution Tracer · Code Runner | `qwen3-coder-plus` | writes the programs that emit real traces |
+| Page-image vision | `qwen3.7-plus` | region/diagram/transcription reading |
+| Voice (TTS) | `qwen3-tts-flash` | natural tutor narration |
 
 ## The universal dry-run engine — and who writes what
 
@@ -210,13 +256,16 @@ Two benchmarks, every number measured, none asserted:
 cd forever && npm install
 cp .env.example .env       # set DASHSCOPE_API_KEY, MONGODB_URI, REDIS_URL, SESSION_SECRET
 docker pull python:3.12-slim node:22-slim   # the code sandbox
-npm run dev:all            # web + worker (worker restarts on code changes)
+
+npm run dev:all            # web on :3000 (+ the Focus-Guard server on :3001)
+npm run worker             # the agent society — separate process, needs REDIS_URL
 # open http://localhost:3000 → create an account → Studio → paste material → watch the society work
 npm test                   # 660+ tests, no tokens spent
 ```
 
-Set `DISABLE_TTS=1` to iterate without spending TTS credits — voicing later re-reconciles
-the whole timeline to the real audio.
+Without `REDIS_URL`, generation falls back to an in-process queue (fine for local dev/tests);
+with it, `npm run worker` runs the BullMQ society and scales horizontally. Set `DISABLE_TTS=1`
+to iterate without spending TTS credits — voicing later re-reconciles the timeline to the audio.
 
 ## Repository map
 
@@ -224,14 +273,20 @@ the whole timeline to the real audio.
 app/                    routes: cover · login · dashboard · courses/[id] syllabus · course/[id] player · api/*
 components/             course player (algorithm stage, panels, try-it editor) · dashboard shell
 lib/
-  orchestration/        the society: agents (planning/authoring/critics/coding/vision), review loop, messages
-  generation/           lesson pipeline: briefs -> scenes -> timeline (bounded fan-out)
-  board/                board contracts: objects, regions, diagrams, ExecutionTrace
-  execution/            real code execution: docker/judge0 sandbox, trace parsing, run contract
-  ingest/               pdf (MinerU + figures + page renders) · url · image
-  playback/             the one clock: audio-backed, reconciled timelines, action engine
-  qwen/                 the single Qwen Cloud (DashScope) client — every model call
-  storage/              mongo/fs dual stores: lessons, courses, users, uploads, assets
+  queue/                lesson-queue (BullMQ | in-process), worker.js, lesson-processor (fan-out)
+  orchestration/        the society: agents (planning/authoring/critics/coding/vision), roles, review loop, messages
+  generation/           lesson pipeline: brief → scene → voice → timeline → gate/repair → practice
+  source-pack/          input dispatch → one SourcePack contract (chunks, page images, sourceRefs)
+  ingest/               pdf (MinerU cloud API: figures/tables/LaTeX + page renders) · url · image
+  board/                board contracts: objects, regions, diagrams, ExecutionTrace + validator
+  execution/            real code execution: Judge0 / Docker / subprocess, @@STEP parsing, oracle
+  playback/             the one clock: audio-backed clock, reconciled timelines, action engine
+  qwen/                 the single Qwen Cloud (DashScope) client — every model call · vision
+  tts/                  Qwen TTS render + timeline reconcile
+  storage/              mongo/fs dual stores: lessons, courses, users, study, notebooks, qwen_cache
+  retention/            spaced-repetition (SM-2) memory + review scheduling
+  focus/                Focus Guard signal classification (Qwen vision)
+eval/                   society-vs-single benchmark harness + RESULTS.md
 screenshots/            the 24 images used in this README
 ```
 
