@@ -73,8 +73,8 @@ export function NoteBook({ note }) {
   const tone = TONES[page.tone % TONES.length];
 
   const go = (dir) => {
-    if (dir > 0 && i < pages.length - 1) { setFlip('next'); setTimeout(() => { setI((n) => n + 1); setFlip(''); }, 260); }
-    if (dir < 0 && i > 0) { setFlip('prev'); setTimeout(() => { setI((n) => n - 1); setFlip(''); }, 260); }
+    if (dir > 0 && i < pages.length - 1) { setFlip('next'); setTimeout(() => { setI((n) => n + 1); setFlip(''); }, 420); }
+    if (dir < 0 && i > 0) { setFlip('prev'); setTimeout(() => { setI((n) => n - 1); setFlip(''); }, 420); }
   };
 
   const readAloud = () => {
@@ -107,7 +107,7 @@ export function NoteBook({ note }) {
   }
 
   return (
-    <div style={{ perspective: 1600 }}>
+    <div style={{ perspective: 2200 }}>
       {/* premium toolbar */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <button onClick={readAloud} style={tool(speaking)}>{speaking ? '⏸ Stop' : '🔊 Read aloud'}</button>
@@ -117,12 +117,22 @@ export function NoteBook({ note }) {
       </div>
 
       <div style={{
-        position: 'relative', borderRadius: 16, minHeight: 440, background: tone.bg,
-        border: `1px solid ${tone.border}`, boxShadow: '0 10px 30px rgba(60,40,30,.12)',
-        transformStyle: 'preserve-3d', transition: 'transform .26s ease',
-        transform: flip === 'next' ? 'rotateY(-14deg)' : flip === 'prev' ? 'rotateY(14deg)' : 'none',
+        position: 'relative', borderRadius: '4px 16px 16px 4px', minHeight: 460,
+        background: `linear-gradient(105deg, ${tone.bg} 0%, #fff 3%, ${tone.bg} 6%)`,
+        border: `1px solid ${tone.border}`,
+        boxShadow: flip ? '0 22px 50px rgba(60,40,30,.28)' : '0 12px 34px rgba(60,40,30,.16), inset 8px 0 14px -8px rgba(60,40,30,.18)',
+        transformStyle: 'preserve-3d', transition: 'transform .42s cubic-bezier(.36,.66,.4,1), box-shadow .42s ease',
+        transform: flip === 'next' ? 'rotateY(-58deg)' : flip === 'prev' ? 'rotateY(58deg)' : 'rotateY(0deg)',
         transformOrigin: flip === 'next' ? 'left center' : 'right center',
+        backfaceVisibility: 'hidden',
       }}>
+        {/* page-curl shadow that sweeps across as the page turns */}
+        {flip && (
+          <div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', pointerEvents: 'none',
+            background: flip === 'next'
+              ? 'linear-gradient(90deg, rgba(0,0,0,.02), rgba(0,0,0,.22) 88%, rgba(0,0,0,.32))'
+              : 'linear-gradient(270deg, rgba(0,0,0,.02), rgba(0,0,0,.22) 88%, rgba(0,0,0,.32))' }} />
+        )}
         {/* spine */}
         <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: `linear-gradient(${tone.color}, ${tone.border})`, borderRadius: '16px 0 0 16px' }} />
         <div style={{ padding: '26px 30px 60px 40px' }}>
