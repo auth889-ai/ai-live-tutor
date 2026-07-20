@@ -54,7 +54,7 @@ export function FocusDashboard() {
       {deviceId && data && acts.length > 0 && (
         <>
           {/* PREMIUM HERO: circular focus gauge + stat cards */}
-          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center', margin: '16px 0 22px',
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center', margin: '16px 0 16px',
             padding: 22, borderRadius: 18, background: 'linear-gradient(135deg, #fbf6f2, #fff)', border: `1px solid ${V('--border', '#eadfd8')}`, boxShadow: '0 10px 30px rgba(60,40,30,.08)' }}>
             <FocusGauge score={score} />
             <div style={{ flex: 1, minWidth: 220, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
@@ -64,39 +64,60 @@ export function FocusDashboard() {
             </div>
           </div>
 
-          {/* insights */}
-          {(data.insights ?? []).length > 0 && (
-            <Section title="Insights">
-              {(data.insights ?? []).map((ins, k) => (
-                <div key={k} style={{ padding: '8px 0', borderBottom: `1px solid ${V('--border', '#f0e8e2')}` }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: ins.type === 'positive' ? '#2b7a3f' : ins.type === 'warning' ? '#c0522d' : V('--ink', '#2b2320') }}>{ins.title}</div>
-                  <div style={{ fontSize: 12.5, color: V('--ink-muted', '#8a7d76') }}>{ins.message}</div>
-                </div>
-              ))}
-            </Section>
-          )}
+          {/* AI COACH BANNER — one dynamic line summarizing where you stand */}
+          <CoachBanner score={score} data={data} goal={data.goal} />
 
-          {/* PREMIUM activity feed — each with the AI's dynamic motivation */}
-          <div style={{ fontSize: 14, fontWeight: 800, color: V('--ink', '#2b2320'), margin: '4px 0 10px' }}>Activity & AI coaching</div>
-          {acts.map((a) => <ActivityCard key={a.id || a.activityId} a={a} />)}
+          {/* PREMIUM activity feed — each with the AI's dynamic motivation, on a timeline */}
+          <div style={{ fontSize: 15, fontWeight: 800, color: V('--ink', '#2b2320'), margin: '18px 0 12px' }}>AI coaching · every page you visited</div>
+          <div style={{ position: 'relative', paddingLeft: 4 }}>
+            {acts.map((a, k) => <ActivityCard key={a.id || a.activityId || k} a={a} last={k === acts.length - 1} />)}
+          </div>
         </>
       )}
     </div>
   );
 }
 
-// PREMIUM ACTIVITY CARD — page + type badge + the AI's dynamic motivation + confidence.
-function ActivityCard({ a }) {
+// AI COACH BANNER — a single dynamic line that reads the whole session.
+function CoachBanner({ score, data, goal }) {
+  const distract = data.distractionCount ?? 0;
+  const line = score >= 75 ? `Excellent focus — ${score}/100. You're staying on ${goal || 'your goal'}. Keep the streak alive.`
+    : score >= 45 ? `Mixed session (${score}/100). ${distract} distraction${distract === 1 ? '' : 's'} crept in — a couple of focused blocks will pull this up fast.`
+    : `Your focus dipped to ${score}/100${distract ? ` with ${distract} distraction${distract === 1 ? '' : 's'}` : ''}. No shame — reset now: one 25-minute focused block on ${goal || 'your goal'} and you're back.`;
+  const c = score >= 75 ? '#2b7a3f' : score >= 45 ? '#b06a2e' : '#c0522d';
+  return (
+    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 18px', borderRadius: 14, background: `linear-gradient(135deg, ${c}14, #fff)`, border: `1px solid ${c}33` }}>
+      <span style={{ fontSize: 22, flexShrink: 0 }}>🧑‍🏫</span>
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: c, letterSpacing: 0.5, marginBottom: 2 }}>YOUR AI COACH</div>
+        <div style={{ fontSize: 14, color: V('--ink', '#2b2320'), lineHeight: 1.55, fontWeight: 500 }}>{line}</div>
+      </div>
+    </div>
+  );
+}
+
+// PREMIUM ACTIVITY CARD — page + type badge + the AI's dynamic motivation + confidence, on a timeline.
+function ActivityCard({ a, last }) {
   const rawType = String(a.ai?.type || a.decision?.finalType || a.decision?.action || 'checked').toLowerCase();
   const kind = /non|distract/.test(rawType) ? 'distraction' : /partial|ask|uncertain/.test(rawType) ? 'uncertain' : 'study';
   const theme = kind === 'study' ? { c: '#2b7a3f', bg: 'rgba(43,122,63,.06)', b: '#bfebd5', badge: 'On task', icon: '✅' }
     : kind === 'distraction' ? { c: '#c0522d', bg: 'rgba(192,82,45,.06)', b: '#ffd4cf', badge: 'Distraction', icon: '⚠️' }
     : { c: '#b06a2e', bg: 'rgba(176,106,46,.06)', b: '#ffe1a8', badge: 'Uncertain', icon: '🤔' };
-  const motivation = a.ai?.motivation || a.ai?.voiceText || a.decision?.reason || a.ai?.reason || '';
+  // guarantee a motivation line for EVERY event
+  const fallback = kind === 'distraction' ? "This won't move your goal forward — step back and give it 5 focused minutes. You've got this."
+    : kind === 'uncertain' ? 'Quick gut-check: is this actually helping your goal, or a detour?'
+    : "On track — keep this momentum going.";
+  const motivation = a.ai?.motivation || a.ai?.voiceText || a.decision?.reason || a.ai?.reason || fallback;
   const conf = Math.round((a.ai?.confidence ?? 0) * 100);
 
   return (
-    <div style={{ display: 'flex', gap: 0, marginBottom: 12, borderRadius: 14, overflow: 'hidden', border: `1px solid ${theme.b}`, background: theme.bg, boxShadow: '0 4px 14px rgba(60,40,30,.05)' }}>
+    <div style={{ display: 'flex', gap: 12, position: 'relative' }}>
+      {/* timeline rail */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 22, flexShrink: 0 }}>
+        <span style={{ width: 14, height: 14, borderRadius: 999, background: theme.c, boxShadow: `0 0 0 4px ${theme.c}22`, marginTop: 16 }} />
+        {!last && <span style={{ flex: 1, width: 2, background: '#efe6de' }} />}
+      </div>
+      <div style={{ display: 'flex', gap: 0, marginBottom: 14, borderRadius: 14, overflow: 'hidden', border: `1px solid ${theme.b}`, background: theme.bg, boxShadow: '0 4px 14px rgba(60,40,30,.05)', flex: 1, minWidth: 0 }}>
       <div style={{ width: 5, background: theme.c, flexShrink: 0 }} />
       <div style={{ padding: '13px 16px', flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
@@ -123,6 +144,7 @@ function ActivityCard({ a }) {
             <span style={{ fontSize: 10.5, color: theme.c, fontWeight: 700 }}>{conf}%</span>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
