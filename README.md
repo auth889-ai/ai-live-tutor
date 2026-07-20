@@ -39,11 +39,28 @@ lesson's code themselves.
 
 ## The problem
 
-Most "AI course" tools ask **one model to imagine a lesson** — so algorithm animations are
-made-up frames, "facts" are hallucinated, and the student just watches. Forever replaces the
-single model with a **society of specialized Qwen agents that divide the work, argue with
-evidence, and refuse to ship anything they can't prove** — and it drives every algorithm
-animation from a *real* code execution, not a guess.
+Every month, students pay for courses — Coursera, Udemy, one subscription after another — and
+finish almost none of them; you pay whether you study or not. And when an exam is close, you fall
+back on your **own university slides and PDFs: dense, wordy, and nearly impossible to understand
+alone.** The AI tools that promise to help just ask **one model to imagine a lesson** — so the
+"facts" are hallucinated, the algorithm animations are made-up frames, and you're still only
+*watching*.
+
+## How Forever answers it
+
+Forever turns **your own material** — the exact slides and PDFs you're stuck on — into a course
+taught by a **society of Qwen agents**, and you **pay only for what you actually generate**, not a
+monthly subscription for content you never open.
+
+- 🎓 A **Dean** and a domain **Teacher** turn your slides into a real lesson plan.
+- 🖊️ A **Board Director** writes it on a board **in sync with a spoken voice** — like a human tutor explaining, not a wall of text.
+- 🔎 A **Grounding Auditor** objects, *with evidence*, to anything your source doesn't support; an **Arbiter** settles the dispute. **Grounded-or-dropped — no hallucinations.**
+- ⚙️ An **Execution Tracer** *runs the real code*, so every algorithm animation is true to an actual run — never imagined — and you can edit and run it yourself.
+
+**That's the real innovation** — not "PDF → summary" (many tools do that), but a **team of AI
+agents that divide the work, debate with citations, and execute real code**, so what you learn is
+provably correct. It maps directly to Track 3: task division, dialogue, conflict resolution, and a
+measured **4/4 vs 0/4** gain over a single-agent baseline.
 
 ## 1 · Paste anything → a faculty of AI teachers builds a full course
 

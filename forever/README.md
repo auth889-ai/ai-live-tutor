@@ -8,12 +8,17 @@
 
 **Global AI Hackathon with Qwen Cloud · Track 3: Agent Society · AGPL-3.0**
 
-Bring any material — a PDF with figures, a web article, notes, an image — and a society of
-Qwen-powered AI teachers turns it into a **narrated, interactive Udemy-style course**: a tutor
-that writes on a board in sync with its voice, **really executes** the code it teaches,
-animates algorithms step by step from **real execution traces** (never imagined frames),
-pauses for quizzes, proves every claim against your source — and lets the student edit and
-run the lesson's code themselves in a sandbox.
+**The problem:** students pay for course subscription after subscription and finish almost none of
+them, then fall back on their own dense university slides and PDFs that are impossible to
+understand alone — while the AI tools meant to help just ask one model to *imagine* a lesson
+(hallucinated facts, made-up animations, passive watching).
+
+**Forever's answer:** bring any material — a PDF with figures, a web article, notes, an image — and
+a **society of Qwen-powered AI teachers** turns it into a **narrated, interactive Udemy-style
+course**: a tutor that writes on a board in sync with its voice, **really executes** the code it
+teaches, animates algorithms step by step from **real execution traces** (never imagined frames),
+pauses for quizzes, proves every claim against your source — and lets the student edit and run the
+lesson's code themselves in a sandbox. You pay only for what you generate, not a monthly fee.
 
 ![Forever home dashboard](screenshots/01-home.png)
 
