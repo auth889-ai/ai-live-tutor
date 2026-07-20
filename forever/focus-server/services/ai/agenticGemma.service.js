@@ -275,10 +275,10 @@ function recoverFromTruncatedJson(rawText = "", meta = {}) {
   const motivation =
     safeUserText(motivationRaw) ||
     (type === "non-study"
-      ? "Let’s return to your study goal for five minutes."
+      ? "This won't move your goal forward — one small step back to studying now beats a long detour. You've got this."
       : type === "study"
-        ? "Good. Keep going with your study goal."
-        : "Please confirm if this page helps your study goal.");
+        ? "You're on track — keep this momentum going."
+        : "Quick gut-check: is this actually helping your goal, or is it a detour?");
 
   const voiceText =
     safeUserText(voiceRaw) ||
@@ -802,8 +802,8 @@ Return this exact JSON shape:
   "decision": "continue or ask or intervene or refocus",
   "reason": "short human reason",
   "needsUserCheck": false,
-  "motivation": "short helpful motivation",
-  "voiceText": "short spoken coaching sentence",
+  "motivation": "a POWERFUL, warm, SPECIFIC nudge (<=25 words) that names the student's GOAL and this exact page — e.g. 'That cat video is fun, but your SQL joins won't learn themselves — 5 focused minutes now beats an hour of catch-up.' Never generic; reference the real page + goal. Motivating, never shaming.",
+  "voiceText": "the same nudge as ONE short spoken sentence (<=16 words), warm and energizing",
   "followUpQuestion": "",
   "selfCheck": {
     "goalUnderstanding": "short",
