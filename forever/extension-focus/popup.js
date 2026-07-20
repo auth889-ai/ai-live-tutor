@@ -36,7 +36,7 @@ async function load() {
     const res = await sendMessage({ type: "STUDY_GET_SETTINGS" });
     const data = res?.data || {};
 
-    apiBaseUrlEl.value = data.apiBaseUrl || "http://localhost:3001/api";
+    apiBaseUrlEl.value = data.apiBaseUrl || "http://localhost:3000/api";
     signalIntervalMsEl.value = data.signalIntervalMs || 12000;
     screenshotIntervalMsEl.value = data.screenshotIntervalMs || 90000;
     goalEl.value = data.goal || "";

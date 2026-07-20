@@ -20,7 +20,7 @@ export async function POST(request) {
   let body;
   try { body = await request.json(); } catch { return Response.json({ ok: false, error: 'bad request' }, { status: 400, headers: cors }); }
   const deviceId = body?.deviceId ?? body?.session?.deviceId ?? 'device';
-  const signal = { page: body?.page ?? body, behavior: body?.behavior ?? {} };
+  const signal = { page: body?.page ?? body, behavior: body?.behavior ?? {}, screenshotBase64: body?.screenshotBase64 ?? body?.screenshot ?? null };
   try {
     const sess = await currentSession({ deviceId }).catch(() => null);
     const goal = body?.goal ?? body?.session?.goal ?? sess?.goal ?? '';

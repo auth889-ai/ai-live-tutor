@@ -10,6 +10,7 @@
 //          reason }  — type drives whether the extension shows the refocus popup.
 
 import { runAgentChain } from '../qwen/client.js';
+import { classifyWithVision } from './qwen-vision.js';
 
 // Cheap deterministic pre-checks so obvious cases never spend a token (and work offline):
 // clearly-study domains pass, clearly-distracting domains flag, before the model is consulted.
@@ -28,6 +29,14 @@ export async function classifyFocusSignal(signal, { goal = '', call = runAgentCh
   }
   if (STUDY_HINTS.test(url) && !behavior.isHidden) {
     return { type: 'study', voiceText: '', chatMessage: '', suggestedAction: '', reason: 'known study resource' };
+  }
+
+  // VISION PATH (how w2 did it): if the extension captured a screenshot, LOOK at the page
+  // with Qwen vision — the most reliable signal, exactly like w2's Gemma screenshot analysis.
+  const shot = signal?.screenshotBase64 ?? signal?.page?.screenshotBase64 ?? signal?.screenshot;
+  if (shot) {
+    const visionDecision = await classifyWithVision({ screenshotBase64: shot, page, goal });
+    if (visionDecision) return visionDecision;
   }
 
   // model path — ambiguous page: let Qwen judge against the goal
