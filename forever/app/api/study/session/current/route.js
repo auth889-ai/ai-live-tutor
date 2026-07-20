@@ -3,6 +3,7 @@ const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods
 export async function OPTIONS() { return new Response(null, { status: 204, headers: cors }); }
 export async function GET(request) {
   const deviceId = new URL(request.url).searchParams.get('deviceId') ?? 'device';
-  const data = await currentSession({ deviceId });
-  return Response.json({ ok: true, data }, { headers: cors });
+  const session = await currentSession({ deviceId });
+  const active = Boolean(session && session.status === 'active');
+  return Response.json({ ok: true, data: { monitoringActive: active, session: active ? session : null, currentSession: active ? session : null } }, { headers: cors });
 }
