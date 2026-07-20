@@ -102,6 +102,11 @@ saveGoalBtn?.addEventListener("click", async () => {
     const started = await sendMessage({ type: "STUDY_START_SESSION", payload: { goal } });
     if (started?.ok) {
       await chrome.storage.local.set({ monitoringActive: true, sessionStatus: "active" });
+      // flip the session badge/text directly so it doesn't lag on "PAUSED"
+      const badge = document.getElementById("sessionBadge");
+      if (badge) { badge.textContent = "ACTIVE"; badge.className = "badge active"; }
+      const sState = document.getElementById("sessionStatus");
+      if (sState) sState.textContent = "Monitoring active";
       setStatus("✅ Monitoring active — open any site; you'll be nudged if you drift.");
     } else {
       setStatus("Goal saved. Click Start Session to monitor. (" + (started?.message || "start failed") + ")");
