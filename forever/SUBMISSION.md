@@ -1,72 +1,74 @@
 # Devpost submission — Forever (Track 3: Agent Society)
 
-Everything below is ready to paste into the Devpost form fields. Deadline: **Jul 20, 5:00pm EDT**.
+Every claim below was checked against the code. Paste these into the Devpost fields.
 
 ---
+
+## Project name (≤60 chars)
+`Forever — an AI agent society that teaches your slides`
+
+Alternatives: `Forever: AI tutor built by a society of Qwen agents` · `Forever — Agent-Society AI Tutor`
+
+## Elevator pitch (≤200 chars)
+`Upload any PDF or slides and a society of Qwen agents builds a narrated course: they divide the work, debate and cite sources, and run real code — so what you learn is provably correct.`
 
 ## Track
 **Track 3 — Agent Society.**
 
-## Repo URL (code)
-`https://github.com/auth889-ai/ai-live-tutor` — submission project is in the [`forever/`](https://github.com/auth889-ai/ai-live-tutor/tree/main/forever) directory. Public. AGPL-3.0 license (shown in the About section).
+## Repo URL
+`https://github.com/auth889-ai/ai-live-tutor` — the project is in [`forever/`](https://github.com/auth889-ai/ai-live-tutor/tree/main/forever). Public, AGPL-3.0 (shown in the About section).
 
-## Proof of Alibaba Cloud deployment (paste this file link)
-`https://github.com/auth889-ai/ai-live-tutor/blob/main/forever/lib/qwen/client.js`
-— every model call goes to Qwen Cloud on Alibaba Cloud (`dashscope-intl.aliyuncs.com/compatible-mode/v1`). Also see [`forever/lib/tts/providers/synthesize.js`](https://github.com/auth889-ai/ai-live-tutor/blob/main/forever/lib/tts/providers/synthesize.js) (Qwen TTS) and [`forever/lib/storage/`](https://github.com/auth889-ai/ai-live-tutor/tree/main/forever/lib/storage) (MongoDB/Redis/OSS seams for ECS).
+## Proof of Alibaba Cloud deployment
+- **Code file:** `https://github.com/auth889-ai/ai-live-tutor/blob/main/forever/lib/qwen/client.js` — every model call goes to Qwen Cloud / Model Studio on Alibaba Cloud (DashScope compatible-mode endpoint). Also `forever/lib/qwen/vision.js` and `forever/lib/tts/providers/synthesize.js` (Qwen TTS).
+- **Live deployment:** the app runs on an **Alibaba Cloud ECS** instance (`http://47.251.32.21:3000`), containerized per `forever/Dockerfile` + `forever/docker-compose.yml`; runbook in `forever/infra/deploy-alibaba-ecs.md`. Screenshot the running app + the ECS console for the proof.
 
 ## Architecture diagram
-Rendered Mermaid diagram at the top of [`forever/README.md`](https://github.com/auth889-ai/ai-live-tutor/blob/main/forever/README.md#architecture) (GitHub renders it visually). If Devpost needs an image, screenshot that rendered diagram.
+Two rendered Mermaid diagrams in the repo README (system + agent pipeline). Screenshot them for Devpost.
 
 ---
 
-## Text description (features & functionality)
+## Text description (features & functionality) — verified
 
-**Forever turns any material into a real, taught course — built by a society of Qwen agents that divide the work, argue with evidence, and refuse to ship anything they can't ground.**
+**Forever turns your own study material into a course taught by a society of Qwen agents that divide the work, debate with evidence, and run real code — so what you learn is provably correct.**
 
-Most "AI course" tools ask one model to imagine a lesson. Forever is a **multi-agent system** where each agent has exactly one job and they negotiate:
+**The problem.** Students pay for course subscription after subscription and finish almost none of them, then fall back on their own dense university slides and PDFs that are hard to understand alone. AI tools that promise to help usually ask one model to *imagine* a lesson — hallucinated facts, made-up animations, passive watching.
 
-- **🧭 Domain Router** (qwen3.6-flash) picks the domain and pipeline.
-- **🎓 Dean** (qwen3.7-max) writes the course outline; **👨‍🏫 Teacher / Coding Instructor** (qwen3.7-max) writes every student-facing explanation.
-- **🖊️ Board Director** (qwen3.7-plus) stages the screen step by step — objects, regions, diagrams.
-- **⚙️ Execution Tracer + 💻 Code Runner** run the *real* algorithm in a Docker sandbox (`--network none`) and record the true trace: active line, pointers riding the array, visited sets, queues, trace tables. Animation comes from really-executed code, never from an LLM guessing frames.
-- **🔍 Grounding Auditor** (qwen3.6-flash) and **🎓 Pedagogy Critic** object with cited evidence; the board revises; a bounded debate ends with an **⚖️ Arbiter** verdict — grounded-or-dropped.
-- **🎙 Voice Writer** narrates; the narration text *is* the trace step's explanation, so voice and board can't drift.
+**What it does.** Upload a PDF, article, or a photo of a slide. A faculty of specialized Qwen agents turns it into a narrated, interactive course — a tutor that writes on a board in sync with a voice, animates algorithms from **really-executed code**, quizzes you, and cites every claim back to your source. It's open source and runs on your own Qwen usage, so there's no subscription.
 
-**Why it's a real Agent Society (Track 3):**
-- *Task division* — one job per agent, each its own file under `lib/orchestration/agents/`.
-- *Dialogue & negotiation* — critics raise objections with evidence; the board answers or revises; conflicts resolve through a bounded, logged debate.
-- *Conflict resolution is structural* — hand-authored motion is stripped so the real trace owns animation; a dry-run scene without a real trace refuses to ship (honest failure, no fallback fabrication).
-- *Measurable efficiency gain* — on 4 matched coding materials, a single agent passes **0/4** the elite quality gate (1/4 breaks the structural contract, 0/4 provably from a real run); the society passes **4/4** with 0 contract failures, engine-recorded traces, and 3–5× depth with logged objections/repairs. Reproducible via `eval/society-vs-single.eval.mjs`.
+**How the agent society works (Track 3).**
+- **Task division** — each agent has one job, one file under `lib/orchestration/agents/`. A **Domain Router** classifies the material and picks **one** planner: a **Coding Instructor**, one of 14 domain **Teachers**, or a Universal Teacher. For a full course, a **Dean** first plans the episodes and fans out one job per lesson.
+- **Dialogue & negotiation** — each scene is produced through a **real LangGraph review cycle** on a shared blackboard: a **Board Director** proposes the board; a **Grounding Auditor** (hard gate) and a **Pedagogy Critic** (advisory) review it in parallel and file objections *with evidence* (an objection without evidence is rejected); the Board Director revises.
+- **Conflict resolution** — bounded by a round cap; if grounding objections survive, an **Arbiter** issues a binding verdict (with a strict-consensus fallback). Only the failed stage re-runs. A dry-run scene without a real execution trace refuses to ship — no fabricated animation.
+- **Real execution** — for coding scenes, an **Execution Tracer** + **Code Runner** run the real algorithm in a sandbox (**Judge0 or Docker, network-isolated**); the program emits structured step events that drive the on-screen animation (active line, visited nodes, trace table). Students can edit and re-run the code in-browser.
 
-**For the student, it's not watching — it's doing:** edit and run the lesson's code in the sandbox; quizzes pause the audio clock; every on-screen fact cites its source chunk ("Source · page N").
+**One model per job — all on Qwen Cloud (DashScope):**
+- `qwen3.7-max` — Dean, Teacher, Coding Instructor, Arbiter (planning & verdicts)
+- `qwen3.7-plus` — Board Director, Voice Writer, and page/slide vision
+- `qwen3.6-flash` — Domain Router, Grounding Auditor, Pedagogy Critic
+- `qwen3-coder-plus` — Execution Tracer, Code Runner
 
-**Bonus features shipped:** a Chrome extension **Focus Guard** (Qwen vision detects when you drift from studying and writes a specific, goal-aware nudge to pull you back) and **Audio → Notes** (live in-class transcription → Qwen-structured study notes in a flippable book).
+**Measured, not asserted (`eval/`):**
+- On **4 matched coding problems** (Tarjan bridges, Dijkstra, bitmask BFS, an unseen problem), a single-agent baseline's dry runs **fail the elite quality gate on all 4**; the society ships **engine-executed traces with 0 contract failures**.
+- In a **blind pedagogy rubric** (7 criteria, judged in both presentation orders), the **society wins (4 and 5 of 7); the single agent wins 0**.
+- **Universal dry-run engine:** **63/64 (98%)** structural-elite across 64 LeetCode problems, **0 errors, zero per-problem code**.
+- Honest tradeoff: the society spends far more tokens and time — the price of validation, real execution, and grounding.
 
-**Stack:** Next.js/React · Node.js worker + BullMQ/Redis · Docker code sandbox · MongoDB · **all intelligence on Qwen Cloud (DashScope / Alibaba Cloud Model Studio)**. 660+ tests, no tokens spent.
+**Production-shaped.** Next.js app + a separate **BullMQ** worker (the society) on **Redis**, **MongoDB** for records, **OSS** for audio/images, all deployed on **Alibaba Cloud ECS**. Honest failures (no fake fallbacks). ~**790 tests**.
 
----
+**Bonus tools shipped:** **Focus Guard** (a Chrome extension where Qwen vision detects when you drift from studying and nudges you back), **Notebooks** (each lesson synthesized by a plan → write → review Qwen chain on `qwen3.7-plus`), **Progress** (spaced-repetition that shows what you're about to forget), and **Audio → Notes** (live transcription written into structured notes by Qwen).
 
-## 3-minute demo video script (record on YouTube/Vimeo/Facebook, make public)
-
-**0:00–0:20 — Hook.** "This is Forever. Give it any material and a *society* of Qwen agents builds a course that actually teaches — and refuses to make anything up." Show the landing page.
-
-**0:20–0:50 — Input → society runs.** In Studio, paste a PDF/article. Show the live SSE progress: Router → Dean → Instructor → Board Director, then the critics. Point at the agent names as they light up.
-
-**0:50–1:40 — The negotiation (the Track-3 core).** Open the run log: show a Grounding Auditor **objection with a citation**, the Board **revising**, and the Arbiter **verdict**. Then show a scene that was **dropped** for an honest reason. Say: "No single model does this — the disagreement is the quality control."
-
-**1:40–2:20 — Real execution, not imagined.** Play an algorithm lesson: pointer riding the array, visited set filling — narrate that this motion is from **really-executed code in a sandbox**, and the voice line *is* the trace step. Then click "Try it," edit the code, run it live.
-
-**2:20–2:45 — Measurable gain.** Show `eval/RESULTS.md`: single agent 0/4 vs society 4/4, 3–5× depth. "Measured, not asserted."
-
-**2:45–3:00 — Alibaba Cloud + close.** Show `lib/qwen/client.js` with the DashScope endpoint. "Every model call runs on Qwen Cloud. Track 3: Agent Society." End on the course player.
+**Stack:** Next.js/React · Node.js worker · BullMQ/Redis · Docker/Judge0 sandbox · MongoDB · **all agent intelligence on Qwen Cloud (DashScope / Alibaba Cloud Model Studio)**. (The tutor voice in the demo uses a TTS service; it's a supporting component — the agents are all Qwen.)
 
 ---
 
-## Devpost form checklist
+## 3-minute demo video
+See the timed teleprompter script (course → let the tutor teach → Qwen model reveal → 50-second bonus). Record 1080p, upload to YouTube/Vimeo/Facebook, set Public.
+
+## Devpost checklist
 - [ ] Track: **Agent Society**
-- [ ] Repo URL: `https://github.com/auth889-ai/ai-live-tutor` (public ✓, AGPL license in About ✓)
-- [ ] Alibaba Cloud proof link: `.../forever/lib/qwen/client.js`
-- [ ] Architecture diagram: link/screenshot of `forever/README.md` Mermaid
-- [ ] Video URL (YouTube/Vimeo/Facebook, public)
-- [ ] Text description: paste the section above
-- [ ] (Optional) blog post URL for the Blog Post Prize
+- [ ] Repo URL (public ✓, AGPL in About ✓)
+- [ ] Alibaba Cloud proof: `forever/lib/qwen/client.js` + live ECS `47.251.32.21:3000`
+- [ ] Architecture diagram (screenshot the README Mermaid)
+- [ ] Video URL (public)
+- [ ] This description
+- [ ] (Optional) blog post

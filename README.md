@@ -29,7 +29,7 @@ lesson's code themselves.
 - 🏛️ **A real agent society, not one mega-prompt** — 10+ specialized Qwen agents per scene divide the work and debate on a shared blackboard; a per-scene **LangGraph** cycle runs propose → audit → revise, and an **Arbiter** breaks deadlocks.
 - ▶️ **Algorithms animated from *really-executed* code** — every trace runs for real in a sandbox (Judge0 / Docker); no LLM-imagined frames. Students re-run the exact code in-browser.
 - 🔎 **Grounded-or-dropped** — every board claim cites a source chunk; an independent auditor blocks the unsupported; figures carry a **"Source · page N"** stamp.
-- 📊 **Measured, not claimed** — same material through the society vs a single-agent baseline: **4/4 vs 0/4** on the quality gate ([`forever/eval/`](forever/eval/)).
+- 📊 **Measured, not claimed** — on 4 matched coding problems a single-agent baseline **fails the dry-run quality gate on all 4** (e.g. "0 steps carry pointers"), while the society ships **engine-executed traces with 0 contract failures**; in a separate blind 7-criterion pedagogy rubric the society **wins and the single agent wins 0** ([`forever/eval/`](forever/eval/)).
 - ☁️ **All-Qwen & production-shaped** — one model per job on DashScope, BullMQ workers, MongoDB, OSS, honest failures (no fake fallbacks), **660+ tests**.
 
 > **📁 The full source, architecture, and benchmarks live in [`forever/`](forever/).** This page
@@ -61,7 +61,8 @@ lesson, instead of paying every month for a platform you barely open.
 **That's the real innovation** — not "PDF → summary" (many tools do that), but a **team of AI
 agents that divide the work, debate with citations, and execute real code**, so what you learn is
 provably correct. It maps directly to Track 3: task division, dialogue, conflict resolution, and a
-measured **4/4 vs 0/4** gain over a single-agent baseline.
+measured gain over a single-agent baseline (which fails the dry-run quality gate on every test problem
+and wins 0 of a blind pedagogy rubric).
 
 ## 1 · Paste anything → a faculty of AI teachers builds a full course
 
@@ -249,9 +250,10 @@ flowchart TB
   own call fails). Only the failed stage re-runs, never the whole scene. Structurally, a dry-run
   scene without a real execution trace refuses to ship — no fabricated animation.
 - **Measurable gain vs single-agent baseline** — [`forever/eval/`](forever/eval/): the same
-  SourcePack runs through a single `qwen3.7-max` mega-prompt vs the full society. On N=4 matched
-  coding materials the single agent passes **0/4** the quality gate; the society passes **4/4**
-  with 0 contract failures and 3–5× depth.
+  SourcePack runs through a single `qwen3.7-max` mega-prompt vs the full society. On 4 matched
+  coding problems the single agent's dry runs **fail the quality gate on all 4**; the society
+  ships **engine-executed traces with 0 contract failures**. A separate blind pedagogy rubric
+  (7 criteria, judged in both orders) the **society wins and the single agent wins 0**.
 
 ### Model routing (one model per job — all on Qwen Cloud)
 

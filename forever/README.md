@@ -243,14 +243,17 @@ simpler-but-true view, never wrong). Authority on any disagreement:
 
 ## The measurable gain (Track 3 requirement)
 
-`eval/RESULTS.md` — regenerate with `node --env-file=.env eval/benchmark.eval.js`.
-Two benchmarks, every number measured, none asserted:
-- **Mechanical validators, N=4 matched coding materials** (`eval/society-vs-single.eval.mjs`):
-  single agent — **0/4** hand-written dry runs pass the elite quality gate, 1/4 violates the
-  structural contract, 0/4 screen values provably from a real run; society — **0 contract
-  failures, 4/4 engine-recorded, 3–5× depth** with logged objections/repairs/refusals.
-- **Cross-domain blind rubric** (`eval/benchmark.eval.js`): contract validity, grounding,
-  tokens, wall time, and 7-criterion pedagogy judged in both presentation orders.
+Every number measured, none asserted:
+- **Mechanical validators, 4 matched coding problems** (`eval/society-vs-single.eval.mjs`,
+  `society-vs-single.results.json`): single agent — **0/4** hand-written dry runs pass the elite
+  quality gate (e.g. "0 steps carry pointers"), and no screen value is provably from a real run;
+  society — **0 contract failures, every trace engine-executed** (real `python3` in the sandbox).
+- **Blind pedagogy rubric** (`eval/RESULTS.md`, `eval/benchmark.eval.js`): 7 criteria judged in
+  BOTH presentation orders — the **society wins (4 and 5 of 7); the single agent wins 0**.
+  Honest tradeoff: the society spends far more tokens and wall-time — the price of validation,
+  real execution, and grounding.
+- **Universal dry-run coverage**: **63/64 (98%)** structural-elite across 64 LeetCode problems,
+  **0 errors, zero per-problem code** (`scripts/universal-battery.mjs`).
 
 ## What makes it different
 
