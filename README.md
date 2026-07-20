@@ -18,9 +18,19 @@ lesson's code themselves.
 **Global AI Hackathon with Qwen Cloud · Track 3: Agent Society** — all intelligence on
 **Qwen Cloud (DashScope / Alibaba Cloud Model Studio)**, deployed on Alibaba Cloud ECS.
 
+[**Highlights**](#-highlights) · [**Product tour**](#1--paste-anything--a-faculty-of-ai-teachers-builds-a-full-course) · [**Architecture**](#architecture) · [**Track 3 mapping**](#track-3-agent-society--how-it-maps) · [**Run it**](#run-it) · [**Deep docs →** `forever/`](forever/)
+
 </div>
 
 ![Forever home dashboard](forever/screenshots/01-home.png)
+
+## ✨ Highlights
+
+- 🏛️ **A real agent society, not one mega-prompt** — 10+ specialized Qwen agents per scene divide the work and debate on a shared blackboard; a per-scene **LangGraph** cycle runs propose → audit → revise, and an **Arbiter** breaks deadlocks.
+- ▶️ **Algorithms animated from *really-executed* code** — every trace runs for real in a sandbox (Judge0 / Docker); no LLM-imagined frames. Students re-run the exact code in-browser.
+- 🔎 **Grounded-or-dropped** — every board claim cites a source chunk; an independent auditor blocks the unsupported; figures carry a **"Source · page N"** stamp.
+- 📊 **Measured, not claimed** — same material through the society vs a single-agent baseline: **4/4 vs 0/4** on the quality gate ([`forever/eval/`](forever/eval/)).
+- ☁️ **All-Qwen & production-shaped** — one model per job on DashScope, BullMQ workers, MongoDB, OSS, honest failures (no fake fallbacks), **660+ tests**.
 
 > **📁 The full source, architecture, and benchmarks live in [`forever/`](forever/).** This page
 > is the complete product tour; [`forever/README.md`](forever/README.md) has the deep technical docs.
@@ -235,6 +245,15 @@ flowchart TB
 | Execution Tracer · Code Runner | `qwen3-coder-plus` | writes the programs that emit real traces |
 | Page-image vision | `qwen3.7-plus` | region/diagram/transcription reading |
 | Voice (TTS) | `qwen3-tts-flash` | natural tutor narration |
+
+## How Forever meets the judging criteria
+
+| Criterion | How Forever delivers |
+|---|---|
+| **Technical Depth & Engineering** (30%) | Custom society kernel + a real **LangGraph** review cycle; a universal execution tracer (17 behavioral detectors, real sandbox runs) that never lets the AI author a runtime fact; a deterministic timeline reconciled to real **TTS word offsets**; a region-DSL board renderer. Structured Outputs + prompt-cache-per-episode on Qwen Cloud. |
+| **Innovation & AI Creativity** (30%) | Grounded-or-dropped debate as the quality gate; algorithms drawn from **real execution**, not imagined frames; one-model-per-job routing; honest failure over silent degradation. |
+| **Problem Value & Impact** (25%) | Turns *any* material into a taught, interactive course — solving passive, hallucination-prone AI courseware. Open-source (AGPL-3.0), horizontally scalable (BullMQ), productizable. |
+| **Presentation & Documentation** (15%) | This README + two architecture diagrams + [`forever/eval/RESULTS.md`](forever/eval/) benchmark + a 3-minute demo; the Studio literally streams the faculty's debate live. |
 
 ## Qwen Cloud / Alibaba Cloud (deployment proof)
 
