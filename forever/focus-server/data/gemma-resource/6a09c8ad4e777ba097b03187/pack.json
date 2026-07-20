@@ -1,0 +1,56 @@
+{
+  "resourceId": "6a09c8ad4e777ba097b03187",
+  "savedAt": "2026-05-17T13:56:08.553Z",
+  "pack": {
+    "summary": "This resource is a study guide for 'Test Exam 1 of Anastasia,' providing an overview of the material covered in the first assessment.",
+    "deepExplanation": "The saved content identifies the specific assessment as 'test exam 1 of anastasia.' This indicates that the material is designed to test knowledge acquired up to the first major milestone or unit of study for the subject 'Anastasia.'",
+    "sections": [
+      {
+        "title": "Exam Identification",
+        "summary": "Confirms the specific test being studied.",
+        "sourceRef": "Chunk 1",
+        "start": "",
+        "end": "",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      }
+    ],
+    "keyPoints": [
+      "The resource pertains to Test Exam 1.",
+      "The subject or course is titled 'Anastasia'."
+    ],
+    "concepts": [
+      "Assessment",
+      "Exam Preparation"
+    ],
+    "tags": [
+      "Exam",
+      "Anastasia",
+      "Test"
+    ],
+    "quickRevision": [
+      "Focus on the material covered for Test Exam 1."
+    ],
+    "roadmap": [
+      {
+        "step": "Step 1",
+        "title": "Review Core Concepts",
+        "whatToDo": "Review all material designated for Test Exam 1.",
+        "why": "To ensure comprehensive preparation for the assessment.",
+        "sourceRef": "Chunk 1",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      }
+    ],
+    "practiceQuestions": [],
+    "ai": {
+      "ok": true,
+      "model": "gemma4:e4b",
+      "provider": "ollama-local",
+      "baseUrl": "http://localhost:11434",
+      "generatedAt": "2026-05-17T13:56:08.479Z"
+    }
+  }
+}

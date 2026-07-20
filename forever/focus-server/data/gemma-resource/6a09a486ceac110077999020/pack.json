@@ -1,0 +1,67 @@
+{
+  "resourceId": "6a09a486ceac110077999020",
+  "savedAt": "2026-05-17T11:21:06.718Z",
+  "pack": {
+    "summary": "This is a private, offline study resource specifically for Alice, focusing on the concept of privacy.",
+    "deepExplanation": "The resource is explicitly labeled as 'Alice private offline saved resource,' indicating its confidential nature and intended use for personal, offline study by Alice. The primary study goal is to test privacy.",
+    "sections": [
+      {
+        "title": "Resource Confidentiality",
+        "summary": "Confirms that the content is private and only intended for Alice's viewing.",
+        "sourceRef": "Chunk 1",
+        "start": "",
+        "end": "",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      }
+    ],
+    "keyPoints": [
+      "The resource is private and offline.",
+      "It is intended only for Alice."
+    ],
+    "concepts": [
+      "Privacy",
+      "Offline Study"
+    ],
+    "tags": [
+      "private",
+      "study",
+      "privacy"
+    ],
+    "quickRevision": [
+      "Remember: This resource is confidential and only for Alice."
+    ],
+    "roadmap": [
+      {
+        "step": "Review Goal",
+        "title": "Understand the Study Focus",
+        "whatToDo": "Review the stated study goal.",
+        "why": "To ensure all study efforts are directed towards testing the concept of privacy.",
+        "sourceRef": "Chunk 1",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      }
+    ],
+    "practiceQuestions": [
+      {
+        "question": "Who is the intended recipient of this resource?",
+        "answer": "Alice",
+        "type": "short_answer",
+        "difficulty": "easy",
+        "sourceRef": "Chunk 1",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      }
+    ],
+    "ai": {
+      "ok": true,
+      "model": "gemma4:e4b",
+      "provider": "ollama-local",
+      "baseUrl": "http://localhost:11434",
+      "generatedAt": "2026-05-17T11:21:06.656Z"
+    }
+  }
+}

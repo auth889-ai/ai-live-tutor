@@ -1,0 +1,43 @@
+{
+  "resourceId": "6a09c8ad4e777ba097b03187",
+  "savedAt": "2026-05-17T13:56:08.552Z",
+  "count": 1,
+  "chunks": [
+    {
+      "id": "6a09c8ad4e777ba097b03199",
+      "resourceId": "6a09c8ad4e777ba097b03187",
+      "deviceId": "web-1778864375928-85e0ab",
+      "userId": "offline-user-1fbkfwf",
+      "chunkId": "chunk_1",
+      "index": 0,
+      "sourceType": "notes",
+      "title": "test exam anastasia",
+      "text": "test exam 1 of anastasia",
+      "textPreview": "test exam 1 of anastasia",
+      "textChars": 24,
+      "tokenCountEstimate": 6,
+      "timestampStart": "",
+      "timestampEnd": "",
+      "startSeconds": null,
+      "endSeconds": null,
+      "pageNumber": null,
+      "pageStart": null,
+      "pageEnd": null,
+      "lineStart": null,
+      "lineEnd": null,
+      "keywords": [
+        "test",
+        "exam",
+        "anastasia"
+      ],
+      "concepts": [],
+      "sourceRef": "Chunk 1",
+      "metadata": {
+        "inputType": "pasted-text",
+        "chars": 24
+      },
+      "createdAt": "2026-05-17T13:54:53.247Z",
+      "updatedAt": "2026-05-17T13:54:53.247Z"
+    }
+  ]
+}

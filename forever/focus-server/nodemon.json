@@ -1,0 +1,32 @@
+{
+  "watch": [
+    "server.js",
+    "config",
+    "controllers",
+    "middleware",
+    "models",
+    "routes",
+    "services",
+    "utils"
+  ],
+  "ignore": [
+    "node_modules/**",
+    "uploads/**",
+    "upload/**",
+    "temp/**",
+    "tmp/**",
+    "storage/**",
+    "public/generated/**",
+    "generated/**",
+    "*.pdf",
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.webp",
+    "*.log",
+    "__MACOSX/**",
+    ".DS_Store"
+  ],
+  "ext": "js,json,mjs,cjs",
+  "delay": "500"
+}

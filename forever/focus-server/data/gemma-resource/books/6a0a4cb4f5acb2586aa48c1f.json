@@ -1,0 +1,2678 @@
+{
+  "id": "6a0a4cb4f5acb2586aa48c1f",
+  "deviceId": "web-1778864375928-85e0ab",
+  "userId": "offline:offline-user-lm7rjt",
+  "title": "Design Patterns: The Template Method Pattern",
+  "subtitle": "Structuring Algorithms in Game Loading Systems",
+  "status": "ready",
+  "sourceResourceIds": [
+    "6a0a453af5acb2586aa4896d"
+  ],
+  "joinedFromBookIds": [],
+  "theme": "warm",
+  "goal": "Make a visual exam study book with examples, diagrams and quiz.",
+  "audience": "student",
+  "difficulty": "adaptive",
+  "chapters": [
+    {
+      "chapterNo": 1,
+      "title": "Understanding the Need for Pattern Design",
+      "learningGoal": "Identify real-world scenarios (like game loading) where code duplication occurs.",
+      "pageStart": 1,
+      "pageEnd": 4,
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa4897f",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:06",
+          "page": "",
+          "timestamp": "0:04-1:06",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! Have you ever wondered what happens during a game's loading screen and why some of them take so much time? To answer these questions, suppose you are a game developer working on one of these loading screens f...",
+          "ragScore": 56.676,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa48980",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "0:52–1:55",
+          "page": "",
+          "timestamp": "0:52-1:55",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "may need to download external data such as sounds, arts, translations, or many others and this also adds to the time of loading Additionally after doing all these steps some cleaning may be required to delete temporary downloads or some files that were...",
+          "ragScore": 56.704,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa48981",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "1:46–2:53",
+          "page": "",
+          "timestamp": "1:46-2:53",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "this class will be instantiated and the load method will be called Now few weeks later the manager asks you to develop the loading screen of Diablo also but while developing you noticed that both classes share the same exact steps However some of their...",
+          "ragScore": 57.097,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        }
+      ]
+    },
+    {
+      "chapterNo": 2,
+      "title": "Implementing the Template Method Pattern",
+      "learningGoal": "Understand how to use abstract and concrete classes to define a reusable algorithm structure.",
+      "pageStart": 5,
+      "pageEnd": 12,
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa48980",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "0:52–1:55",
+          "page": "",
+          "timestamp": "0:52-1:55",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "may need to download external data such as sounds, arts, translations, or many others and this also adds to the time of loading Additionally after doing all these steps some cleaning may be required to delete temporary downloads or some files that were...",
+          "ragScore": 56.704,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa48981",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "1:46–2:53",
+          "page": "",
+          "timestamp": "1:46-2:53",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "this class will be instantiated and the load method will be called Now few weeks later the manager asks you to develop the loading screen of Diablo also but while developing you noticed that both classes share the same exact steps However some of their...",
+          "ragScore": 57.097,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa48982",
+          "chunkId": "chunk_4",
+          "index": 3,
+          "sourceRef": "2:41–3:50",
+          "page": "",
+          "timestamp": "2:41-3:50",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "the steps may either be abstract or have some default implementation inside the parent class Now to use the algorithm defined by the series of steps the client must provide its own sub-class, implement all abstract steps, and if need be overwrite some...",
+          "ragScore": 57.09,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "pageNo": 1,
+      "spreadNo": 1,
+      "chapterNo": 1,
+      "pageType": "cover",
+      "title": "Understanding Application Startup Processes",
+      "subtitle": "What happens behind the scenes when a large application loads?",
+      "body": "When developing large-scale applications, such as AAA video games, understanding the loading process is crucial. The startup sequence involves several complex steps. First, core resources—including data, code, images, and videos—must be loaded from local storage into the random access memory (RAM). Because these games are massive, they require the creation of significantly more objects than typical applications. Furthermore, the process often includes downloading external data, such as sounds, art assets, or translations. Finally, the application may perform cleanup steps, deleting temporary downloads to ensure optimal performance.",
+      "keyTakeaways": [
+        "Loading requires moving data and code from local storage to RAM.",
+        "Large applications create a high volume of objects, increasing load time.",
+        "External data (sounds, art) often needs to be downloaded during startup.",
+        "Cleanup of temporary files is a necessary final step."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that all applications load resources at the same speed. Reality: The size and complexity of the application (e.g., AAA games) significantly impact loading time.",
+      "didYouKnow": "The time taken during a loading screen is often a measure of the cumulative time required for initialization, object creation, and data fetching.",
+      "example": "A AAA game loading screen demonstrates the process of loading core code, creating thousands of game objects, and downloading external assets like sound files and art textures.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary destination for data and code during an application's startup?",
+        "answer": "Random Access Memory (RAM)",
+        "hint": "Think about where the computer needs fast access to run the program."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Understanding Application Startup Processes",
+          "text": "What happens behind the scenes when a large application loads?",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-flow",
+          "type": "flow",
+          "title": "Startup Sequence Flow",
+          "text": "Core resources -> RAM -> Object Creation -> External Data Download -> Cleanup",
+          "mermaid": "",
+          "x": 40,
+          "y": 100,
+          "w": 700,
+          "h": 250,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "start",
+              "x": 100,
+              "y": 150,
+              "w": 150,
+              "h": 50,
+              "text": "1. Load Core Resources (Code, Data, Images)"
+            },
+            {
+              "id": "ram",
+              "x": 350,
+              "y": 150,
+              "w": 150,
+              "h": 50,
+              "text": "2. Transfer to RAM"
+            },
+            {
+              "id": "objects",
+              "x": 600,
+              "y": 150,
+              "w": 150,
+              "h": 50,
+              "text": "3. Object Creation (High Volume)"
+            },
+            {
+              "id": "download",
+              "x": 100,
+              "y": 300,
+              "w": 150,
+              "h": 50,
+              "text": "4. Download External Assets (Sounds, Art)"
+            },
+            {
+              "id": "cleanup",
+              "x": 350,
+              "y": 300,
+              "w": 150,
+              "h": 50,
+              "text": "5. Cleanup (Delete Temp Files)"
+            }
+          ],
+          "edges": [
+            {
+              "from": "start",
+              "to": "ram",
+              "label": "Load"
+            },
+            {
+              "from": "ram",
+              "to": "objects",
+              "label": "Initialize"
+            },
+            {
+              "from": "objects",
+              "to": "download",
+              "label": "Requires"
+            },
+            {
+              "from": "download",
+              "to": "cleanup",
+              "label": "Final Step"
+            }
+          ]
+        },
+        {
+          "id": "p1-takeaways",
+          "type": "callout",
+          "title": "Key Takeaways",
+          "text": "• Data moves from Local Storage to RAM.\n• Large apps create many objects.\n• External assets often require downloading.\n• Cleanup ensures optimal performance.",
+          "mermaid": "",
+          "x": 40,
+          "y": 400,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-misconception",
+          "type": "box",
+          "title": "💡 Misconception Fix",
+          "text": "Mistake: Assuming all apps load resources at the same speed.\nReality: Complexity (e.g., AAA games) significantly impacts loading time.",
+          "mermaid": "",
+          "x": 40,
+          "y": 520,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa4897f",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:06",
+          "page": "",
+          "timestamp": "0:04-1:06",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! Have you ever wondered what happens during a game's loading screen and why some of them take so much time? To answer these questions, suppose you are a game developer working on one of these loading screens f...",
+          "ragScore": 56.676,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 2,
+      "spreadNo": 1,
+      "chapterNo": 1,
+      "pageType": "big_picture",
+      "title": "The Problem: Game Loading Complexity",
+      "subtitle": "Understanding the steps behind a game's loading screen",
+      "body": "When developing a large-scale application, such as a AAA video game, the loading screen is a complex process. Initially, the core components—including the application's data, code, and media assets (images and videos)—must be loaded from local storage into the Random Access Memory (RAM). Because these games are massive, they require the creation of significantly more objects than typical applications, which inherently increases the initialization time. Furthermore, the loading process often involves downloading external data, such as sounds, art assets, or translations. Finally, after all initialization and downloading are complete, a crucial step is cleaning up temporary downloads to ensure the system runs efficiently.",
+      "keyTakeaways": [
+        "Loading requires moving data, code, and assets from local storage to RAM.",
+        "Large games create many objects, increasing initialization time.",
+        "External data (sounds, art, translations) may need downloading during startup.",
+        "The process concludes with cleaning up temporary files."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that loading only involves reading code. Remember that loading also includes transferring all necessary assets (images, videos) and creating a large number of objects.",
+      "didYouKnow": "The complexity of a game's loading screen is directly related to the sheer volume of data and the number of objects it must initialize.",
+      "example": "A AAA game must load its core code, all high-resolution textures, and character models into RAM, followed by downloading language packs and sound effects.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary destination for data, code, and assets during the game loading process?",
+        "answer": "Random Access Memory (RAM)",
+        "hint": "It's the computer's fast, temporary memory."
+      },
+      "boardCommands": [
+        {
+          "id": "p2-title",
+          "type": "heading",
+          "title": "The Problem: Game Loading Complexity",
+          "text": "Understanding the steps behind a game's loading screen",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 700,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-flow",
+          "type": "flow",
+          "title": "Game Loading Process Flow",
+          "text": "Data flow from storage to RAM",
+          "mermaid": "",
+          "x": 50,
+          "y": 100,
+          "w": 950,
+          "h": 250,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "storage",
+              "text": "Local Storage (Code, Assets, Data)",
+              "x": 100,
+              "y": 150,
+              "w": 200,
+              "h": 60
+            },
+            {
+              "id": "transfer",
+              "text": "Transfer to RAM (Initialization)",
+              "x": 350,
+              "y": 150,
+              "w": 200,
+              "h": 60
+            },
+            {
+              "id": "download",
+              "text": "Download External Data (Sounds, Translations)",
+              "x": 600,
+              "y": 150,
+              "w": 200,
+              "h": 60
+            },
+            {
+              "id": "cleanup",
+              "text": "Cleanup Temporary Files",
+              "x": 850,
+              "y": 150,
+              "w": 200,
+              "h": 60
+            }
+          ],
+          "edges": [
+            {
+              "from": "storage",
+              "to": "transfer",
+              "label": "Core Components Load"
+            },
+            {
+              "from": "transfer",
+              "to": "download",
+              "label": "Initialization Complete"
+            },
+            {
+              "from": "download",
+              "to": "cleanup",
+              "label": "Final Step"
+            }
+          ]
+        },
+        {
+          "id": "p2-box",
+          "type": "callout",
+          "title": "Key Takeaway: Complexity Factors",
+          "text": "Loading time increases due to: 1. Massive object creation (AAA games). 2. Transferring all assets (images, videos). 3. Downloading external data.",
+          "mermaid": "",
+          "x": 50,
+          "y": 400,
+          "w": 900,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-quiz",
+          "type": "quizCard",
+          "title": "Quiz Check",
+          "text": "What is the primary destination for data, code, and assets during the game loading process?",
+          "mermaid": "",
+          "x": 50,
+          "y": 520,
+          "w": 900,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa4897f",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:06",
+          "page": "",
+          "timestamp": "0:04-1:06",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! Have you ever wondered what happens during a game's loading screen and why some of them take so much time? To answer these questions, suppose you are a game developer working on one of these loading screens f...",
+          "ragScore": 56.676,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 3,
+      "spreadNo": 2,
+      "chapterNo": 1,
+      "pageType": "example",
+      "title": "Game Loading: The Initialization Process",
+      "subtitle": "Understanding why large applications take time to start up",
+      "body": "When developing large-scale applications, such as AAA video games, the loading screen is a complex process. The initial steps involve loading essential components: the application's data, code, and media assets (images and videos). These elements must be transferred from local storage into the Random Access Memory (RAM). Because games are massive, they require the creation of significantly more objects than typical applications, which inherently increases the initialization time. Furthermore, the process often includes downloading external data—such as sounds, art assets, or translations—and concluding with necessary cleanup steps, like deleting temporary downloads. All these steps contribute to the overall loading duration.",
+      "keyTakeaways": [
+        "Loading requires moving data, code, and media from local storage to RAM.",
+        "Large applications create many objects, increasing initialization time.",
+        "External data (sounds, art) and cleanup steps add to loading time.",
+        "The loading process is a multi-step initialization sequence."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that loading time is solely due to network speed. While external downloads contribute, the primary time sinks are often the initial loading of massive amounts of data and the creation of numerous in-memory objects.",
+      "didYouKnow": "The complexity of a game's loading screen often reflects the sheer volume and variety of assets (textures, models, sounds) it must manage and initialize.",
+      "example": "A AAA game must load its core code, all associated images, and videos from the hard drive into RAM before the player can interact with the game world.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary destination for data, code, and images during a game's loading screen?",
+        "answer": "Random Access Memory (RAM)",
+        "hint": "It's the computer's short-term, fast-access memory."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Game Loading: The Initialization Process",
+          "text": "Understanding why large applications take time to start up",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-flow",
+          "type": "flow",
+          "title": "Game Loading Sequence",
+          "text": "Data transfer and object creation",
+          "mermaid": "",
+          "x": 50,
+          "y": 100,
+          "w": 700,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "start",
+              "text": "Local Storage (HDD/SSD)",
+              "x": 100,
+              "y": 150,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "process",
+              "text": "Load Assets & Code",
+              "x": 350,
+              "y": 150,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "end",
+              "text": "Random Access Memory (RAM)",
+              "x": 600,
+              "y": 150,
+              "w": 200,
+              "h": 50
+            }
+          ],
+          "edges": [
+            {
+              "from": "start",
+              "to": "process",
+              "label": "Transfer Data/Code"
+            },
+            {
+              "from": "process",
+              "to": "end",
+              "label": "Initialize Objects"
+            }
+          ]
+        },
+        {
+          "id": "p1-callout",
+          "type": "callout",
+          "title": "Key Time Sinks",
+          "text": "1. Massive Data Volume (Code, Media)\n2. Object Creation (High count)\n3. External Downloads & Cleanup",
+          "mermaid": "",
+          "x": 50,
+          "y": 300,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-misconception",
+          "type": "box",
+          "title": "⚠️ Misconception Fix",
+          "text": "Loading time is NOT solely due to network speed. Primary sinks are initial data loading and object creation.",
+          "mermaid": "",
+          "x": 50,
+          "y": 420,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-quiz",
+          "type": "quizCard",
+          "title": "Quiz Check",
+          "text": "Where does the data, code, and images go?",
+          "mermaid": "",
+          "x": 50,
+          "y": 520,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa4897f",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:06",
+          "page": "",
+          "timestamp": "0:04-1:06",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! Have you ever wondered what happens during a game's loading screen and why some of them take so much time? To answer these questions, suppose you are a game developer working on one of these loading screens f...",
+          "ragScore": 56.676,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 4,
+      "spreadNo": 2,
+      "chapterNo": 1,
+      "pageType": "lesson",
+      "title": "Introducing the Template Method Concept",
+      "subtitle": "Defining an Algorithm's Skeleton in Superclasses",
+      "body": "The Template Method pattern is a behavioral design pattern that defines the overall structure, or skeleton, of an algorithm within a superclass. This structure ensures that the general flow of the process remains consistent across related classes. However, it allows specialized subclasses to override specific steps of the algorithm without altering the core structure defined by the superclass. For instance, if you are creating loaders for different games (like World of Warcraft and Diablo), they must follow the same general loading process. By using a base class, all subclasses can share common implementation steps while providing unique, game-specific logic for the remaining steps, thereby eliminating code duplication.",
+      "keyTakeaways": [
+        "The Template Method defines the skeleton of an algorithm in the superclass.",
+        "It is a behavioral pattern, not structural.",
+        "Subclasses can override specific steps without changing the overall structure.",
+        "This approach minimizes code duplication across related classes."
+      ],
+      "misconceptionFix": "Do not confuse the Template Method with inheritance alone. While it uses inheritance, its purpose is specifically to enforce a fixed algorithm structure while allowing flexible customization of individual steps.",
+      "didYouKnow": "This pattern is highly useful when you have multiple classes that must perform the same sequence of steps, but each step requires unique implementation details.",
+      "example": "If `BaseGameLoader` defines the sequence (e.g., `loadHeader()`, `loadAssets()`, `loadData()`), the `WorldOfWarcraftLoader` and `DiabloLoader` subclasses will implement their unique logic only for `loadAssets()` and `loadData()`, while inheriting the common `loadHeader()` method.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary benefit of using the Template Method pattern?",
+        "answer": "It allows subclasses to customize specific steps of an algorithm while ensuring the overall structure remains consistent and reducing code duplication.",
+        "hint": "Think about how different games must follow the same general loading process."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Introducing the Template Method Concept",
+          "text": "Defining an Algorithm's Skeleton in Superclasses",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-concept",
+          "type": "callout",
+          "title": "Template Method Pattern",
+          "text": "Defines the overall structure (skeleton) of an algorithm in a superclass, ensuring a consistent flow while allowing specialized subclasses to override specific steps.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-flow",
+          "type": "flow",
+          "title": "Algorithm Flow Example",
+          "text": "BaseGameLoader -> [loadHeader()] -> [loadAssets()] -> [loadData()]",
+          "mermaid": "graph TD\nA[BaseGameLoader] -->|Defines Sequence| B(WorldOfWarcraftLoader)\nA -->|Defines Sequence| C(DiabloLoader)",
+          "x": 40,
+          "y": 350,
+          "w": 600,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "A",
+              "text": "BaseGameLoader (Superclass)",
+              "x": 100,
+              "y": 250,
+              "w": 150,
+              "h": 50
+            },
+            {
+              "id": "B",
+              "text": "WorldOfWarcraftLoader (Subclass)",
+              "x": 350,
+              "y": 250,
+              "w": 150,
+              "h": 50
+            },
+            {
+              "id": "C",
+              "text": "DiabloLoader (Subclass)",
+              "x": 600,
+              "y": 250,
+              "w": 150,
+              "h": 50
+            }
+          ],
+          "edges": [
+            {
+              "from": "A",
+              "to": "B",
+              "label": "Defines Sequence"
+            },
+            {
+              "from": "A",
+              "to": "C",
+              "label": "Defines Sequence"
+            }
+          ]
+        },
+        {
+          "id": "p1-key",
+          "type": "box",
+          "title": "Key Takeaways",
+          "text": "1. Defines the skeleton in the superclass.\n2. Behavioral pattern (not structural).\n3. Subclasses customize steps, not the structure.\n4. Minimizes code duplication.",
+          "mermaid": "",
+          "x": 40,
+          "y": 520,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa48983",
+          "chunkId": "chunk_5",
+          "index": 4,
+          "sourceRef": "3:34–4:41",
+          "page": "",
+          "timestamp": "3:34-4:41",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "this will allow us to get rid of code duplication inside the sub-classes we are going to create. The next step is to create a specific or concrete class for each loader we need and let it extend the BaseGameLoader class we just created In our example w...",
+          "ragScore": 60.662,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 5,
+      "spreadNo": 3,
+      "chapterNo": 2,
+      "pageType": "lesson",
+      "title": "Structure: The BaseGameLoader (Superclass)",
+      "subtitle": "Using Abstract Classes to Define Fixed Algorithms",
+      "body": "The Template Method pattern uses an abstract base class (like `BaseGameLoader`) to define the fixed structure of an algorithm. This base class declares the overall template method, which calls various steps in a specific sequence. These steps can be declared as abstract methods (requiring implementation by subclasses) or can have default implementations. Concrete subclasses (e.g., `WorldOfWarcraftLoader` or `DiabloLoader`) inherit from this base class. They are responsible for overriding specific steps—either all of them or just the abstract ones—while the core template method structure remains fixed and unchanged.",
+      "keyTakeaways": [
+        "The base class defines the fixed algorithm structure (the template method).",
+        "Steps of the algorithm are broken down into individual methods.",
+        "Concrete subclasses implement specific steps by overriding methods from the parent class.",
+        "The template method itself cannot be overridden by the subclasses."
+      ],
+      "misconceptionFix": "Do not confuse the abstract class with the concrete class. The abstract class provides the *skeleton* (the fixed order), while the concrete class provides the *specific details* (the implementation of the steps).",
+      "didYouKnow": "By using this pattern, you ensure that all derived classes follow the same high-level process, even if their internal steps are different.",
+      "example": "In the game loading application, `BaseGameLoader` defines the sequence (e.g., LoadAssets -> InitializeWorld -> ConnectDatabase). `WorldOfWarcraftLoader` and `DiabloLoader` implement the specific details for each step.",
+      "equation": "",
+      "quiz": {
+        "question": "In the Template Method pattern, which part of the code defines the fixed sequence of steps?",
+        "answer": "The abstract base class (the superclass).",
+        "hint": "Look for the class that contains the overall template method."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Structure: The BaseGameLoader (Superclass)",
+          "text": "Using Abstract Classes to Define Fixed Algorithms",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-diagram",
+          "type": "diagram",
+          "title": "Template Method Pattern Flow",
+          "text": "BaseGameLoader defines the fixed sequence (Template Method). Subclasses implement specific steps.",
+          "mermaid": "graph TD\n    A[BaseGameLoader] -->|Defines Template Method| B(LoadAssets)\n    A -->|Defines Template Method| C(InitializeWorld)\n    A -->|Defines Template Method| D(ConnectDatabase)\n    subgraph Subclass Implementation\n        B_sub[WoWLoader implements LoadAssets]\n        C_sub[WoWLoader implements InitializeWorld]\n        D_sub[WoWLoader implements ConnectDatabase]\n    end\n    B --> B_sub\n    C --> C_sub\n    D --> D_sub",
+          "x": 40,
+          "y": 250,
+          "w": 600,
+          "h": 250,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "base",
+              "x": 100,
+              "y": 150,
+              "w": 200,
+              "h": 80,
+              "text": "BaseGameLoader (Abstract Class)",
+              "style": "box"
+            },
+            {
+              "id": "sub1",
+              "x": 400,
+              "y": 150,
+              "w": 200,
+              "h": 80,
+              "text": "Concrete Subclass (e.g., WoWLoader)",
+              "style": "box"
+            }
+          ],
+          "edges": [
+            {
+              "from": "base",
+              "to": "sub1",
+              "type": "arrow",
+              "label": "Inherits from"
+            }
+          ]
+        },
+        {
+          "id": "p3-callout",
+          "type": "callout",
+          "title": "Key Distinction",
+          "text": "Abstract Class = Skeleton (Fixed Order)\nConcrete Class = Specific Details (Implementation)",
+          "mermaid": "",
+          "x": 40,
+          "y": 520,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p4-list",
+          "type": "table",
+          "title": "Template Method Roles",
+          "text": "Role | Class | Responsibility",
+          "mermaid": "",
+          "x": 40,
+          "y": 640,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [
+            {
+              "text": "Fixed Structure | Abstract Base Class | Defines the overall sequence (Template Method)."
+            },
+            {
+              "text": "Specific Steps | Concrete Subclass | Overrides methods to provide unique implementation details."
+            }
+          ],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa48984",
+          "chunkId": "chunk_6",
+          "index": 5,
+          "sourceRef": "4:28–5:29",
+          "page": "",
+          "timestamp": "4:28-5:29",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "algorithm without changing its structure. Let's go ahead now and take a look at the structure or class diagram of the template method design pattern while taking into consideration the example and the classes we created in our game loading application....",
+          "ragScore": 61.134,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 6,
+      "spreadNo": 3,
+      "chapterNo": 2,
+      "pageType": "formula",
+      "title": "Algorithm Skeleton Definition",
+      "subtitle": "Using the Template Method Pattern to Reduce Code Duplication",
+      "body": "The Template Method Pattern is used to define the skeleton of an algorithm, breaking it down into a series of steps or methods. These steps are then called sequentially within a single 'template method' (e.g., `loadMethod`). This approach is crucial for reducing code duplication when multiple classes share the same overall algorithm structure, even if the specific implementation details of individual steps vary. The steps within the algorithm can be either abstract (requiring implementation by the subclass) or can have a default implementation provided by the parent class. To utilize this defined algorithm, the client must provide its own subclass that inherits the structure.",
+      "keyTakeaways": [
+        "The pattern defines the overall structure (skeleton) of an algorithm.",
+        "It uses a 'template method' to call steps in a fixed order.",
+        "Code duplication is minimized by centralizing the algorithm flow.",
+        "Subclasses must implement the abstract steps defined by the parent class."
+      ],
+      "misconceptionFix": "Do not confuse the template method with the implementation details. The template method defines *what* steps must happen and *in what order*, but it does not provide the specific code for every step.",
+      "didYouKnow": "By using this pattern, you ensure that the core logic and sequence of operations remain consistent across related classes, improving maintainability.",
+      "example": "If two different game loading screens share identical steps for cleaning up temporary files, the Template Method Pattern allows you to write that cleanup code once in the parent class, while allowing the unique object loading code to vary in the subclasses.",
+      "equation": "",
+      "quiz": {
+        "question": "In the Template Method Pattern, what is the primary purpose of the 'template method'?",
+        "answer": "To define the fixed sequence and structure (skeleton) of an algorithm.",
+        "hint": "Think about the overall flow, not the specific code."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Algorithm Skeleton Definition",
+          "text": "Template Method Pattern",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-concept",
+          "type": "callout",
+          "title": "Template Method Pattern",
+          "text": "Defines the skeleton of an algorithm (fixed sequence of steps) to reduce code duplication across related classes.",
+          "mermaid": "",
+          "x": 40,
+          "y": 120,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-flow",
+          "type": "diagram",
+          "title": "Algorithm Flow Structure",
+          "text": "Parent Class (Template Method) -> Calls Steps in Fixed Order -> Subclass Implements Abstract Steps",
+          "mermaid": "graph TD\nA[Parent Class] -->|Defines Skeleton| B(Template Method);\nB -->|Calls Steps| C{Abstract Step 1}; \nC -->|Calls Steps| D{Abstract Step 2};",
+          "x": 40,
+          "y": 350,
+          "w": 600,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "A",
+              "x": 100,
+              "y": 250,
+              "w": 150,
+              "h": 50,
+              "text": "Parent Class",
+              "type": "box"
+            },
+            {
+              "id": "B",
+              "x": 350,
+              "y": 250,
+              "w": 150,
+              "h": 50,
+              "text": "Subclass",
+              "type": "box"
+            }
+          ],
+          "edges": [
+            {
+              "from": "A",
+              "to": "B",
+              "type": "arrow",
+              "label": "Inheritance/Usage"
+            }
+          ]
+        },
+        {
+          "id": "p4-keytakeaways",
+          "type": "table",
+          "title": "Key Takeaways",
+          "text": "1. Defines overall structure (skeleton).\n2. Uses a 'template method' for fixed order.\n3. Minimizes code duplication.\n4. Subclasses implement abstract steps.",
+          "mermaid": "",
+          "x": 40,
+          "y": 520,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [
+            {
+              "text": "Structure Defined:",
+              "content": "Skeleton (What steps happen)"
+            },
+            {
+              "text": "Mechanism:",
+              "content": "Template Method (Fixed Order)"
+            },
+            {
+              "text": "Goal:",
+              "content": "Reduce Code Duplication"
+            }
+          ],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa48981",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "1:46–2:53",
+          "page": "",
+          "timestamp": "1:46-2:53",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "this class will be instantiated and the load method will be called Now few weeks later the manager asks you to develop the loading screen of Diablo also but while developing you noticed that both classes share the same exact steps However some of their...",
+          "ragScore": 57.097,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 7,
+      "spreadNo": 4,
+      "chapterNo": 2,
+      "pageType": "visual",
+      "title": "Implementing the Template Method Pattern",
+      "subtitle": "Structuring algorithms using abstract and default steps",
+      "body": "The Template Method pattern defines the skeleton of an algorithm in a base class, allowing subclasses to implement specific steps without changing the overall structure. The steps within the algorithm can be declared as abstract, forcing subclasses to provide an implementation, or they can be given a default implementation in the parent class. This latter approach significantly reduces code duplication across concrete subclasses. To utilize this pattern, the client must create a specific subclass that extends the base class, implementing all abstract steps and optionally overriding default steps as needed, but crucially, it must not modify the template method itself.",
+      "keyTakeaways": [
+        "The base class defines the algorithm's structure (the template method).",
+        "Abstract methods force subclasses to implement specific steps.",
+        "Default implementations in the base class prevent code duplication.",
+        "Subclasses extend the base class to provide concrete logic."
+      ],
+      "misconceptionFix": "Do not confuse the template method with the abstract methods. The template method defines the sequence, while abstract methods define the required missing pieces of that sequence.",
+      "didYouKnow": "By using the Template Method pattern, you ensure that the overall flow of the algorithm remains consistent, regardless of how different subclasses implement their specific steps.",
+      "example": "In a game loading system, the `BaseGameLoader` defines the sequence (e.g., `loadLocalData` -> `createObjects` -> `downloadAdditionalFiles`). Subclasses (e.g., `PCGameLoader`) then implement the specific logic for each step.",
+      "equation": "",
+      "quiz": {
+        "question": "What must a subclass implement when using the Template Method pattern?",
+        "answer": "All abstract steps defined in the parent class.",
+        "hint": "Check the requirements for the missing pieces of the algorithm."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Implementing the Template Method Pattern",
+          "text": "Structuring algorithms using abstract and default steps",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-flow",
+          "type": "flow",
+          "title": "Template Method Flow",
+          "text": "Base Class defines the algorithm structure (Template Method). Subclasses implement specific steps.",
+          "mermaid": "",
+          "x": 40,
+          "y": 100,
+          "w": 600,
+          "h": 200,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "A",
+              "x": 100,
+              "y": 150,
+              "w": 150,
+              "h": 50,
+              "text": "Base Class (Parent)",
+              "style": "box"
+            },
+            {
+              "id": "B",
+              "x": 350,
+              "y": 150,
+              "w": 150,
+              "h": 50,
+              "text": "Subclass (Child)",
+              "style": "box"
+            }
+          ],
+          "edges": [
+            {
+              "from": "A",
+              "to": "B",
+              "type": "arrow",
+              "label": "Extends/Implements"
+            }
+          ]
+        },
+        {
+          "id": "p3-key",
+          "type": "callout",
+          "title": "Key Roles",
+          "text": "1. Base Class: Defines the sequence (Template Method).\n2. Abstract Methods: Force subclasses to implement missing steps.\n3. Default Impl.: Reduces code duplication.",
+          "mermaid": "",
+          "x": 40,
+          "y": 350,
+          "w": 600,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p4-example",
+          "type": "diagram",
+          "title": "Example: Game Loading System",
+          "text": "BaseGameLoader defines the sequence (Load -> Create -> Download). PCGameLoader implements specific logic for each step.",
+          "mermaid": "",
+          "x": 40,
+          "y": 450,
+          "w": 600,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "L",
+              "x": 50,
+              "y": 50,
+              "w": 150,
+              "h": 50,
+              "text": "Load Local Data (Abstract)",
+              "style": "box"
+            },
+            {
+              "id": "C",
+              "x": 300,
+              "y": 50,
+              "w": 150,
+              "h": 50,
+              "text": "Create Objects (Abstract)",
+              "style": "box"
+            },
+            {
+              "id": "D",
+              "x": 550,
+              "y": 50,
+              "w": 150,
+              "h": 50,
+              "text": "Download Files (Default)",
+              "style": "box"
+            }
+          ],
+          "edges": [
+            {
+              "from": "L",
+              "to": "C",
+              "type": "arrow"
+            },
+            {
+              "from": "C",
+              "to": "D",
+              "type": "arrow"
+            }
+          ]
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa48982",
+          "chunkId": "chunk_4",
+          "index": 3,
+          "sourceRef": "2:41–3:50",
+          "page": "",
+          "timestamp": "2:41-3:50",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "the steps may either be abstract or have some default implementation inside the parent class Now to use the algorithm defined by the series of steps the client must provide its own sub-class, implement all abstract steps, and if need be overwrite some...",
+          "ragScore": 57.09,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 8,
+      "spreadNo": 4,
+      "chapterNo": 2,
+      "pageType": "lesson",
+      "title": "Subclass Implementation (Concrete Classes)",
+      "subtitle": "Understand that subclasses provide specific behavior for the abstract steps.",
+      "body": "this will allow us to get rid of code duplication inside the sub-classes we are going to create The next step is to create a specific or concrete class for each loader we need and let it extend the BaseGameLoader class we just created In our example we will have two subclasses the WorldOfWarcraftLoader and the DiabloLoader classes these classes will share the same implementation of the clean method for example but they will provide their own specific implementation for all remaining steps by doing this, each step will contain the actual behavior needed by this specific game we are trying to load You see that's what the template method is all about this pattern is a behavioral one that defines the skeleton of an algorithm in the superclass but lets subclasses override specific steps of the algorithm without changing its structure",
+      "keyTakeaways": [
+        "this will allow us to get rid of code duplication inside the sub-classes we are going to create",
+        "The next step is to create a specific or concrete class for each loader we need and let it extend the BaseGameLoader class we just created In our example we will have two subclasses the WorldOfWarcraftLoader and the DiabloLoader classes these classes will share the same implementation of the clean method for example but they will provide their own specific implementation for all remaining steps by doing this, each step will contain the actual behavior needed by this specific game we are trying to load",
+        "You see that's what the template method is all about this pattern is a behavioral one that defines the skeleton of an algorithm in the superclass but lets subclasses override specific steps of the algorithm without changing its structure",
+        "Let's go ahead now and take a look at the structure or class diagram of the template method design pattern while taking into consideration the example and the classes we created"
+      ],
+      "misconceptionFix": "Do not treat \"Subclass Implementation (Concrete Classes)\" as a memorized phrase; connect it to when and why it is used.",
+      "didYouKnow": "this will allow us to get rid of code duplication inside the sub-classes we are going to create",
+      "example": "Let's go ahead now and take a look at the structure or class diagram of the template method design pattern while taking into consideration the example and the classes we created",
+      "equation": "",
+      "quiz": {
+        "question": "What is the main idea of \"Subclass Implementation (Concrete Classes)\"?",
+        "answer": "this will allow us to get rid of code duplication inside the sub-classes we are going to create",
+        "hint": "Look at the source reference attached to this page."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Subclass Implementation (Concrete Classes)",
+          "text": "Understand that subclasses provide specific behavior for the abstract steps.",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-concept",
+          "type": "callout",
+          "title": "Template Method Pattern",
+          "text": "Defines the skeleton of an algorithm in the superclass, but lets subclasses override specific steps without changing its structure.",
+          "mermaid": "",
+          "x": 40,
+          "y": 180,
+          "w": 560,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-flow",
+          "type": "flow",
+          "title": "Subclassing for Specific Behavior",
+          "text": "BaseGameLoader (Superclass) -> WorldOfWarcraftLoader (Subclass) & DiabloLoader (Subclass)",
+          "mermaid": "graph TD\n    A[BaseGameLoader] -->|extends| B[WorldOfWarcraftLoader]\n    A -->|extends| C[DiabloLoader]",
+          "x": 40,
+          "y": 350,
+          "w": 600,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "base",
+              "type": "box",
+              "text": "BaseGameLoader",
+              "x": 100,
+              "y": 300,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "wow",
+              "type": "box",
+              "text": "WorldOfWarcraftLoader",
+              "x": 350,
+              "y": 300,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "diablo",
+              "type": "box",
+              "text": "DiabloLoader",
+              "x": 600,
+              "y": 300,
+              "w": 200,
+              "h": 50
+            }
+          ],
+          "edges": [
+            {
+              "source": "base",
+              "target": "wow",
+              "type": "arrow",
+              "label": "extends"
+            },
+            {
+              "source": "base",
+              "target": "diablo",
+              "type": "arrow",
+              "label": "extends"
+            }
+          ]
+        },
+        {
+          "id": "p1-key",
+          "type": "table",
+          "title": "Key Takeaways",
+          "text": "Goal: Eliminate code duplication.",
+          "mermaid": "",
+          "x": 40,
+          "y": 520,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [
+            {
+              "text": "Superclass (BaseGameLoader): Defines the algorithm skeleton (Template Method).",
+              "col": 1
+            },
+            {
+              "text": "Subclasses (Concrete Loaders): Provide specific implementations for abstract steps.",
+              "col": 2
+            }
+          ],
+          "rows": [
+            {
+              "text": "Shared Method (e.g., clean): Implemented once in the superclass.",
+              "col": 1
+            },
+            {
+              "text": "Specific Method (e.g., loadWorld): Overridden in each subclass.",
+              "col": 2
+            }
+          ],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa48983",
+          "chunkId": "chunk_5",
+          "index": 4,
+          "sourceRef": "3:34–4:41",
+          "page": "",
+          "timestamp": "3:34-4:41",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "this will allow us to get rid of code duplication inside the sub-classes we are going to create. The next step is to create a specific or concrete class for each loader we need and let it extend the BaseGameLoader class we just created In our example w...",
+          "ragScore": 60.662,
+          "whyUsed": "Best matching saved chunk for basic_implementation."
+        }
+      ]
+    },
+    {
+      "pageNo": 9,
+      "spreadNo": 5,
+      "chapterNo": 2,
+      "pageType": "example",
+      "title": "Overriding Steps: Specific Game Logic",
+      "subtitle": "Using the Template Method to Customize Behavior",
+      "body": "The Template Method pattern is a behavioral design pattern that defines the skeleton of an algorithm in a superclass. This structure ensures that the overall process remains consistent, while allowing subclasses to provide their own specific implementations for individual steps. By creating concrete classes (like `WorldOfWarcraftLoader` or `DiabloLoader`) that extend a base class (`BaseGameLoader`), we can eliminate code duplication. These subclasses share common steps (e.g., the `clean` method) but override the remaining steps to contain the unique behavior required for the specific game being loaded. This maintains the integrity of the algorithm's structure while enabling deep customization.",
+      "keyTakeaways": [
+        "The Template Method defines the overall structure (skeleton) of an algorithm in the superclass.",
+        "Subclasses override only the necessary steps, not the entire method.",
+        "This pattern prevents code duplication across related classes.",
+        "It ensures consistency while allowing for specific, unique behaviors."
+      ],
+      "misconceptionFix": "Do not assume that overriding a method means replacing the entire method. In the Template Method pattern, you only replace the specific steps that need unique game logic, keeping the overall structure intact.",
+      "didYouKnow": "The Template Method pattern is highly useful when you have multiple related classes that follow the same general process but require different specific actions at certain points.",
+      "example": "If `BaseGameLoader` defines the steps: `load() -> clean() -> processAssets() -> validate()`, the `WorldOfWarcraftLoader` might only override `processAssets()` to handle WoW-specific files, while keeping the `clean()` and `validate()` steps from the base class.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary benefit of using the Template Method pattern?",
+        "answer": "It allows subclasses to customize specific steps of an algorithm without changing the overall structure defined by the superclass.",
+        "hint": "Think about code duplication and maintaining a consistent process."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Overriding Steps: Specific Game Logic",
+          "text": "Using the Template Method to Customize Behavior",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 800,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-concept",
+          "type": "callout",
+          "title": "Template Method Pattern",
+          "text": "Defines the skeleton of an algorithm in a superclass, ensuring consistent structure while allowing subclasses to customize specific steps.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 800,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-flow",
+          "type": "flow",
+          "title": "Algorithm Structure (BaseGameLoader)",
+          "text": "Base Class defines the overall process (e.g., load() -> clean() -> processAssets() -> validate()).",
+          "mermaid": "",
+          "x": 40,
+          "y": 280,
+          "w": 900,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "A",
+              "text": "load()",
+              "x": 100,
+              "y": 10,
+              "w": 150,
+              "h": 50
+            },
+            {
+              "id": "B",
+              "text": "clean()",
+              "x": 350,
+              "y": 10,
+              "w": 150,
+              "h": 50
+            },
+            {
+              "id": "C",
+              "text": "processAssets()",
+              "x": 600,
+              "y": 10,
+              "w": 150,
+              "h": 50
+            },
+            {
+              "id": "D",
+              "text": "validate()",
+              "x": 850,
+              "y": 10,
+              "w": 150,
+              "h": 50
+            }
+          ],
+          "edges": [
+            {
+              "from": "A",
+              "to": "B",
+              "label": "->"
+            },
+            {
+              "from": "B",
+              "to": "C",
+              "label": "->"
+            },
+            {
+              "from": "C",
+              "to": "D",
+              "label": "->"
+            }
+          ]
+        },
+        {
+          "id": "p1-example",
+          "type": "box",
+          "title": "Customization Example",
+          "text": "Subclasses (e.g., WoWLoader) override only the necessary steps (e.g., processAssets()) while keeping the base structure intact.",
+          "mermaid": "",
+          "x": 40,
+          "y": 420,
+          "w": 800,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa48983",
+          "chunkId": "chunk_5",
+          "index": 4,
+          "sourceRef": "3:34–4:41",
+          "page": "",
+          "timestamp": "3:34-4:41",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "this will allow us to get rid of code duplication inside the sub-classes we are going to create. The next step is to create a specific or concrete class for each loader we need and let it extend the BaseGameLoader class we just created In our example w...",
+          "ragScore": 60.662,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 10,
+      "spreadNo": 5,
+      "chapterNo": 2,
+      "pageType": "summary",
+      "title": "Summary: Factors Affecting Application Loading Time",
+      "subtitle": "Understanding why large applications take time to start up",
+      "body": "Loading a large application, such as a AAA video game, involves several complex steps that contribute to the total startup time. Initially, the core data, code, images, and videos must be transferred from local storage into the Random Access Memory (RAM). Because these games are massive, they require the creation of a significantly higher number of objects compared to standard applications, which inherently increases processing time. Furthermore, the loading process often includes downloading external data—such as sounds, art assets, or translations—and may require a final cleanup phase to delete temporary files and downloads.",
+      "keyTakeaways": [
+        "Data must be loaded from local storage into RAM.",
+        "Large applications create many objects, increasing processing time.",
+        "External data (sounds, art) often needs downloading during startup.",
+        "A final cleanup step is necessary to delete temporary files."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that loading time is solely determined by the amount of data. In reality, the complexity of object creation and external data fetching also significantly contribute to the delay.",
+      "didYouKnow": "The need for cleanup (deleting temporary downloads) is a crucial, often overlooked, part of the application lifecycle.",
+      "example": "A AAA video game loading screen illustrates this process, requiring the loading of code, assets, and external data.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary destination for data, code, and images during application startup?",
+        "answer": "Random Access Memory (RAM)",
+        "hint": "It is the fast, temporary memory used by the computer's CPU."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Summary: Factors Affecting Application Loading Time",
+          "text": "Understanding why large applications take time to start up",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-process",
+          "type": "diagram",
+          "title": "Application Startup Process",
+          "text": "Local Storage -> RAM (Core Data, Code, Images) -> Object Creation -> External Data Download -> Cleanup",
+          "mermaid": "graph LR\n    A[Local Storage] -->|Transfer Core Data| B(RAM)\n    B -->|Object Creation| C[Processing]\n    B -->|Requires| D[External Data Download]\n    D -->|Followed by| E[Cleanup]",
+          "x": 50,
+          "y": 100,
+          "w": 700,
+          "h": 250,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "A",
+              "text": "Local Storage",
+              "x": 100,
+              "y": 150,
+              "w": 150,
+              "h": 50
+            },
+            {
+              "id": "B",
+              "text": "Random Access Memory (RAM)",
+              "x": 350,
+              "y": 150,
+              "w": 150,
+              "h": 50
+            },
+            {
+              "id": "C",
+              "text": "Object Creation & Processing",
+              "x": 600,
+              "y": 150,
+              "w": 150,
+              "h": 50
+            },
+            {
+              "id": "D",
+              "text": "External Data Download (Sounds, Art)",
+              "x": 100,
+              "y": 250,
+              "w": 250,
+              "h": 50
+            },
+            {
+              "id": "E",
+              "text": "Cleanup (Delete Temp Files)",
+              "x": 400,
+              "y": 250,
+              "w": 200,
+              "h": 50
+            }
+          ],
+          "edges": [
+            {
+              "from": "A",
+              "to": "B",
+              "label": "Transfer Core Data"
+            },
+            {
+              "from": "B",
+              "to": "C",
+              "label": "Increases Processing Time"
+            },
+            {
+              "from": "B",
+              "to": "D",
+              "label": "Requires"
+            },
+            {
+              "from": "D",
+              "to": "E",
+              "label": "Followed by"
+            }
+          ]
+        },
+        {
+          "id": "p1-keytakeaways",
+          "type": "callout",
+          "title": "Key Takeaways",
+          "text": "Loading time is complex: It's not just about data size, but also object complexity and external fetching.",
+          "mermaid": "",
+          "x": 50,
+          "y": 400,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [
+            "Data must move from Local Storage to RAM.",
+            "Large apps = Many objects = More processing time.",
+            "External assets (sounds, art) often need downloading.",
+            "Cleanup phase is crucial for temporary files."
+          ],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-misconception",
+          "type": "box",
+          "title": "⚠️ Misconception Fix",
+          "text": "Loading time is NOT solely determined by data amount. Object complexity and external fetching also cause significant delays.",
+          "mermaid": "",
+          "x": 50,
+          "y": 520,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa4897f",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:06",
+          "page": "",
+          "timestamp": "0:04-1:06",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! Have you ever wondered what happens during a game's loading screen and why some of them take so much time? To answer these questions, suppose you are a game developer working on one of these loading screens f...",
+          "ragScore": 56.676,
+          "whyUsed": "Best matching saved chunk for summary_review."
+        }
+      ]
+    },
+    {
+      "pageNo": 11,
+      "spreadNo": 6,
+      "chapterNo": 2,
+      "pageType": "quiz",
+      "title": "Concept Check: Application Startup Process",
+      "subtitle": "Understanding the steps behind a complex application's loading screen",
+      "body": "When developing large-scale applications, such as AAA video games, the loading screen is not a single step but a complex sequence of operations. Initially, the system must load core resources: data, code, images, and videos, transferring them from local storage into the random access memory (RAM). Because these games are massive, they require the creation of significantly more objects than typical applications, which inherently increases the initialization time. Furthermore, the process often involves downloading external data—like sounds, art assets, or translations—and finally, a cleanup phase to delete temporary downloads, all contributing to the total loading duration.",
+      "keyTakeaways": [
+        "Loading requires moving data, code, and media from local storage to RAM.",
+        "Large applications create many objects, increasing initialization time.",
+        "External data (sounds, art) often needs downloading during startup.",
+        "The process concludes with cleaning up temporary files."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming the loading screen is instantaneous. Remember that complex applications involve multiple sequential steps (loading, object creation, downloading, cleanup) that cumulatively take time.",
+      "didYouKnow": "The complexity of a loading screen often reflects the sheer volume and variety of assets the application must manage and initialize.",
+      "example": "A AAA game loading screen must load core code, create thousands of game objects, download sound packs, and then delete temporary files—all contributing to the visible loading time.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary purpose of transferring data, code, and images from local storage into RAM during application startup?",
+        "answer": "To make the resources accessible and usable by the application's running memory.",
+        "hint": "Think about where the computer needs to read the data from to run the program."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Concept Check: Application Startup Process",
+          "text": "Understanding the steps behind a complex application's loading screen",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-quiz",
+          "type": "quizCard",
+          "title": "Quiz: Startup Process",
+          "text": "What is the primary purpose of transferring data, code, and images from local storage into RAM during application startup?",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 600,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-flow",
+          "type": "flow",
+          "title": "Startup Sequence Flow",
+          "text": "Loading is a multi-step process:",
+          "mermaid": "",
+          "x": 40,
+          "y": 300,
+          "w": 700,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "A",
+              "text": "1. Load Core Resources (Data, Code, Images)",
+              "x": 100,
+              "y": 250,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "B",
+              "text": "2. Object Creation (High volume for large apps)",
+              "x": 350,
+              "y": 250,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "C",
+              "text": "3. Download External Data (Sounds, Art Assets)",
+              "x": 600,
+              "y": 250,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "D",
+              "text": "4. Cleanup (Delete temporary files)",
+              "x": 100,
+              "y": 350,
+              "w": 200,
+              "h": 50
+            }
+          ],
+          "edges": [
+            {
+              "source": "A",
+              "target": "B",
+              "x": 300,
+              "y": 275,
+              "w": 50,
+              "h": 0
+            },
+            {
+              "source": "B",
+              "target": "C",
+              "x": 550,
+              "y": 275,
+              "w": 50,
+              "h": 0
+            },
+            {
+              "source": "C",
+              "target": "D",
+              "x": 650,
+              "y": 325,
+              "w": 0,
+              "h": 50
+            }
+          ]
+        },
+        {
+          "id": "p1-takeaways",
+          "type": "callout",
+          "title": "Key Takeaways",
+          "text": "Loading is complex: Data moves to RAM, many objects are created, external assets are downloaded, and temporary files are cleaned up.",
+          "mermaid": "",
+          "x": 40,
+          "y": 500,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa4897f",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:06",
+          "page": "",
+          "timestamp": "0:04-1:06",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! Have you ever wondered what happens during a game's loading screen and why some of them take so much time? To answer these questions, suppose you are a game developer working on one of these loading screens f...",
+          "ragScore": 56.676,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 12,
+      "spreadNo": 6,
+      "chapterNo": 2,
+      "pageType": "summary",
+      "title": "Review Checklist: Template Method Pattern",
+      "subtitle": "Understanding Algorithm Structure and Inheritance",
+      "body": "The Template Method pattern is a structural design pattern that allows you to define an algorithm's skeleton in an abstract base class. This base class contains the main 'template method,' which dictates the specific sequence of steps. These steps are implemented as individual methods, which can be declared abstract or given default implementations. Concrete subclasses (like `WorldOfWarcraftLoader`) inherit from this base class and are responsible for providing the specific logic for these individual steps. They can override any or all of the abstract methods, but they must respect the fixed order defined by the parent's template method.",
+      "keyTakeaways": [
+        "The pattern defines an algorithm's structure (skeleton) in a base class.",
+        "The base class contains the 'template method' that calls steps in a fixed order.",
+        "Concrete subclasses implement the specific logic for individual steps.",
+        "Subclasses can override steps but cannot change the sequence defined by the template method."
+      ],
+      "misconceptionFix": "Do not confuse the template method with simple inheritance. The template method *enforces* the sequence of steps, ensuring the algorithm runs correctly regardless of which concrete class is used.",
+      "didYouKnow": "By breaking an algorithm into individual methods, the Template Method pattern promotes high cohesion and low coupling, making the code easier to maintain and extend.",
+      "example": "In a game loading application, the `BaseGameLoader` defines the sequence (e.g., LoadAssets -> InitializeEngine -> ConnectDatabase). Specific games like `DiabloLoader` only need to implement the unique logic for each step.",
+      "equation": "",
+      "quiz": {
+        "question": "In the Template Method pattern, which class is responsible for defining the fixed sequence of steps?",
+        "answer": "The abstract base class (e.g., BaseGameLoader).",
+        "hint": "Look for the class that contains the main 'template method'."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Review Checklist: Template Method Pattern",
+          "text": "Understanding Algorithm Structure and Inheritance",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-diagram",
+          "type": "diagram",
+          "title": "Template Method Structure",
+          "text": "Base Class defines the fixed sequence (Template Method). Subclasses implement specific steps.",
+          "mermaid": "",
+          "x": 0,
+          "y": 100,
+          "w": 700,
+          "h": 350,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "base",
+              "type": "box",
+              "text": "Abstract Base Class (BaseGameLoader)",
+              "x": 100,
+              "y": 150,
+              "w": 200,
+              "h": 80
+            },
+            {
+              "id": "subclass",
+              "type": "box",
+              "text": "Concrete Subclass (DiabloLoader)",
+              "x": 400,
+              "y": 150,
+              "w": 200,
+              "h": 80
+            },
+            {
+              "id": "template",
+              "type": "callout",
+              "text": "Template Method: Defines the fixed sequence (e.g., Load -> Init -> Connect)",
+              "x": 100,
+              "y": 260,
+              "w": 300,
+              "h": 60
+            },
+            {
+              "id": "step1",
+              "type": "write",
+              "text": "Step 1: Load Assets",
+              "x": 150,
+              "y": 350,
+              "w": 150,
+              "h": 30
+            },
+            {
+              "id": "step2",
+              "type": "write",
+              "text": "Step 2: Initialize Engine",
+              "x": 300,
+              "y": 350,
+              "w": 150,
+              "h": 30
+            }
+          ],
+          "edges": [
+            {
+              "from": "base",
+              "to": "template",
+              "type": "arrow",
+              "label": "Defines"
+            },
+            {
+              "from": "template",
+              "to": "step1",
+              "type": "arrow",
+              "label": "Calls"
+            },
+            {
+              "from": "template",
+              "to": "step2",
+              "type": "arrow",
+              "label": "Calls"
+            },
+            {
+              "from": "subclass",
+              "to": "step1",
+              "type": "arrow",
+              "label": "Implements"
+            },
+            {
+              "from": "subclass",
+              "to": "step2",
+              "type": "arrow",
+              "label": "Implements"
+            }
+          ]
+        },
+        {
+          "id": "p1-takeaways",
+          "type": "table",
+          "title": "Key Takeaways",
+          "text": "Structure vs. Implementation",
+          "mermaid": "",
+          "x": 40,
+          "y": 500,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [
+            {
+              "text": "Base Class: Defines the fixed sequence (Skeleton).",
+              "col": 1
+            },
+            {
+              "text": "Template Method: Enforces the order of steps.",
+              "col": 2
+            },
+            {
+              "text": "Subclass: Provides specific logic for individual steps.",
+              "col": 3
+            }
+          ],
+          "rows": [
+            {
+              "text": "Rule: Subclasses MUST respect the sequence defined by the parent."
+            }
+          ],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-misconception",
+          "type": "callout",
+          "title": "",
+          "text": "⚠️ Misconception Fix: Template Method *enforces* the sequence, unlike simple inheritance.",
+          "mermaid": "",
+          "x": 40,
+          "y": 620,
+          "w": 600,
+          "h": 60,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a0a453af5acb2586aa4896d",
+          "chunkMongoId": "6a0a453af5acb2586aa48984",
+          "chunkId": "chunk_6",
+          "index": 5,
+          "sourceRef": "4:28–5:29",
+          "page": "",
+          "timestamp": "4:28-5:29",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "algorithm without changing its structure. Let's go ahead now and take a look at the structure or class diagram of the template method design pattern while taking into consideration the example and the classes we created in our game loading application....",
+          "ragScore": 61.134,
+          "whyUsed": "Best matching saved chunk for summary_review."
+        }
+      ]
+    }
+  ],
+  "sourceRefs": [
+    {
+      "resourceId": "6a0a453af5acb2586aa4896d",
+      "chunkMongoId": "6a0a453af5acb2586aa4897f",
+      "chunkId": "chunk_1",
+      "index": 0,
+      "sourceRef": "0:04–1:06",
+      "page": "",
+      "timestamp": "0:04-1:06",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "What's up geeks and welcome to the channel! Have you ever wondered what happens during a game's loading screen and why some of them take so much time? To answer these questions, suppose you are a game developer working on one of these loading screens f...",
+      "ragScore": 56.676,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a0a453af5acb2586aa4896d",
+      "chunkMongoId": "6a0a453af5acb2586aa48980",
+      "chunkId": "chunk_2",
+      "index": 1,
+      "sourceRef": "0:52–1:55",
+      "page": "",
+      "timestamp": "0:52-1:55",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "may need to download external data such as sounds, arts, translations, or many others and this also adds to the time of loading Additionally after doing all these steps some cleaning may be required to delete temporary downloads or some files that were...",
+      "ragScore": 56.704,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a0a453af5acb2586aa4896d",
+      "chunkMongoId": "6a0a453af5acb2586aa48981",
+      "chunkId": "chunk_3",
+      "index": 2,
+      "sourceRef": "1:46–2:53",
+      "page": "",
+      "timestamp": "1:46-2:53",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "this class will be instantiated and the load method will be called Now few weeks later the manager asks you to develop the loading screen of Diablo also but while developing you noticed that both classes share the same exact steps However some of their...",
+      "ragScore": 57.097,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a0a453af5acb2586aa4896d",
+      "chunkMongoId": "6a0a453af5acb2586aa48982",
+      "chunkId": "chunk_4",
+      "index": 3,
+      "sourceRef": "2:41–3:50",
+      "page": "",
+      "timestamp": "2:41-3:50",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "the steps may either be abstract or have some default implementation inside the parent class Now to use the algorithm defined by the series of steps the client must provide its own sub-class, implement all abstract steps, and if need be overwrite some...",
+      "ragScore": 57.09,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a0a453af5acb2586aa4896d",
+      "chunkMongoId": "6a0a453af5acb2586aa48983",
+      "chunkId": "chunk_5",
+      "index": 4,
+      "sourceRef": "3:34–4:41",
+      "page": "",
+      "timestamp": "3:34-4:41",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "this will allow us to get rid of code duplication inside the sub-classes we are going to create. The next step is to create a specific or concrete class for each loader we need and let it extend the BaseGameLoader class we just created In our example w...",
+      "ragScore": 60.662,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a0a453af5acb2586aa4896d",
+      "chunkMongoId": "6a0a453af5acb2586aa48984",
+      "chunkId": "chunk_6",
+      "index": 5,
+      "sourceRef": "4:28–5:29",
+      "page": "",
+      "timestamp": "4:28-5:29",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "algorithm without changing its structure. Let's go ahead now and take a look at the structure or class diagram of the template method design pattern while taking into consideration the example and the classes we created in our game loading application....",
+      "ragScore": 61.134,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a0a453af5acb2586aa4896d",
+      "chunkMongoId": "6a0a453af5acb2586aa48985",
+      "chunkId": "chunk_7",
+      "index": 6,
+      "sourceRef": "5:17–6:06",
+      "page": "",
+      "timestamp": "5:17-6:06",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "or only the abstract ones except for the template method itself. Okay to sum everything up, the template method pattern allows you to turn an algorithm into a series of individual methods that can be easily extended and overridden by subclasses ...",
+      "ragScore": 57.157,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    }
+  ],
+  "summary": "The Template Method Pattern defines the skeleton of an algorithm in a superclass, allowing subclasses to override specific steps while maintaining the overall structure and preventing code duplication.",
+  "concepts": [
+    "Template Method Pattern",
+    "Abstract Classes",
+    "Code Reusability",
+    "Polymorphism"
+  ],
+  "generation": {
+    "model": "gemma4:e4b",
+    "embeddingModel": "nomic-embed-text",
+    "mode": "langgraph_agentic_offline_book",
+    "usedFallback": false,
+    "generatedAt": "2026-05-17T23:18:12.032Z",
+    "retrievalMode": "universal-bm25-phrase-source-mmr-stored-vector"
+  },
+  "agentTrace": [
+    {
+      "step": "start",
+      "ok": true,
+      "message": "Agentic LangGraph book pipeline started.",
+      "model": "langgraph",
+      "usedFallback": false,
+      "at": "2026-05-17T23:18:12.111Z"
+    },
+    {
+      "step": "load_resource",
+      "ok": true,
+      "message": "Resource loaded.",
+      "model": "mongodb",
+      "usedFallback": false,
+      "at": "2026-05-17T23:18:12.113Z"
+    },
+    {
+      "step": "embedding_check",
+      "ok": true,
+      "message": "Embeddings already built.",
+      "model": "nomic-embed-text",
+      "usedFallback": false,
+      "diagnostics": {
+        "ok": true,
+        "skipped": false,
+        "alreadyBuilt": true,
+        "resourceId": "6a0a453af5acb2586aa4896d",
+        "total": 0,
+        "embedded": 0,
+        "failed": 0,
+        "model": "nomic-embed-text",
+        "builtAt": "2026-05-17T23:04:49.143Z"
+      },
+      "at": "2026-05-17T23:18:12.114Z"
+    },
+    {
+      "step": "rag_retrieval",
+      "ok": true,
+      "message": "Retrieved 7 chunks for book generation.",
+      "model": "nomic-embed-text",
+      "usedFallback": false,
+      "diagnostics": {
+        "totalChunks": 7,
+        "selectedChunks": 7,
+        "candidateChunks": 7,
+        "retrievalMode": "universal-bm25-phrase-source-mmr-stored-vector",
+        "usedEmbeddings": true,
+        "embeddingModel": "nomic-embed-text",
+        "embeddingError": "",
+        "queryTokens": [
+          "visual",
+          "exam",
+          "book",
+          "examples",
+          "diagrams",
+          "quiz.",
+          "saved",
+          "youtube",
+          "video",
+          "complete",
+          "flipable",
+          "chapters",
+          "misconceptions",
+          "quiz",
+          "summary",
+          "adaptive",
+          "student"
+        ],
+        "phrases": [
+          "visual exam",
+          "exam book",
+          "book examples",
+          "examples diagrams",
+          "diagrams quiz.",
+          "quiz. saved",
+          "saved youtube",
+          "youtube video",
+          "video complete",
+          "complete flipable",
+          "flipable chapters",
+          "chapters misconceptions",
+          "misconceptions quiz",
+          "quiz summary",
+          "summary adaptive",
+          "adaptive student",
+          "visual exam book",
+          "exam book examples",
+          "book examples diagrams",
+          "examples diagrams quiz.",
+          "diagrams quiz. saved",
+          "quiz. saved youtube",
+          "saved youtube video",
+          "youtube video complete",
+          "video complete flipable",
+          "complete flipable chapters",
+          "flipable chapters misconceptions",
+          "chapters misconceptions quiz",
+          "misconceptions quiz summary",
+          "quiz summary adaptive",
+          "summary adaptive student"
+        ],
+        "focus": {
+          "timestamp": {
+            "hasTimestamp": false,
+            "start": null,
+            "end": null,
+            "raw": ""
+          },
+          "page": {
+            "hasPage": false,
+            "start": null,
+            "end": null,
+            "raw": ""
+          },
+          "line": {
+            "hasLine": false,
+            "start": null,
+            "end": null,
+            "raw": ""
+          }
+        }
+      },
+      "at": "2026-05-17T23:18:12.115Z"
+    },
+    {
+      "step": "book_planner_agent",
+      "ok": true,
+      "message": "Book plan created.",
+      "model": "gemma4:e4b",
+      "usedFallback": false,
+      "at": "2026-05-17T23:18:12.115Z"
+    },
+    {
+      "step": "page_writer_agent",
+      "ok": true,
+      "message": "Per-page writer completed: 12 pages.",
+      "model": "gemma4:e4b",
+      "usedFallback": false,
+      "diagnostics": {
+        "pages": [
+          {
+            "pageNo": 1,
+            "title": "The Template Method Pattern: A Study Guide",
+            "focus": "general",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–1:06",
+            "score": 36.13352
+          },
+          {
+            "pageNo": 2,
+            "title": "The Problem: Game Loading Complexity",
+            "focus": "general",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–1:06",
+            "score": 42.13352000000002
+          },
+          {
+            "pageNo": 3,
+            "title": "Code Duplication Challenge (WoW vs. Diablo)",
+            "focus": "general",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–1:06",
+            "score": 23.93352000000001
+          },
+          {
+            "pageNo": 4,
+            "title": "Introducing the Template Method Concept",
+            "focus": "general",
+            "chunkIndex": 4,
+            "sourceRef": "3:34–4:41",
+            "score": 16.613239999999998
+          },
+          {
+            "pageNo": 5,
+            "title": "Structure: The BaseGameLoader (Superclass)",
+            "focus": "general",
+            "chunkIndex": 5,
+            "sourceRef": "4:28–5:29",
+            "score": 18.82268
+          },
+          {
+            "pageNo": 6,
+            "title": "Algorithm Skeleton Definition",
+            "focus": "general",
+            "chunkIndex": 2,
+            "sourceRef": "1:46–2:53",
+            "score": 16.54194
+          },
+          {
+            "pageNo": 7,
+            "title": "Class Diagram Walkthrough",
+            "focus": "general",
+            "chunkIndex": 3,
+            "sourceRef": "2:41–3:50",
+            "score": 12.1418
+          },
+          {
+            "pageNo": 8,
+            "title": "Subclass Implementation (Concrete Classes)",
+            "focus": "basic_implementation",
+            "chunkIndex": 4,
+            "sourceRef": "3:34–4:41",
+            "score": 63.61324
+          },
+          {
+            "pageNo": 9,
+            "title": "Overriding Steps: Specific Game Logic",
+            "focus": "general",
+            "chunkIndex": 4,
+            "sourceRef": "3:34–4:41",
+            "score": 14.613239999999994
+          },
+          {
+            "pageNo": 10,
+            "title": "Summary: Key Benefits of the Pattern",
+            "focus": "summary_review",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–1:06",
+            "score": 14.13352
+          },
+          {
+            "pageNo": 11,
+            "title": "Concept Check: Template Method",
+            "focus": "general",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–1:06",
+            "score": 8.733519999999999
+          },
+          {
+            "pageNo": 12,
+            "title": "Review Checklist: Template Method Pattern",
+            "focus": "summary_review",
+            "chunkIndex": 5,
+            "sourceRef": "4:28–5:29",
+            "score": 13.02268
+          }
+        ]
+      },
+      "at": "2026-05-17T23:18:12.115Z"
+    },
+    {
+      "step": "page_quality_validator",
+      "ok": true,
+      "message": "All pages passed quality checks.",
+      "model": "validator",
+      "usedFallback": false,
+      "at": "2026-05-17T23:18:12.115Z"
+    },
+    {
+      "step": "board_command_agent",
+      "ok": true,
+      "message": "Per-page board commands completed: 12 pages.",
+      "model": "gemma4:e4b",
+      "usedFallback": false,
+      "diagnostics": {
+        "safeFallbackPages": 0
+      },
+      "at": "2026-05-17T23:18:12.116Z"
+    },
+    {
+      "step": "schema_validator_repair",
+      "ok": true,
+      "message": "Book schema validated/repaired.",
+      "model": "validator",
+      "usedFallback": false,
+      "at": "2026-05-17T23:18:12.116Z"
+    }
+  ],
+  "error": "",
+  "metadata": {
+    "sourceTitle": "Saved YouTube Video",
+    "sourceType": "youtube",
+    "requestedPageTarget": 12,
+    "actualPages": 12,
+    "retrievalDiagnostics": {
+      "totalChunks": 7,
+      "selectedChunks": 7,
+      "candidateChunks": 7,
+      "retrievalMode": "universal-bm25-phrase-source-mmr-stored-vector",
+      "usedEmbeddings": true,
+      "embeddingModel": "nomic-embed-text",
+      "embeddingError": "",
+      "queryTokens": [
+        "visual",
+        "exam",
+        "book",
+        "examples",
+        "diagrams",
+        "quiz.",
+        "saved",
+        "youtube",
+        "video",
+        "complete",
+        "flipable",
+        "chapters",
+        "misconceptions",
+        "quiz",
+        "summary",
+        "adaptive",
+        "student"
+      ],
+      "phrases": [
+        "visual exam",
+        "exam book",
+        "book examples",
+        "examples diagrams",
+        "diagrams quiz.",
+        "quiz. saved",
+        "saved youtube",
+        "youtube video",
+        "video complete",
+        "complete flipable",
+        "flipable chapters",
+        "chapters misconceptions",
+        "misconceptions quiz",
+        "quiz summary",
+        "summary adaptive",
+        "adaptive student",
+        "visual exam book",
+        "exam book examples",
+        "book examples diagrams",
+        "examples diagrams quiz.",
+        "diagrams quiz. saved",
+        "quiz. saved youtube",
+        "saved youtube video",
+        "youtube video complete",
+        "video complete flipable",
+        "complete flipable chapters",
+        "flipable chapters misconceptions",
+        "chapters misconceptions quiz",
+        "misconceptions quiz summary",
+        "quiz summary adaptive",
+        "summary adaptive student"
+      ],
+      "focus": {
+        "timestamp": {
+          "hasTimestamp": false,
+          "start": null,
+          "end": null,
+          "raw": ""
+        },
+        "page": {
+          "hasPage": false,
+          "start": null,
+          "end": null,
+          "raw": ""
+        },
+        "line": {
+          "hasLine": false,
+          "start": null,
+          "end": null,
+          "raw": ""
+        }
+      }
+    },
+    "pageDiagnostics": [
+      {
+        "pageNo": 1,
+        "title": "The Template Method Pattern: A Study Guide",
+        "focus": "general",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–1:06",
+        "score": 36.13352
+      },
+      {
+        "pageNo": 2,
+        "title": "The Problem: Game Loading Complexity",
+        "focus": "general",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–1:06",
+        "score": 42.13352000000002
+      },
+      {
+        "pageNo": 3,
+        "title": "Code Duplication Challenge (WoW vs. Diablo)",
+        "focus": "general",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–1:06",
+        "score": 23.93352000000001
+      },
+      {
+        "pageNo": 4,
+        "title": "Introducing the Template Method Concept",
+        "focus": "general",
+        "chunkIndex": 4,
+        "sourceRef": "3:34–4:41",
+        "score": 16.613239999999998
+      },
+      {
+        "pageNo": 5,
+        "title": "Structure: The BaseGameLoader (Superclass)",
+        "focus": "general",
+        "chunkIndex": 5,
+        "sourceRef": "4:28–5:29",
+        "score": 18.82268
+      },
+      {
+        "pageNo": 6,
+        "title": "Algorithm Skeleton Definition",
+        "focus": "general",
+        "chunkIndex": 2,
+        "sourceRef": "1:46–2:53",
+        "score": 16.54194
+      },
+      {
+        "pageNo": 7,
+        "title": "Class Diagram Walkthrough",
+        "focus": "general",
+        "chunkIndex": 3,
+        "sourceRef": "2:41–3:50",
+        "score": 12.1418
+      },
+      {
+        "pageNo": 8,
+        "title": "Subclass Implementation (Concrete Classes)",
+        "focus": "basic_implementation",
+        "chunkIndex": 4,
+        "sourceRef": "3:34–4:41",
+        "score": 63.61324
+      },
+      {
+        "pageNo": 9,
+        "title": "Overriding Steps: Specific Game Logic",
+        "focus": "general",
+        "chunkIndex": 4,
+        "sourceRef": "3:34–4:41",
+        "score": 14.613239999999994
+      },
+      {
+        "pageNo": 10,
+        "title": "Summary: Key Benefits of the Pattern",
+        "focus": "summary_review",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–1:06",
+        "score": 14.13352
+      },
+      {
+        "pageNo": 11,
+        "title": "Concept Check: Template Method",
+        "focus": "general",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–1:06",
+        "score": 8.733519999999999
+      },
+      {
+        "pageNo": 12,
+        "title": "Review Checklist: Template Method Pattern",
+        "focus": "summary_review",
+        "chunkIndex": 5,
+        "sourceRef": "4:28–5:29",
+        "score": 13.02268
+      }
+    ]
+  },
+  "createdAt": "2026-05-17T23:18:12.143Z",
+  "updatedAt": "2026-05-17T23:18:12.143Z"
+}

@@ -1,0 +1,41 @@
+{
+  "conversations": [
+    {
+      "at": "2026-05-17T03:30:24.575Z",
+      "question": "explain full web page",
+      "mode": "explain",
+      "route": "saved_resource_answer",
+      "confidence": 0.95,
+      "concepts": [
+        "Arithmetic",
+        "Algebra",
+        "Geometry",
+        "Trigonometry",
+        "Calculus",
+        "Probability",
+        "Statistics",
+        "min",
+        "read",
+        "maths",
+        "operations",
+        "trigonometric",
+        "solutions",
+        "class",
+        "sharma",
+        "functions"
+      ]
+    }
+  ],
+  "weakConcepts": [],
+  "reviewHistory": [
+    {
+      "at": "2026-05-17T03:30:24.575Z",
+      "suggestion": "Review the relationship between the core branches (Algebra, Geometry, Calculus) to understand how they build upon each other.",
+      "quickCheck": {
+        "question": "Which branch of mathematics deals with the study of change, such as rates of change?",
+        "expectedAnswer": "Calculus"
+      }
+    }
+  ],
+  "updatedAt": "2026-05-17T03:30:24.575Z"
+}

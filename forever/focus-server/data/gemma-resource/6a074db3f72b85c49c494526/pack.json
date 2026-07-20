@@ -1,0 +1,101 @@
+{
+  "resourceId": "6a074db3f72b85c49c494526",
+  "savedAt": "2026-05-15T16:46:32.940Z",
+  "pack": {
+    "summary": "This study pack provides a concise overview of Binary Search, focusing on its prerequisites, mechanism, and efficiency for exam preparation.",
+    "deepExplanation": "Binary Search is an efficient algorithm that operates exclusively on sorted arrays. Its core mechanism involves repeatedly checking the middle element of the current search space. After checking the middle element, the algorithm eliminates half of the remaining search space, thereby narrowing down the potential location of the target element. This systematic halving of the search space is what gives it its logarithmic time complexity, O(log n).",
+    "sections": [
+      {
+        "title": "Fundamentals of Binary Search",
+        "summary": "Understanding the prerequisites and basic mechanism of the algorithm.",
+        "sourceRef": "Chunk 1",
+        "start": "",
+        "end": "",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Binary search requires the input array to be sorted.",
+      "The algorithm works by checking the middle element and eliminating half of the search space in each step.",
+      "Time complexity is O(log n)."
+    ],
+    "concepts": [
+      "Sorted Arrays",
+      "Binary Search",
+      "Time Complexity (O(log n))"
+    ],
+    "tags": [
+      "DSA",
+      "Searching",
+      "Algorithms"
+    ],
+    "quickRevision": [
+      "Must be on a sorted array.",
+      "Check middle element -> Halve search space.",
+      "Time: O(log n)."
+    ],
+    "roadmap": [
+      {
+        "step": "1",
+        "title": "Review Prerequisites",
+        "whatToDo": "Confirm that the array you are searching is sorted.",
+        "why": "Binary search fundamentally relies on the sorted nature of the data to correctly eliminate half the search space.",
+        "sourceRef": "Chunk 1",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      },
+      {
+        "step": "2",
+        "title": "Understand the Process",
+        "whatToDo": "Visualize the process of checking the middle element and then discarding one half of the remaining elements.",
+        "why": "This systematic halving is the core mechanism that ensures the algorithm's efficiency.",
+        "sourceRef": "Chunk 1",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      },
+      {
+        "step": "3",
+        "title": "Analyze Complexity",
+        "whatToDo": "Recall that the time complexity is O(log n).",
+        "why": "Knowing the complexity is crucial for answering performance-related questions in an exam setting.",
+        "sourceRef": "Chunk 1",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      }
+    ],
+    "practiceQuestions": [
+      {
+        "question": "What is the primary prerequisite for using Binary Search?",
+        "answer": "The array must be sorted.",
+        "type": "short_answer",
+        "difficulty": "easy",
+        "sourceRef": "Chunk 1",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      },
+      {
+        "question": "How does Binary Search reduce the search space in each step?",
+        "answer": "It checks the middle element and removes half of the search space.",
+        "type": "short_answer",
+        "difficulty": "medium",
+        "sourceRef": "Chunk 1",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      }
+    ],
+    "ai": {
+      "ok": true,
+      "model": "gemma4:e4b",
+      "provider": "ollama-local",
+      "baseUrl": "http://localhost:11434",
+      "generatedAt": "2026-05-15T16:46:31.134Z"
+    }
+  }
+}

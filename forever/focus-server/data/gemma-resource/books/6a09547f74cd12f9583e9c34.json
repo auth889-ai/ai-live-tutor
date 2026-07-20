@@ -1,0 +1,2389 @@
+{
+  "id": "6a09547f74cd12f9583e9c34",
+  "deviceId": "web-test",
+  "userId": "",
+  "title": "Mastering the Singleton Design Pattern",
+  "subtitle": "A Visual Guide to Thread-Safe Implementation",
+  "status": "ready",
+  "sourceResourceIds": [
+    "6a091166caa8e814c11b5ec3"
+  ],
+  "joinedFromBookIds": [],
+  "theme": "warm",
+  "goal": "Make a visual exam study book with examples, diagrams and quiz.",
+  "audience": "student",
+  "difficulty": "adaptive",
+  "chapters": [
+    {
+      "chapterNo": 1,
+      "title": "Introduction to the Singleton Pattern",
+      "learningGoal": "Understand the purpose and real-world application of the Singleton pattern.",
+      "pageStart": 1,
+      "pageEnd": 4,
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed5",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–3:58",
+          "page": "",
+          "timestamp": "0:04-3:58",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! In the first video of this series we are going to start with one of the simplest yet one of the most used design patterns out there: The Singleton Pattern. The singleton is a creational design pattern this pa...",
+          "ragScore": 57.368,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed6",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "3:35–7:19",
+          "page": "",
+          "timestamp": "3:35-7:19",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "and to these people I say you're right! To solve this issue and as discussed in our previous videos, all we have to do is wrap our if-statement with a synchronized block Now every time a thread tries to create an instance of the Singleton class it will...",
+          "ragScore": 61.737,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed7",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "6:56–8:26",
+          "page": "",
+          "timestamp": "6:56-8:26",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "now marked as volatile so every time we access this variable we need to read it directly from the main memory as it cannot be cached So in this single code snippet even if the variable was already initialized we have to fetch it twice the first time in...",
+          "ragScore": 58.432,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        }
+      ]
+    },
+    {
+      "chapterNo": 2,
+      "title": "Achieving Thread Safety in Singletons",
+      "learningGoal": "Implement and optimize Singleton code for multi-threaded environments.",
+      "pageStart": 5,
+      "pageEnd": 12,
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed6",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "3:35–7:19",
+          "page": "",
+          "timestamp": "3:35-7:19",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "and to these people I say you're right! To solve this issue and as discussed in our previous videos, all we have to do is wrap our if-statement with a synchronized block Now every time a thread tries to create an instance of the Singleton class it will...",
+          "ragScore": 61.737,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed7",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "6:56–8:26",
+          "page": "",
+          "timestamp": "6:56-8:26",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "now marked as volatile so every time we access this variable we need to read it directly from the main memory as it cannot be cached So in this single code snippet even if the variable was already initialized we have to fetch it twice the first time in...",
+          "ragScore": 58.432,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "pageNo": 1,
+      "spreadNo": 1,
+      "chapterNo": 1,
+      "pageType": "cover",
+      "title": "The Singleton Pattern: One Instance, One Access",
+      "subtitle": "Guaranteeing a single, controlled point of access in software design",
+      "body": "The Singleton is a creational design pattern that ensures only one instance of a class exists throughout the entire application. It provides a single, controlled point of access to that instance, much like a country's official government or president. Unlike simple global variables, which just allow access from anywhere, the Singleton encapsulates the object's attributes within a single class and guarantees its uniqueness. This is crucial for resources like database connections; instead of creating multiple instances, a Singleton ensures all parts of the application reuse the same, stable instance. This not only speeds up access but also significantly reduces the risk of errors or exceptions that might occur when creating multiple connections.",
+      "keyTakeaways": [
+        "A Singleton guarantees that only one instance of a class exists.",
+        "It provides a single, controlled point of access to that instance.",
+        "It is useful for managing shared resources (e.g., database connections).",
+        "Implementation requires a private constructor and a public static getter method."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that simply making a variable global is enough. While global variables provide access, they do not control the *creation* or *number* of instances; the Singleton pattern enforces that only one instance can ever exist.",
+      "didYouKnow": "The concept of a Singleton is analogous to a country's official government—there can only be one recognized authority, regardless of who holds the current office.",
+      "example": "Database Connection: Instead of creating a new database connection instance every time data is queried, a Singleton manages one central connection instance, which is reused by all parts of the application.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary function of the private constructor in a Singleton implementation?",
+        "answer": "To prevent external code from creating multiple instances of the class, forcing all access through the controlled static method.",
+        "hint": "Think about why the pattern needs to control object creation."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "The Singleton Pattern",
+          "text": "One Instance, One Access",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-definition",
+          "type": "callout",
+          "title": "What is Singleton?",
+          "text": "A creational pattern ensuring only one instance of a class exists throughout the application. It provides a single, controlled point of access.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-key-takeaways",
+          "type": "box",
+          "title": "Key Principles",
+          "text": "1. Guarantees uniqueness of the instance.\n2. Provides controlled access (via a static getter).\n3. Ideal for shared resources (e.g., DB connections).",
+          "mermaid": "",
+          "x": 40,
+          "y": 270,
+          "w": 600,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-misconception",
+          "type": "callout",
+          "title": "⚠️ Misconception Fix",
+          "text": "Global variables provide access, but they do NOT control the *creation* or *number* of instances. Singleton enforces uniqueness.",
+          "mermaid": "",
+          "x": 40,
+          "y": 410,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-quiz",
+          "type": "quizCard",
+          "title": "Quiz Check",
+          "text": "What is the primary function of the private constructor in a Singleton implementation?",
+          "mermaid": "",
+          "x": 40,
+          "y": 510,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed5",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–3:58",
+          "page": "",
+          "timestamp": "0:04-3:58",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! In the first video of this series we are going to start with one of the simplest yet one of the most used design patterns out there: The Singleton Pattern. The singleton is a creational design pattern this pa...",
+          "ragScore": 57.368,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 2,
+      "spreadNo": 1,
+      "chapterNo": 1,
+      "pageType": "big_picture",
+      "title": "Understanding the Singleton Pattern",
+      "subtitle": "Ensuring only one instance of a class exists throughout your application",
+      "body": "The Singleton is a creational design pattern designed to ensure that only a single instance of a class exists throughout the entire application. It provides a single, controlled point of access to this unique object. Unlike simple global variables, which merely allow access from anywhere, Singletons encapsulate the object's attributes within one class and guarantee instance uniqueness. A common real-world analogy is the government or the president of a country; there can only be one official government or one president at any given time. In programming, Singletons are ideal for resources like database connections. Instead of creating a new database instance every time you query data, you create a single singleton instance and reuse it. This approach not only speeds up access and retrieval but also significantly reduces the risk of errors or exceptions that might occur when creating multiple instances.",
+      "keyTakeaways": [
+        "Singletons are a creational design pattern.",
+        "They guarantee that only one instance of a class exists.",
+        "They provide a single, controlled point of access (e.g., a `getInstance()` method).",
+        "They are useful for managing shared resources like database connections."
+      ],
+      "misconceptionFix": "Do not confuse Singletons with simple global variables. While both provide global access, Singletons encapsulate the object's attributes within a class structure and actively enforce the rule of single instantiation.",
+      "didYouKnow": "To enforce the Singleton pattern, you typically declare a private static field to hold the single instance and make the class constructor private.",
+      "example": "Using a Singleton for a database connection ensures that all parts of the application use the same connection instance, preventing resource conflicts and improving stability.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary purpose of the private constructor in a Singleton implementation?",
+        "answer": "To prevent external code from creating multiple instances of the class directly.",
+        "hint": "It restricts how the object can be initialized."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Understanding the Singleton Pattern",
+          "text": "Ensuring only one instance of a class exists throughout your application",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 700,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-concept",
+          "type": "callout",
+          "title": "What is a Singleton?",
+          "text": "A creational design pattern that guarantees only one instance of a class exists throughout the entire application. It provides a single, controlled point of access.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 650,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-mechanism",
+          "type": "diagram",
+          "title": "Singleton Implementation Core",
+          "text": "Private Constructor + Static Instance Holder + Public getInstance() Method",
+          "mermaid": "graph LR\n    A[Private Constructor] --> B(Static Instance Holder) --> C[getInstance() Method];",
+          "x": 40,
+          "y": 350,
+          "w": 700,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "node1",
+              "x": 100,
+              "y": 250,
+              "w": 150,
+              "h": 50,
+              "text": "Private Constructor",
+              "style": "box"
+            },
+            {
+              "id": "node2",
+              "x": 350,
+              "y": 250,
+              "w": 150,
+              "h": 50,
+              "text": "Static Instance Holder",
+              "style": "box"
+            },
+            {
+              "id": "node3",
+              "x": 600,
+              "y": 250,
+              "w": 150,
+              "h": 50,
+              "text": "getInstance() Method",
+              "style": "box"
+            }
+          ],
+          "edges": [
+            {
+              "source": "node1",
+              "target": "node2",
+              "label": "Enforces Uniqueness"
+            },
+            {
+              "source": "node2",
+              "target": "node3",
+              "label": "Access Point"
+            }
+          ]
+        },
+        {
+          "id": "p1-comparison",
+          "type": "table",
+          "title": "Singleton vs. Global Variables",
+          "text": "Singletons actively enforce single instantiation and encapsulate attributes within a class structure. Global variables merely provide global access without control.",
+          "mermaid": "",
+          "x": 40,
+          "y": 520,
+          "w": 650,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [
+            {
+              "type": "row",
+              "cells": [
+                {
+                  "text": "Feature",
+                  "width": "20%"
+                },
+                {
+                  "text": "Singleton",
+                  "width": "40%"
+                },
+                {
+                  "text": "Global Variable",
+                  "width": "40%"
+                }
+              ]
+            },
+            {
+              "type": "row",
+              "cells": [
+                {
+                  "text": "Enforcement",
+                  "width": "20%"
+                },
+                {
+                  "text": "Yes (Controlled)",
+                  "width": "40%"
+                },
+                {
+                  "text": "No (Uncontrolled)",
+                  "width": "40%"
+                }
+              ]
+            }
+          ],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-usecase",
+          "type": "callout",
+          "title": "Ideal Use Case",
+          "text": "Managing shared resources like database connections or logging services. Ensures all parts of the application use the same, stable instance.",
+          "mermaid": "",
+          "x": 40,
+          "y": 660,
+          "w": 650,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed5",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–3:58",
+          "page": "",
+          "timestamp": "0:04-3:58",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! In the first video of this series we are going to start with one of the simplest yet one of the most used design patterns out there: The Singleton Pattern. The singleton is a creational design pattern this pa...",
+          "ragScore": 57.368,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 3,
+      "spreadNo": 2,
+      "chapterNo": 1,
+      "pageType": "visual",
+      "title": "Real-World Analogy: Singleton Pattern",
+      "subtitle": "Why only one instance is needed for critical systems",
+      "body": "The Singleton pattern is a creational design pattern that ensures only one instance of a class exists throughout the application. This concept is vital for resources that must be universally accessed and managed, such as a country's government or a database connection. Instead of creating multiple instances—which can lead to errors or inconsistencies—a Singleton provides a single, controlled point of access. For example, a large application should use only one instance of its database connection. By implementing this pattern, developers guarantee faster access and retrieval, while also significantly reducing the risk of exceptions that arise from creating multiple, conflicting instances.",
+      "keyTakeaways": [
+        "A Singleton guarantees that only one instance of a class exists.",
+        "It provides a single, controlled point of access to the object.",
+        "Analogy: A country has only one official government or president.",
+        "Practical Use: Database connections are ideal candidates for Singletons."
+      ],
+      "misconceptionFix": "Do not confuse Singletons with global variables. While both provide global access, Singletons encapsulate the object's attributes within a single class structure, offering better control and structure.",
+      "didYouKnow": "The Singleton pattern is often used to manage resources like logging services or configuration managers, ensuring all parts of the application use the same settings.",
+      "example": "If an application needs to query a database, it should use a Singleton database instance rather than creating a new connection every time. This saves resources and prevents connection errors.",
+      "equation": "",
+      "quiz": {
+        "question": "What real-world entity best represents the concept of a Singleton?",
+        "answer": "The government or the president of a country.",
+        "hint": "Think of something that is unique and singular for a given location."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Singleton Pattern Analogy",
+          "text": "Why only one instance is needed for critical systems",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-diagram",
+          "type": "flow",
+          "title": "Singleton Concept Flow",
+          "text": "Single, Controlled Access Point",
+          "mermaid": "",
+          "x": 0,
+          "y": 100,
+          "w": 800,
+          "h": 250,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "A",
+              "text": "Application Needs Resource (e.g., DB Connection)",
+              "x": 100,
+              "y": 150,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "B",
+              "text": "Singleton Class Implementation",
+              "x": 350,
+              "y": 150,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "C",
+              "text": "Guaranteed Single Instance",
+              "x": 600,
+              "y": 150,
+              "w": 200,
+              "h": 50
+            }
+          ],
+          "edges": [
+            {
+              "from": "A",
+              "to": "B",
+              "label": "Request Instance"
+            },
+            {
+              "from": "B",
+              "to": "C",
+              "label": "Provides Unique Access"
+            }
+          ]
+        },
+        {
+          "id": "p3-analogy",
+          "type": "callout",
+          "title": "Real-World Analogy",
+          "text": "A country has only one official government or president. This ensures consistency and a single point of authority.",
+          "mermaid": "",
+          "x": 40,
+          "y": 400,
+          "w": 700,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p4-keytakeaways",
+          "type": "table",
+          "title": "Key Takeaways",
+          "text": "1. Guarantees one instance.\n2. Single point of access.\n3. Ideal for DB connections/Logging.",
+          "mermaid": "",
+          "x": 40,
+          "y": 520,
+          "w": 700,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [
+            {
+              "text": "Singleton:",
+              "text2": "One instance only."
+            },
+            {
+              "text": "Use Case:",
+              "text2": "DB Connections, Loggers, Config Managers."
+            }
+          ],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed5",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–3:58",
+          "page": "",
+          "timestamp": "0:04-3:58",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! In the first video of this series we are going to start with one of the simplest yet one of the most used design patterns out there: The Singleton Pattern. The singleton is a creational design pattern this pa...",
+          "ragScore": 57.368,
+          "whyUsed": "Best matching saved chunk for analogy_use_case."
+        }
+      ]
+    },
+    {
+      "pageNo": 4,
+      "spreadNo": 2,
+      "chapterNo": 1,
+      "pageType": "example",
+      "title": "Basic Implementation of Singletons",
+      "subtitle": "Controlling Object Instances with Private Constructors and Static Fields",
+      "body": "A Singleton pattern ensures that only one instance of a class exists throughout the entire application. This concept is similar to global variables, allowing access to object attributes from anywhere, but it provides encapsulation within a single class. To implement a basic Singleton, three key components are required: 1) A private static field to hold the single instance. 2) A private constructor to prevent external instantiation. 3) A public static method (often named `getInstance()`) that checks if the instance is null. If it is null, it creates the instance; otherwise, it returns the existing stored instance. This mechanism guarantees that the same object is returned every time the method is called.",
+      "keyTakeaways": [
+        "Singletons guarantee only one instance of a class exists.",
+        "Use a private static field to store the single instance.",
+        "Set the constructor to private to restrict external object creation.",
+        "Use a public static method (getInstance) to manage access and initialization."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that simply making the constructor private is enough. While necessary, this alone does not guarantee single instance control; the public static getter method is crucial for managing the instance lifecycle.",
+      "didYouKnow": "While the basic implementation works for single-threaded environments, it is not robust enough for multi-threaded applications, which requires additional synchronization mechanisms.",
+      "example": "The core logic involves checking if the static instance is null. If `instance == null`, a new object is created using the private constructor; otherwise, the existing `instance` is returned.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary purpose of setting the constructor of a Singleton class to private?",
+        "answer": "To prevent external code from creating multiple instances of the class directly.",
+        "hint": "It restricts how the object can be initialized."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Basic Implementation of Singletons",
+          "text": "Controlling Object Instances with Private Constructors and Static Fields",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-concept",
+          "type": "callout",
+          "title": "What is a Singleton?",
+          "text": "Ensures that only one instance of a class exists throughout the entire application. It provides encapsulation similar to global variables.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-components",
+          "type": "diagram",
+          "title": "3 Key Components for Singleton Implementation",
+          "text": "1. Private static field (to hold the instance).\n2. Private constructor (to prevent external instantiation).\n3. Public static method (getInstance) (to manage access and initialization).",
+          "mermaid": "graph TD\nA[Private Static Field] --> B(Holds the single instance); B --> C{Instance Check}; D[Private Constructor] --> E(Restricts external object creation); F[Public Static Method (getInstance)] --> G(Checks for null, creates if needed, returns instance);",
+          "x": 40,
+          "y": 280,
+          "w": 580,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-flow",
+          "type": "flow",
+          "title": "Singleton Initialization Flow",
+          "text": "The core logic involves checking if the static instance is null. If null, create it; otherwise, return the existing instance.",
+          "mermaid": "",
+          "x": 40,
+          "y": 450,
+          "w": 580,
+          "h": 200,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "start",
+              "text": "Call getInstance()",
+              "x": 100,
+              "y": 50
+            },
+            {
+              "id": "check",
+              "text": "Is instance == null?",
+              "x": 100,
+              "y": 100
+            },
+            {
+              "id": "create",
+              "text": "Create new instance (Private Constructor)",
+              "x": 300,
+              "y": 100
+            },
+            {
+              "id": "return_new",
+              "text": "Return new instance",
+              "x": 450,
+              "y": 100
+            },
+            {
+              "id": "return_old",
+              "text": "Return existing instance",
+              "x": 450,
+              "y": 200
+            }
+          ],
+          "edges": [
+            {
+              "from": "start",
+              "to": "check",
+              "label": ""
+            },
+            {
+              "from": "check",
+              "to": "create",
+              "label": "Yes"
+            },
+            {
+              "from": "check",
+              "to": "return_old",
+              "label": "No"
+            },
+            {
+              "from": "create",
+              "to": "return_new",
+              "label": ""
+            }
+          ]
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed5",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–3:58",
+          "page": "",
+          "timestamp": "0:04-3:58",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! In the first video of this series we are going to start with one of the simplest yet one of the most used design patterns out there: The Singleton Pattern. The singleton is a creational design pattern this pa...",
+          "ragScore": 57.368,
+          "whyUsed": "Best matching saved chunk for basic_implementation."
+        }
+      ]
+    },
+    {
+      "pageNo": 5,
+      "spreadNo": 3,
+      "chapterNo": 2,
+      "pageType": "lesson",
+      "title": "Thread-Safety and Synchronization",
+      "subtitle": "Understanding the pitfalls of multi-threaded object creation",
+      "body": "When multiple threads access a shared resource, race conditions can occur, leading to incorrect state. Initially, wrapping the initialization logic (like in a Singleton pattern) in a `synchronized` block solves the basic threading issue by ensuring only one thread executes the critical section at a time. However, this adds unnecessary overhead, as even reading an already initialized instance requires acquiring the lock. To improve performance, the Double-Checked Locking (DCL) idiom is used. This involves checking for initialization *twice*: once outside the synchronized block (for performance) and once inside (for safety). While DCL significantly improves performance by limiting synchronization to only the initialization case, it is not foolproof. A critical flaw remains: due to compiler semantics, the shared variable might be updated in memory to reference a *partially constructed* object before the full initialization process is complete, leading to unpredictable behavior.",
+      "keyTakeaways": [
+        "Synchronization blocks ensure mutual exclusion, allowing only one thread access at a time.",
+        "Double-Checked Locking (DCL) improves performance by minimizing lock acquisition.",
+        "DCL involves checking the instance status both outside and inside the synchronized block.",
+        "A major flaw in DCL is the possibility of reading a partially constructed object due to compiler optimizations."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that simply using `synchronized` or DCL is sufficient for thread safety. Remember that compiler optimizations can still allow threads to see partially initialized objects, requiring further measures (like the `volatile` keyword) for true safety.",
+      "didYouKnow": "The Double-Checked Locking pattern is a common optimization technique, but its implementation must be precise to guarantee memory visibility and prevent race conditions.",
+      "example": "If Thread A starts initializing a Singleton, and another thread (Thread B) accesses it before A finishes, Thread B might incorrectly read a reference to an object that is not yet fully constructed.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary performance drawback of using a simple `synchronized` block for Singleton initialization?",
+        "answer": "Every thread, even when retrieving an already initialized instance, must acquire the lock, causing unnecessary overhead.",
+        "hint": "Think about what happens when the instance already exists."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Thread-Safety and Synchronization",
+          "text": "Understanding the pitfalls of multi-threaded object creation",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-concept",
+          "type": "callout",
+          "title": "The Problem: Race Conditions",
+          "text": "Multiple threads accessing shared resources can lead to incorrect state (Race Conditions).",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-flow",
+          "type": "flow",
+          "title": "Synchronization Flow (DCL)",
+          "text": "Simple `synchronized` block -> High Overhead. Double-Checked Locking (DCL) -> Optimized, but flawed.",
+          "mermaid": "",
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "start",
+              "x": 100,
+              "y": 250,
+              "w": 150,
+              "h": 50,
+              "text": "Thread Accesses Singleton"
+            },
+            {
+              "id": "check1",
+              "x": 350,
+              "y": 250,
+              "w": 150,
+              "h": 50,
+              "text": "Check Instance (Outside Lock)"
+            },
+            {
+              "id": "sync",
+              "x": 600,
+              "y": 250,
+              "w": 150,
+              "h": 50,
+              "text": "Acquire Lock (Synchronized)"
+            },
+            {
+              "id": "check2",
+              "x": 350,
+              "y": 350,
+              "w": 150,
+              "h": 50,
+              "text": "Check Instance (Inside Lock)"
+            },
+            {
+              "id": "end",
+              "x": 800,
+              "y": 350,
+              "w": 150,
+              "h": 50,
+              "text": "Instance Created/Returned"
+            }
+          ],
+          "edges": [
+            {
+              "from": "start",
+              "to": "check1",
+              "label": "Is null?"
+            },
+            {
+              "from": "check1",
+              "to": "sync",
+              "label": "Yes"
+            },
+            {
+              "from": "sync",
+              "to": "check2",
+              "label": "Lock Acquired"
+            },
+            {
+              "from": "check2",
+              "to": "end",
+              "label": "Initialization Complete"
+            }
+          ]
+        },
+        {
+          "id": "p4-warning",
+          "type": "box",
+          "title": "⚠️ Critical Flaw in DCL",
+          "text": "Compiler optimizations can allow threads to see a *partially constructed* object reference before full initialization, leading to unpredictable behavior.",
+          "mermaid": "",
+          "x": 40,
+          "y": 500,
+          "w": 580,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p5-quiz",
+          "type": "quizCard",
+          "title": "Quiz Check",
+          "text": "What is the primary performance drawback of using a simple `synchronized` block for Singleton initialization?",
+          "mermaid": "",
+          "x": 40,
+          "y": 600,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed6",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "3:35–7:19",
+          "page": "",
+          "timestamp": "3:35-7:19",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "and to these people I say you're right! To solve this issue and as discussed in our previous videos, all we have to do is wrap our if-statement with a synchronized block Now every time a thread tries to create an instance of the Singleton class it will...",
+          "ragScore": 61.737,
+          "whyUsed": "Best matching saved chunk for synchronization_thread_safety."
+        }
+      ]
+    },
+    {
+      "pageNo": 6,
+      "spreadNo": 3,
+      "chapterNo": 2,
+      "pageType": "visual",
+      "title": "The Double-Checked Locking Idiom",
+      "subtitle": "Ensuring Thread-Safe Singleton Initialization",
+      "body": "When implementing the Singleton pattern in a multi-threaded environment, simply using a synchronized block is effective, but it can hurt performance because every access requires acquiring a lock. The Double-Checked Locking (DCL) idiom improves efficiency by limiting synchronization. This technique involves wrapping the initialization check within a synchronized block, but also adding an `if` statement *inside* the synchronized block. This structure ensures that threads only acquire the lock when the instance is actually null (i.e., when initialization is necessary). Once the instance is created, subsequent threads can check the instance status without needing to acquire the lock, significantly improving performance during common read operations. However, developers must be aware of a critical flaw: compiler optimizations can sometimes allow the shared variable to be updated with a reference to a partially constructed object before the full initialization is complete, leading to potential race conditions.",
+      "keyTakeaways": [
+        "DCL minimizes synchronization overhead by only locking during initialization.",
+        "The structure involves checking for null *twice* (once outside, once inside the synchronized block).",
+        "DCL is highly effective for performance but is susceptible to compiler optimizations.",
+        "Compiler optimizations can allow partial object construction to be visible to other threads."
+      ],
+      "misconceptionFix": "Mistake to Avoid: Assuming that simply using `synchronized` is always the most performant solution. While safe, it forces all threads to acquire a lock, even if the instance is already initialized. DCL addresses this performance bottleneck.",
+      "didYouKnow": "The problem described—where a shared variable might be updated with a reference to a partially constructed object—is a classic concurrency issue related to memory visibility and compiler optimizations.",
+      "example": "If `instance` is checked and found to be null, the thread acquires the lock and initializes it. If `instance` is found to be non-null, the thread bypasses the lock and returns the existing object.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary performance benefit of using the Double-Checked Locking idiom over a simple synchronized method?",
+        "answer": "It limits synchronization (acquiring the lock) only to the rare case where the instance is null and needs initialization.",
+        "hint": "Think about what happens when the Singleton has already been created."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "The Double-Checked Locking Idiom",
+          "text": "Ensuring Thread-Safe Singleton Initialization",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-concept",
+          "type": "callout",
+          "title": "💡 DCL: Performance Improvement",
+          "text": "DCL minimizes synchronization overhead by only locking during the initial null check. Subsequent reads bypass the lock.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-flow",
+          "type": "flow",
+          "title": "DCL Execution Flow",
+          "text": "1. Check (Outside Lock): Is instance null? -> Yes (Acquire Lock) -> 2. Check (Inside Lock): Is instance null? -> Yes (Initialize) -> 3. Release Lock. Else (Instance exists) -> Return instance (No Lock needed).",
+          "mermaid": "",
+          "x": 40,
+          "y": 280,
+          "w": 600,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p4-warning",
+          "type": "box",
+          "title": "⚠️ Critical Flaw (The Trap)",
+          "text": "Compiler optimizations can allow partial object construction to be visible, leading to potential race conditions if not handled correctly (e.g., using `volatile`).",
+          "mermaid": "",
+          "x": 40,
+          "y": 450,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p5-quiz",
+          "type": "quizCard",
+          "title": "Quick Check",
+          "text": "What is the primary performance benefit of DCL?",
+          "mermaid": "",
+          "x": 40,
+          "y": 570,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed6",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "3:35–7:19",
+          "page": "",
+          "timestamp": "3:35-7:19",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "and to these people I say you're right! To solve this issue and as discussed in our previous videos, all we have to do is wrap our if-statement with a synchronized block Now every time a thread tries to create an instance of the Singleton class it will...",
+          "ragScore": 61.737,
+          "whyUsed": "Best matching saved chunk for synchronization_thread_safety."
+        }
+      ]
+    },
+    {
+      "pageNo": 7,
+      "spreadNo": 4,
+      "chapterNo": 2,
+      "pageType": "lesson",
+      "title": "Cost of Over-Synchronization",
+      "subtitle": "Optimizing Thread Safety with Double-Checked Locking",
+      "body": "While using `synchronized` blocks ensures thread safety by forcing threads to wait their turn, this approach can be inefficient. Every time a thread accesses the resource, it must acquire the class lock, even if the resource is already initialized. This overhead is costly, especially in high-concurrency applications. To improve performance, the Double-Checked Locking (DCL) idiom is used. DCL wraps the initialization check within a synchronized block, but crucially, it also includes an `if` statement *outside* the synchronized block. This allows threads to check if the instance is available without acquiring the lock, significantly improving performance by limiting synchronization only to the rare case of initialization.",
+      "keyTakeaways": [
+        "Synchronization blocks ensure thread safety but introduce performance overhead.",
+        "Double-Checked Locking (DCL) minimizes lock acquisition by checking the instance status twice.",
+        "DCL allows threads to bypass the lock when the resource is already initialized.",
+        "Even DCL can be flawed if memory visibility issues (partial construction) are not addressed."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that simply wrapping the check in a synchronized block is always the most performant solution. Over-synchronization unnecessarily serializes access, creating a performance bottleneck.",
+      "didYouKnow": "The core benefit of DCL is that it drastically reduces the number of times the expensive lock acquisition process must occur.",
+      "example": "In a Singleton pattern, DCL allows subsequent threads to retrieve an already initialized instance without needing to acquire the class lock.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary performance benefit of using the Double-Checked Locking idiom?",
+        "answer": "It limits synchronization (lock acquisition) only to the rare case of initializing the resource, skipping it during common retrieval cases.",
+        "hint": "Think about what happens when the resource is already ready to use."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Cost of Over-Synchronization",
+          "text": "Optimizing Thread Safety with Double-Checked Locking",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-concept",
+          "type": "callout",
+          "title": "The Problem with `synchronized`",
+          "text": "Over-synchronization forces every thread to acquire the class lock, even if the resource is already initialized. This overhead is costly in high-concurrency applications.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-dcl-flow",
+          "type": "flow",
+          "title": "Double-Checked Locking (DCL) Flow",
+          "text": "1. Check instance status (outside lock). 2. If null, acquire lock. 3. Check instance status again (inside lock). 4. Initialize if still null.",
+          "mermaid": "graph TD\nA[Start] --> B{Is instance null?}; B -- Yes --> C[Acquire Lock]; C --> D{Is instance null?}; D -- Yes --> E[Initialize Instance]; E --> F[Release Lock]; D -- No --> G[Use Instance]; C -- No --> G",
+          "x": 40,
+          "y": 280,
+          "w": 580,
+          "h": 200,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-takeaways",
+          "type": "box",
+          "title": "Key Takeaways",
+          "text": "DCL minimizes lock acquisition by checking the instance status twice. It allows threads to bypass the lock when the resource is already initialized.",
+          "mermaid": "",
+          "x": 40,
+          "y": 500,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-quiz",
+          "type": "quizCard",
+          "title": "Quiz Check",
+          "text": "What is the primary performance benefit of DCL?",
+          "mermaid": "",
+          "x": 40,
+          "y": 620,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed6",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "3:35–7:19",
+          "page": "",
+          "timestamp": "3:35-7:19",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "and to these people I say you're right! To solve this issue and as discussed in our previous videos, all we have to do is wrap our if-statement with a synchronized block Now every time a thread tries to create an instance of the Singleton class it will...",
+          "ragScore": 61.737,
+          "whyUsed": "Best matching saved chunk for synchronization_thread_safety."
+        }
+      ]
+    },
+    {
+      "pageNo": 8,
+      "spreadNo": 4,
+      "chapterNo": 2,
+      "pageType": "example",
+      "title": "Double-Checked Locking",
+      "subtitle": "Optimizing Singleton Initialization for Performance",
+      "body": "While using a simple `synchronized` block solves threading issues in Singleton patterns, it introduces unnecessary overhead. Every thread accessing the instance must wait to acquire the class lock, even if the instance already exists. Double-Checked Locking (DCL) improves performance by limiting synchronization. It involves wrapping the initialization check within a synchronized block, but crucially, it also includes an `if` statement *outside* the synchronized block. This allows threads that find the instance already initialized to bypass the lock entirely, significantly improving performance during common read operations. Synchronization is only required for the rare case of actual initialization.",
+      "keyTakeaways": [
+        "DCL reduces overhead by minimizing lock acquisition.",
+        "It allows threads to bypass synchronization if the instance is already created.",
+        "Synchronization is only needed when the instance is being initialized.",
+        "This pattern improves performance over simple synchronized methods."
+      ],
+      "misconceptionFix": "Do not assume that simply adding an outer `if` statement is enough. The pattern must be correctly implemented to ensure thread safety and proper visibility of the initialized object.",
+      "didYouKnow": "The performance gain from DCL comes from skipping the expensive process of acquiring and releasing the class lock when the object is already available.",
+      "example": "If the Singleton instance is already initialized, threads can check the instance status without acquiring the class lock, thus improving speed.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary performance benefit of using Double-Checked Locking?",
+        "answer": "It limits synchronization (lock acquisition) only to the rare case of object initialization, allowing most threads to bypass the lock.",
+        "hint": "Think about what happens when the instance is already created."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Double-Checked Locking",
+          "text": "Optimizing Singleton Initialization for Performance",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-concept",
+          "type": "callout",
+          "title": "How DCL Works",
+          "text": "DCL minimizes lock overhead by checking for instance existence *outside* the synchronized block. Synchronization is only required for the rare case of actual initialization.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-flow",
+          "type": "flow",
+          "title": "DCL Flow Diagram",
+          "text": "Thread checks instance status -> If exists, bypass lock -> If null, acquire lock and initialize.",
+          "mermaid": "graph TD\n    A[Start] --> B{Is instance null?};\n    B -- Yes --> C[Acquire Lock & Initialize];\n    B -- No --> D[Return existing instance];\n    C --> E[End];\n    D --> E;",
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "start",
+              "type": "box",
+              "text": "Thread attempts to get Singleton instance",
+              "x": 100,
+              "y": 250,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "check",
+              "type": "box",
+              "text": "Is instance null? (Outer Check)",
+              "x": 100,
+              "y": 320,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "bypass",
+              "type": "box",
+              "text": "Instance exists. Bypass lock.",
+              "x": 400,
+              "y": 320,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "sync",
+              "type": "box",
+              "text": "Instance is null. Acquire lock.",
+              "x": 100,
+              "y": 390,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "init",
+              "type": "box",
+              "text": "Initialize instance (Critical Section)",
+              "x": 100,
+              "y": 460,
+              "w": 200,
+              "h": 50
+            }
+          ],
+          "edges": [
+            {
+              "from": "start",
+              "to": "check",
+              "type": "arrow"
+            },
+            {
+              "from": "check",
+              "to": "bypass",
+              "type": "arrow",
+              "label": "Yes"
+            },
+            {
+              "from": "check",
+              "to": "sync",
+              "type": "arrow",
+              "label": "No"
+            },
+            {
+              "from": "sync",
+              "to": "init",
+              "type": "arrow"
+            },
+            {
+              "from": "init",
+              "to": "end",
+              "type": "arrow",
+              "label": "Done"
+            }
+          ]
+        },
+        {
+          "id": "p4-takeaways",
+          "type": "table",
+          "title": "Key Takeaways",
+          "text": "DCL significantly improves performance by minimizing lock acquisition overhead. Synchronization is only needed during the rare initialization phase.",
+          "mermaid": "",
+          "x": 40,
+          "y": 650,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [
+            {
+              "text": "Reduces overhead by minimizing lock acquisition.",
+              "col": 1
+            },
+            {
+              "text": "Allows threads to bypass synchronization if the instance is already created.",
+              "col": 2
+            },
+            {
+              "text": "Synchronization is only needed when the instance is being initialized.",
+              "col": 3
+            }
+          ],
+          "rows": [
+            {
+              "text": "Performance Gain:",
+              "col": 1,
+              "colSpan": 3
+            }
+          ],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed6",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "3:35–7:19",
+          "page": "",
+          "timestamp": "3:35-7:19",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "and to these people I say you're right! To solve this issue and as discussed in our previous videos, all we have to do is wrap our if-statement with a synchronized block Now every time a thread tries to create an instance of the Singleton class it will...",
+          "ragScore": 61.737,
+          "whyUsed": "Best matching saved chunk for double_checked_locking."
+        }
+      ]
+    },
+    {
+      "pageNo": 9,
+      "spreadNo": 5,
+      "chapterNo": 2,
+      "pageType": "formula",
+      "title": "Volatile Keyword and Memory Visibility",
+      "subtitle": "Ensuring Consistent Data Access in Multi-threaded Environments",
+      "body": "When a variable is marked `volatile`, every access to it must read directly from the main memory, bypassing local CPU caches. This guarantees that all threads see the most up-to-date value. However, repeated direct reads can impact performance. To optimize this, if you retrieve a volatile instance once, store it in a local variable. Then, use this local variable for subsequent checks (like `if` statements) and returns. This technique minimizes expensive memory reads, potentially improving method performance significantly. This concept of careful variable handling is also applicable within synchronized blocks.",
+      "keyTakeaways": [
+        "The `volatile` keyword forces reads/writes to main memory, preventing stale cached values.",
+        "Repeated volatile reads can hurt performance.",
+        "Store volatile instances in a local variable after the first retrieval to optimize access.",
+        "The Singleton Pattern requires special multi-threaded handling, often involving volatile or synchronization."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that simply marking a variable as `volatile` solves all concurrency issues. While it ensures visibility, performance optimization (like using local variables) is still necessary.",
+      "didYouKnow": "The Singleton Pattern ensures a class has only one instance, controlling object creation through a special static method.",
+      "example": "If a volatile instance is checked for null in an `if` statement and then returned, the variable is fetched from memory twice. Storing it in a local variable fetches it only once.",
+      "equation": "",
+      "quiz": {
+        "question": "Why is it beneficial to store a volatile instance in a local variable after its initial retrieval?",
+        "answer": "It prevents the method from having to fetch the variable from main memory multiple times, thereby improving overall performance.",
+        "hint": "Think about the cost of repeated memory reads."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Volatile Keyword and Memory Visibility",
+          "text": "Ensuring Consistent Data Access in Multi-threaded Environments",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 700,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-concept",
+          "type": "callout",
+          "title": "Understanding `volatile`",
+          "text": "Forces reads/writes directly to main memory, bypassing local CPU caches. Guarantees all threads see the most up-to-date value.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 450,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-optimization",
+          "type": "box",
+          "title": "Performance Optimization Tip",
+          "text": "Retrieve volatile instance once, store it in a local variable. Use the local variable for subsequent checks (e.g., `if` statements) and returns to minimize expensive memory reads.",
+          "mermaid": "",
+          "x": 500,
+          "y": 150,
+          "w": 450,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-flow",
+          "type": "flow",
+          "title": "Volatile Access Flow",
+          "text": "Initial Read (Memory) -> Local Variable Storage -> Subsequent Checks (Local Cache)",
+          "mermaid": "graph LR\n    A[Initial Access] --> B(Read from Main Memory); \n    B --> C[Store in Local Variable]; \n    C --> D{Subsequent Checks/Returns}; \n    D --> E[Use Local Variable];",
+          "x": 40,
+          "y": 280,
+          "w": 700,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed7",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "6:56–8:26",
+          "page": "",
+          "timestamp": "6:56-8:26",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "now marked as volatile so every time we access this variable we need to read it directly from the main memory as it cannot be cached So in this single code snippet even if the variable was already initialized we have to fetch it twice the first time in...",
+          "ragScore": 58.432,
+          "whyUsed": "Best matching saved chunk for volatile_visibility."
+        }
+      ]
+    },
+    {
+      "pageNo": 10,
+      "spreadNo": 5,
+      "chapterNo": 2,
+      "pageType": "example",
+      "title": "Local Variable Optimization with Volatile Fields",
+      "subtitle": "Improving performance by reading memory only once",
+      "body": "When a field is marked `volatile`, every access requires reading the value directly from main memory because the compiler cannot cache it. This means that even if a variable is initialized, accessing it multiple times (e.g., in an `if` statement and then in a `return` statement) forces multiple, redundant memory reads. To optimize this, we can store the volatile instance in a local variable. By retrieving the value from memory once and assigning it to a local variable, we can reuse that local reference for all subsequent operations within the method. This simple technique significantly improves method performance, sometimes by as much as 40%. This principle can also be applied within synchronized blocks to minimize direct memory reads.",
+      "keyTakeaways": [
+        "Volatile fields force direct memory reads on every access.",
+        "Redundant memory reads hurt performance, especially when accessing volatile fields multiple times.",
+        "Store volatile instances in a local variable to read memory only once.",
+        "This optimization technique improves method performance by reusing local references."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that simply declaring a local variable automatically solves all memory visibility issues. While it helps with redundant reads, the underlying volatile nature still requires careful handling of synchronization and visibility.",
+      "didYouKnow": "The Singleton Pattern often requires special attention in multi-threaded environments, as its implementation must be adapted to handle concurrent access correctly.",
+      "example": "Instead of accessing a volatile field multiple times (e.g., `if (volatileField == null)` and then `return volatileField`), read it once: `LocalVariable = volatileField;` and then use `LocalVariable` in both statements.",
+      "equation": "",
+      "quiz": {
+        "question": "Why is it inefficient to access a volatile field multiple times within a single method?",
+        "answer": "Each access forces the system to read the value directly from main memory, leading to redundant and slow memory operations.",
+        "hint": "Think about what 'volatile' prevents the compiler from doing."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Local Variable Optimization with Volatile Fields",
+          "text": "Improving performance by reading memory only once",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-concept",
+          "type": "callout",
+          "title": "The Problem: Redundant Memory Reads",
+          "text": "When a field is `volatile`, every access forces a read from main memory. Repeated access (e.g., in multiple statements) causes redundant, slow memory operations.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-solution",
+          "type": "box",
+          "title": "Optimization Technique: Local Caching",
+          "text": "Read the volatile instance once and store it in a local variable. Reuse this local reference for all subsequent operations.",
+          "mermaid": "",
+          "x": 40,
+          "y": 270,
+          "w": 580,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-example",
+          "type": "mermaid",
+          "title": "Code Example (Before vs After)",
+          "text": "Before: `if (volatileField == null)` and then `return volatileField`\n\nAfter: `LocalVariable = volatileField;` and then use `LocalVariable`",
+          "mermaid": "graph TD\n    A[Before: Multiple volatile reads]\n    B[After: Local variable cache]\n    A --> C{Slow Memory Access}\n    B --> D{Fast Local Reference}\n    C --> E[Performance Hit]\n    D --> F[Optimized Performance]",
+          "x": 40,
+          "y": 420,
+          "w": 580,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed7",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "6:56–8:26",
+          "page": "",
+          "timestamp": "6:56-8:26",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "now marked as volatile so every time we access this variable we need to read it directly from the main memory as it cannot be cached So in this single code snippet even if the variable was already initialized we have to fetch it twice the first time in...",
+          "ragScore": 58.432,
+          "whyUsed": "Best matching saved chunk for volatile_visibility."
+        }
+      ]
+    },
+    {
+      "pageNo": 11,
+      "spreadNo": 6,
+      "chapterNo": 3,
+      "pageType": "summary",
+      "title": "Robust Singleton Recap",
+      "subtitle": "Optimizing Memory Access and Thread Safety",
+      "body": "The Singleton pattern ensures a class has only one instance, controlling object creation through a special static method. In multi-threaded environments, implementing this pattern requires careful handling of visibility and performance. When a variable is marked `volatile`, every access must read directly from main memory, preventing caching. This can lead to redundant memory fetches (e.g., fetching the instance twice in an `if` check and a `return` statement). To optimize performance, store the retrieved instance in a local variable. This approach ensures the instance is fetched from memory only once, improving method performance significantly (potentially by 40%). This local variable technique can also be applied within synchronized blocks to minimize multiple direct memory reads.",
+      "keyTakeaways": [
+        "Singleton Pattern: Ensures only one instance of a class exists.",
+        "Volatile Keyword: Forces direct memory reads, preventing caching.",
+        "Optimization Technique: Use local variables to store retrieved instances.",
+        "Performance Gain: Storing instances locally reduces redundant memory access, improving speed."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that simply using `volatile` is enough for thread safety. While `volatile` handles visibility, proper synchronization and local variable optimization are needed for robust, high-performance singletons.",
+      "didYouKnow": "The Singleton pattern restricts object creation to a single static method, disabling all other means of instantiation.",
+      "example": "Instead of accessing the volatile instance variable multiple times, store it in a local variable: `LocalInstance = SingletonVariable;` and use `LocalInstance` for all subsequent checks and returns.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary performance benefit of storing a volatile instance in a local variable?",
+        "answer": "It prevents multiple direct reads from main memory, fetching the instance only once.",
+        "hint": "Think about how many times the memory is accessed when checking for null and then returning the object."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Robust Singleton Recap",
+          "text": "Optimizing Memory Access and Thread Safety",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-concept",
+          "type": "callout",
+          "title": "Singleton Pattern Core",
+          "text": "Ensures only one instance of a class exists. Controlled via a special static method.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 350,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-optimization",
+          "type": "box",
+          "title": "Performance Optimization (Local Variable)",
+          "text": "Problem: Multiple volatile reads (e.g., in `if` check and `return`).\nSolution: Store instance in a local variable (`LocalInstance = SingletonVariable;`).\nBenefit: Fetches instance from memory only once, significantly improving speed.",
+          "mermaid": "",
+          "x": 400,
+          "y": 150,
+          "w": 450,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-takeaways",
+          "type": "table",
+          "title": "Key Takeaways",
+          "text": "1. Volatile: Forces direct memory reads (visibility).\n2. Local Variable: Minimizes redundant memory fetches.\n3. Goal: Robust, high-performance singletons.",
+          "mermaid": "",
+          "x": 40,
+          "y": 320,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [
+            [
+              "Singleton Pattern",
+              "One instance only"
+            ],
+            [
+              "Volatile Keyword",
+              "Direct memory access"
+            ],
+            [
+              "Local Variable",
+              "Reduces memory reads"
+            ]
+          ],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-quiz",
+          "type": "quizCard",
+          "title": "Quiz Check",
+          "text": "What is the primary performance benefit of storing a volatile instance in a local variable?",
+          "mermaid": "",
+          "x": 40,
+          "y": 440,
+          "w": 600,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed7",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "6:56–8:26",
+          "page": "",
+          "timestamp": "6:56-8:26",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "now marked as volatile so every time we access this variable we need to read it directly from the main memory as it cannot be cached So in this single code snippet even if the variable was already initialized we have to fetch it twice the first time in...",
+          "ragScore": 58.432,
+          "whyUsed": "Best matching saved chunk for volatile_visibility."
+        }
+      ]
+    },
+    {
+      "pageNo": 12,
+      "spreadNo": 6,
+      "chapterNo": 3,
+      "pageType": "quiz",
+      "title": "Final Review Quiz: Performance & Design Patterns",
+      "subtitle": "Optimizing memory access and implementing the Singleton Pattern",
+      "body": "When dealing with volatile variables, every access requires reading directly from main memory, preventing caching. This can lead to performance issues, especially if the variable is accessed multiple times (e.g., in an `if` statement and a `return` statement). To optimize this, store the instance retrieved from memory into a local variable. This local variable can then be used multiple times within the method, ensuring the memory is accessed only once. This simple technique can significantly boost method performance (up to 40%). Furthermore, the Singleton Pattern ensures a class has only one instance available to all clients by controlling object creation through a special static method. Remember that implementing this pattern requires careful adaptation, especially in multi-threaded environments.",
+      "keyTakeaways": [
+        "Volatile variables force direct main memory reads, bypassing caching.",
+        "Use local variables to store volatile instances and minimize memory reads.",
+        "The Singleton Pattern guarantees a class has only one instance.",
+        "Multi-threaded environments require special handling for the Singleton Pattern."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that simply declaring a variable as volatile solves all performance issues. Volatile only ensures visibility; local variable caching is needed to prevent repeated memory reads within a single method.",
+      "didYouKnow": "Optimizing memory access by minimizing redundant reads can lead to substantial performance improvements, sometimes reaching 40% or more.",
+      "example": "Instead of reading a volatile variable twice (once in `if` and once in `return`), read it once into a local variable and use that local variable for both checks and returns.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary performance benefit of storing a volatile variable instance in a local variable?",
+        "answer": "It ensures the variable is read from main memory only once, rather than multiple times.",
+        "hint": "Think about how many times the memory is accessed in the code snippet."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Final Review Quiz: Performance & Design Patterns",
+          "text": "Optimizing memory access and implementing the Singleton Pattern",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 700,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-quiz",
+          "type": "quizCard",
+          "title": "Quiz Question",
+          "text": "What is the primary performance benefit of storing a volatile variable instance in a local variable?",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 700,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-concept",
+          "type": "callout",
+          "title": "Key Concept: Volatile Optimization",
+          "text": "Volatile variables force direct main memory reads, bypassing caching. Store the instance in a local variable to ensure memory is accessed only once.",
+          "mermaid": "",
+          "x": 40,
+          "y": 320,
+          "w": 700,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-pattern",
+          "type": "callout",
+          "title": "Key Concept: Singleton Pattern",
+          "text": "Ensures a class has only one instance available to all clients by controlling object creation through a special static method. Requires careful handling in multi-threaded environments.",
+          "mermaid": "",
+          "x": 40,
+          "y": 440,
+          "w": 700,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed7",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "6:56–8:26",
+          "page": "",
+          "timestamp": "6:56-8:26",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "now marked as volatile so every time we access this variable we need to read it directly from the main memory as it cannot be cached So in this single code snippet even if the variable was already initialized we have to fetch it twice the first time in...",
+          "ragScore": 58.432,
+          "whyUsed": "Best matching saved chunk for summary_review."
+        }
+      ]
+    }
+  ],
+  "sourceRefs": [
+    {
+      "resourceId": "6a091166caa8e814c11b5ec3",
+      "chunkMongoId": "6a091167caa8e814c11b5ed5",
+      "chunkId": "chunk_1",
+      "index": 0,
+      "sourceRef": "0:04–3:58",
+      "page": "",
+      "timestamp": "0:04-3:58",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "What's up geeks and welcome to the channel! In the first video of this series we are going to start with one of the simplest yet one of the most used design patterns out there: The Singleton Pattern. The singleton is a creational design pattern this pa...",
+      "ragScore": 57.368,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a091166caa8e814c11b5ec3",
+      "chunkMongoId": "6a091167caa8e814c11b5ed6",
+      "chunkId": "chunk_2",
+      "index": 1,
+      "sourceRef": "3:35–7:19",
+      "page": "",
+      "timestamp": "3:35-7:19",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "and to these people I say you're right! To solve this issue and as discussed in our previous videos, all we have to do is wrap our if-statement with a synchronized block Now every time a thread tries to create an instance of the Singleton class it will...",
+      "ragScore": 61.737,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a091166caa8e814c11b5ec3",
+      "chunkMongoId": "6a091167caa8e814c11b5ed7",
+      "chunkId": "chunk_3",
+      "index": 2,
+      "sourceRef": "6:56–8:26",
+      "page": "",
+      "timestamp": "6:56-8:26",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "now marked as volatile so every time we access this variable we need to read it directly from the main memory as it cannot be cached So in this single code snippet even if the variable was already initialized we have to fetch it twice the first time in...",
+      "ragScore": 58.432,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    }
+  ],
+  "summary": "The Singleton Pattern ensures that a class has only one instance throughout the application, providing a single, controlled point of access. This guide covers basic implementation, and critically, how to make it robust and thread-safe using synchronized blocks, double-checked locking, volatile keywords, and local variable optimization.",
+  "concepts": [
+    "Singleton Pattern",
+    "Creational Design Patterns",
+    "Thread Safety",
+    "Synchronized Blocks",
+    "Double-Checked Locking",
+    "Volatile Keyword",
+    "Local Variable Optimization"
+  ],
+  "generation": {
+    "model": "gemma4:e4b",
+    "embeddingModel": "nomic-embed-text",
+    "mode": "langgraph_agentic_offline_book",
+    "usedFallback": false,
+    "generatedAt": "2026-05-17T05:39:11.682Z",
+    "retrievalMode": "universal-bm25-phrase-source-mmr-stored-vector"
+  },
+  "agentTrace": [
+    {
+      "step": "start",
+      "ok": true,
+      "message": "Agentic LangGraph book pipeline started.",
+      "model": "langgraph",
+      "usedFallback": false,
+      "at": "2026-05-17T05:39:11.738Z"
+    },
+    {
+      "step": "load_resource",
+      "ok": true,
+      "message": "Resource loaded.",
+      "model": "mongodb",
+      "usedFallback": false,
+      "at": "2026-05-17T05:39:11.738Z"
+    },
+    {
+      "step": "embedding_check",
+      "ok": true,
+      "message": "Embeddings already built.",
+      "model": "nomic-embed-text",
+      "usedFallback": false,
+      "diagnostics": {
+        "ok": true,
+        "skipped": false,
+        "alreadyBuilt": true,
+        "resourceId": "6a091166caa8e814c11b5ec3",
+        "total": 0,
+        "embedded": 0,
+        "failed": 0,
+        "model": "nomic-embed-text",
+        "builtAt": "2026-05-17T05:26:55.168Z"
+      },
+      "at": "2026-05-17T05:39:11.738Z"
+    },
+    {
+      "step": "rag_retrieval",
+      "ok": true,
+      "message": "Retrieved 3 chunks for book generation.",
+      "model": "nomic-embed-text",
+      "usedFallback": false,
+      "diagnostics": {
+        "totalChunks": 3,
+        "selectedChunks": 3,
+        "candidateChunks": 3,
+        "retrievalMode": "universal-bm25-phrase-source-mmr-stored-vector",
+        "usedEmbeddings": true,
+        "embeddingModel": "nomic-embed-text",
+        "embeddingError": "",
+        "queryTokens": [
+          "visual",
+          "exam",
+          "book",
+          "examples",
+          "diagrams",
+          "quiz.",
+          "saved",
+          "youtube",
+          "video",
+          "complete",
+          "flipable",
+          "chapters",
+          "misconceptions",
+          "quiz",
+          "summary",
+          "adaptive",
+          "student"
+        ],
+        "phrases": [
+          "visual exam",
+          "exam book",
+          "book examples",
+          "examples diagrams",
+          "diagrams quiz.",
+          "quiz. saved",
+          "saved youtube",
+          "youtube video",
+          "video complete",
+          "complete flipable",
+          "flipable chapters",
+          "chapters misconceptions",
+          "misconceptions quiz",
+          "quiz summary",
+          "summary adaptive",
+          "adaptive student",
+          "visual exam book",
+          "exam book examples",
+          "book examples diagrams",
+          "examples diagrams quiz.",
+          "diagrams quiz. saved",
+          "quiz. saved youtube",
+          "saved youtube video",
+          "youtube video complete",
+          "video complete flipable",
+          "complete flipable chapters",
+          "flipable chapters misconceptions",
+          "chapters misconceptions quiz",
+          "misconceptions quiz summary",
+          "quiz summary adaptive",
+          "summary adaptive student"
+        ],
+        "focus": {
+          "timestamp": {
+            "hasTimestamp": false,
+            "start": null,
+            "end": null,
+            "raw": ""
+          },
+          "page": {
+            "hasPage": false,
+            "start": null,
+            "end": null,
+            "raw": ""
+          },
+          "line": {
+            "hasLine": false,
+            "start": null,
+            "end": null,
+            "raw": ""
+          }
+        }
+      },
+      "at": "2026-05-17T05:39:11.738Z"
+    },
+    {
+      "step": "book_planner_agent",
+      "ok": true,
+      "message": "Book plan created.",
+      "model": "gemma4:e4b",
+      "usedFallback": false,
+      "at": "2026-05-17T05:39:11.738Z"
+    },
+    {
+      "step": "page_writer_agent",
+      "ok": true,
+      "message": "Per-page writer completed: 12 pages.",
+      "model": "gemma4:e4b",
+      "usedFallback": false,
+      "diagnostics": {
+        "pages": [
+          {
+            "pageNo": 1,
+            "title": "The Singleton Pattern: One Instance, One Access",
+            "focus": "general",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–3:58",
+            "score": 51.54736000000002
+          },
+          {
+            "pageNo": 2,
+            "title": "What is a Singleton?",
+            "focus": "general",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–3:58",
+            "score": 37.747360000000015
+          },
+          {
+            "pageNo": 3,
+            "title": "Real-World Analogy: Government and Database",
+            "focus": "analogy_use_case",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–3:58",
+            "score": 232.74736000000001
+          },
+          {
+            "pageNo": 4,
+            "title": "Basic Implementation Steps",
+            "focus": "basic_implementation",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–3:58",
+            "score": 275.34736000000004
+          },
+          {
+            "pageNo": 5,
+            "title": "Thread-Safety Problem",
+            "focus": "synchronization_thread_safety",
+            "chunkIndex": 1,
+            "sourceRef": "3:35–7:19",
+            "score": 252.03474
+          },
+          {
+            "pageNo": 6,
+            "title": "Synchronized Block Fix",
+            "focus": "synchronization_thread_safety",
+            "chunkIndex": 1,
+            "sourceRef": "3:35–7:19",
+            "score": 247.03474000000003
+          },
+          {
+            "pageNo": 7,
+            "title": "Cost of Over-Synchronization",
+            "focus": "synchronization_thread_safety",
+            "chunkIndex": 1,
+            "sourceRef": "3:35–7:19",
+            "score": 228.83474
+          },
+          {
+            "pageNo": 8,
+            "title": "Double-Checked Locking",
+            "focus": "double_checked_locking",
+            "chunkIndex": 1,
+            "sourceRef": "3:35–7:19",
+            "score": 284.63474
+          },
+          {
+            "pageNo": 9,
+            "title": "Volatile Keyword and Memory Visibility",
+            "focus": "volatile_visibility",
+            "chunkIndex": 2,
+            "sourceRef": "6:56–8:26",
+            "score": 470.76864
+          },
+          {
+            "pageNo": 10,
+            "title": "Local Variable Optimization",
+            "focus": "volatile_visibility",
+            "chunkIndex": 2,
+            "sourceRef": "6:56–8:26",
+            "score": 459.16864000000004
+          },
+          {
+            "pageNo": 11,
+            "title": "Robust Singleton Recap",
+            "focus": "volatile_visibility",
+            "chunkIndex": 2,
+            "sourceRef": "6:56–8:26",
+            "score": 440.96864
+          },
+          {
+            "pageNo": 12,
+            "title": "Final Review Quiz",
+            "focus": "summary_review",
+            "chunkIndex": 2,
+            "sourceRef": "6:56–8:26",
+            "score": 138.16864
+          }
+        ]
+      },
+      "at": "2026-05-17T05:39:11.738Z"
+    },
+    {
+      "step": "page_quality_validator",
+      "ok": true,
+      "message": "All pages passed quality checks.",
+      "model": "validator",
+      "usedFallback": false,
+      "at": "2026-05-17T05:39:11.738Z"
+    },
+    {
+      "step": "board_command_agent",
+      "ok": true,
+      "message": "Per-page board commands completed: 12 pages.",
+      "model": "gemma4:e4b",
+      "usedFallback": false,
+      "diagnostics": {
+        "safeFallbackPages": 0
+      },
+      "at": "2026-05-17T05:39:11.738Z"
+    },
+    {
+      "step": "schema_validator_repair",
+      "ok": true,
+      "message": "Book schema validated/repaired.",
+      "model": "validator",
+      "usedFallback": false,
+      "at": "2026-05-17T05:39:11.738Z"
+    }
+  ],
+  "error": "",
+  "metadata": {
+    "sourceTitle": "Saved YouTube Video",
+    "sourceType": "youtube",
+    "requestedPageTarget": 12,
+    "actualPages": 12,
+    "retrievalDiagnostics": {
+      "totalChunks": 3,
+      "selectedChunks": 3,
+      "candidateChunks": 3,
+      "retrievalMode": "universal-bm25-phrase-source-mmr-stored-vector",
+      "usedEmbeddings": true,
+      "embeddingModel": "nomic-embed-text",
+      "embeddingError": "",
+      "queryTokens": [
+        "visual",
+        "exam",
+        "book",
+        "examples",
+        "diagrams",
+        "quiz.",
+        "saved",
+        "youtube",
+        "video",
+        "complete",
+        "flipable",
+        "chapters",
+        "misconceptions",
+        "quiz",
+        "summary",
+        "adaptive",
+        "student"
+      ],
+      "phrases": [
+        "visual exam",
+        "exam book",
+        "book examples",
+        "examples diagrams",
+        "diagrams quiz.",
+        "quiz. saved",
+        "saved youtube",
+        "youtube video",
+        "video complete",
+        "complete flipable",
+        "flipable chapters",
+        "chapters misconceptions",
+        "misconceptions quiz",
+        "quiz summary",
+        "summary adaptive",
+        "adaptive student",
+        "visual exam book",
+        "exam book examples",
+        "book examples diagrams",
+        "examples diagrams quiz.",
+        "diagrams quiz. saved",
+        "quiz. saved youtube",
+        "saved youtube video",
+        "youtube video complete",
+        "video complete flipable",
+        "complete flipable chapters",
+        "flipable chapters misconceptions",
+        "chapters misconceptions quiz",
+        "misconceptions quiz summary",
+        "quiz summary adaptive",
+        "summary adaptive student"
+      ],
+      "focus": {
+        "timestamp": {
+          "hasTimestamp": false,
+          "start": null,
+          "end": null,
+          "raw": ""
+        },
+        "page": {
+          "hasPage": false,
+          "start": null,
+          "end": null,
+          "raw": ""
+        },
+        "line": {
+          "hasLine": false,
+          "start": null,
+          "end": null,
+          "raw": ""
+        }
+      }
+    },
+    "pageDiagnostics": [
+      {
+        "pageNo": 1,
+        "title": "The Singleton Pattern: One Instance, One Access",
+        "focus": "general",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–3:58",
+        "score": 51.54736000000002
+      },
+      {
+        "pageNo": 2,
+        "title": "What is a Singleton?",
+        "focus": "general",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–3:58",
+        "score": 37.747360000000015
+      },
+      {
+        "pageNo": 3,
+        "title": "Real-World Analogy: Government and Database",
+        "focus": "analogy_use_case",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–3:58",
+        "score": 232.74736000000001
+      },
+      {
+        "pageNo": 4,
+        "title": "Basic Implementation Steps",
+        "focus": "basic_implementation",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–3:58",
+        "score": 275.34736000000004
+      },
+      {
+        "pageNo": 5,
+        "title": "Thread-Safety Problem",
+        "focus": "synchronization_thread_safety",
+        "chunkIndex": 1,
+        "sourceRef": "3:35–7:19",
+        "score": 252.03474
+      },
+      {
+        "pageNo": 6,
+        "title": "Synchronized Block Fix",
+        "focus": "synchronization_thread_safety",
+        "chunkIndex": 1,
+        "sourceRef": "3:35–7:19",
+        "score": 247.03474000000003
+      },
+      {
+        "pageNo": 7,
+        "title": "Cost of Over-Synchronization",
+        "focus": "synchronization_thread_safety",
+        "chunkIndex": 1,
+        "sourceRef": "3:35–7:19",
+        "score": 228.83474
+      },
+      {
+        "pageNo": 8,
+        "title": "Double-Checked Locking",
+        "focus": "double_checked_locking",
+        "chunkIndex": 1,
+        "sourceRef": "3:35–7:19",
+        "score": 284.63474
+      },
+      {
+        "pageNo": 9,
+        "title": "Volatile Keyword and Memory Visibility",
+        "focus": "volatile_visibility",
+        "chunkIndex": 2,
+        "sourceRef": "6:56–8:26",
+        "score": 470.76864
+      },
+      {
+        "pageNo": 10,
+        "title": "Local Variable Optimization",
+        "focus": "volatile_visibility",
+        "chunkIndex": 2,
+        "sourceRef": "6:56–8:26",
+        "score": 459.16864000000004
+      },
+      {
+        "pageNo": 11,
+        "title": "Robust Singleton Recap",
+        "focus": "volatile_visibility",
+        "chunkIndex": 2,
+        "sourceRef": "6:56–8:26",
+        "score": 440.96864
+      },
+      {
+        "pageNo": 12,
+        "title": "Final Review Quiz",
+        "focus": "summary_review",
+        "chunkIndex": 2,
+        "sourceRef": "6:56–8:26",
+        "score": 138.16864
+      }
+    ]
+  },
+  "createdAt": "2026-05-17T05:39:11.753Z",
+  "updatedAt": "2026-05-17T05:39:11.753Z"
+}

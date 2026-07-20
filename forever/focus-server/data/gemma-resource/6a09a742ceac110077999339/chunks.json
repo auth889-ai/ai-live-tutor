@@ -1,0 +1,45 @@
+{
+  "resourceId": "6a09a742ceac110077999339",
+  "savedAt": "2026-05-17T11:33:12.518Z",
+  "count": 1,
+  "chunks": [
+    {
+      "id": "6a09a742ceac11007799934b",
+      "resourceId": "6a09a742ceac110077999339",
+      "deviceId": "web-1778864375928-85e0ab",
+      "userId": "offline-user-anastasia",
+      "chunkId": "chunk_1",
+      "index": 0,
+      "sourceType": "notes",
+      "title": "Auth Test Notes",
+      "text": "This is a test note after AuthContext fix.",
+      "textPreview": "This is a test note after AuthContext fix.",
+      "textChars": 42,
+      "tokenCountEstimate": 11,
+      "timestampStart": "",
+      "timestampEnd": "",
+      "startSeconds": null,
+      "endSeconds": null,
+      "pageNumber": null,
+      "pageStart": null,
+      "pageEnd": null,
+      "lineStart": null,
+      "lineEnd": null,
+      "keywords": [
+        "test",
+        "note",
+        "after",
+        "authcontext",
+        "fix."
+      ],
+      "concepts": [],
+      "sourceRef": "Chunk 1",
+      "metadata": {
+        "inputType": "pasted-text",
+        "chars": 42
+      },
+      "createdAt": "2026-05-17T11:32:18.176Z",
+      "updatedAt": "2026-05-17T11:32:18.176Z"
+    }
+  ]
+}

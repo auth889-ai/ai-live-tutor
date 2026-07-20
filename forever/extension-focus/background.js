@@ -15,7 +15,7 @@
  * - Migrate old ngrok API URL to localhost because ngrok credit finished.
  *
  * Fixed:
- * - DEFAULT apiBaseUrl = http://localhost:3000/api
+ * - DEFAULT apiBaseUrl = http://localhost:3001/api
  * - old ngrok URL in chrome.storage is migrated to localhost
  * - direct popup fallback from HTTP response
  * - socket failure does not block popup
@@ -25,7 +25,7 @@
 /* global chrome, SFAI_API_CLIENT */
 
 const DEFAULTS = {
-  apiBaseUrl: "http://localhost:3000/api",
+  apiBaseUrl: "http://localhost:3001/api",
   signalIntervalMs: 20000,
   screenshotIntervalMs: 90000,
   batchMaxSize: 4,
@@ -63,7 +63,9 @@ function isOldNgrokUrl(url = "") {
   return (
     value.includes("ngrok-free.dev") ||
     value.includes("ngrok.io") ||
-    value.includes("enjoyer-extrude-neurology")
+    value.includes("enjoyer-extrude-neurology") ||
+    value.includes("localhost:3000") ||
+    value.includes("127.0.0.1:3000")
   );
 }
 

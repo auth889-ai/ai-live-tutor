@@ -4,13 +4,13 @@
  * Shared backend API client for extension background/content/popup.
  *
  * Full fixed local/no-ngrok version.
- * - Default API URL is http://localhost:3000/api.
+ * - Default API URL is http://localhost:3001/api.
  * - Old ngrok URLs saved in Chrome storage are migrated to localhost.
  * - Keeps all existing Feature 1 APIs: goal/session/signal/batch/voice/feedback/dashboard.
  */
 
 (function initSfaiApiClient(global) {
-  const DEFAULT_API_BASE_URL = "http://localhost:3000/api";
+  const DEFAULT_API_BASE_URL = "http://localhost:3001/api";
 
   function clean(value = "") {
     return String(value || "").trim();

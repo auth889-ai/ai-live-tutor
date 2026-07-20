@@ -1,0 +1,61 @@
+{
+  "resourceId": "6a09ad97ceac110077999825",
+  "title": "Saved YouTube Video",
+  "sourceType": "youtube",
+  "sourceUrl": "https://www.youtube.com/watch?v=QNpwWkdFvgQ&list=PLlsmxlJgn1HJpa28yHzkBmUY-Ty71ZUGc",
+  "domain": "youtube.com",
+  "createdAt": "2026-05-17T12:01:24.488Z",
+  "fetched": {
+    "title": "Saved YouTube Video",
+    "sourceType": "youtube",
+    "sourceUrl": "https://www.youtube.com/watch?v=QNpwWkdFvgQ&list=PLlsmxlJgn1HJpa28yHzkBmUY-Ty71ZUGc",
+    "domain": "youtube.com",
+    "pageCount": 0,
+    "durationSeconds": 372,
+    "metadata": {
+      "videoId": "QNpwWkdFvgQ",
+      "transcriptProvider": "existing-service",
+      "servicePath": "../youtubeTranscript.service.js",
+      "rawSource": "youtube-transcript",
+      "transcriptError": ""
+    }
+  },
+  "files": {
+    "rawTextPath": "data/gemma-resource/6a09ad97ceac110077999825/raw.txt",
+    "chunksPath": "data/gemma-resource/6a09ad97ceac110077999825/chunks.json",
+    "packPath": "data/gemma-resource/6a09ad97ceac110077999825/pack.json",
+    "bookPath": "data/gemma-resource/6a09ad97ceac110077999825/book.json",
+    "tutorMemoryPath": "data/gemma-resource/6a09ad97ceac110077999825/tutor-memory.json"
+  },
+  "rawInfo": {
+    "path": "data/gemma-resource/6a09ad97ceac110077999825/raw.txt",
+    "chars": 6771,
+    "fullChars": 6771,
+    "sha256": "69590d1db9636b3fe3e6c8fc0c4c165de50b70ef6444de122b208c7e3d05343c",
+    "truncated": false
+  },
+  "chunkInfo": {
+    "path": "data/gemma-resource/6a09ad97ceac110077999825/chunks.json",
+    "count": 8,
+    "sha256": "9f3742b518fd5a84af61a7bb5e007bf7e4b519125f5e98a349326c33a04caa95"
+  },
+  "packInfo": {
+    "path": "data/gemma-resource/6a09ad97ceac110077999825/pack.json",
+    "sha256": "a4eec00bcac398abb491a1aa45bc6085107bbf435daa99a430f8bd1977754bea"
+  },
+  "extra": {
+    "jobId": "grj_1779019159241_2590a4a3349a",
+    "finalizedAt": "2026-05-17T12:01:24.481Z",
+    "embeddings": {
+      "ok": true,
+      "skipped": false,
+      "resourceId": "6a09ad97ceac110077999825",
+      "total": 8,
+      "embedded": 8,
+      "failed": 0,
+      "errors": [],
+      "model": "nomic-embed-text",
+      "builtAt": "2026-05-17T11:59:20.706Z"
+    }
+  }
+}

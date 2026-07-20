@@ -1,0 +1,58 @@
+{
+  "resourceId": "6a09a486ceac110077999020",
+  "title": "Alice Private Resource",
+  "sourceType": "notes",
+  "sourceUrl": "",
+  "domain": "",
+  "createdAt": "2026-05-17T11:21:06.718Z",
+  "fetched": {
+    "title": "Alice Private Resource",
+    "sourceType": "notes",
+    "sourceUrl": "",
+    "domain": "",
+    "pageCount": 0,
+    "durationSeconds": 0,
+    "metadata": {
+      "inputType": "pasted-text",
+      "chars": 71
+    }
+  },
+  "files": {
+    "rawTextPath": "data/gemma-resource/6a09a486ceac110077999020/raw.txt",
+    "chunksPath": "data/gemma-resource/6a09a486ceac110077999020/chunks.json",
+    "packPath": "data/gemma-resource/6a09a486ceac110077999020/pack.json",
+    "bookPath": "data/gemma-resource/6a09a486ceac110077999020/book.json",
+    "tutorMemoryPath": "data/gemma-resource/6a09a486ceac110077999020/tutor-memory.json"
+  },
+  "rawInfo": {
+    "path": "data/gemma-resource/6a09a486ceac110077999020/raw.txt",
+    "chars": 71,
+    "fullChars": 71,
+    "sha256": "a4a5a730b1fb1d1cfe616d50d8d04d090cd37f617152cccf8f799b560bfeb393",
+    "truncated": false
+  },
+  "chunkInfo": {
+    "path": "data/gemma-resource/6a09a486ceac110077999020/chunks.json",
+    "count": 1,
+    "sha256": "7f92cfb42384fb9f68ada8c35536c85b15bb33ae875d9007625f758689fd5b3c"
+  },
+  "packInfo": {
+    "path": "data/gemma-resource/6a09a486ceac110077999020/pack.json",
+    "sha256": "b8b6a894ef9a12ddad1e7b01f271bd49ce521ca1f313ac411fa82509da1b7f63"
+  },
+  "extra": {
+    "jobId": "grj_1779016838384_ee4c634bb1db",
+    "finalizedAt": "2026-05-17T11:21:06.713Z",
+    "embeddings": {
+      "ok": true,
+      "skipped": false,
+      "resourceId": "6a09a486ceac110077999020",
+      "total": 1,
+      "embedded": 1,
+      "failed": 0,
+      "errors": [],
+      "model": "nomic-embed-text",
+      "builtAt": "2026-05-17T11:20:39.178Z"
+    }
+  }
+}

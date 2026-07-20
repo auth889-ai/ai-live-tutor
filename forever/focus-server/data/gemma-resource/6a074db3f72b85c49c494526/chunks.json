@@ -1,0 +1,56 @@
+{
+  "resourceId": "6a074db3f72b85c49c494526",
+  "savedAt": "2026-05-15T16:46:32.936Z",
+  "count": 1,
+  "chunks": [
+    {
+      "id": "6a074db3f72b85c49c494538",
+      "resourceId": "6a074db3f72b85c49c494526",
+      "deviceId": "local-device",
+      "userId": "",
+      "chunkId": "chunk_1",
+      "index": 0,
+      "sourceType": "notes",
+      "title": "Binary Search Notes",
+      "text": "Binary search works on sorted arrays. It checks the middle element, then removes half of the search space each step. Time complexity is O(log n).",
+      "textPreview": "Binary search works on sorted arrays. It checks the middle element, then removes half of the search space each step. Time complexity is O(log n).",
+      "textChars": 145,
+      "tokenCountEstimate": 37,
+      "timestampStart": "",
+      "timestampEnd": "",
+      "startSeconds": null,
+      "endSeconds": null,
+      "pageNumber": null,
+      "pageStart": null,
+      "pageEnd": null,
+      "lineStart": null,
+      "lineEnd": null,
+      "keywords": [
+        "search",
+        "binary",
+        "works",
+        "sorted",
+        "arrays.",
+        "checks",
+        "middle",
+        "element",
+        "removes",
+        "half",
+        "space",
+        "each",
+        "step.",
+        "time",
+        "complexity",
+        "log"
+      ],
+      "concepts": [],
+      "sourceRef": "Chunk 1",
+      "metadata": {
+        "inputType": "pasted-text",
+        "chars": 145
+      },
+      "createdAt": "2026-05-15T16:45:39.170Z",
+      "updatedAt": "2026-05-15T16:45:39.170Z"
+    }
+  ]
+}

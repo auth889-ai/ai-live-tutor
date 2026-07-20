@@ -1,0 +1,42 @@
+{
+  "resourceId": "6a09a98bceac1100779995b1",
+  "savedAt": "2026-05-17T11:42:50.959Z",
+  "count": 1,
+  "chunks": [
+    {
+      "id": "6a09a98bceac1100779995c3",
+      "resourceId": "6a09a98bceac1100779995b1",
+      "deviceId": "web-1778864375928-85e0ab",
+      "userId": "offline-user-lm7rjt",
+      "chunkId": "chunk_1",
+      "index": 0,
+      "sourceType": "notes",
+      "title": "test1",
+      "text": "test note 1",
+      "textPreview": "test note 1",
+      "textChars": 11,
+      "tokenCountEstimate": 3,
+      "timestampStart": "",
+      "timestampEnd": "",
+      "startSeconds": null,
+      "endSeconds": null,
+      "pageNumber": null,
+      "pageStart": null,
+      "pageEnd": null,
+      "lineStart": null,
+      "lineEnd": null,
+      "keywords": [
+        "test",
+        "note"
+      ],
+      "concepts": [],
+      "sourceRef": "Chunk 1",
+      "metadata": {
+        "inputType": "pasted-text",
+        "chars": 11
+      },
+      "createdAt": "2026-05-17T11:42:03.416Z",
+      "updatedAt": "2026-05-17T11:42:03.416Z"
+    }
+  ]
+}

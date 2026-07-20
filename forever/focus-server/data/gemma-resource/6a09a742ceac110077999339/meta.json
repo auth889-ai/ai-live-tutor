@@ -1,0 +1,58 @@
+{
+  "resourceId": "6a09a742ceac110077999339",
+  "title": "Auth Test Notes",
+  "sourceType": "notes",
+  "sourceUrl": "",
+  "domain": "",
+  "createdAt": "2026-05-17T11:33:12.518Z",
+  "fetched": {
+    "title": "Auth Test Notes",
+    "sourceType": "notes",
+    "sourceUrl": "",
+    "domain": "",
+    "pageCount": 0,
+    "durationSeconds": 0,
+    "metadata": {
+      "inputType": "pasted-text",
+      "chars": 42
+    }
+  },
+  "files": {
+    "rawTextPath": "data/gemma-resource/6a09a742ceac110077999339/raw.txt",
+    "chunksPath": "data/gemma-resource/6a09a742ceac110077999339/chunks.json",
+    "packPath": "data/gemma-resource/6a09a742ceac110077999339/pack.json",
+    "bookPath": "data/gemma-resource/6a09a742ceac110077999339/book.json",
+    "tutorMemoryPath": "data/gemma-resource/6a09a742ceac110077999339/tutor-memory.json"
+  },
+  "rawInfo": {
+    "path": "data/gemma-resource/6a09a742ceac110077999339/raw.txt",
+    "chars": 42,
+    "fullChars": 42,
+    "sha256": "91033cc6d01e00b4b92920be58d957029194ba4e7e5dd3212fe1cf4048726ca6",
+    "truncated": false
+  },
+  "chunkInfo": {
+    "path": "data/gemma-resource/6a09a742ceac110077999339/chunks.json",
+    "count": 1,
+    "sha256": "d5d1614d9b928d2fd292b5f658e37114421e625e7577ac61a30557957da74d08"
+  },
+  "packInfo": {
+    "path": "data/gemma-resource/6a09a742ceac110077999339/pack.json",
+    "sha256": "55060325d9cbd3ac677bdbd0298cff718c6f4978ccda280e8c9f37baa2f5493d"
+  },
+  "extra": {
+    "jobId": "grj_1779017538140_1365267d0d44",
+    "finalizedAt": "2026-05-17T11:33:12.511Z",
+    "embeddings": {
+      "ok": true,
+      "skipped": false,
+      "resourceId": "6a09a742ceac110077999339",
+      "total": 1,
+      "embedded": 1,
+      "failed": 0,
+      "errors": [],
+      "model": "nomic-embed-text",
+      "builtAt": "2026-05-17T11:32:18.732Z"
+    }
+  }
+}

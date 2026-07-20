@@ -1,0 +1,48 @@
+{
+  "resourceId": "6a09a486ceac110077999020",
+  "savedAt": "2026-05-17T11:21:06.717Z",
+  "count": 1,
+  "chunks": [
+    {
+      "id": "6a09a486ceac110077999032",
+      "resourceId": "6a09a486ceac110077999020",
+      "deviceId": "shared-browser-device-001",
+      "userId": "offline-user-alice",
+      "chunkId": "chunk_1",
+      "index": 0,
+      "sourceType": "notes",
+      "title": "Alice Private Resource",
+      "text": "This is Alice private offline saved resource. Only Alice should see it.",
+      "textPreview": "This is Alice private offline saved resource. Only Alice should see it.",
+      "textChars": 71,
+      "tokenCountEstimate": 18,
+      "timestampStart": "",
+      "timestampEnd": "",
+      "startSeconds": null,
+      "endSeconds": null,
+      "pageNumber": null,
+      "pageStart": null,
+      "pageEnd": null,
+      "lineStart": null,
+      "lineEnd": null,
+      "keywords": [
+        "alice",
+        "private",
+        "offline",
+        "saved",
+        "resource.",
+        "only",
+        "see",
+        "it."
+      ],
+      "concepts": [],
+      "sourceRef": "Chunk 1",
+      "metadata": {
+        "inputType": "pasted-text",
+        "chars": 71
+      },
+      "createdAt": "2026-05-17T11:20:38.458Z",
+      "updatedAt": "2026-05-17T11:20:38.458Z"
+    }
+  ]
+}

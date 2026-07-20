@@ -1,0 +1,163 @@
+{
+  "resourceId": "6a0a453af5acb2586aa4896d",
+  "savedAt": "2026-05-17T22:48:25.383Z",
+  "pack": {
+    "summary": "This resource introduces the Template Method Design Pattern, using the complex process of loading a large video game (like AAA titles) as a practical example. The pattern solves the problem of code duplication by defining the fixed structure (skeleton) of an algorithm in a superclass, while allowing specific steps to be implemented uniquely by subclasses.",
+    "deepExplanation": "The Template Method Pattern is a behavioral design pattern that defines the skeleton of an algorithm in a superclass (the base class). This superclass contains the 'template method,' which dictates the fixed sequence of steps required to complete the algorithm. The individual steps of the algorithm are implemented as separate methods. These steps can either be declared as abstract (forcing subclasses to implement them) or can have a default implementation in the parent class (to avoid duplication). Subclasses then extend the base class and override only the specific steps that need unique behavior, while the overall structure and order of execution remain intact. This ensures that the core logic is consistent, but the variable parts can be customized for different concrete implementations (e.g., loading a different game).",
+    "sections": [
+      {
+        "title": "The Game Loading Process (The Problem)",
+        "summary": "Outlines the complex, multi-step process required for a large application or game to start up, identifying potential areas for code duplication.",
+        "sourceRef": "0:04–1:20",
+        "start": "0:04",
+        "end": "1:20",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      },
+      {
+        "title": "Understanding Code Duplication and the Pattern",
+        "summary": "Introduces the need for a pattern to manage shared logic across different applications (e.g., loading screens for different games) while maintaining structural integrity.",
+        "sourceRef": "1:25–2:20",
+        "start": "1:25",
+        "end": "2:20",
+        "chunkIds": [
+          "chunk_2",
+          "chunk_3"
+        ]
+      },
+      {
+        "title": "Implementing the Template Method Pattern",
+        "summary": "Details the technical steps: extracting logic into methods, defining the base class, and creating concrete subclasses.",
+        "sourceRef": "2:27–3:50",
+        "start": "2:27",
+        "end": "3:50",
+        "chunkIds": [
+          "chunk_3",
+          "chunk_4"
+        ]
+      },
+      {
+        "title": "Pattern Structure and Benefits",
+        "summary": "Provides a structural overview, showing how the abstract base class and concrete subclasses interact to define the algorithm skeleton.",
+        "sourceRef": "4:28–6:06",
+        "start": "4:28",
+        "end": "6:06",
+        "chunkIds": [
+          "chunk_5",
+          "chunk_6",
+          "chunk_7"
+        ]
+      }
+    ],
+    "keyPoints": [
+      "The Template Method Pattern defines the skeleton of an algorithm in a superclass.",
+      "It uses a 'template method' to enforce the fixed order of steps.",
+      "Subclasses override specific steps (methods) without changing the overall structure.",
+      "This approach eliminates code duplication by centralizing common logic in the base class.",
+      "Steps can be declared abstract (must be implemented) or provide default implementations (optional)."
+    ],
+    "concepts": [
+      "Template Method Pattern",
+      "Behavioral Design Pattern",
+      "Superclass/Base Class",
+      "Subclass/Concrete Class",
+      "Abstract Method",
+      "Code Duplication"
+    ],
+    "tags": [
+      "Design Patterns",
+      "Object-Oriented Programming",
+      "Software Architecture",
+      "Inheritance"
+    ],
+    "quickRevision": [
+      "**Goal:** Avoid repeating code for similar algorithms (e.g., game loading).",
+      "**Mechanism:** Use a Base Class to define the fixed sequence (the template method).",
+      "**Execution:** Subclasses inherit the sequence and only implement/override the unique steps.",
+      "**Benefit:** Maintains structural integrity while allowing high customization."
+    ],
+    "roadmap": [
+      {
+        "step": "1. Identify the Algorithm",
+        "title": "Analyze the process flow",
+        "whatToDo": "Break down the complex process (like game loading) into a series of discrete, sequential steps (e.g., load local data, create objects, clean files).",
+        "why": "To determine the fixed structure that must be maintained across all implementations.",
+        "sourceRef": "3:05–3:15",
+        "chunkIds": [
+          "chunk_4"
+        ]
+      },
+      {
+        "step": "2. Create the Base Class",
+        "title": "Define the Template Method",
+        "whatToDo": "Create a superclass that houses the main template method. This method calls the individual steps in the correct, fixed order.",
+        "why": "This class defines the algorithm's skeleton and ensures the steps are executed consistently.",
+        "sourceRef": "4:54–4:59",
+        "chunkIds": [
+          "chunk_6"
+        ]
+      },
+      {
+        "step": "3. Define the Steps",
+        "title": "Implement Abstract/Default Methods",
+        "whatToDo": "Declare each step method in the Base Class. Use `abstract` if every subclass must implement it, or provide a default implementation if the step is common.",
+        "why": "This prevents code duplication for common steps and enforces necessary steps for unique ones.",
+        "sourceRef": "3:23–3:34",
+        "chunkIds": [
+          "chunk_4"
+        ]
+      },
+      {
+        "step": "4. Create Subclasses",
+        "title": "Customize the Behavior",
+        "whatToDo": "Create concrete subclasses (e.g., WorldOfWarcraftLoader). These classes extend the Base Class and override only the specific methods that require unique logic.",
+        "why": "This allows the subclass to provide its unique behavior while benefiting from the fixed structure of the parent class.",
+        "sourceRef": "3:45–4:12",
+        "chunkIds": [
+          "chunk_4",
+          "chunk_5"
+        ]
+      }
+    ],
+    "practiceQuestions": [
+      {
+        "question": "What is the primary problem the Template Method Pattern aims to solve?",
+        "answer": "Code duplication when multiple classes need to follow the same general algorithm structure but have unique implementations for certain steps.",
+        "type": "short_answer",
+        "difficulty": "easy",
+        "sourceRef": "2:15–2:20",
+        "chunkIds": [
+          "chunk_3"
+        ]
+      },
+      {
+        "question": "In the context of the pattern, what role does the superclass play?",
+        "answer": "It defines the fixed structure (the skeleton) of the algorithm through the template method, ensuring the steps are called in the correct order.",
+        "type": "short_answer",
+        "difficulty": "medium",
+        "sourceRef": "4:54–4:59",
+        "chunkIds": [
+          "chunk_6"
+        ]
+      },
+      {
+        "question": "If a step in the algorithm is common to all subclasses, what implementation choice should the base class make?",
+        "answer": "Provide a default implementation in the base class to eliminate code duplication.",
+        "type": "short_answer",
+        "difficulty": "medium",
+        "sourceRef": "3:34–3:39",
+        "chunkIds": [
+          "chunk_4"
+        ]
+      }
+    ],
+    "ai": {
+      "ok": true,
+      "model": "gemma4:e4b",
+      "provider": "ollama-local",
+      "baseUrl": "http://localhost:11434",
+      "generatedAt": "2026-05-17T22:48:25.334Z"
+    }
+  }
+}

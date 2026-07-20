@@ -1,0 +1,65 @@
+{
+  "conversations": [
+    {
+      "at": "2026-05-17T22:57:47.657Z",
+      "question": "write code in cpp and explain with details",
+      "mode": "code",
+      "route": "general_answer",
+      "confidence": 0.62,
+      "concepts": [
+        "Template Method Pattern",
+        "Behavioral Design Pattern",
+        "Superclass/Base Class",
+        "Subclass/Concrete Class",
+        "Abstract Method",
+        "Code Duplication",
+        "Design Patterns",
+        "Object-Oriented Programming",
+        "Software Architecture",
+        "Inheritance",
+        "youtube"
+      ]
+    },
+    {
+      "at": "2026-05-17T23:02:10.702Z",
+      "question": "Explain more simply",
+      "mode": "code",
+      "route": "saved_resource_answer",
+      "confidence": 0.95,
+      "concepts": [
+        "Template Method Pattern",
+        "Behavioral Design Pattern",
+        "Inheritance",
+        "Code Duplication",
+        "Abstract Class/Method",
+        "Superclass/Base Class",
+        "Subclass/Concrete Class",
+        "Abstract Method",
+        "Design Patterns",
+        "Object-Oriented Programming",
+        "Software Architecture",
+        "youtube"
+      ]
+    }
+  ],
+  "weakConcepts": [],
+  "reviewHistory": [
+    {
+      "at": "2026-05-17T22:57:47.657Z",
+      "suggestion": "",
+      "quickCheck": {
+        "question": "Can you explain the main idea in one sentence?",
+        "expectedAnswer": "A short definition plus one example."
+      }
+    },
+    {
+      "at": "2026-05-17T23:02:10.702Z",
+      "suggestion": "Review the difference between Abstract Class and Interface to solidify understanding of method implementation control.",
+      "quickCheck": {
+        "question": "In the context of the game loader, which part of the code is responsible for guaranteeing that the steps are executed in the correct order?",
+        "expectedAnswer": "The Template Method (the `loadGame()` method) in the superclass."
+      }
+    }
+  ],
+  "updatedAt": "2026-05-17T23:02:10.702Z"
+}

@@ -1,0 +1,106 @@
+{
+  "resourceId": "6a0934d0dd9da0b806233af9",
+  "savedAt": "2026-05-17T03:25:30.802Z",
+  "pack": {
+    "summary": "Arithmetic in Maths - GeeksforGeeks Courses Tutorials Interview Prep Number System and Arithmetic Algebra Set Theory Probability Statistics Geometry Calculus Logarithms Mensuration Matrices Trigonometry Mathematics Arithmetic in Maths Last Updated : 19 Feb, 2026 Arithmetic is the fundamental branch of mathematics that deals with numbers and their basic operations, such as addition, subtraction, multiplication, and division. These operations are performed on numbers, which are represented by digits. Arithmetic Operations Learn the fundamental calculations performed on numbers. Addition Subtraction Multiplication Division Exponents Logarithm Properties of Arithmetic Operations Explore the rules that make calculations easier and consistent. Commutative Associative Distributive Identity Higher Arithmetic Study advanced numerical concepts used in real-life problems. Fractions Decimals Percentages Ratios Applications of Arithmetic in Math See how arithmetic is used in patterns, averages, and sequences. Arithmetic Mean Arithmetic Progression Modular Arithmetic Practice Section Test your understanding with questions, quizzes, and reasoning problems. Questions and Answers Quiz Arithmetic Re",
+    "deepExplanation": "The resource has been extracted and chunked. Gemma can still answer from the saved chunks after the Ask Gemma step is enabled.",
+    "sections": [
+      {
+        "title": "Chunk 1",
+        "summary": "Arithmetic in Maths - GeeksforGeeks Courses Tutorials Interview Prep Number System and Arithmetic Algebra Set Theory Probability Statistics Geometry Calculus Logarithms Mensuration Matrices Trigonometry Mathematics Arithmetic in Maths Last Updated : 19 Feb, 2026 Arithmetic is the...",
+        "sourceRef": "Chunk 1",
+        "start": "",
+        "end": "",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      }
+    ],
+    "keyPoints": [
+      "Review: min",
+      "Review: read",
+      "Review: arithmetic",
+      "Review: maths",
+      "Review: operations",
+      "Review: trigonometric",
+      "Review: solutions",
+      "Review: class",
+      "Review: sharma",
+      "Review: probability"
+    ],
+    "concepts": [
+      "min",
+      "read",
+      "arithmetic",
+      "maths",
+      "operations",
+      "trigonometric",
+      "solutions",
+      "class",
+      "sharma",
+      "probability",
+      "statistics",
+      "calculus",
+      "functions",
+      "algebra",
+      "mathematics",
+      "numbers",
+      "basic",
+      "identities",
+      "set",
+      "theory"
+    ],
+    "tags": [
+      "webpage",
+      "offline-ready"
+    ],
+    "quickRevision": [
+      "Arithmetic in Maths - GeeksforGeeks Courses Tutorials Interview Prep Number System and Arithmetic Algebra Set Theory Probability Statistics Geometry Calculus Logarithms Mensuration Matrices Trigonometry Mathematics Arithmetic in Maths Last Updated : 19 Feb, 2026 Arithmetic is the..."
+    ],
+    "roadmap": [
+      {
+        "step": "Step 1",
+        "title": "Review summary",
+        "whatToDo": "Read the resource summary and identify the main topic.",
+        "why": "This gives context before detailed study.",
+        "sourceRef": "",
+        "chunkIds": []
+      },
+      {
+        "step": "Step 2",
+        "title": "Study sections",
+        "whatToDo": "Go section by section using the generated source references.",
+        "why": "Chunked study reduces overload.",
+        "sourceRef": "",
+        "chunkIds": []
+      },
+      {
+        "step": "Step 3",
+        "title": "Ask questions",
+        "whatToDo": "Use Ask Gemma to explain confusing parts from saved chunks.",
+        "why": "Grounded Q&A makes offline tutoring useful.",
+        "sourceRef": "",
+        "chunkIds": []
+      }
+    ],
+    "practiceQuestions": [
+      {
+        "question": "What is the main idea of this saved resource?",
+        "answer": "Use the summary and first sections to answer from the saved content.",
+        "type": "short_answer",
+        "difficulty": "easy",
+        "sourceRef": "",
+        "chunkIds": []
+      }
+    ],
+    "aiError": "Gemma did not return valid JSON.",
+    "ai": {
+      "ok": false,
+      "model": "gemma4:e4b",
+      "provider": "ollama-local",
+      "baseUrl": "http://localhost:11434",
+      "error": "Gemma did not return valid JSON.",
+      "generatedAt": "2026-05-17T03:25:30.572Z"
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "resourceId": "6a09a53aceac1100779990bf",
+  "title": "Saved YouTube Video",
+  "sourceType": "youtube",
+  "sourceUrl": "https://www.youtube.com/watch?v=EdFq_JIThqM&list=PLlsmxlJgn1HJpa28yHzkBmUY-Ty71ZUGc",
+  "domain": "youtube.com",
+  "createdAt": "2026-05-17T11:25:45.473Z",
+  "fetched": {
+    "title": "Saved YouTube Video",
+    "sourceType": "youtube",
+    "sourceUrl": "https://www.youtube.com/watch?v=EdFq_JIThqM&list=PLlsmxlJgn1HJpa28yHzkBmUY-Ty71ZUGc",
+    "domain": "youtube.com",
+    "pageCount": 0,
+    "durationSeconds": 506,
+    "metadata": {
+      "videoId": "EdFq_JIThqM",
+      "transcriptProvider": "existing-service",
+      "servicePath": "../youtubeTranscript.service.js",
+      "rawSource": "youtube-transcript",
+      "transcriptError": ""
+    }
+  },
+  "files": {
+    "rawTextPath": "data/gemma-resource/6a09a53aceac1100779990bf/raw.txt",
+    "chunksPath": "data/gemma-resource/6a09a53aceac1100779990bf/chunks.json",
+    "packPath": "data/gemma-resource/6a09a53aceac1100779990bf/pack.json",
+    "bookPath": "data/gemma-resource/6a09a53aceac1100779990bf/book.json",
+    "tutorMemoryPath": "data/gemma-resource/6a09a53aceac1100779990bf/tutor-memory.json"
+  },
+  "rawInfo": {
+    "path": "data/gemma-resource/6a09a53aceac1100779990bf/raw.txt",
+    "chars": 9500,
+    "fullChars": 9500,
+    "sha256": "965731b2589b4087ca1915d43b575665b33a07c4cab200a6cae269c826dd95cf",
+    "truncated": false
+  },
+  "chunkInfo": {
+    "path": "data/gemma-resource/6a09a53aceac1100779990bf/chunks.json",
+    "count": 10,
+    "sha256": "128677ff3cf4b5ffb30c4b50705b28024cdb6ec9187ce4f5f6da76bb6ddf027a"
+  },
+  "packInfo": {
+    "path": "data/gemma-resource/6a09a53aceac1100779990bf/pack.json",
+    "sha256": "b06300d36594c84bb7bca03a1bd727d63ba935228f0145c199b2be130704a746"
+  },
+  "extra": {
+    "jobId": "grj_1779017018834_28acb5291e93",
+    "finalizedAt": "2026-05-17T11:25:45.467Z",
+    "embeddings": {
+      "ok": true,
+      "skipped": false,
+      "resourceId": "6a09a53aceac1100779990bf",
+      "total": 10,
+      "embedded": 10,
+      "failed": 0,
+      "errors": [],
+      "model": "nomic-embed-text",
+      "builtAt": "2026-05-17T11:23:40.271Z"
+    }
+  }
+}

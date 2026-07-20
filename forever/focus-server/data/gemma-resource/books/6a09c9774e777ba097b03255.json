@@ -1,0 +1,2234 @@
+{
+  "id": "6a09c9774e777ba097b03255",
+  "deviceId": "web-1778864375928-85e0ab",
+  "userId": "offline-user-lm7rjt",
+  "title": "The Abstract Factory Pattern",
+  "subtitle": "Creating Families of Related Products",
+  "status": "ready",
+  "sourceResourceIds": [
+    "6a09ad97ceac110077999825"
+  ],
+  "joinedFromBookIds": [],
+  "theme": "warm",
+  "goal": "Make a visual exam study book with examples, diagrams and quiz.",
+  "audience": "student",
+  "difficulty": "adaptive",
+  "chapters": [
+    {
+      "chapterNo": 1,
+      "title": "Understanding the Abstract Factory Pattern",
+      "learningGoal": "Define the pattern and understand its purpose in creating related product families.",
+      "pageStart": 1,
+      "pageEnd": 4,
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999837",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:04",
+          "page": "",
+          "timestamp": "0:04-1:04",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! In the previous video of this series we discussed and implemented the factory method pattern so as a follow-up we are going to tackle today the Abstract Factory Pattern, therefore if you haven't watched our p...",
+          "ragScore": 56.953,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999838",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "0:50–1:53",
+          "page": "",
+          "timestamp": "0:50-1:53",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "let's take a practical approach and imagine you want to simulate the creation of computer parts. Now to not overcomplicate the example right from the beginning suppose we are just manufacturing GPUs Now, the GPUs you are manufacturing belong to a certa...",
+          "ragScore": 60.977,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999839",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "1:42–2:48",
+          "page": "",
+          "timestamp": "1:42-2:48",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "hence the concrete creators will be the MsiManufacturer and the AsusManufacturer classes these two classes will implement the createGpu method, the factory method in this case So the MsiManufacturer class will return MSI branded GPUs and the AsusManufa...",
+          "ragScore": 57.287,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        }
+      ]
+    },
+    {
+      "chapterNo": 2,
+      "title": "Implementation and Principles",
+      "learningGoal": "Apply the pattern using a practical example (computer parts) and understand its benefits.",
+      "pageStart": 5,
+      "pageEnd": 12,
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999838",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "0:50–1:53",
+          "page": "",
+          "timestamp": "0:50-1:53",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "let's take a practical approach and imagine you want to simulate the creation of computer parts. Now to not overcomplicate the example right from the beginning suppose we are just manufacturing GPUs Now, the GPUs you are manufacturing belong to a certa...",
+          "ragScore": 60.977,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999839",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "1:42–2:48",
+          "page": "",
+          "timestamp": "1:42-2:48",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "hence the concrete creators will be the MsiManufacturer and the AsusManufacturer classes these two classes will implement the createGpu method, the factory method in this case So the MsiManufacturer class will return MSI branded GPUs and the AsusManufa...",
+          "ragScore": 57.287,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac11007799983a",
+          "chunkId": "chunk_4",
+          "index": 3,
+          "sourceRef": "2:34–3:34",
+          "page": "",
+          "timestamp": "2:34-3:34",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "the AsusGpu, the MsiMonitor, and the AsusMonitor classes then they'll rename the Gpu interface to something broader like Component and then let each different concrete product implement this interface. Now all that is left to do is rename the factory m...",
+          "ragScore": 57.143,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "pageNo": 1,
+      "spreadNo": 1,
+      "chapterNo": 1,
+      "pageType": "cover",
+      "title": "The Abstract Factory Pattern: A Study Guide",
+      "subtitle": "Creating Families of Related Objects",
+      "body": "The Abstract Factory is a powerful creational design pattern. Its primary purpose is to enable the creation of families of related objects without requiring the client code to specify the concrete classes of those objects. Essentially, it allows you to think of it as scaling up the Factory Method pattern to handle the creation of multiple, distinct product lines. This pattern is crucial when your system needs to produce cohesive sets of components, such as an entire suite of computer parts.",
+      "keyTakeaways": [
+        "It is a creational design pattern.",
+        "It produces families of related objects.",
+        "It decouples the client from concrete product classes.",
+        "It can be viewed as an extension of the Factory Method pattern."
+      ],
+      "misconceptionFix": "Do not confuse Abstract Factory with Factory Method. While related, Factory Method handles the creation of a single product type, whereas Abstract Factory handles entire families of related products.",
+      "didYouKnow": "Using this pattern ensures that all created components are compatible and belong to the same 'family' or theme.",
+      "example": "Imagine building a computer: instead of creating individual parts, the Abstract Factory ensures that all created parts (e.g., GPU, CPU, RAM) are compatible with the same operating system or hardware standard.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the main goal of the Abstract Factory Pattern?",
+        "answer": "To produce families of related objects without specifying their concrete classes.",
+        "hint": "Think about creating a set of compatible products, not just one."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "The Abstract Factory Pattern",
+          "text": "A Study Guide",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-definition",
+          "type": "callout",
+          "title": "What is it?",
+          "text": "A creational pattern that creates families of related, compatible objects without specifying their concrete classes.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-comparison",
+          "type": "box",
+          "title": "Abstract Factory vs. Factory Method",
+          "text": "AF: Creates entire families (e.g., Windows components).\nFM: Creates a single product type (e.g., just a CPU).",
+          "mermaid": "",
+          "x": 40,
+          "y": 280,
+          "w": 600,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-example",
+          "type": "diagram",
+          "title": "Example: Building a Computer",
+          "text": "Ensures all parts (GPU, CPU, RAM) are compatible with the same standard/OS.",
+          "mermaid": "graph TD\n    A[Abstract Factory] --> B(Create Family);\n    B --> C{Compatible Parts Set};\n    C --> D[GPU];\n    C --> E[CPU];\n    C --> F[RAM];",
+          "x": 40,
+          "y": 420,
+          "w": 600,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999837",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:04",
+          "page": "",
+          "timestamp": "0:04-1:04",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! In the previous video of this series we discussed and implemented the factory method pattern so as a follow-up we are going to tackle today the Abstract Factory Pattern, therefore if you haven't watched our p...",
+          "ragScore": 56.953,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 2,
+      "spreadNo": 1,
+      "chapterNo": 1,
+      "pageType": "lesson",
+      "title": "What is Abstract Factory?",
+      "subtitle": "Creating families of related objects without knowing their specific types",
+      "body": "The Abstract Factory is a creational design pattern designed to solve the problem of creating families of related objects. Essentially, it allows you to produce entire groups of interconnected products without needing to specify the exact concrete classes of those products. You can visualize it as an extension of the Factory Method pattern, scaled up to handle the creation of multiple, distinct product lines. For instance, if you were building a system that needed to manufacture various computer parts, the Abstract Factory ensures that all created parts (like GPUs, motherboards, etc.) belong to a consistent, related family.",
+      "keyTakeaways": [
+        "It is a creational design pattern.",
+        "Its purpose is to produce families of related objects.",
+        "It decouples the client code from concrete product implementations.",
+        "It can be viewed as scaling up the Factory Method pattern."
+      ],
+      "misconceptionFix": "Do not confuse Abstract Factory with Factory Method. Factory Method handles creating a single product type; Abstract Factory handles creating entire families of related products.",
+      "didYouKnow": "By using this pattern, your code becomes highly portable, allowing you to switch between different product families (e.g., switching from 'Windows' components to 'Mac' components) simply by changing the factory implementation.",
+      "example": "If you are building a computer simulation, the Abstract Factory can ensure that when you create a 'GPU', you also automatically get a compatible 'Motherboard' and 'RAM' that belong to the same operating system or hardware family.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary function of the Abstract Factory pattern?",
+        "answer": "To produce families of related objects without specifying their concrete classes.",
+        "hint": "Think about creating multiple, interconnected products at once."
+      },
+      "boardCommands": [
+        {
+          "id": "p2-title",
+          "type": "heading",
+          "title": "What is Abstract Factory?",
+          "text": "Creating families of related objects without knowing their specific types",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-definition",
+          "type": "callout",
+          "title": "💡 Core Concept",
+          "text": "The Abstract Factory creates families of related products (e.g., GPU, Motherboard, RAM) without the client code needing to know their specific concrete types. It ensures consistency across a product line.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-comparison",
+          "type": "box",
+          "title": "🆚 Factory Method vs. Abstract Factory",
+          "text": "Factory Method: Creates a single product type. Abstract Factory: Creates entire families of related products.",
+          "mermaid": "",
+          "x": 40,
+          "y": 280,
+          "w": 600,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-example",
+          "type": "diagram",
+          "title": "💻 Example: OS Components",
+          "text": "Client code requests a 'Computer System'. The Abstract Factory ensures all components (GPU, Motherboard, RAM) are compatible (e.g., all 'Windows' or all 'Mac').",
+          "mermaid": "graph TD\n    A[Abstract Factory] --> B(Create Family);\n    B --> C{Product Family};\n    C --> D[GPU];\n    C --> E[Motherboard];\n    C --> F[RAM];",
+          "x": 40,
+          "y": 420,
+          "w": 600,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999837",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:04",
+          "page": "",
+          "timestamp": "0:04-1:04",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! In the previous video of this series we discussed and implemented the factory method pattern so as a follow-up we are going to tackle today the Abstract Factory Pattern, therefore if you haven't watched our p...",
+          "ragScore": 56.953,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 3,
+      "spreadNo": 2,
+      "chapterNo": 1,
+      "pageType": "big_picture",
+      "title": "Scaling Up from Factory Method",
+      "subtitle": "Understanding the Abstract Factory Pattern",
+      "body": "The Abstract Factory is a powerful creational design pattern designed to help you produce entire families of related objects without needing to specify their exact concrete classes. If the Factory Method pattern allows you to create one type of product, the Abstract Factory allows you to scale up that concept to handle multiple, distinct product lines. Essentially, you can think of it as using the Factory Method pattern multiple times, or scaling your factory to manage the creation of several related components simultaneously. This pattern ensures that all created products belong to a consistent family.",
+      "keyTakeaways": [
+        "Abstract Factory is a creational design pattern.",
+        "It produces families of related objects.",
+        "It allows object creation without specifying concrete classes.",
+        "It can be viewed as scaling up the Factory Method pattern."
+      ],
+      "misconceptionFix": "Do not confuse Abstract Factory with Factory Method. Factory Method handles the creation of a single product type, while Abstract Factory handles entire families of related products.",
+      "didYouKnow": "This pattern is crucial when your system needs to work with multiple interchangeable product lines (e.g., creating components for different operating systems or hardware types).",
+      "example": "Imagine building a computer: instead of just creating a GPU, an Abstract Factory would ensure you create a matching set of related parts, such as a GPU, a CPU, and a RAM stick, all designed for the same system architecture.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary function of the Abstract Factory pattern?",
+        "answer": "To produce families of related objects without specifying their concrete classes.",
+        "hint": "Think about creating multiple, consistent product types at once."
+      },
+      "boardCommands": [
+        {
+          "id": "p3-title",
+          "type": "heading",
+          "title": "Scaling Up from Factory Method",
+          "text": "Understanding the Abstract Factory Pattern",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-definition",
+          "type": "callout",
+          "title": "Abstract Factory: The Family Creator",
+          "text": "Produces entire families of related objects (e.g., CPU, GPU, RAM) without specifying their exact concrete classes. Ensures consistency across multiple product lines.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 580,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-comparison",
+          "type": "box",
+          "title": "Factory Method vs. Abstract Factory",
+          "text": "Factory Method: Creates a single product type. Abstract Factory: Creates entire families of related products.",
+          "mermaid": "",
+          "x": 40,
+          "y": 290,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-example",
+          "type": "diagram",
+          "title": "Example: Building a Computer System",
+          "text": "Abstract Factory ensures all components (CPU, GPU, RAM) match a single system architecture (e.g., Windows vs. Linux).",
+          "mermaid": "",
+          "x": 40,
+          "y": 410,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999837",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:04",
+          "page": "",
+          "timestamp": "0:04-1:04",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! In the previous video of this series we discussed and implemented the factory method pattern so as a follow-up we are going to tackle today the Abstract Factory Pattern, therefore if you haven't watched our p...",
+          "ragScore": 56.953,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 4,
+      "spreadNo": 2,
+      "chapterNo": 1,
+      "pageType": "visual",
+      "title": "The Core Concept: Product Families",
+      "subtitle": "Using the Abstract Factory Pattern to Create Related Objects",
+      "body": "The Abstract Factory is a powerful creational design pattern designed to produce entire families of related objects without requiring the client code to know the specific concrete classes of those objects. Essentially, it allows you to scale up the concept of the Factory Method Pattern to handle the creation of multiple, distinct, and related products. Instead of creating one type of product, the Abstract Factory ensures that all created components belong to a consistent family (e.g., a specific brand's set of computer parts). This separation of concerns makes the system highly flexible and easy to expand.",
+      "keyTakeaways": [
+        "The Abstract Factory is a creational design pattern.",
+        "It produces families of related objects.",
+        "It decouples the client code from concrete product classes.",
+        "It is an extension of the Factory Method Pattern."
+      ],
+      "misconceptionFix": "Do not confuse the Abstract Factory with the Factory Method. While related, the Factory Method handles the creation of a single product type, whereas the Abstract Factory handles multiple, related product types (a 'family').",
+      "didYouKnow": "By using an Abstract Factory, you can switch entire product lines (e.g., from 'Dell' components to 'HP' components) simply by changing one factory implementation, without modifying the client code.",
+      "example": "If you are building a computer, the Abstract Factory can ensure that all components—such as the GPU, monitor, and case—are from the same manufacturer or product line, guaranteeing compatibility.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the primary function of the Abstract Factory Pattern?",
+        "answer": "To produce families of related objects without specifying their concrete classes.",
+        "hint": "Think about creating multiple, compatible components at once."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "The Core Concept: Product Families",
+          "text": "Abstract Factory Pattern",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-definition",
+          "type": "callout",
+          "title": "Abstract Factory Pattern",
+          "text": "Produces entire families of related objects (e.g., a full set of compatible components) without the client knowing the specific concrete classes.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-comparison",
+          "type": "box",
+          "title": "Factory Method vs. Abstract Factory",
+          "text": "Factory Method: Creates a single product type. Abstract Factory: Creates multiple, related product types (a 'family').",
+          "mermaid": "",
+          "x": 40,
+          "y": 280,
+          "w": 600,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p4-diagram",
+          "type": "diagram",
+          "title": "System Flexibility Example",
+          "text": "Client Code -> Abstract Factory Interface -> Concrete Factory (e.g., DellFactory) -> Family of Products (GPU, Monitor, Case)",
+          "mermaid": "graph LR\n    A[Client Code] --> B(Abstract Factory);\n    B --> C{Concrete Factory: Dell};\n    B --> D{Concrete Factory: HP};\n    C --> C1[GPU];\n    C --> C2[Monitor];\n    C --> C3[Case];\n    D --> D1[GPU];\n    D --> D2[Monitor];\n    D --> D3[Case];",
+          "x": 40,
+          "y": 430,
+          "w": 600,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999837",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:04",
+          "page": "",
+          "timestamp": "0:04-1:04",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! In the previous video of this series we discussed and implemented the factory method pattern so as a follow-up we are going to tackle today the Abstract Factory Pattern, therefore if you haven't watched our p...",
+          "ragScore": 56.953,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 5,
+      "spreadNo": 3,
+      "chapterNo": 2,
+      "pageType": "example",
+      "title": "Practical Example: Computer Component Manufacturing",
+      "subtitle": "Applying the Factory Method Pattern to GPU Production",
+      "body": "To understand the Factory Method pattern, we can simulate a real-world scenario: manufacturing Graphics Processing Units (GPUs). Our company produces GPUs for specific brands, such as MSI and ASUS. We model the product (the GPU) using an interface, like `GpuInterface`, which ensures all brand-specific GPUs adhere to a common standard. The concrete products are then implemented as `MsiGpu` and `AsusGpu`. The business logic, or the 'creator,' is represented by classes like `MsiManufacturer` and `AsusManufacturer`. These concrete creator classes implement the factory method, `createGpu()`, which is the core mechanism for generating brand-specific products.",
+      "keyTakeaways": [
+        "The Factory Method pattern simulates product creation based on brand or type.",
+        "A common interface (e.g., `GpuInterface`) defines the standard for all products.",
+        "Concrete products (e.g., `MsiGpu`) implement the specific brand details.",
+        "Concrete creators (e.g., `MsiManufacturer`) implement the factory method."
+      ],
+      "misconceptionFix": "Do not confuse the product interface with the creator class. The interface defines *what* the product does, while the creator class defines *how* the product is manufactured.",
+      "didYouKnow": "The Factory Method pattern is highly flexible, allowing you to add new brands (e.g., Gigabyte) without modifying existing manufacturer code.",
+      "example": "If the company needs to create an MSI GPU, the `MsiManufacturer` class is used to call its specific `createGpu()` method, ensuring the correct `MsiGpu` object is returned.",
+      "equation": "",
+      "quiz": {
+        "question": "In the GPU manufacturing example, what role does the `GpuInterface` play?",
+        "answer": "It acts as a common interface or abstract product that all brand-specific GPUs must implement.",
+        "hint": "Think of it as the standard contract that all products must follow."
+      },
+      "boardCommands": [
+        {
+          "id": "p5-title",
+          "type": "heading",
+          "title": "Practical Example: Computer Component Manufacturing",
+          "text": "Applying the Factory Method Pattern to GPU Production",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 700,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p5-diagram",
+          "type": "diagram",
+          "title": "Factory Method Pattern Structure (GPU)",
+          "text": "Illustrating the relationship between Product, Creator, and the Factory Method.",
+          "mermaid": "classDiagram\n    direction LR\n    GpuInterface <|-- MsiGpu\n    GpuInterface <|-- AsusGpu\n    MsiManufacturer --> GpuInterface : createGpu()\n    AsusManufacturer --> GpuInterface : createGpu()",
+          "x": 40,
+          "y": 100,
+          "w": 750,
+          "h": 350,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "GpuInterface",
+              "type": "box",
+              "text": "GpuInterface (Product Interface)",
+              "x": 100,
+              "y": 150,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "MsiGpu",
+              "type": "box",
+              "text": "MsiGpu (Concrete Product)",
+              "x": 350,
+              "y": 150,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "AsusGpu",
+              "type": "box",
+              "text": "AsusGpu (Concrete Product)",
+              "x": 600,
+              "y": 150,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "MsiManufacturer",
+              "type": "box",
+              "text": "MsiManufacturer (Concrete Creator)",
+              "x": 100,
+              "y": 300,
+              "w": 200,
+              "h": 50
+            },
+            {
+              "id": "AsusManufacturer",
+              "type": "box",
+              "text": "AsusManufacturer (Concrete Creator)",
+              "x": 350,
+              "y": 300,
+              "w": 200,
+              "h": 50
+            }
+          ],
+          "edges": [
+            {
+              "source": "MsiManufacturer",
+              "target": "GpuInterface",
+              "type": "arrow",
+              "text": "implements createGpu()"
+            },
+            {
+              "source": "AsusManufacturer",
+              "target": "GpuInterface",
+              "type": "arrow",
+              "text": "implements createGpu()"
+            },
+            {
+              "source": "MsiManufacturer",
+              "target": "MsiGpu",
+              "type": "arrow",
+              "text": "produces"
+            },
+            {
+              "source": "AsusManufacturer",
+              "target": "AsusGpu",
+              "type": "arrow",
+              "text": "produces"
+            }
+          ]
+        },
+        {
+          "id": "p5-keyTakeaways",
+          "type": "callout",
+          "title": "Key Takeaways",
+          "text": "1. Factory Method simulates product creation based on brand/type.\n2. Common interface (`GpuInterface`) defines the standard.\n3. Concrete creators implement the factory method.",
+          "mermaid": "",
+          "x": 40,
+          "y": 500,
+          "w": 700,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p5-misconception",
+          "type": "sticky",
+          "title": "⚠️ Misconception Fix",
+          "text": "Product Interface defines *what* the product does. Creator class defines *how* it is manufactured.",
+          "mermaid": "",
+          "x": 40,
+          "y": 620,
+          "w": 700,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999838",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "0:50–1:53",
+          "page": "",
+          "timestamp": "0:50-1:53",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "let's take a practical approach and imagine you want to simulate the creation of computer parts. Now to not overcomplicate the example right from the beginning suppose we are just manufacturing GPUs Now, the GPUs you are manufacturing belong to a certa...",
+          "ragScore": 60.977,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 6,
+      "spreadNo": 3,
+      "chapterNo": 2,
+      "pageType": "lesson",
+      "title": "Structure: Interfaces and Products",
+      "subtitle": "Using the Abstract Factory Pattern for Product Families",
+      "body": "The Abstract Factory pattern is crucial for managing product families. When designing a system that requires multiple related products (like a GPU and a Monitor), you define abstract interfaces for each product. Each concrete factory (or manufacturer class) is then responsible for creating a complete set of these products. This approach significantly decouples the product creation process from the client code that uses the products. Consequently, the client application can interact with any concrete factory, provided that all interactions occur through the defined abstract interfaces. This ensures flexibility and maintainability when expanding the product line.",
+      "keyTakeaways": [
+        "Abstract interfaces define the required products (e.g., GPU, Monitor).",
+        "Concrete factories are responsible for creating entire product families.",
+        "The pattern decouples product creation from product usage.",
+        "Client code interacts only with abstract interfaces, not concrete implementations."
+      ],
+      "misconceptionFix": "Mistake to avoid: Assuming that a single factory method can create all products. Remember, each concrete factory must be capable of creating *all* products within the defined family.",
+      "didYouKnow": "The abstract factory itself acts as a blueprint, ensuring that all concrete implementations adhere to the same product creation contract.",
+      "example": "If a system needs both a GPU and a Monitor, the abstract factory ensures that any manufacturer (concrete factory) must provide both a GPU interface and a Monitor interface.",
+      "equation": "",
+      "quiz": {
+        "question": "In the Abstract Factory pattern, what role do abstract interfaces play?",
+        "answer": "They define the necessary types of products (e.g., GPU, Monitor) that must be created.",
+        "hint": "Think of them as the contract that all products must fulfill."
+      },
+      "boardCommands": [
+        {
+          "id": "p6-title",
+          "type": "heading",
+          "title": "Structure: Interfaces and Products",
+          "text": "Abstract Factory Pattern",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p6-concept",
+          "type": "callout",
+          "title": "Abstract Factory Pattern",
+          "text": "Manages product families by defining abstract interfaces for related products (e.g., GPU, Monitor). Each concrete factory creates a complete set.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 600,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p6-flow",
+          "type": "flow",
+          "title": "Pattern Flow: Decoupling Creation",
+          "text": "Client Code -> (Uses) Abstract Interfaces -> Concrete Factory -> Creates Product Family",
+          "mermaid": "graph LR\n    A[Client Code]\n    B(Abstract Interface)\n    C[Concrete Factory]\n    A --> B\n    B --> C\n    C --> D[Product Family]",
+          "x": 40,
+          "y": 290,
+          "w": 600,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p6-takeaways",
+          "type": "table",
+          "title": "Key Takeaways",
+          "text": "1. Abstract interfaces define required products.\n2. Concrete factories create entire product families.\n3. Decouples creation from usage.\n4. Client interacts only with abstract interfaces.",
+          "mermaid": "",
+          "x": 40,
+          "y": 460,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [
+            [
+              "Abstract Interfaces",
+              "Define the contract (e.g., GPU, Monitor)."
+            ],
+            [
+              "Concrete Factory",
+              "Responsible for creating the full product set."
+            ],
+            [
+              "Client Code",
+              "Interacts only with abstract interfaces."
+            ]
+          ],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac11007799983c",
+          "chunkId": "chunk_6",
+          "index": 5,
+          "sourceRef": "4:17–5:18",
+          "page": "",
+          "timestamp": "4:17-5:18",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "methods one for each abstract product we have in this example we have two abstract products the GPU and the Monitor interfaces hence we will have two factory methods now each concrete factory we have or manufacturer class in this example will return a...",
+          "ragScore": 60.715,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 7,
+      "spreadNo": 4,
+      "chapterNo": 2,
+      "pageType": "formula",
+      "title": "The Abstract Factory Structure",
+      "subtitle": "Designing for Families of Related Products",
+      "body": "The Abstract Factory pattern is essential when your code must interact with various families of related products, but you want to avoid direct dependencies on the specific concrete classes of those products. This pattern is implemented using concrete factories (manufacturer classes), where each factory is responsible for creating a set of related products. Crucially, while all concrete factories must return the same abstract product interface, the specific concrete product created must correspond logically to the type of factory that generated it. This approach helps centralize product creation code, adhering to the Open-Closed and Single Responsibility principles.",
+      "keyTakeaways": [
+        "Use Abstract Factory for families of related products.",
+        "Avoid direct dependency on concrete product classes.",
+        "Concrete factories must return consistent abstract product interfaces.",
+        "Adheres to Open-Closed and Single Responsibility principles."
+      ],
+      "misconceptionFix": "Do not confuse Abstract Factory with Factory Method. While many designs start with Factory Method (due to its simplicity), Abstract Factory is used when the entire *family* of related products needs to be managed and created together.",
+      "didYouKnow": "Centralizing product creation code using this pattern significantly improves maintainability and testability of your application.",
+      "example": "If you are building a UI framework that needs to support different operating systems (e.g., Windows, macOS), an Abstract Factory can ensure that all components (buttons, menus, etc.) created together belong to the same OS family.",
+      "equation": "",
+      "quiz": {
+        "question": "When should a developer choose to implement the Abstract Factory pattern?",
+        "answer": "When the code needs to work with various families of related products without depending on their specific concrete classes.",
+        "hint": "Think about creating multiple, consistent sets of components (like different OS styles)."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "The Abstract Factory Structure",
+          "text": "Designing for Families of Related Products",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-definition",
+          "type": "callout",
+          "title": "What is Abstract Factory?",
+          "text": "A pattern for creating families of related products without specifying their concrete classes. It centralizes product creation.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 580,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-comparison",
+          "type": "box",
+          "title": "Abstract Factory vs. Factory Method",
+          "text": "Abstract Factory manages the creation of an entire *family* of related products (e.g., all Windows components). Factory Method handles the creation of a single product.",
+          "mermaid": "",
+          "x": 40,
+          "y": 290,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p4-example",
+          "type": "diagram",
+          "title": "Example: UI Framework (OS Support)",
+          "text": "Factory creates a consistent set of components (Button, Menu, etc.) for a specific OS (Windows/macOS).",
+          "mermaid": "graph TD\n    A[Abstract Factory] --> B(Windows Factory)\n    A --> C(macOS Factory)\n    B --> B1[Button]\n    B --> B2[Menu]\n    C --> C1[Button]\n    C --> C2[Menu]",
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "os_factory",
+              "x": 100,
+              "y": 380,
+              "w": 150,
+              "h": 50,
+              "text": "Abstract Factory (UI Factory)"
+            },
+            {
+              "id": "windows",
+              "x": 300,
+              "y": 380,
+              "w": 100,
+              "h": 50,
+              "text": "Windows Factory"
+            },
+            {
+              "id": "macos",
+              "x": 500,
+              "y": 380,
+              "w": 100,
+              "h": 50,
+              "text": "macOS Factory"
+            },
+            {
+              "id": "button",
+              "x": 100,
+              "y": 450,
+              "w": 150,
+              "h": 50,
+              "text": "Button (Abstract Product)"
+            },
+            {
+              "id": "menu",
+              "x": 300,
+              "y": 450,
+              "w": 150,
+              "h": 50,
+              "text": "Menu (Abstract Product)"
+            }
+          ],
+          "edges": [
+            {
+              "from": "os_factory",
+              "to": "windows",
+              "type": "arrow",
+              "label": "Creates"
+            },
+            {
+              "from": "windows",
+              "to": "button",
+              "type": "arrow",
+              "label": "-> Button"
+            },
+            {
+              "from": "windows",
+              "to": "menu",
+              "type": "arrow",
+              "label": "-> Menu"
+            },
+            {
+              "from": "os_factory",
+              "to": "macos",
+              "type": "arrow",
+              "label": "Creates"
+            },
+            {
+              "from": "macos",
+              "to": "button",
+              "type": "arrow",
+              "label": "-> Button"
+            },
+            {
+              "from": "macos",
+              "to": "menu",
+              "type": "arrow",
+              "label": "-> Menu"
+            }
+          ]
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac11007799983d",
+          "chunkId": "chunk_7",
+          "index": 6,
+          "sourceRef": "5:05–6:06",
+          "page": "",
+          "timestamp": "5:05-6:06",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "and this factory is implemented by concrete factories which are the manufacturer classes in this example each concrete factory is responsible for creating both products which means that both factories should and must return the same abstract product or...",
+          "ragScore": 60.407,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 8,
+      "spreadNo": 4,
+      "chapterNo": 2,
+      "pageType": "lesson",
+      "title": "Scaling Design Patterns",
+      "subtitle": "Moving from Factory Method to Abstract Factory",
+      "body": "When a single factory method pattern is insufficient for managing product variations, it signals a need to scale up the design. This transition involves moving from the Factory Method pattern to the Abstract Factory pattern. The core principle of the Abstract Factory pattern is to explicitly declare an interface for every distinct product type. All concrete product variants must then adhere to these defined interfaces. Furthermore, the abstract factory itself should contain a collection of creation methods—one dedicated factory method for each abstract product interface required by the system. For instance, if a system requires both GPU and Monitor products, the abstract factory must include separate factory methods for both the GPU interface and the Monitor interface.",
+      "keyTakeaways": [
+        "Abstract Factory is used when a single factory method is insufficient.",
+        "It requires declaring explicit interfaces for every distinct product.",
+        "All product variants must implement these declared interfaces.",
+        "The abstract factory must contain a dedicated factory method for each product interface."
+      ],
+      "misconceptionFix": "Do not assume that applying the Factory Method pattern automatically solves all scaling issues; when product types increase, consider upgrading to the Abstract Factory pattern.",
+      "didYouKnow": "The Abstract Factory pattern helps ensure that the products created together are compatible, maintaining system integrity as complexity grows.",
+      "example": "If a system needs both GPU and Monitor products, the Abstract Factory must define separate factory methods for the GPU interface and the Monitor interface.",
+      "equation": "",
+      "quiz": {
+        "question": "What pattern should be considered when a single factory method is insufficient for managing product variations?",
+        "answer": "Abstract Factory pattern",
+        "hint": "Think about scaling up your implementation beyond the basic factory method."
+      },
+      "boardCommands": [
+        {
+          "id": "p8-title",
+          "type": "heading",
+          "title": "Scaling Design Patterns",
+          "text": "Moving from Factory Method to Abstract Factory",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p8-concept",
+          "type": "callout",
+          "title": "Abstract Factory Pattern",
+          "text": "Used when a single factory method is insufficient for managing product variations. It ensures compatibility among related product families.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p8-key-takeaways",
+          "type": "table",
+          "title": "Key Principles",
+          "text": "1. Requires explicit interfaces for every distinct product.\n2. All product variants must implement these interfaces.\n3. The abstract factory must contain a dedicated factory method for each product interface.",
+          "mermaid": "",
+          "x": 40,
+          "y": 280,
+          "w": 580,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [
+            [
+              "Interface Declaration",
+              "Define explicit interfaces for all product types."
+            ],
+            [
+              "Product Implementation",
+              "All concrete products must adhere to these interfaces."
+            ],
+            [
+              "Factory Structure",
+              "The abstract factory must have a dedicated method for each required product interface."
+            ]
+          ],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p8-example-flow",
+          "type": "flow",
+          "title": "Example: GPU & Monitor System",
+          "text": "Abstract Factory defines separate methods for GPU and Monitor interfaces, ensuring compatible product creation.",
+          "mermaid": "",
+          "x": 40,
+          "y": 450,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [
+            {
+              "id": "A",
+              "text": "System Needs GPU & Monitor",
+              "x": 50,
+              "y": 50
+            },
+            {
+              "id": "B",
+              "text": "Abstract Factory",
+              "x": 250,
+              "y": 50
+            },
+            {
+              "id": "C",
+              "text": "Creates Compatible Products",
+              "x": 450,
+              "y": 50
+            }
+          ],
+          "edges": [
+            {
+              "from": "A",
+              "to": "B",
+              "label": "Requires"
+            },
+            {
+              "from": "B",
+              "to": "C",
+              "label": "Guarantees"
+            }
+          ]
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac11007799983b",
+          "chunkId": "chunk_5",
+          "index": 4,
+          "sourceRef": "3:25–4:26",
+          "page": "",
+          "timestamp": "3:25-4:26",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "Now some of you may be wondering how did this guy manage to violate the open-closed principle even though he was applying the factory method pattern? Well you see in this particular example a single factory is not enough and that is where you should start thi....",
+          "ragScore": 60.596,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 9,
+      "spreadNo": 5,
+      "chapterNo": 2,
+      "pageType": "example",
+      "title": "Implementation Detail: Concrete Factories",
+      "subtitle": "Show how each concrete manufacturer is responsible for creating *all* related products (e.g., MSI creates MSI GPU AND MSI Monitor).",
+      "body": "In the previous video of this series we discussed and implemented the factory method pattern so as a follow-up we are going to tackle today the Abstract Factory Pattern, therefore if you haven't watched our previous upload or have no idea what the factory method pattern is I suggest you take a look at the video link down below in the description first So the abstract factory is a creational design pattern that lets you produce families of related objects without specifying their concrete classes you can think of it as if you were using the factory method pattern but multiple times or as if you were scaling up your factory to handle the creation of multiple distinct products Okay as usual and to better understand the concept at hand let's take a practical approach and imagine you want to simulate the creation of computer parts",
+      "keyTakeaways": [
+        "In the previous video of this series we discussed and implemented the factory method pattern so as a follow-up we are going to tackle today the Abstract Factory Pattern, therefore if you haven't watched our previous upload or have no idea what the factory method pattern is I suggest you take a look at the video link down below in the description first",
+        "So the abstract factory is a creational design pattern that lets you produce families of related objects without specifying their concrete classes you can think of it as if you were using the factory method pattern but multiple times or as if you were scaling up your factory to handle the creation of multiple distinct products",
+        "Okay as usual and to better understand the concept at hand let's take a practical approach and imagine you want to simulate the creation of computer parts",
+        "Now to not overcomplicate the example right from the beginning suppose we are just manufacturing GPUs Now, the GPUs you are manufacturing"
+      ],
+      "misconceptionFix": "Do not treat \"Implementation Detail: Concrete Factories\" as a memorized phrase; connect it to when and why it is used.",
+      "didYouKnow": "In the previous video of this series we discussed and implemented the factory method pattern so as a follow-up we are going to tackle today the Abstract Factory Pattern, therefore if you haven't watched our previous upload or have no idea what the factory method pattern is I suggest you take a look at the video link down below in the description first",
+      "example": "Now to not overcomplicate the example right from the beginning suppose we are just manufacturing GPUs Now, the GPUs you are manufacturing",
+      "equation": "",
+      "quiz": {
+        "question": "What is the main idea of \"Implementation Detail: Concrete Factories\"?",
+        "answer": "In the previous video of this series we discussed and implemented the factory method pattern so as a follow-up we are going to tackle today the Abstract Factory Pattern, therefore if you haven't watched our previous upload or have no idea what the factory method pattern is I suggest you take a look at the video link down below in the description first",
+        "hint": "Look at the source reference attached to this page."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Abstract Factory Pattern",
+          "text": "Implementation Detail: Concrete Factories",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-concept",
+          "type": "callout",
+          "title": "What is Abstract Factory?",
+          "text": "A creational pattern that lets you produce families of related objects without specifying their concrete classes. Think of it as scaling up the Factory Method Pattern.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-diagram",
+          "type": "diagram",
+          "title": "Example: Computer Parts Manufacturing",
+          "text": "Illustrate the concept using a family of products (e.g., MSI/NVIDIA/AMD) creating related components (GPU, Monitor).",
+          "mermaid": "graph TD\n    A[Abstract Factory] --> B(Concrete Factory: MSI)\n    A --> C(Concrete Factory: NVIDIA)\n    B --> B1[MSI GPU]\n    B --> B2[MSI Monitor]\n    C --> C1[NVIDIA GPU]\n    C --> C2[NVIDIA Monitor]",
+          "x": 40,
+          "y": 280,
+          "w": 600,
+          "h": 200,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p4-keytakeaway",
+          "type": "write",
+          "title": "Key Takeaway",
+          "text": "The factory ensures that all created products belong to a consistent family (e.g., all MSI products).",
+          "mermaid": "",
+          "x": 40,
+          "y": 500,
+          "w": 580,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999837",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:04",
+          "page": "",
+          "timestamp": "0:04-1:04",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! In the previous video of this series we discussed and implemented the factory method pattern so as a follow-up we are going to tackle today the Abstract Factory Pattern, therefore if you haven't watched our p...",
+          "ragScore": 56.953,
+          "whyUsed": "Best matching saved chunk for basic_implementation."
+        }
+      ]
+    },
+    {
+      "pageNo": 10,
+      "spreadNo": 5,
+      "chapterNo": 2,
+      "pageType": "quiz",
+      "title": "Concept Check: When to Use Abstract Factory?",
+      "subtitle": "Understanding Families of Related Products",
+      "body": "The Abstract Factory is a creational design pattern designed to produce families of related objects without requiring the client code to specify their concrete classes. Essentially, it allows you to scale up the concept of the Factory Method Pattern to handle the creation of multiple, distinct product lines. If you are building a system that needs to create several related items (like different types of computer parts), the Abstract Factory provides a unified interface for creating all these components together.",
+      "keyTakeaways": [
+        "Abstract Factory is a creational design pattern.",
+        "It produces families of related objects.",
+        "It hides the concrete classes from the client code.",
+        "It is useful when scaling up product creation beyond a single product type."
+      ],
+      "misconceptionFix": "Do not confuse Abstract Factory with Factory Method. While related, Factory Method handles creating one type of product, whereas Abstract Factory handles creating entire families of related products.",
+      "didYouKnow": "This pattern is crucial for ensuring that all created components are compatible and belong to the same 'family' (e.g., all products from the 'Windows' line or all products from the 'Mac' line).",
+      "example": "If you are building a system to simulate computer parts, an Abstract Factory could be used to ensure that when you create a GPU, you automatically also create a compatible CPU and Motherboard from the same manufacturer or product line.",
+      "equation": "",
+      "quiz": {
+        "question": "Which design pattern is best suited for creating multiple, compatible product lines (a 'family' of related objects) without specifying their concrete classes?",
+        "answer": "Abstract Factory Pattern",
+        "hint": "Think about scaling up the Factory Method Pattern."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Concept Check: When to Use Abstract Factory?",
+          "text": "Understanding Families of Related Products",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-quiz",
+          "type": "quizCard",
+          "title": "Quiz Time!",
+          "text": "Which design pattern is best suited for creating multiple, compatible product lines (a 'family' of related objects) without specifying their concrete classes?",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 600,
+          "h": 200,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-concept",
+          "type": "callout",
+          "title": "💡 Key Concept",
+          "text": "Abstract Factory creates families of related objects (e.g., all Windows components) and hides concrete classes from the client.",
+          "mermaid": "",
+          "x": 40,
+          "y": 370,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-comparison",
+          "type": "box",
+          "title": "🆚 Abstract Factory vs. Factory Method",
+          "text": "AF: Creates entire families of compatible products. | FM: Creates one type of product.",
+          "mermaid": "",
+          "x": 40,
+          "y": 490,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999837",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–1:04",
+          "page": "",
+          "timestamp": "0:04-1:04",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "What's up geeks and welcome to the channel! In the previous video of this series we discussed and implemented the factory method pattern so as a follow-up we are going to tackle today the Abstract Factory Pattern, therefore if you haven't watched our p...",
+          "ragScore": 56.953,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    },
+    {
+      "pageNo": 11,
+      "spreadNo": 6,
+      "chapterNo": 2,
+      "pageType": "summary",
+      "title": "Abstract Factory Summary Checklist",
+      "subtitle": "When and how to use the Abstract Factory pattern",
+      "body": "Summary: and this factory is implemented by concrete factories which are the manufacturer classes in this example each concrete factory is responsible for creating both products which means that both factories should and must return the same abstract product or interface however the concrete product created should correspond or relate to the type of factory it was created from So to recap you should use the abstract factory pattern when your code needs to work with various families of related products but you don't want it to depend on the concrete classes of those products though they might be known beforehand and that's why many designs start by using the factory method pattern as it is less complicated and more customizable via subclasses and later evolve toward an abstract factory design By using this pattern you will be following and applying the open-closed principle and the single...",
+      "keyTakeaways": [
+        "Understand Abstract Factory Summary Checklist.",
+        "and this factory is implemented by concrete factories which are the manufacturer classes in this example each concrete factory is responsible for creating both products which means that both factories should and must return the same abstract product or interface however the concrete product created should correspond or relate to the type of factory it was created from So to recap you should use the abstract factory pattern when your code needs to work with various families of related products but you don't want it to depend on the concrete classes of those products though they might be known beforehand and that's why many designs start by using the factory method pattern as it is less complicated and more customizable via subclasses and later evolve toward an abstract factory design By using this pattern you will be following and applying the open-closed principle and the single responsibility principle as you are centralizing the product creation code in one place in the program.",
+        "Connect this page with its source reference."
+      ],
+      "misconceptionFix": "Do not treat \"Abstract Factory Summary Checklist\" as a memorized phrase; connect it to when and why it is used.",
+      "didYouKnow": "Implementing this pattern helps enforce the Open-Closed Principle by making the system open for extension but closed for modification.",
+      "example": "The idea is grounded in the source evidence.",
+      "equation": "",
+      "quiz": {
+        "question": "What is the main idea of \"Abstract Factory Summary Checklist\"?",
+        "answer": "and this factory is implemented by concrete factories which are the manufacturer classes in this example each concrete factory is responsible for creating both products which means that both factories should and must return the same abstract product or interface however the concrete product created should correspond or relate to the type of factory it was created from So to recap you should use the abstract factory pattern when your code needs to work with various families of related products but you don't want it to depend on the concrete classes of those products though they might be known beforehand and that's why many designs start by using the factory method pattern as it is less complicated and more customizable via subclasses and later evolve toward an abstract factory design By using this pattern you will be following and applying the open-closed principle and the single responsibility principle as you are centralizing the product creation code in one place in the program.",
+        "hint": "Look at the source reference attached to this page."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Abstract Factory Summary Checklist",
+          "text": "When and how to use the Abstract Factory pattern",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-usecase",
+          "type": "callout",
+          "title": "💡 When to Use Abstract Factory",
+          "text": "When your code needs to work with various families of related products, but you don't want it to depend on the concrete classes of those products.",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 580,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-mechanism",
+          "type": "box",
+          "title": "How it Works (The Core Idea)",
+          "text": "A factory creates families of related products (e.g., GUI elements for different OSs). Each concrete factory must return products corresponding to the same abstract interface.",
+          "mermaid": "",
+          "x": 40,
+          "y": 280,
+          "w": 580,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-principles",
+          "type": "diagram",
+          "title": "Design Principles Followed",
+          "text": "Open-Closed Principle (Open for extension, closed for modification) & Single Responsibility Principle (Centralizing product creation).",
+          "mermaid": "graph TD\nA[Abstract Factory] --> B(Open-Closed Principle);B --> C(Open for Extension);B --> D(Closed for Modification);\nA --> E(Single Responsibility Principle);E --> F(Centralized Product Creation);",
+          "x": 40,
+          "y": 420,
+          "w": 580,
+          "h": 120,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac11007799983d",
+          "chunkId": "chunk_7",
+          "index": 6,
+          "sourceRef": "5:05–6:06",
+          "page": "",
+          "timestamp": "5:05-6:06",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "and this factory is implemented by concrete factories which are the manufacturer classes in this example each concrete factory is responsible for creating both products which means that both factories should and must return the same abstract product or...",
+          "ragScore": 60.407,
+          "whyUsed": "Best matching saved chunk for summary_review."
+        }
+      ]
+    },
+    {
+      "pageNo": 12,
+      "spreadNo": 6,
+      "chapterNo": 2,
+      "pageType": "quiz",
+      "title": "Deep Dive Quiz: Factory Patterns",
+      "subtitle": "When to upgrade from Factory Method to Abstract Factory",
+      "body": "The Factory Method pattern allows a creator (like `MsiManufacturer`) to produce a specific product (like an MSI GPU) without knowing the concrete class details. However, what if your company expands its product line? Imagine you start manufacturing monitors alongside GPUs, and these monitors must also be branded (MSI or ASUS). To handle this expansion, you must transition to the Abstract Factory pattern. This requires creating separate concrete classes for every product type (e.g., `MsiGpu`, `AsusGpu`, `MsiMonitor`, `AsusMonitor`). Furthermore, the original product interface (like `Gpu`) must be broadened to a more general interface (like `Component`) to accommodate all new product types.",
+      "keyTakeaways": [
+        "Factory Method handles product creation for a single product line.",
+        "Abstract Factory is needed when multiple, related product families must be created together (e.g., GPU and Monitor).",
+        "Expanding product lines requires creating concrete classes for every new product type.",
+        "Interfaces must be generalized (e.g., from `Gpu` to `Component`) to support all product families."
+      ],
+      "misconceptionFix": "Do not assume that adding a new product type (like a monitor) only requires updating the existing factory method. You must update the entire structure, including creating new concrete classes and generalizing the product interfaces.",
+      "didYouKnow": "The Abstract Factory pattern ensures that all created products are compatible and belong to the same 'family' (e.g., all MSI products).",
+      "example": "If you initially only made GPUs, the Factory Method works. If you add monitors, you must create `MsiMonitor` and `AsusMonitor` classes, and generalize the product interface to `Component`.",
+      "equation": "",
+      "quiz": {
+        "question": "A company initially uses the Factory Method pattern for GPUs. If they decide to start manufacturing branded monitors, which pattern must they transition to?",
+        "answer": "Abstract Factory",
+        "hint": "Think about the need to create multiple, related product families (GPU and Monitor) simultaneously."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-title",
+          "type": "heading",
+          "title": "Deep Dive Quiz: Factory Patterns",
+          "text": "When to upgrade from Factory Method to Abstract Factory",
+          "mermaid": "",
+          "x": 40,
+          "y": 40,
+          "w": 600,
+          "h": 80,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-quiz",
+          "type": "quizCard",
+          "title": "Quiz Question",
+          "text": "A company initially uses the Factory Method pattern for GPUs. If they decide to start manufacturing branded monitors, which pattern must they transition to?",
+          "mermaid": "",
+          "x": 40,
+          "y": 150,
+          "w": 600,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-keytakeaways",
+          "type": "callout",
+          "title": "Key Takeaways",
+          "text": "Factory Method: Single product line. Abstract Factory: Multiple, related product families (e.g., GPU & Monitor).",
+          "mermaid": "",
+          "x": 40,
+          "y": 320,
+          "w": 600,
+          "h": 100,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-concept",
+          "type": "diagram",
+          "title": "Pattern Transition Concept",
+          "text": "Factory Method -> Abstract Factory\n(Adding a new product family requires generalizing interfaces and creating new concrete classes for every product type.)",
+          "mermaid": "graph LR\n    A[Factory Method: GPU only]\n    B[Abstract Factory: GPU + Monitor]\n    A -->|Expand Product Line| B\n    style A fill:#ccf,stroke:#333\n    style B fill:#ffc,stroke:#333",
+          "x": 40,
+          "y": 440,
+          "w": 600,
+          "h": 150,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a09ad97ceac110077999825",
+          "chunkMongoId": "6a09ad97ceac110077999839",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "1:42–2:48",
+          "page": "",
+          "timestamp": "1:42-2:48",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "hence the concrete creators will be the MsiManufacturer and the AsusManufacturer classes these two classes will implement the createGpu method, the factory method in this case So the MsiManufacturer class will return MSI branded GPUs and the AsusManufa...",
+          "ragScore": 57.287,
+          "whyUsed": "Best matching saved chunk for general."
+        }
+      ]
+    }
+  ],
+  "sourceRefs": [
+    {
+      "resourceId": "6a09ad97ceac110077999825",
+      "chunkMongoId": "6a09ad97ceac110077999837",
+      "chunkId": "chunk_1",
+      "index": 0,
+      "sourceRef": "0:04–1:04",
+      "page": "",
+      "timestamp": "0:04-1:04",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "What's up geeks and welcome to the channel! In the previous video of this series we discussed and implemented the factory method pattern so as a follow-up we are going to tackle today the Abstract Factory Pattern, therefore if you haven't watched our p...",
+      "ragScore": 56.953,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a09ad97ceac110077999825",
+      "chunkMongoId": "6a09ad97ceac110077999838",
+      "chunkId": "chunk_2",
+      "index": 1,
+      "sourceRef": "0:50–1:53",
+      "page": "",
+      "timestamp": "0:50-1:53",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "let's take a practical approach and imagine you want to simulate the creation of computer parts. Now to not overcomplicate the example right from the beginning suppose we are just manufacturing GPUs Now, the GPUs you are manufacturing belong to a certa...",
+      "ragScore": 60.977,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a09ad97ceac110077999825",
+      "chunkMongoId": "6a09ad97ceac110077999839",
+      "chunkId": "chunk_3",
+      "index": 2,
+      "sourceRef": "1:42–2:48",
+      "page": "",
+      "timestamp": "1:42-2:48",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "hence the concrete creators will be the MsiManufacturer and the AsusManufacturer classes these two classes will implement the createGpu method, the factory method in this case So the MsiManufacturer class will return MSI branded GPUs and the AsusManufa...",
+      "ragScore": 57.287,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a09ad97ceac110077999825",
+      "chunkMongoId": "6a09ad97ceac11007799983a",
+      "chunkId": "chunk_4",
+      "index": 3,
+      "sourceRef": "2:34–3:34",
+      "page": "",
+      "timestamp": "2:34-3:34",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "the AsusGpu, the MsiMonitor, and the AsusMonitor classes then they'll rename the Gpu interface to something broader like Component and then let each different concrete product implement this interface. Now all that is left to do is rename the factory m...",
+      "ragScore": 57.143,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a09ad97ceac110077999825",
+      "chunkMongoId": "6a09ad97ceac11007799983b",
+      "chunkId": "chunk_5",
+      "index": 4,
+      "sourceRef": "3:25–4:26",
+      "page": "",
+      "timestamp": "3:25-4:26",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "Now some of you may be wondering how did this guy manage to violate the open-closed principle even though he was applying the factory method pattern? Well you see in this particular example a single factory is not enough and that is where you should start thi....",
+      "ragScore": 60.596,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a09ad97ceac110077999825",
+      "chunkMongoId": "6a09ad97ceac11007799983c",
+      "chunkId": "chunk_6",
+      "index": 5,
+      "sourceRef": "4:17–5:18",
+      "page": "",
+      "timestamp": "4:17-5:18",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "methods one for each abstract product we have in this example we have two abstract products the GPU and the Monitor interfaces hence we will have two factory methods now each concrete factory we have or manufacturer class in this example will return a...",
+      "ragScore": 60.715,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a09ad97ceac110077999825",
+      "chunkMongoId": "6a09ad97ceac11007799983d",
+      "chunkId": "chunk_7",
+      "index": 6,
+      "sourceRef": "5:05–6:06",
+      "page": "",
+      "timestamp": "5:05-6:06",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "and this factory is implemented by concrete factories which are the manufacturer classes in this example each concrete factory is responsible for creating both products which means that both factories should and must return the same abstract product or...",
+      "ragScore": 60.407,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a09ad97ceac110077999825",
+      "chunkMongoId": "6a09ad97ceac11007799983e",
+      "chunkId": "chunk_8",
+      "index": 7,
+      "sourceRef": "5:56–6:12",
+      "page": "",
+      "timestamp": "5:56-6:12",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "and the single responsibility principle as you are centralizing the product creation code in one place in the program. So that's it for this video, I hope it was helpful, thank you guys for watching, take care and I will see you on the next one!",
+      "ragScore": 56.491,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    }
+  ],
+  "summary": "The Abstract Factory Pattern is a creational design pattern used to produce families of related objects without specifying their concrete classes. It allows a system to work with various product families while adhering to the Open/Closed and Single Responsibility Principles.",
+  "concepts": [
+    "Creational Design Patterns",
+    "Abstract Factory Pattern",
+    "Factory Method Pattern",
+    "Open/Closed Principle",
+    "Single Responsibility Principle",
+    "Product Families"
+  ],
+  "generation": {
+    "model": "gemma4:e4b",
+    "embeddingModel": "nomic-embed-text",
+    "mode": "langgraph_agentic_offline_book",
+    "usedFallback": false,
+    "generatedAt": "2026-05-17T13:58:15.215Z",
+    "retrievalMode": "universal-bm25-phrase-source-mmr-stored-vector"
+  },
+  "agentTrace": [
+    {
+      "step": "start",
+      "ok": true,
+      "message": "Agentic LangGraph book pipeline started.",
+      "model": "langgraph",
+      "usedFallback": false,
+      "at": "2026-05-17T13:58:15.237Z"
+    },
+    {
+      "step": "load_resource",
+      "ok": true,
+      "message": "Resource loaded.",
+      "model": "mongodb",
+      "usedFallback": false,
+      "at": "2026-05-17T13:58:15.237Z"
+    },
+    {
+      "step": "embedding_check",
+      "ok": true,
+      "message": "Embeddings already built.",
+      "model": "nomic-embed-text",
+      "usedFallback": false,
+      "diagnostics": {
+        "ok": true,
+        "skipped": false,
+        "alreadyBuilt": true,
+        "resourceId": "6a09ad97ceac110077999825",
+        "total": 0,
+        "embedded": 0,
+        "failed": 0,
+        "model": "nomic-embed-text",
+        "builtAt": "2026-05-17T13:46:40.248Z"
+      },
+      "at": "2026-05-17T13:58:15.237Z"
+    },
+    {
+      "step": "rag_retrieval",
+      "ok": true,
+      "message": "Retrieved 8 chunks for book generation.",
+      "model": "nomic-embed-text",
+      "usedFallback": false,
+      "diagnostics": {
+        "totalChunks": 8,
+        "selectedChunks": 8,
+        "candidateChunks": 8,
+        "retrievalMode": "universal-bm25-phrase-source-mmr-stored-vector",
+        "usedEmbeddings": true,
+        "embeddingModel": "nomic-embed-text",
+        "embeddingError": "",
+        "queryTokens": [
+          "visual",
+          "exam",
+          "book",
+          "examples",
+          "diagrams",
+          "quiz.",
+          "saved",
+          "youtube",
+          "video",
+          "complete",
+          "flipable",
+          "chapters",
+          "misconceptions",
+          "quiz",
+          "summary",
+          "adaptive",
+          "student"
+        ],
+        "phrases": [
+          "visual exam",
+          "exam book",
+          "book examples",
+          "examples diagrams",
+          "diagrams quiz.",
+          "quiz. saved",
+          "saved youtube",
+          "youtube video",
+          "video complete",
+          "complete flipable",
+          "flipable chapters",
+          "chapters misconceptions",
+          "misconceptions quiz",
+          "quiz summary",
+          "summary adaptive",
+          "adaptive student",
+          "visual exam book",
+          "exam book examples",
+          "book examples diagrams",
+          "examples diagrams quiz.",
+          "diagrams quiz. saved",
+          "quiz. saved youtube",
+          "saved youtube video",
+          "youtube video complete",
+          "video complete flipable",
+          "complete flipable chapters",
+          "flipable chapters misconceptions",
+          "chapters misconceptions quiz",
+          "misconceptions quiz summary",
+          "quiz summary adaptive",
+          "summary adaptive student"
+        ],
+        "focus": {
+          "timestamp": {
+            "hasTimestamp": false,
+            "start": null,
+            "end": null,
+            "raw": ""
+          },
+          "page": {
+            "hasPage": false,
+            "start": null,
+            "end": null,
+            "raw": ""
+          },
+          "line": {
+            "hasLine": false,
+            "start": null,
+            "end": null,
+            "raw": ""
+          }
+        }
+      },
+      "at": "2026-05-17T13:58:15.237Z"
+    },
+    {
+      "step": "book_planner_agent",
+      "ok": true,
+      "message": "Book plan created.",
+      "model": "gemma4:e4b",
+      "usedFallback": false,
+      "at": "2026-05-17T13:58:15.237Z"
+    },
+    {
+      "step": "page_writer_agent",
+      "ok": true,
+      "message": "Per-page writer completed: 12 pages.",
+      "model": "gemma4:e4b",
+      "usedFallback": false,
+      "diagnostics": {
+        "pages": [
+          {
+            "pageNo": 1,
+            "title": "The Abstract Factory Pattern: A Study Guide",
+            "focus": "general",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–1:04",
+            "score": 42.73906000000001
+          },
+          {
+            "pageNo": 2,
+            "title": "What is Abstract Factory?",
+            "focus": "general",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–1:04",
+            "score": 46.53906000000003
+          },
+          {
+            "pageNo": 3,
+            "title": "Scaling Up from Factory Method",
+            "focus": "general",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–1:04",
+            "score": 37.13906000000003
+          },
+          {
+            "pageNo": 4,
+            "title": "The Core Concept: Product Families",
+            "focus": "general",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–1:04",
+            "score": 25.53906000000002
+          },
+          {
+            "pageNo": 5,
+            "title": "Practical Example: Computer Parts",
+            "focus": "general",
+            "chunkIndex": 1,
+            "sourceRef": "0:50–1:53",
+            "score": 18.81954
+          },
+          {
+            "pageNo": 6,
+            "title": "Structure: Interfaces and Products",
+            "focus": "general",
+            "chunkIndex": 5,
+            "sourceRef": "4:17–5:18",
+            "score": 18.8143
+          },
+          {
+            "pageNo": 7,
+            "title": "The Abstract Factory Structure",
+            "focus": "general",
+            "chunkIndex": 6,
+            "sourceRef": "5:05–6:06",
+            "score": 21.008139999999997
+          },
+          {
+            "pageNo": 8,
+            "title": "Adhering to Design Principles",
+            "focus": "general",
+            "chunkIndex": 4,
+            "sourceRef": "3:25–4:26",
+            "score": 14.411919999999999
+          },
+          {
+            "pageNo": 9,
+            "title": "Implementation Detail: Concrete Factories",
+            "focus": "basic_implementation",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–1:04",
+            "score": 87.73906000000002
+          },
+          {
+            "pageNo": 10,
+            "title": "Concept Check: When to Use AF?",
+            "focus": "general",
+            "chunkIndex": 0,
+            "sourceRef": "0:04–1:04",
+            "score": 8.139060000000015
+          },
+          {
+            "pageNo": 11,
+            "title": "Abstract Factory Summary Checklist",
+            "focus": "summary_review",
+            "chunkIndex": 6,
+            "sourceRef": "5:05–6:06",
+            "score": 19.408140000000003
+          },
+          {
+            "pageNo": 12,
+            "title": "Deep Dive Quiz: Pattern Application",
+            "focus": "general",
+            "chunkIndex": 2,
+            "sourceRef": "1:42–2:48",
+            "score": 5.54574
+          }
+        ]
+      },
+      "at": "2026-05-17T13:58:15.237Z"
+    },
+    {
+      "step": "page_quality_validator",
+      "ok": true,
+      "message": "All pages passed quality checks.",
+      "model": "validator",
+      "usedFallback": false,
+      "at": "2026-05-17T13:58:15.237Z"
+    },
+    {
+      "step": "board_command_agent",
+      "ok": true,
+      "message": "Per-page board commands completed: 12 pages.",
+      "model": "gemma4:e4b",
+      "usedFallback": false,
+      "diagnostics": {
+        "safeFallbackPages": 0
+      },
+      "at": "2026-05-17T13:58:15.237Z"
+    },
+    {
+      "step": "schema_validator_repair",
+      "ok": true,
+      "message": "Book schema validated/repaired.",
+      "model": "validator",
+      "usedFallback": false,
+      "at": "2026-05-17T13:58:15.238Z"
+    }
+  ],
+  "error": "",
+  "metadata": {
+    "sourceTitle": "Saved YouTube Video",
+    "sourceType": "youtube",
+    "requestedPageTarget": 12,
+    "actualPages": 12,
+    "retrievalDiagnostics": {
+      "totalChunks": 8,
+      "selectedChunks": 8,
+      "candidateChunks": 8,
+      "retrievalMode": "universal-bm25-phrase-source-mmr-stored-vector",
+      "usedEmbeddings": true,
+      "embeddingModel": "nomic-embed-text",
+      "embeddingError": "",
+      "queryTokens": [
+        "visual",
+        "exam",
+        "book",
+        "examples",
+        "diagrams",
+        "quiz.",
+        "saved",
+        "youtube",
+        "video",
+        "complete",
+        "flipable",
+        "chapters",
+        "misconceptions",
+        "quiz",
+        "summary",
+        "adaptive",
+        "student"
+      ],
+      "phrases": [
+        "visual exam",
+        "exam book",
+        "book examples",
+        "examples diagrams",
+        "diagrams quiz.",
+        "quiz. saved",
+        "saved youtube",
+        "youtube video",
+        "video complete",
+        "complete flipable",
+        "flipable chapters",
+        "chapters misconceptions",
+        "misconceptions quiz",
+        "quiz summary",
+        "summary adaptive",
+        "adaptive student",
+        "visual exam book",
+        "exam book examples",
+        "book examples diagrams",
+        "examples diagrams quiz.",
+        "diagrams quiz. saved",
+        "quiz. saved youtube",
+        "saved youtube video",
+        "youtube video complete",
+        "video complete flipable",
+        "complete flipable chapters",
+        "flipable chapters misconceptions",
+        "chapters misconceptions quiz",
+        "misconceptions quiz summary",
+        "quiz summary adaptive",
+        "summary adaptive student"
+      ],
+      "focus": {
+        "timestamp": {
+          "hasTimestamp": false,
+          "start": null,
+          "end": null,
+          "raw": ""
+        },
+        "page": {
+          "hasPage": false,
+          "start": null,
+          "end": null,
+          "raw": ""
+        },
+        "line": {
+          "hasLine": false,
+          "start": null,
+          "end": null,
+          "raw": ""
+        }
+      }
+    },
+    "pageDiagnostics": [
+      {
+        "pageNo": 1,
+        "title": "The Abstract Factory Pattern: A Study Guide",
+        "focus": "general",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–1:04",
+        "score": 42.73906000000001
+      },
+      {
+        "pageNo": 2,
+        "title": "What is Abstract Factory?",
+        "focus": "general",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–1:04",
+        "score": 46.53906000000003
+      },
+      {
+        "pageNo": 3,
+        "title": "Scaling Up from Factory Method",
+        "focus": "general",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–1:04",
+        "score": 37.13906000000003
+      },
+      {
+        "pageNo": 4,
+        "title": "The Core Concept: Product Families",
+        "focus": "general",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–1:04",
+        "score": 25.53906000000002
+      },
+      {
+        "pageNo": 5,
+        "title": "Practical Example: Computer Parts",
+        "focus": "general",
+        "chunkIndex": 1,
+        "sourceRef": "0:50–1:53",
+        "score": 18.81954
+      },
+      {
+        "pageNo": 6,
+        "title": "Structure: Interfaces and Products",
+        "focus": "general",
+        "chunkIndex": 5,
+        "sourceRef": "4:17–5:18",
+        "score": 18.8143
+      },
+      {
+        "pageNo": 7,
+        "title": "The Abstract Factory Structure",
+        "focus": "general",
+        "chunkIndex": 6,
+        "sourceRef": "5:05–6:06",
+        "score": 21.008139999999997
+      },
+      {
+        "pageNo": 8,
+        "title": "Adhering to Design Principles",
+        "focus": "general",
+        "chunkIndex": 4,
+        "sourceRef": "3:25–4:26",
+        "score": 14.411919999999999
+      },
+      {
+        "pageNo": 9,
+        "title": "Implementation Detail: Concrete Factories",
+        "focus": "basic_implementation",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–1:04",
+        "score": 87.73906000000002
+      },
+      {
+        "pageNo": 10,
+        "title": "Concept Check: When to Use AF?",
+        "focus": "general",
+        "chunkIndex": 0,
+        "sourceRef": "0:04–1:04",
+        "score": 8.139060000000015
+      },
+      {
+        "pageNo": 11,
+        "title": "Abstract Factory Summary Checklist",
+        "focus": "summary_review",
+        "chunkIndex": 6,
+        "sourceRef": "5:05–6:06",
+        "score": 19.408140000000003
+      },
+      {
+        "pageNo": 12,
+        "title": "Deep Dive Quiz: Pattern Application",
+        "focus": "general",
+        "chunkIndex": 2,
+        "sourceRef": "1:42–2:48",
+        "score": 5.54574
+      }
+    ]
+  },
+  "createdAt": "2026-05-17T13:58:15.243Z",
+  "updatedAt": "2026-05-17T13:58:15.243Z"
+}

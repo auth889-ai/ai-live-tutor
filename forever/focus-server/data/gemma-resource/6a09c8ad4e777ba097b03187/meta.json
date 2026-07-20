@@ -1,0 +1,58 @@
+{
+  "resourceId": "6a09c8ad4e777ba097b03187",
+  "title": "test exam anastasia",
+  "sourceType": "notes",
+  "sourceUrl": "",
+  "domain": "",
+  "createdAt": "2026-05-17T13:56:08.553Z",
+  "fetched": {
+    "title": "test exam anastasia",
+    "sourceType": "notes",
+    "sourceUrl": "",
+    "domain": "",
+    "pageCount": 0,
+    "durationSeconds": 0,
+    "metadata": {
+      "inputType": "pasted-text",
+      "chars": 24
+    }
+  },
+  "files": {
+    "rawTextPath": "data/gemma-resource/6a09c8ad4e777ba097b03187/raw.txt",
+    "chunksPath": "data/gemma-resource/6a09c8ad4e777ba097b03187/chunks.json",
+    "packPath": "data/gemma-resource/6a09c8ad4e777ba097b03187/pack.json",
+    "bookPath": "data/gemma-resource/6a09c8ad4e777ba097b03187/book.json",
+    "tutorMemoryPath": "data/gemma-resource/6a09c8ad4e777ba097b03187/tutor-memory.json"
+  },
+  "rawInfo": {
+    "path": "data/gemma-resource/6a09c8ad4e777ba097b03187/raw.txt",
+    "chars": 24,
+    "fullChars": 24,
+    "sha256": "020af02ec00487966e35738519420c88e923b451abdf52de50c2c30b661828e7",
+    "truncated": false
+  },
+  "chunkInfo": {
+    "path": "data/gemma-resource/6a09c8ad4e777ba097b03187/chunks.json",
+    "count": 1,
+    "sha256": "fc894c57fd0bfed547c868dc06d4d146e572df4973aa00a2d069162a239ad0b8"
+  },
+  "packInfo": {
+    "path": "data/gemma-resource/6a09c8ad4e777ba097b03187/pack.json",
+    "sha256": "297bf54314eb1fc697f21eb790c4e07da04170ff9c490eaa8a82dd5973566f40"
+  },
+  "extra": {
+    "jobId": "grj_1779026093127_94002988d492",
+    "finalizedAt": "2026-05-17T13:56:08.548Z",
+    "embeddings": {
+      "ok": true,
+      "skipped": false,
+      "resourceId": "6a09c8ad4e777ba097b03187",
+      "total": 1,
+      "embedded": 1,
+      "failed": 0,
+      "errors": [],
+      "model": "nomic-embed-text",
+      "builtAt": "2026-05-17T13:54:54.265Z"
+    }
+  }
+}

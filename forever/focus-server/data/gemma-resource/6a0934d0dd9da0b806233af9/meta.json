@@ -1,0 +1,59 @@
+{
+  "resourceId": "6a0934d0dd9da0b806233af9",
+  "title": "Arithmetic in Maths - GeeksforGeeks",
+  "sourceType": "webpage",
+  "sourceUrl": "https://www.geeksforgeeks.org/maths/arithmetic/",
+  "domain": "geeksforgeeks.org",
+  "createdAt": "2026-05-17T03:25:30.802Z",
+  "fetched": {
+    "title": "Arithmetic in Maths - GeeksforGeeks",
+    "sourceType": "webpage",
+    "sourceUrl": "https://www.geeksforgeeks.org/maths/arithmetic/",
+    "domain": "geeksforgeeks.org",
+    "pageCount": 0,
+    "durationSeconds": 0,
+    "metadata": {
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "fetchedAt": "2026-05-17T03:24:00.345Z"
+    }
+  },
+  "files": {
+    "rawTextPath": "data/gemma-resource/6a0934d0dd9da0b806233af9/raw.txt",
+    "chunksPath": "data/gemma-resource/6a0934d0dd9da0b806233af9/chunks.json",
+    "packPath": "data/gemma-resource/6a0934d0dd9da0b806233af9/pack.json",
+    "bookPath": "data/gemma-resource/6a0934d0dd9da0b806233af9/book.json",
+    "tutorMemoryPath": "data/gemma-resource/6a0934d0dd9da0b806233af9/tutor-memory.json"
+  },
+  "rawInfo": {
+    "path": "data/gemma-resource/6a0934d0dd9da0b806233af9/raw.txt",
+    "chars": 2975,
+    "fullChars": 2975,
+    "sha256": "b862e73f9e6af03ab38ddcb14a642e656d3b86baf1d479925eebc682b6b79525",
+    "truncated": false
+  },
+  "chunkInfo": {
+    "path": "data/gemma-resource/6a0934d0dd9da0b806233af9/chunks.json",
+    "count": 1,
+    "sha256": "f1fe999daf31d2698ca0684e67ee8927102b171cb6898ca7e15b6729e0b88f01"
+  },
+  "packInfo": {
+    "path": "data/gemma-resource/6a0934d0dd9da0b806233af9/pack.json",
+    "sha256": "cd0dbe1823e0b7ddf292e8e5a381f70a009b68feec557f332fd3213798c13e03"
+  },
+  "extra": {
+    "jobId": "grj_1778988240136_686c4c1d5059",
+    "finalizedAt": "2026-05-17T03:25:30.798Z",
+    "embeddings": {
+      "ok": true,
+      "skipped": false,
+      "resourceId": "6a0934d0dd9da0b806233af9",
+      "total": 1,
+      "embedded": 1,
+      "failed": 0,
+      "errors": [],
+      "model": "nomic-embed-text",
+      "builtAt": "2026-05-17T03:24:00.980Z"
+    }
+  }
+}

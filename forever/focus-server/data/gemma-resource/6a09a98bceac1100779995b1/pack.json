@@ -1,0 +1,67 @@
+{
+  "resourceId": "6a09a98bceac1100779995b1",
+  "savedAt": "2026-05-17T11:42:50.959Z",
+  "pack": {
+    "summary": "This resource provides foundational study notes, labeled 'test note 1,' designed for offline review and learning.",
+    "deepExplanation": "The resource contains a single, foundational set of notes. These notes serve as a starting point for learning the material and are intended to be reviewed offline. Since the content is brief, the focus is on recognizing its role as a core study reference.",
+    "sections": [
+      {
+        "title": "Core Study Notes (Test Note 1)",
+        "summary": "This section introduces the primary study material, which is designated as 'test note 1.'",
+        "sourceRef": "Chunk 1",
+        "start": "",
+        "end": "",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      }
+    ],
+    "keyPoints": [
+      "The resource contains 'test note 1' as the primary content.",
+      "The notes are intended for offline study and review."
+    ],
+    "concepts": [
+      "Study Notes",
+      "Offline Learning"
+    ],
+    "tags": [
+      "notes",
+      "review",
+      "foundational"
+    ],
+    "quickRevision": [
+      "Review 'test note 1' for a quick understanding of the core concepts."
+    ],
+    "roadmap": [
+      {
+        "step": "Step 1",
+        "title": "Review the Core Note",
+        "whatToDo": "Read through 'test note 1' thoroughly.",
+        "why": "To establish a foundational understanding of the material before moving to advanced topics.",
+        "sourceRef": "Chunk 1",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      }
+    ],
+    "practiceQuestions": [
+      {
+        "question": "What is the title of the primary study material provided in this resource?",
+        "answer": "test note 1",
+        "type": "short_answer",
+        "difficulty": "easy",
+        "sourceRef": "Chunk 1",
+        "chunkIds": [
+          "chunk_1"
+        ]
+      }
+    ],
+    "ai": {
+      "ok": true,
+      "model": "gemma4:e4b",
+      "provider": "ollama-local",
+      "baseUrl": "http://localhost:11434",
+      "generatedAt": "2026-05-17T11:42:50.925Z"
+    }
+  }
+}

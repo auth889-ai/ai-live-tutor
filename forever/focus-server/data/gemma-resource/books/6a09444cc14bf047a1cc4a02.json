@@ -1,0 +1,504 @@
+{
+  "id": "6a09444cc14bf047a1cc4a02",
+  "deviceId": "web-test",
+  "userId": "",
+  "title": "AI Flipable Book: Saved YouTube Video",
+  "subtitle": "Generated from saved offline resource chunks.",
+  "status": "ready",
+  "sourceResourceIds": [
+    "6a091166caa8e814c11b5ec3"
+  ],
+  "joinedFromBookIds": [],
+  "theme": "warm",
+  "goal": "Make a visual exam study book with examples, diagrams and quiz.",
+  "audience": "student",
+  "difficulty": "adaptive",
+  "chapters": [
+    {
+      "chapterNo": 1,
+      "title": "Saved YouTube Video",
+      "learningGoal": "Make a visual exam study book with examples, diagrams and quiz.",
+      "pageStart": 1,
+      "pageEnd": 3,
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed5",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–3:58",
+          "page": "",
+          "timestamp": "0:04-3:58",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "[0:04] What's up geeks and welcome to the channel! In the first video of this series we are going [0:10] to start with one of the simplest yet one of the most used design [0:14] patterns out there: The Singleton Pattern. The singleton is a creational design pa...",
+          "ragScore": 0,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed6",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "3:35–7:19",
+          "page": "",
+          "timestamp": "3:35-7:19",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "[3:35] and to these people I say you're right! To solve this issue and as discussed [3:40] in our previous videos, all we have to do is wrap [3:43] our if-statement with a synchronized block Now every time a thread tries to [3:47] create an instance of the Sin...",
+          "ragScore": 0,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        },
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed7",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "6:56–8:26",
+          "page": "",
+          "timestamp": "6:56-8:26",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "[6:56] now marked as volatile so every time we access [6:59] this variable we need to read it directly from the main memory as it cannot be cached [7:03] So in this single code snippet even if the variable was already initialized [7:09] we have to fetch it twi...",
+          "ragScore": 0,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "pageNo": 1,
+      "spreadNo": 1,
+      "chapterNo": 1,
+      "pageType": "cover",
+      "title": "Saved YouTube Video",
+      "subtitle": "AI Flipable Book",
+      "body": "[0:04] What's up geeks and welcome to the channel! In the first video of this series we are going\n[0:10] to start with one of the simplest yet one of the most used design\n[0:14] patterns out there: The Singleton Pattern. The singleton is a creational design pattern\n[0:20] this pattern ensures that only one instance of its kind exists\n[0:24] and provides a single point of access to it from any other part of our application\n[0:30] As a real-world analogy take the government of a country or its president,\n[0:34] you see a given country can have only one official government or one official president\n[0:39] regardless of the individuals who form this government or the person that\n[0:43] is currently the president of this country, so the title \"the government or the president\n[0:48] of X\" is a global identifier it is a global point of access\n[0:53] used to represent or reference the president...",
+      "keyTakeaways": [
+        "[0:04] What's up geeks and welcome to the channel",
+        "In the first video of this series we are going\n[0:10] to start with one of the simplest yet one of the most used design\n[0:14] patterns out there: The Singleton Pattern",
+        "The singleton is a creational design pattern\n[0:20] this pattern ensures that only one instance of its kind exists\n[0:24] and provides a single point of access to it from any other part of our application\n[0:30] As a real-world analogy take the government of a country or its president,\n[0:34] you see a given country can have only one official government or one official president\n[0:39] regardless of the individuals who form this government or the person that\n[0:43] is currently the president of this country, so the title \"the government or the president\n[0:48] of X\" is a global identifier it is a global point of access\n[0:53] used to represent or reference the president or the individuals in charge of this country",
+        "[0:58] Singletons represent exactly the same idea, just like global variables they let you access\n[1:04] your object from anywhere in your application but on top of that, they encapsulate the\n[1:09] attributes of this object in one single class and guarantee that only one instance of this class\n[1:16] will be available at any point in time but why would anyone want to control\n[1:21] how many instances a class has"
+      ],
+      "misconceptionFix": "Well think of a database instance,\n[1:26] only one instance of a database is required and should be used by all the parts of our application\n[1:31] So instead of creating a new instance every time we need to query our database\n[1:36] we create a singleton database instance and reuse this same instance every time we access our tables\n[1:42] by doing this we didn't only guarantee a faster access and retrieval of the instance\n[1:47] but we also reduced the possibility of encountering an error or exception\n[1:52] while creating these several instances",
+      "didYouKnow": "In the first video of this series we are going\n[0:10] to start with one of the simplest yet one of the most used design\n[0:14] patterns out there: The Singleton Pattern",
+      "example": "The singleton is a creational design pattern\n[0:20] this pattern ensures that only one instance of its kind exists\n[0:24] and provides a single point of access to it from any other part of our application\n[0:30] As a real-world analogy take the government of a country or its president,\n[0:34] you see a given country can have only one official government or one official president\n[0:39] regardless of the individuals who form this government or the person that\n[0:43] is currently the president of this country, so the title \"the government or the president\n[0:48] of X\" is a global identifier it is a global point of access\n[0:53] used to represent or reference the president or the individuals in charge of this country",
+      "equation": "",
+      "quiz": {
+        "question": "What is the main idea of \"Saved YouTube Video\"?",
+        "answer": "[0:04] What's up geeks and welcome to the channel",
+        "hint": "Look at the source reference on this page."
+      },
+      "boardCommands": [
+        {
+          "id": "p1-heading",
+          "type": "heading",
+          "title": "Saved YouTube Video",
+          "text": "Saved YouTube Video",
+          "mermaid": "",
+          "x": 40,
+          "y": 32,
+          "w": 430,
+          "h": 70,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-core",
+          "type": "box",
+          "title": "Core Idea",
+          "text": "[0:04] What's up geeks and welcome to the channel",
+          "mermaid": "",
+          "x": 50,
+          "y": 120,
+          "w": 420,
+          "h": 130,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-flow",
+          "type": "flow",
+          "title": "Learning Flow",
+          "text": "",
+          "mermaid": "",
+          "x": 60,
+          "y": 280,
+          "w": 430,
+          "h": 170,
+          "from": "",
+          "to": "",
+          "items": [
+            "[0:04] What's up geeks and welcome to the channel",
+            "In the first video of this series we are going\n[0:10] to start with one of the simplest yet one of the most used design\n[0:14] patterns out there: The Singleton Pattern",
+            "The singleton is a creational design pattern\n[0:20] this pattern ensures that only one instance of its kind exists\n[0:24] and provides a single point of access to it from any other part of our application\n[0:30] As a real-world analogy take the government of a country or its president,\n[0:34] you see a given country can have only one official government or one official president\n[0:39] regardless of the individuals who form this government or the person that\n[0:43] is currently the president of this country, so the title \"the government or the president\n[0:48] of X\" is a global identifier it is a global point of access\n[0:53] used to represent or reference the president or the individuals in charge of this country",
+            "[0:58] Singletons represent exactly the same idea, just like global variables they let you access\n[1:04] your object from anywhere in your application but on top of that, they encapsulate the\n[1:09] attributes of this object in one single class and guarantee that only one instance of this class\n[1:16] will be available at any point in time but why would anyone want to control\n[1:21] how many instances a class has"
+          ],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p1-map",
+          "type": "mermaid",
+          "title": "Concept Map",
+          "text": "",
+          "mermaid": "graph TD; A[\"Saved YouTube Video\"]-->B[\"Core idea\"]; B-->C[\"Example\"]; C-->D[\"Quiz\"];",
+          "x": 50,
+          "y": 460,
+          "w": 430,
+          "h": 180,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed5",
+          "chunkId": "chunk_1",
+          "index": 0,
+          "sourceRef": "0:04–3:58",
+          "page": "",
+          "timestamp": "0:04-3:58",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "[0:04] What's up geeks and welcome to the channel! In the first video of this series we are going [0:10] to start with one of the simplest yet one of the most used design [0:14] patterns out there: The Singleton Pattern. The singleton is a creational design pa...",
+          "ragScore": 0,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        }
+      ]
+    },
+    {
+      "pageNo": 2,
+      "spreadNo": 1,
+      "chapterNo": 1,
+      "pageType": "lesson",
+      "title": "Saved YouTube Video",
+      "subtitle": "Grounded lesson page",
+      "body": "[3:35] and to these people I say you're right! To solve this issue and as discussed\n[3:40] in our previous videos, all we have to do is wrap\n[3:43] our if-statement with a synchronized block Now every time a thread tries to\n[3:47] create an instance of the Singleton class it will have to wait for its turn as one thread\n[3:52] only may execute this code block at a given time. Okay with this we solved the threading issue\n[3:58] however we added unnecessary overhead to the creation process of our singleton object.\n[4:04] You see after the single instance is created, when the threads of our application try to\n[4:08] access it they will first have to wait for their turn to acquire the lock on our class\n[4:13] and only when it is their time to go they will check if the instance\n[4:16] is available and then return with it This problem is actually not specific\n[4:21] to the Singleton pattern and...",
+      "keyTakeaways": [
+        "[3:35] and to these people I say you're right",
+        "To solve this issue and as discussed\n[3:40] in our previous videos, all we have to do is wrap\n[3:43] our if-statement with a synchronized block Now every time a thread tries to\n[3:47] create an instance of the Singleton class it will have to wait for its turn as one thread\n[3:52] only may execute this code block at a given time",
+        "Okay with this we solved the threading issue\n[3:58] however we added unnecessary overhead to the creation process of our singleton object",
+        "[4:04] You see after the single instance is created, when the threads of our application try to\n[4:08] access it they will first have to wait for their turn to acquire the lock on our class\n[4:13] and only when it is their time to go they will check if the instance\n[4:16] is available and then return with it This problem is actually not specific\n[4:21] to the Singleton pattern and can be solved by applying\n[4:24] the double-checked locking idiom on our method How do we do that"
+      ],
+      "misconceptionFix": "Well, we simply wrap\n[4:31] the synchronized block with another if statement similar to the one inside it\n[4:35] I know the code may look confusing at first but look closely\n[4:39] now the threads trying to retrieve the instance of our Singleton class after being instantiated\n[4:44] do not necessarily have to acquire the lock on our class\n[4:48] as we are first testing the locking criteria what we did improved the performance of our\n[4:54] code by limiting synchronization to the rare case of computing the field's value\n[5:00] or constructing a new instance of this field and by skipping synchronization during the\n[5:05] common cases of retrieving an already created instance or value of this field",
+      "didYouKnow": "To solve this issue and as discussed\n[3:40] in our previous videos, all we have to do is wrap\n[3:43] our if-statement with a synchronized block Now every time a thread tries to\n[3:47] create an instance of the Singleton class it will have to wait for its turn as one thread\n[3:52] only may execute this code block at a given time",
+      "example": "Okay with this we solved the threading issue\n[3:58] however we added unnecessary overhead to the creation process of our singleton object",
+      "equation": "",
+      "quiz": {
+        "question": "What is the main idea of \"Saved YouTube Video\"?",
+        "answer": "[3:35] and to these people I say you're right",
+        "hint": "Look at the source reference on this page."
+      },
+      "boardCommands": [
+        {
+          "id": "p2-heading",
+          "type": "heading",
+          "title": "Saved YouTube Video",
+          "text": "Saved YouTube Video",
+          "mermaid": "",
+          "x": 40,
+          "y": 32,
+          "w": 430,
+          "h": 70,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-core",
+          "type": "box",
+          "title": "Core Idea",
+          "text": "[3:35] and to these people I say you're right",
+          "mermaid": "",
+          "x": 50,
+          "y": 120,
+          "w": 420,
+          "h": 130,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-flow",
+          "type": "flow",
+          "title": "Learning Flow",
+          "text": "",
+          "mermaid": "",
+          "x": 60,
+          "y": 280,
+          "w": 430,
+          "h": 170,
+          "from": "",
+          "to": "",
+          "items": [
+            "[3:35] and to these people I say you're right",
+            "To solve this issue and as discussed\n[3:40] in our previous videos, all we have to do is wrap\n[3:43] our if-statement with a synchronized block Now every time a thread tries to\n[3:47] create an instance of the Singleton class it will have to wait for its turn as one thread\n[3:52] only may execute this code block at a given time",
+            "Okay with this we solved the threading issue\n[3:58] however we added unnecessary overhead to the creation process of our singleton object",
+            "[4:04] You see after the single instance is created, when the threads of our application try to\n[4:08] access it they will first have to wait for their turn to acquire the lock on our class\n[4:13] and only when it is their time to go they will check if the instance\n[4:16] is available and then return with it This problem is actually not specific\n[4:21] to the Singleton pattern and can be solved by applying\n[4:24] the double-checked locking idiom on our method How do we do that"
+          ],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p2-map",
+          "type": "mermaid",
+          "title": "Concept Map",
+          "text": "",
+          "mermaid": "graph TD; A[\"Saved YouTube Video\"]-->B[\"Core idea\"]; B-->C[\"Example\"]; C-->D[\"Quiz\"];",
+          "x": 50,
+          "y": 460,
+          "w": 430,
+          "h": 180,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed6",
+          "chunkId": "chunk_2",
+          "index": 1,
+          "sourceRef": "3:35–7:19",
+          "page": "",
+          "timestamp": "3:35-7:19",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "[3:35] and to these people I say you're right! To solve this issue and as discussed [3:40] in our previous videos, all we have to do is wrap [3:43] our if-statement with a synchronized block Now every time a thread tries to [3:47] create an instance of the Sin...",
+          "ragScore": 0,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        }
+      ]
+    },
+    {
+      "pageNo": 3,
+      "spreadNo": 2,
+      "chapterNo": 1,
+      "pageType": "lesson",
+      "title": "Saved YouTube Video",
+      "subtitle": "Grounded lesson page",
+      "body": "[6:56] now marked as volatile so every time we access\n[6:59] this variable we need to read it directly from the main memory as it cannot be cached\n[7:03] So in this single code snippet even if the variable was already initialized\n[7:09] we have to fetch it twice the first time in the\n[7:12] if-statement to check if it is null and the second time in the return\n[7:15] statement to return it to the user. To avoid doing this and access the\n[7:19] memory only once what we can do is\n[7:21] store this instance in a local variable the first time we retrieve it from the memory\n[7:26] then use this same local variable in both the if-statement and the return statement.\n[7:31] The same logic and way of thinking can be expanded and used inside the synchronized block\n[7:36] to avoid multiple direct reads of the memory. This simple usage of such a local variable\n[7:42] can and will improve the methods...",
+      "keyTakeaways": [
+        "[6:56] now marked as volatile so every time we access\n[6:59] this variable we need to read it directly from the main memory as it cannot be cached\n[7:03] So in this single code snippet even if the variable was already initialized\n[7:09] we have to fetch it twice the first time in the\n[7:12] if-statement to check if it is null and the second time in the return\n[7:15] statement to return it to the user",
+        "To avoid doing this and access the\n[7:19] memory only once what we can do is\n[7:21] store this instance in a local variable the first time we retrieve it from the memory\n[7:26] then use this same local variable in both the if-statement and the return statement",
+        "[7:31] The same logic and way of thinking can be expanded and used inside the synchronized block\n[7:36] to avoid multiple direct reads of the memory",
+        "This simple usage of such a local variable\n[7:42] can and will improve the methods overall performance by as much as 40%\n[7:48] So to recap we can say that the Singleton Pattern should be used when a class must have a single\n[7:54] instance available to all its clients as this pattern disables all other means\n[7:59] of creating objects of a class except for the special static creation method\n[8:04] This method either creates a new object or returns the existing one if it has already been created\n[8:10] However this pattern requires special treatment in a multi-threaded environment as its code needs\n[8:15] to be adapted to handle multiple threads"
+      ],
+      "misconceptionFix": "So that's it for this video, I hope it was\n[8:21] helpful, thank you guys for watching, take care, and I will see you in the next one!",
+      "didYouKnow": "To avoid doing this and access the\n[7:19] memory only once what we can do is\n[7:21] store this instance in a local variable the first time we retrieve it from the memory\n[7:26] then use this same local variable in both the if-statement and the return statement",
+      "example": "[7:31] The same logic and way of thinking can be expanded and used inside the synchronized block\n[7:36] to avoid multiple direct reads of the memory",
+      "equation": "",
+      "quiz": {
+        "question": "What is the main idea of \"Saved YouTube Video\"?",
+        "answer": "[6:56] now marked as volatile so every time we access\n[6:59] this variable we need to read it directly from the main memory as it cannot be cached\n[7:03] So in this single code snippet even if the variable was already initialized\n[7:09] we have to fetch it twice the first time in the\n[7:12] if-statement to check if it is null and the second time in the return\n[7:15] statement to return it to the user",
+        "hint": "Look at the source reference on this page."
+      },
+      "boardCommands": [
+        {
+          "id": "p3-heading",
+          "type": "heading",
+          "title": "Saved YouTube Video",
+          "text": "Saved YouTube Video",
+          "mermaid": "",
+          "x": 40,
+          "y": 32,
+          "w": 430,
+          "h": 70,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-core",
+          "type": "box",
+          "title": "Core Idea",
+          "text": "[6:56] now marked as volatile so every time we access\n[6:59] this variable we need to read it directly from the main memory as it cannot be cached\n[7:03] So in this single code snippet even if the variable was already initialized\n[7:09] we have to fetch it twice the first time in the\n[7:12] if-statement to check if it is null and the second time in the return\n[7:15] statement to return it to the user",
+          "mermaid": "",
+          "x": 50,
+          "y": 120,
+          "w": 420,
+          "h": 130,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-flow",
+          "type": "flow",
+          "title": "Learning Flow",
+          "text": "",
+          "mermaid": "",
+          "x": 60,
+          "y": 280,
+          "w": 430,
+          "h": 170,
+          "from": "",
+          "to": "",
+          "items": [
+            "[6:56] now marked as volatile so every time we access\n[6:59] this variable we need to read it directly from the main memory as it cannot be cached\n[7:03] So in this single code snippet even if the variable was already initialized\n[7:09] we have to fetch it twice the first time in the\n[7:12] if-statement to check if it is null and the second time in the return\n[7:15] statement to return it to the user",
+            "To avoid doing this and access the\n[7:19] memory only once what we can do is\n[7:21] store this instance in a local variable the first time we retrieve it from the memory\n[7:26] then use this same local variable in both the if-statement and the return statement",
+            "[7:31] The same logic and way of thinking can be expanded and used inside the synchronized block\n[7:36] to avoid multiple direct reads of the memory",
+            "This simple usage of such a local variable\n[7:42] can and will improve the methods overall performance by as much as 40%\n[7:48] So to recap we can say that the Singleton Pattern should be used when a class must have a single\n[7:54] instance available to all its clients as this pattern disables all other means\n[7:59] of creating objects of a class except for the special static creation method\n[8:04] This method either creates a new object or returns the existing one if it has already been created\n[8:10] However this pattern requires special treatment in a multi-threaded environment as its code needs\n[8:15] to be adapted to handle multiple threads"
+          ],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        },
+        {
+          "id": "p3-map",
+          "type": "mermaid",
+          "title": "Concept Map",
+          "text": "",
+          "mermaid": "graph TD; A[\"Saved YouTube Video\"]-->B[\"Core idea\"]; B-->C[\"Example\"]; C-->D[\"Quiz\"];",
+          "x": 50,
+          "y": 460,
+          "w": 430,
+          "h": 180,
+          "from": "",
+          "to": "",
+          "items": [],
+          "rows": [],
+          "nodes": [],
+          "edges": []
+        }
+      ],
+      "sourceRefs": [
+        {
+          "resourceId": "6a091166caa8e814c11b5ec3",
+          "chunkMongoId": "6a091167caa8e814c11b5ed7",
+          "chunkId": "chunk_3",
+          "index": 2,
+          "sourceRef": "6:56–8:26",
+          "page": "",
+          "timestamp": "6:56-8:26",
+          "line": "",
+          "title": "Saved YouTube Video",
+          "textPreview": "[6:56] now marked as volatile so every time we access [6:59] this variable we need to read it directly from the main memory as it cannot be cached [7:03] So in this single code snippet even if the variable was already initialized [7:09] we have to fetch it twi...",
+          "ragScore": 0,
+          "whyUsed": "Retrieved from saved offline resource chunks."
+        }
+      ]
+    }
+  ],
+  "sourceRefs": [
+    {
+      "resourceId": "6a091166caa8e814c11b5ec3",
+      "chunkMongoId": "6a091167caa8e814c11b5ed5",
+      "chunkId": "chunk_1",
+      "index": 0,
+      "sourceRef": "0:04–3:58",
+      "page": "",
+      "timestamp": "0:04-3:58",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "[0:04] What's up geeks and welcome to the channel! In the first video of this series we are going [0:10] to start with one of the simplest yet one of the most used design [0:14] patterns out there: The Singleton Pattern. The singleton is a creational design pa...",
+      "ragScore": 0,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a091166caa8e814c11b5ec3",
+      "chunkMongoId": "6a091167caa8e814c11b5ed6",
+      "chunkId": "chunk_2",
+      "index": 1,
+      "sourceRef": "3:35–7:19",
+      "page": "",
+      "timestamp": "3:35-7:19",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "[3:35] and to these people I say you're right! To solve this issue and as discussed [3:40] in our previous videos, all we have to do is wrap [3:43] our if-statement with a synchronized block Now every time a thread tries to [3:47] create an instance of the Sin...",
+      "ragScore": 0,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    },
+    {
+      "resourceId": "6a091166caa8e814c11b5ec3",
+      "chunkMongoId": "6a091167caa8e814c11b5ed7",
+      "chunkId": "chunk_3",
+      "index": 2,
+      "sourceRef": "6:56–8:26",
+      "page": "",
+      "timestamp": "6:56-8:26",
+      "line": "",
+      "title": "Saved YouTube Video",
+      "textPreview": "[6:56] now marked as volatile so every time we access [6:59] this variable we need to read it directly from the main memory as it cannot be cached [7:03] So in this single code snippet even if the variable was already initialized [7:09] we have to fetch it twi...",
+      "ragScore": 0,
+      "whyUsed": "Retrieved from saved offline resource chunks."
+    }
+  ],
+  "summary": "The Singleton Pattern is a creational design pattern that guarantees only one instance of a class exists throughout the application, providing a single, controlled point of access to that instance. The resource details the implementation steps, starting from basic private constructors and progressing through advanced fixes required for multi-threaded environments, including using `volatile` and local variables for optimal performance.",
+  "concepts": [
+    "Singleton Pattern (Creational Design Pattern)",
+    "Private Constructor",
+    "Static Access Method",
+    "Synchronization (Thread Safety)",
+    "Double-Checked Locking (DCL)",
+    "Volatile Keyword (Memory Visibility)",
+    "Local Variable Optimization"
+  ],
+  "generation": {
+    "model": "gemma4:e4b",
+    "embeddingModel": "nomic-embed-text",
+    "mode": "grounded_fallback_book",
+    "usedFallback": true,
+    "generatedAt": "2026-05-17T04:30:04.032Z",
+    "retrievalMode": ""
+  },
+  "agentTrace": [
+    {
+      "step": "graph_failed",
+      "ok": false,
+      "message": "Page Writer Agent returned invalid JSON.",
+      "model": "gemma4:e4b",
+      "usedFallback": true,
+      "at": "2026-05-17T04:30:04.049Z"
+    },
+    {
+      "step": "fallback_save",
+      "ok": true,
+      "message": "Grounded fallback book saved.",
+      "model": "mongoose",
+      "usedFallback": true,
+      "at": "2026-05-17T04:30:04.049Z"
+    }
+  ],
+  "error": "",
+  "metadata": {
+    "sourceTitle": "Saved YouTube Video",
+    "sourceType": "youtube",
+    "fallbackReason": "Page Writer Agent returned invalid JSON."
+  },
+  "createdAt": "2026-05-17T04:30:04.052Z",
+  "updatedAt": "2026-05-17T04:30:04.052Z"
+}
