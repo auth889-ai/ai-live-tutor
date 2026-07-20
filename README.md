@@ -9,8 +9,14 @@ agents turns it into a narrated, interactive course** where algorithms are anima
 *really-executed code*, every claim is cited to your source, and the student edits and runs the
 lesson's code themselves.
 
-**Global AI Hackathon with Qwen Cloud · Track 3: Agent Society**
-`AGPL-3.0` · all models on **Qwen Cloud (DashScope / Alibaba Cloud Model Studio)** · Next.js · Node.js worker · Docker sandbox · MongoDB · Redis
+![Track](https://img.shields.io/badge/Qwen_Cloud_Hackathon-Track_3%3A_Agent_Society-c0522d)
+![License](https://img.shields.io/badge/License-AGPL--3.0-2b7a3f)
+![Models](https://img.shields.io/badge/LLMs-Qwen_Cloud_·_DashScope-6f42c1)
+![Stack](https://img.shields.io/badge/Stack-Next.js_16_·_BullMQ_·_MongoDB_·_Redis-0b7285)
+![Tests](https://img.shields.io/badge/tests-660%2B_passing-2b7a3f)
+
+**Global AI Hackathon with Qwen Cloud · Track 3: Agent Society** — all intelligence on
+**Qwen Cloud (DashScope / Alibaba Cloud Model Studio)**, deployed on Alibaba Cloud ECS.
 
 </div>
 
@@ -44,9 +50,10 @@ Build / Practice**, each with a quiz.
 
 ## 2 · The signature feature — algorithms animated from *really-executed* code
 
-The engine records ONE real execution (`sys.settrace`) and drives the screen from it: the grid,
-the **highlighted active line**, node state, and a step-by-step trace table are all reconciled to
-the run. The student can re-run the exact code in their own browser (CPython / WebAssembly).
+The engine runs the algorithm **for real in a sandbox** (Judge0 or Docker) — the traced program
+emits structured step events as it executes — and drives the screen from that recording: the
+grid, the **highlighted active line**, node state, and a step-by-step trace table are all
+reconciled to the run. The student can re-run the exact code in their own browser (CPython / WASM).
 
 **Flood-fill / DFS** — grid cells fill as the recursion sinks each island, the code panel marks
 the live line, the trace table logs every call:
@@ -119,34 +126,43 @@ specific, goal-aware nudge to pull you back.
 
 ## Architecture
 
-### System — one repo, two processes, all state on Alibaba Cloud
+### System — how frontend, backend, database, and Qwen Cloud connect
 
-The web process serves the player/studio/API; a **separate BullMQ worker** runs the agent
-society. `POST /api/jobs` enqueues and returns `202 { jobId }` — nothing generates inline —
-and the Studio streams the faculty's live debate over SSE.
+One repo, **two processes**: the Next.js app serves the Studio/Player/API; a **separate BullMQ
+worker** runs the agent society. `POST /api/jobs` enqueues and returns `202 { jobId }` — nothing
+generates inline — and the Studio streams the faculty's live debate back over SSE. Every model
+call goes to **Qwen Cloud**; all persistent state lives in **Alibaba Cloud** managed services.
 
 ```mermaid
 flowchart TB
-    subgraph Browser["Browser — Next.js 16"]
-        Studio["Studio: upload / paste / import<br/>live faculty log via SSE"]
-        Player["Course Player: one audio clock drives<br/>board, code, subtitles, quizzes"]
+    subgraph FE["🖥️  Frontend · Next.js 16 (React)"]
+        Studio["Studio<br/>upload PDF / paste / URL · watch the faculty debate live (SSE)"]
+        Player["Course Player<br/>one audio clock drives board · code · quiz · subtitles"]
     end
-    subgraph Cloud["Alibaba Cloud"]
-        API["Next.js API routes<br/>POST /api/jobs then 202 jobId"]
-        Q[("Redis + BullMQ<br/>lesson and per-scene jobs")]
-        WK["BullMQ worker process<br/>processLessonJob"]
-        DB[("MongoDB<br/>users, lessons, courses, study, notebooks, qwen_cache")]
-        OSS[("OSS object storage<br/>audio, page images, uploads")]
-        SBX["Code sandbox<br/>Judge0 or Docker, network-isolated"]
-        DS["DashScope / Model Studio<br/>Qwen LLMs, vision, TTS"]
+
+    API["⚙️  API routes (Next.js)<br/>/api/jobs · /api/courses · /api/jobs/:id/events (SSE)"]
+    SOC["🏛️  Agent Society<br/>BullMQ worker · 10+ focused Qwen agents per scene"]
+
+    subgraph DATA["🗄️  Managed data · Alibaba Cloud"]
+        REDIS[("Tair / Redis<br/>BullMQ job queue + progress events")]
+        MONGO[("ApsaraDB / MongoDB<br/>courses · lessons · users · study · notebooks")]
+        OSS[("Alibaba OSS<br/>TTS audio · page images · uploads")]
     end
-    Studio --> API --> Q --> WK
-    WK <--> DS
-    WK <--> DB
-    WK --> OSS
-    WK --> SBX
-    Player --> API
-    Player --> OSS
+
+    SBX["🐳  Code sandbox<br/>Judge0 or Docker · network-isolated"]
+    QWEN["☁️  Qwen Cloud · DashScope / Model Studio<br/>qwen3.7-max · qwen3.7-plus (+vision) · qwen3.6-flash · qwen3-coder-plus · qwen3-tts-flash"]
+
+    Studio -->|POST /api/jobs| API
+    API -->|enqueue lesson| REDIS
+    REDIS -->|dequeue| SOC
+    API -.->|SSE progress| Studio
+    SOC <-->|every model call| QWEN
+    SOC -->|read source, save manifest| MONGO
+    SOC -->|run real code| SBX
+    SOC -->|publish audio + images| OSS
+    Player -->|load course| API
+    API -->|query| MONGO
+    Player -->|stream audio + images| OSS
 ```
 
 ### The agent society — the real generation pipeline
