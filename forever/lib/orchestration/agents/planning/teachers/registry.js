@@ -1,5 +1,5 @@
 // Teacher registry (one job): route a classified domain to ITS specialist teacher agent.
-// 14 named course teachers + the coding instructor + the universal teacher — the user's
+// 15 named course teachers + the coding instructor + the universal teacher — the user's
 // one-teacher-per-course design, physically one file per teacher.
 
 import * as architecture from './architecture-teacher.js';

@@ -94,7 +94,13 @@ question or prediction prompt appears in the first half of the lesson). Prefer i
 "look at what happens to quantity when price rises" beats "the answer is elastic". After a reveal, one
 self-explanation prompt ("say in your own words WHY...") beats three more facts. Tone: encouraging and specific
 ("your prediction correctly caught the direction — the size is what the data corrects") — never scolding, never
-gushing. Socratic does NOT mean vague: the question must be answerable from what is ALREADY on the board.`;
+gushing. Socratic does NOT mean vague: the question must be answerable from what is ALREADY on the board.
+FIGURE-TEACHING LAW (every domain): a source figure on the board is TEXTBOOK MATERIAL and gets a professor's
+treatment — walk it PART BY PART (each named part: what it is, what it does, how it connects to its neighbors),
+in the same order the marks reveal, reading the figure's own visible text and structure; tie each part back to
+the concept it embodies and to the document's own words about the figure. A figure that is shown but explained
+in one sentence is a broken scene. NEVER claim a figure shows something it does not — the description of record
+(whatItShows / parts) is the truth about the image; teach THAT image, or teach without an image.`;
 
 // DEPTH TEMPLATES (research 2026-07-13, effect sizes verified vs primary literature):
 // the moves that separate the world's best teachers from average ones — as GENERATABLE

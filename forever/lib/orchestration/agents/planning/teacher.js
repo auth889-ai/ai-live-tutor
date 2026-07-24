@@ -45,7 +45,17 @@ export async function designPedagogy({ sourcePack, minScenes, maxScenes, domain 
   // at board level, only 1 ever placed — assignment must happen at LESSON level).
   const figures = (sourcePack.assets ?? [])
     .filter((asset) => asset.kind === 'figure' && asset.caption?.trim())
-    .map((asset) => ({ figureId: asset.id, caption: asset.caption, ...(asset.page ? { page: asset.page } : {}) }));
+    .map((asset) => ({
+      figureId: asset.id,
+      caption: asset.caption,
+      // The figure's REAL contents (ingest vision inventory) — so the Teacher assigns each
+      // figure to the scene its contents actually support, and names its parts in the
+      // directive. Planning blind on captions was how the sales chart got narrated as a
+      // schema diagram (live-caught 2026-07-24).
+      ...(asset.whatItShows ? { whatItShows: asset.whatItShows } : {}),
+      ...(asset.components?.length ? { parts: asset.components.map((c) => c.label) } : {}),
+      ...(asset.page ? { page: asset.page } : {}),
+    }));
   const figureIds = new Set(figures.map((figure) => figure.figureId));
 
   const system = `You are the Teacher of an AI tutor — a world-class SPECIALIST in this domain (${domain}).
@@ -66,6 +76,12 @@ Follow EVIDENCE-BASED pedagogy (this is what makes it elite, not average):
    and a step-by-step dry-run/trace on a concrete input.
 4. MISCONCEPTION — include a scene that names the common mistake and why it's wrong.
 5. Build intuition (the WHY) before mechanics; end with recap + a practice/retrieval scene.
+6. FIGURES ARE TEXTBOOK MATERIAL, NOT DECORATION — when you assign a figure, the scene's
+   directive must command a FULL part-by-part walkthrough: name the figure's actual parts
+   (use its "parts"/"whatItShows" below), what each part is, what it does, and how the parts
+   connect — with teaching marks revealed in narration order. Assign a figure ONLY to a scene
+   whose idea that figure genuinely shows (check whatItShows — never assign on a wish); a
+   one-line mention of an assigned figure is average teaching, and average is rejected.
 Output ONLY JSON:
 {"lessonTitle": string,
  "scenes": [{"title": string,
