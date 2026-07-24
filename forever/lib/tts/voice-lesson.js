@@ -18,11 +18,13 @@ export function pickSynth(env = process.env) {
   return (env.TTS_PROVIDER || '').trim().toLowerCase() === 'elevenlabs' ? synthesizeWithTimestamps : synthesizeLine;
 }
 
-async function synthesizeWithRetry(synth, text, { attempts = 3 } = {}) {
+async function synthesizeWithRetry(synth, text, { attempts = 3, previousText, nextText } = {}) {
   let lastError;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      return await synth({ text });
+      // previousText/nextText: neighbor narration for prosody continuity (ElevenLabs uses
+      // them; the Qwen provider destructures {text} and safely ignores the extras).
+      return await synth({ text, previousText, nextText });
     } catch (error) {
       lastError = error;
       if (attempt < attempts - 1) await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
@@ -48,8 +50,13 @@ export async function voiceScene(
 
   const buffers = [];
   const clips = [];
-  for (const line of scene.voiceLines) {
-    const clip = await synthesizeWithRetry(doSynth, line.text, { attempts });
+  for (let i = 0; i < scene.voiceLines.length; i += 1) {
+    const line = scene.voiceLines[i];
+    const clip = await synthesizeWithRetry(doSynth, line.text, {
+      attempts,
+      previousText: scene.voiceLines[i - 1]?.text,
+      nextText: scene.voiceLines[i + 1]?.text,
+    });
     buffers.push(clip.bytes);
     clips.push({ voiceLineId: line.id, durationMs: clip.durationMs, wordTimings: clip.wordTimings ?? null });
   }

@@ -21,6 +21,7 @@ import { StallOverlay } from './live/stall-overlay.js';
 import { PendingSceneRows, PendingSceneChips } from './live/pending-scenes.js';
 import { AskTutor } from './ask/ask-tutor.js';
 import { PracticePanel } from '../panels/practice-panel.js';
+import { EditScenePanel } from './edit/edit-scene-panel.js';
 
 const fmt = (ms) => {
   const s = Math.max(0, Math.round(ms / 1000));
@@ -112,6 +113,10 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
   // 📓 one-keystroke notebook capture (Xournal++ pattern): the moment lands in the lesson's
   // own notebook with the spoken line + a replay link back to THIS second.
   const [nbMarked, setNbMarked] = useState('');
+  // Human-in-the-loop scene edit (owner only — the API enforces it): opens the per-scene
+  // editor; playback pauses so the student edits what they just heard.
+  const [editing, setEditing] = useState(false);
+  useEffect(() => setEditing(false), [scene?.sceneId]); // scene switch closes the editor
   const captureToNotebook = () => {
     if (!lessonId || nbMarked) return;
     setNbMarked('saving');
@@ -200,6 +205,12 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
           }}>{lesson.lessonTitle}</div>
           <div style={{ fontSize: 12, color: V('--ink-muted'), fontVariantNumeric: 'tabular-nums' }}>
             Scene {sceneIndex + 1} of {totalPlanned} · <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>{scene.title}</span>
+            {lessonId && !live && (
+              <button onClick={() => { setEditing((v) => !v); if (playing) player.togglePlay(); }} title="Edit this scene's narration and board text — only your changes are re-voiced"
+                style={{ marginLeft: 10, border: `1px solid ${V('--border')}`, background: editing ? '#fff8f0' : '#fff', borderRadius: 8, padding: '2px 10px', fontSize: 11.5, cursor: 'pointer', color: V('--ink') }}>
+                ✏️ Edit scene
+              </button>
+            )}
           </div>
         </div>
         <div style={{ marginLeft: 'auto', fontSize: 12, color: V('--ink-muted'), whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -275,6 +286,11 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
         <section style={{ flex: 1, minWidth: 0 }}>
           {player.audioUrl && (
             <audio ref={player.audioRef} src={player.audioUrl} preload="auto" key={player.audioUrl} />
+          )}
+          {editing && lessonId && (
+            <div style={{ marginBottom: 14 }}>
+              <EditScenePanel lessonId={lessonId} scene={scene} onClose={() => setEditing(false)} />
+            </div>
           )}
           <div style={{
             background: `linear-gradient(180deg, ${V('--theater-surface')}, ${V('--theater-bg')} 70%)`,

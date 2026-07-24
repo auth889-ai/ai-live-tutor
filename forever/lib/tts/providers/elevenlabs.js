@@ -23,14 +23,21 @@ export function elevenLabsKeys(env = process.env) {
 // A key that has spent its credits stays out for the rest of the process.
 const exhaustedKeys = new Set();
 
-function isQuotaError(status, body = '') {
-  if (status === 429) return true; // rate/quota
-  if (status === 401 && /quota|credit|insufficient|unusual_activity/i.test(body)) return true;
-  return /quota_exceeded|out of (characters|credits)|insufficient/i.test(body);
+// A key is "unusable" — skip it and try the next — on rate/quota (429) OR any auth failure
+// (401: invalid/expired key, out of credits, unusual activity). This makes a bad or empty key
+// fall through to the next pooled key instead of failing the whole lesson.
+function isKeyUnusable(status, body = '') {
+  if (status === 401 || status === 429 || status === 403) return true;
+  return /quota_exceeded|out of (characters|credits)|insufficient|invalid_api_key|unauthorized/i.test(body);
 }
 
 export async function synthesizeWithTimestamps({
   text,
+  // Neighbor-narration context (ElevenLabs' documented fields for regenerating one segment
+  // without a prosody seam against the clips around it — the edit-and-revoice case). Not
+  // part of the cache key on purpose: unchanged lines keep hitting their cached clip.
+  previousText,
+  nextText,
   voiceId = process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE,
   modelId = process.env.ELEVENLABS_MODEL || 'eleven_turbo_v2_5',
   timeoutMs = 60_000,
@@ -60,13 +67,19 @@ export async function synthesizeWithTimestamps({
         method: 'POST',
         signal: controller.signal,
         headers: { 'Content-Type': 'application/json', 'xi-api-key': apiKey },
-        body: JSON.stringify({ text, model_id: modelId, output_format: 'mp3_44100_128' }),
+        body: JSON.stringify({
+          text,
+          model_id: modelId,
+          output_format: 'mp3_44100_128',
+          ...(previousText?.trim() ? { previous_text: previousText.trim().slice(-600) } : {}),
+          ...(nextText?.trim() ? { next_text: nextText.trim().slice(0, 600) } : {}),
+        }),
       });
       if (!response.ok) {
         const bodyText = (await response.text().catch(() => '')).slice(0, 400);
-        if (isQuotaError(response.status, bodyText)) {
-          exhaustedKeys.add(apiKey); // spent — skip it next time
-          lastError = new Error(`ElevenLabs key #${i + 1} exhausted (HTTP ${response.status})`);
+        if (isKeyUnusable(response.status, bodyText)) {
+          exhaustedKeys.add(apiKey); // bad/spent — skip it next time
+          lastError = new Error(`ElevenLabs key #${i + 1} unusable (HTTP ${response.status})`);
           continue; // fall back to the next key
         }
         throw new Error(`ElevenLabs failed: HTTP ${response.status} — ${bodyText}`);
