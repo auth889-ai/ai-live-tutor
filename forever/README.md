@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/badge/License-AGPL--3.0-2b7a3f)
 ![Models](https://img.shields.io/badge/LLMs-Qwen_Cloud_·_DashScope-6f42c1)
 ![Stack](https://img.shields.io/badge/Stack-Next.js_16_·_BullMQ_·_MongoDB_·_Redis-0b7285)
-![Tests](https://img.shields.io/badge/tests-660%2B_passing-2b7a3f)
+![Tests](https://img.shields.io/badge/tests-793_passing-2b7a3f)
 
 **Global AI Hackathon with Qwen Cloud · Track 3: Agent Society · AGPL-3.0**
 
@@ -132,7 +132,8 @@ a specific, goal-aware nudge to pull you back; the dashboard scores every page y
 One repo, **two processes**: the Next.js app serves the Studio/Player/API; a **separate BullMQ
 worker** runs the agent society. `POST /api/jobs` enqueues and returns `202 { jobId }` — nothing
 generates inline — and the Studio streams the faculty's live debate back over SSE. Every model
-call goes to **Qwen Cloud**; all persistent state lives in **Alibaba Cloud** managed services.
+call goes to **Qwen Cloud**; the app deploys on **Alibaba Cloud ECS**, with MongoDB and Redis
+behind swappable storage seams.
 
 ```mermaid
 flowchart TB
@@ -142,12 +143,12 @@ flowchart TB
     end
 
     API["⚙️  API routes (Next.js)<br/>/api/jobs · /api/courses · /api/jobs/:id/events (SSE)"]
-    SOC["🏛️  Agent Society<br/>BullMQ worker · 10+ focused Qwen agents per scene"]
+    SOC["🏛️  Agent Society<br/>BullMQ worker · 10+ focused Qwen agents per lesson"]
 
-    subgraph DATA["🗄️  Managed data · Alibaba Cloud"]
-        REDIS[("Tair / Redis<br/>BullMQ job queue + progress events")]
-        MONGO[("ApsaraDB / MongoDB<br/>courses · lessons · users · study · notebooks")]
-        OSS[("Alibaba OSS<br/>TTS audio · page images · uploads")]
+    subgraph DATA["🗄️  Data stores"]
+        REDIS[("Redis (Tair-compatible)<br/>BullMQ job queue + progress events")]
+        MONGO[("MongoDB (ApsaraDB-compatible)<br/>courses · lessons · users · study · notebooks")]
+        OSS[("Media store<br/>TTS audio · page images · uploads<br/>local fs behind an OSS-ready seam")]
     end
 
     SBX["🐳  Code sandbox<br/>Judge0 or Docker · network-isolated"]
@@ -160,17 +161,17 @@ flowchart TB
     SOC <-->|every model call| QWEN
     SOC -->|read source, save manifest| MONGO
     SOC -->|run real code| SBX
-    SOC -->|publish audio + images| OSS
+    SOC -->|save audio + images| OSS
     Player -->|load course| API
     API -->|query| MONGO
-    Player -->|stream audio + images| OSS
+    Player -->|load audio + images| OSS
 ```
 
 ### The agent society — the real generation pipeline
 
 The orchestrator is **deterministic code** (BullMQ + a LangGraph state machine); intelligence
 lives in the agents. The **Dean** runs only for course jobs (fans out one job per lesson). Per
-lesson, the **Domain Router** picks **one** planner — the Coding Instructor, one of 14 domain
+lesson, the **Domain Router** picks **one** planner — the Coding Instructor, one of 15 domain
 Teachers, or the Universal Teacher. Each scene is produced in parallel, and its board goes
 through a **real LangGraph review cycle**: propose → audit → revise → (arbitrate).
 
@@ -179,7 +180,7 @@ flowchart TB
     SP["SourcePack: chunks, page images, sourceRefs<br/>PDF via MinerU · URL · image · text"]
     DEAN["Dean — qwen3.7-max<br/>course outline (course jobs only)"]
     R["Domain Router — qwen3.6-flash"]
-    PL["Planner, ONE by domain:<br/>Coding Instructor OR Domain Teacher x14 OR Universal<br/>qwen3.7-max"]
+    PL["Planner, ONE by domain:<br/>Coding Instructor OR Domain Teacher x15 OR Universal<br/>qwen3.7-max"]
     SP --> DEAN
     DEAN -.->|one job per lesson| R
     SP --> R --> PL --> SCENES
@@ -201,9 +202,9 @@ flowchart TB
     SCENES --> VW["Voice Writer — qwen3.7-plus<br/>narrates non-algorithm objects"]
     ET --> TL["Timeline compile — deterministic<br/>provisional, then reconciled to real TTS"]
     VW --> TL
-    TL --> TTS["Qwen TTS — qwen3-tts-flash"]
+    TL --> TTS["TTS — qwen3-tts-flash default<br/>ElevenLabs opt-in (word timestamps)"]
     TTS --> GATE["Quality gate + repair loop<br/>honest failure, no fake fallback"]
-    GATE --> SAVE["Save manifest to MongoDB<br/>publish audio + images to OSS"]
+    GATE --> SAVE["Save manifest to MongoDB<br/>save audio + images (OSS-ready seam)"]
 ```
 
 **Task division:** each agent has ONE focused job with its own schema, under
@@ -225,7 +226,7 @@ dry-run scene without a real execution trace refuses to ship — no fabricated a
 | Domain Router · Grounding Auditor · Pedagogy Critic | `qwen3.6-flash` | fast classify & review |
 | Execution Tracer · Code Runner | `qwen3-coder-plus` | writes the programs that emit real traces |
 | Page-image vision | `qwen3.7-plus` | region/diagram/transcription reading |
-| Voice (TTS) | `qwen3-tts-flash` | natural tutor narration |
+| Voice (TTS) | `qwen3-tts-flash` (default; ElevenLabs opt-in via `TTS_PROVIDER`) | natural tutor narration |
 
 ## The universal dry-run engine — and who writes what
 
@@ -233,12 +234,13 @@ dry-run scene without a real execution trace refuses to ship — no fabricated a
 
 The AI never authors a runtime fact. For any coding problem the engine records ONE real
 execution — the traced program runs in the sandbox (Judge0 / Docker) and emits structured step
-events (every line, variable, call/return) — and **17 behavioral
+events (every line, variable, call/return) — and **15 behavioral
 detectors** pick the teaching lens from the run itself — DP grid with proved dependency rules,
 graph walk with per-node state (Tarjan's disc/low riding under the nodes), heap, trie,
-union-find, recursion tree, bitmask semantics, call-stack frames. Regression battery:
-**64 problems, 0 errors, zero per-problem code** (an unfamiliar shape degrades to a
-simpler-but-true view, never wrong). Authority on any disagreement:
+union-find, recursion tree, bitmask semantics, call-stack frames. Regression battery
+(2026-07-15 run): **64 problems, 63 structural-elite, 0 errors, zero per-problem code**
+(an unfamiliar shape degrades to a simpler-but-true view, never wrong); the battery has
+since grown to 68 problems. Authority on any disagreement:
 **execution > structure > behavioral invariants > AI interpretation > detector confidence.**
 
 ## The measurable gain (Track 3 requirement)
@@ -247,13 +249,14 @@ Every number measured, none asserted:
 - **Mechanical validators, 4 matched coding problems** (`eval/society-vs-single.eval.mjs`,
   `society-vs-single.results.json`): single agent — **0/4** hand-written dry runs pass the elite
   quality gate (e.g. "0 steps carry pointers"), and no screen value is provably from a real run;
-  society — **0 contract failures, every trace engine-executed** (real `python3` in the sandbox).
+  society — **0 contract failures across all traces**.
 - **Blind pedagogy rubric** (`eval/RESULTS.md`, `eval/benchmark.eval.js`): 7 criteria judged in
   BOTH presentation orders — the **society wins (4 and 5 of 7); the single agent wins 0**.
   Honest tradeoff: the society spends far more tokens and wall-time — the price of validation,
   real execution, and grounding.
 - **Universal dry-run coverage**: **63/64 (98%)** structural-elite across 64 LeetCode problems,
-  **0 errors, zero per-problem code** (`scripts/universal-battery.mjs`).
+  **0 errors, zero per-problem code** (`scripts/universal-battery.mjs`, 2026-07-15 run; the
+  battery has since grown to 68 problems).
 
 ## What makes it different
 
@@ -273,8 +276,8 @@ Every number measured, none asserted:
   board/vision, qwen3.6-flash routing/audit, qwen3-coder-plus tracer programs), plus the Qwen
   TTS adapter ([`lib/tts/providers/synthesize.js`](lib/tts/providers/synthesize.js)).
 - Backend deploys on **Alibaba Cloud ECS**; records in **MongoDB (ApsaraDB-compatible)**;
-  queue on **Redis (Tair-compatible)**; media to **OSS** behind the storage seams
-  (`lib/storage/`).
+  queue on **Redis (Tair-compatible)**; media (TTS audio, page images) on local disk behind
+  a storage seam built to swap to **OSS** (`lib/storage/`).
 - **Deploy it:** [`Dockerfile`](Dockerfile) + [`docker-compose.yml`](docker-compose.yml) +
   a step-by-step ECS runbook [`infra/deploy-alibaba-ecs.md`](infra/deploy-alibaba-ecs.md) and a
   one-command [`infra/deploy.sh`](infra/deploy.sh).
@@ -289,7 +292,7 @@ docker pull python:3.12-slim node:22-slim   # the code sandbox
 npm run dev:all            # web on :3000 (+ the Focus-Guard server on :3001)
 npm run worker             # the agent society — separate process, needs REDIS_URL
 # open http://localhost:3000 → create an account → Studio → paste material → watch the society work
-npm test                   # 660+ tests, no tokens spent
+npm test                   # 793 tests, no tokens spent
 ```
 
 Without `REDIS_URL`, generation falls back to an in-process queue (fine for local dev/tests);

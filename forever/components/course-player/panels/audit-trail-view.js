@@ -57,7 +57,7 @@ export function AuditTrailView({ transcript }) {
             const hasDetail = refs.length > 0 || m.verdict;
             const isOpen = expanded === i;
             return (
-              <div key={m.id ?? i} style={{ border: `1.5px solid ${s.border}`, background: s.tint, borderRadius: 9, padding: '9px 12px' }}>
+              <div key={`${m.id ?? 'msg'}-${i}`} style={{ border: `1.5px solid ${s.border}`, background: s.tint, borderRadius: 9, padding: '9px 12px' }}>
                 <div
                   onClick={() => hasDetail && setExpanded(isOpen ? null : i)}
                   style={{ display: 'flex', alignItems: 'baseline', gap: 8, cursor: hasDetail ? 'pointer' : 'default' }}

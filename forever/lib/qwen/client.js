@@ -65,6 +65,13 @@ export async function runAgentChain({
   env = process.env,
 }) {
   const { apiKey, baseUrl } = qwenConfig(env);
+  // A slow/hanging workspace (e.g. a regional MaaS gateway) makes the generous 300s×3-retry
+  // default cost up to 20 min on ONE hung call. QWEN_TIMEOUT_MS / QWEN_RETRIES let a slow
+  // workspace fail fast instead. Defaults unchanged when the envs are unset.
+  const envTimeout = Number(env.QWEN_TIMEOUT_MS);
+  if (Number.isFinite(envTimeout) && envTimeout > 0) timeoutMs = envTimeout;
+  const envRetries = Number(env.QWEN_RETRIES);
+  if (Number.isFinite(envRetries) && envRetries >= 0) retries = envRetries;
   // DashScope hard rule with response_format json_object: the messages must contain the
   // literal word "json" — a prompt without it 400s the whole call (live-caught 2026-07-15:
   // the Arbiter's ruling prompt lacked it and a Training scene died for it). Guarded at the
