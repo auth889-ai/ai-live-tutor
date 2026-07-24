@@ -10,6 +10,9 @@ export function validateImageContent(content, context = 'image') {
   if (typeof content.url !== 'string' || !content.url.trim()) throw new Error(`${context} needs a url`);
   if (typeof content.alt !== 'string' || !content.alt.trim()) throw new Error(`${context} needs alt text (what the image shows)`);
   if (content.bbox !== undefined) validateBbox(content.bbox, context);
+  if (content.bboxTarget !== undefined && (typeof content.bboxTarget !== 'string' || !content.bboxTarget.trim())) {
+    throw new Error(`${context}.bboxTarget must be a non-empty string naming the highlighted part`);
+  }
   validateAnnotations(content.annotations, context);
   return content;
 }

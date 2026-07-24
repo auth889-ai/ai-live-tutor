@@ -61,6 +61,15 @@ function normalizeAsset(image, index) {
     url: image.url || image.path || '',
     page: image.page,
     caption: image.caption || '',
+    // Vision depth (describeImage) rides the asset to the authoring agents: dropping it here
+    // was the "one-line figure explanation" bug — ingest paid for the vision pass, then the
+    // Board Director only ever saw `caption` (image-id-mapping reads asset.whatItShows).
+    ...(image.whatItShows ? { whatItShows: image.whatItShows } : {}),
+    // Inventory (transcribe-first pass): verbatim visible text + located components. The
+    // components double as grounding ANCHORS (name-matched boxes) and as the per-part
+    // teaching checklist for the Board Director / Voice Writer.
+    ...(image.transcript ? { transcript: image.transcript } : {}),
+    ...(Array.isArray(image.components) && image.components.length ? { components: image.components } : {}),
     bbox: image.bbox,
   };
 }

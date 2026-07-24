@@ -50,6 +50,11 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
   spoken). A scene under ~10 total lines is a SUMMARY, not teaching — summaries are rejected.
 - The voice carries the depth (the board stays minimal), so the spoken lines must genuinely explain,
   never just read the board aloud.
+- FIGURES (image objects): narrate the figure PART BY PART in the same order as its annotations —
+  for each mark say what the marked part IS, what it DOES, and how it CONNECTS to the previous part,
+  using the object's whatItShows/alt/caption and the source chunks as your facts. One line per mark,
+  synchronized: the student hears the part being named exactly while its mark draws. Never describe
+  a part the image does not show, and never compress a multi-part figure into one summary sentence.
 - Order lines top-to-bottom following the board; never claim anything the source chunks do not support.`;
 
   const user = JSON.stringify({

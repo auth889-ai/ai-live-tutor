@@ -3,7 +3,7 @@
 // Dev preview: the Konva draw-on annotation layer over a synthetic figure (SVG data URI).
 // Scrub the slider to control the narration reveal; Replay re-draws the pen marks in order.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ImageView } from '../../../components/course-player/panels/image-view.js';
 
@@ -32,6 +32,18 @@ const CONTENT = {
 export default function AnnotationsDevPage() {
   const [progress, setProgress] = useState(1);
   const [epoch, setEpoch] = useState(0);
+  const [liveContent, setLiveContent] = useState(null);
+
+  // ?live=1 calls /api/dev/ground-live — the REAL pipeline (describeImage inventory ->
+  // groundAnnotations) runs on a REAL ingested PDF figure at request time. Nothing canned,
+  // nothing hand-tuned: every reload is a fresh live run of the actual vision agents.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !new URLSearchParams(window.location.search).has('live')) return;
+    fetch('/api/dev/ground-live')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => data?.content && setLiveContent(data.content))
+      .catch(() => {});
+  }, []);
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: '32px 16px', display: 'grid', gap: 18 }}>
@@ -43,7 +55,7 @@ export default function AnnotationsDevPage() {
           ▶ Replay
         </button>
       </div>
-      <ImageView key={epoch} content={CONTENT} progress={progress} />
+      <ImageView key={epoch} content={liveContent ?? CONTENT} progress={progress} />
     </div>
   );
 }

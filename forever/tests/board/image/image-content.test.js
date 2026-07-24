@@ -19,3 +19,11 @@ test('rejects an image with no url or no alt', () => {
 test('rejects a bbox outside the image', () => {
   assert.throws(() => validateImageContent({ url: '/x.png', alt: 'x', bbox: { x: 0.9, y: 0.1, w: 0.3, h: 0.1 } }), /inside the image/);
 });
+
+test('bboxTarget names the highlighted part: valid string accepted, junk rejected', () => {
+  // The highlight bbox is only shippable when vision can verify it against a NAMED target
+  // (board-director strips unnamed highlights before grounding — blind guesses never ship).
+  validateImageContent({ url: '/x.png', alt: 'x', bbox: { x: 0.1, y: 0.1, w: 0.2, h: 0.2 }, bboxTarget: 'the fact table box' });
+  assert.throws(() => validateImageContent({ url: '/x.png', alt: 'x', bboxTarget: '   ' }), /bboxTarget/);
+  assert.throws(() => validateImageContent({ url: '/x.png', alt: 'x', bboxTarget: 42 }), /bboxTarget/);
+});

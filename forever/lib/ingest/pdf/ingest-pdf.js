@@ -2,7 +2,8 @@
 // clean markdown -> multimodal SourcePack (text chunks + image assets). Slice 1 teaches
 // from the text; the figure assets are carried for the vision pass (slice 2).
 
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, access } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 import { parsePdfWithMineru } from './mineru.js';
@@ -28,7 +29,26 @@ export async function ingestPdf(pdfPath, { workDir = '.data/ingest', env = proce
   const outDir = path.join(workDir, id);
   await mkdir(outDir, { recursive: true });
 
-  const { zipPath } = await parsePdfWithMineru(bytes, { fileName: path.basename(pdfPath), outDir, env });
+  // MINERU REUSE (deterministic cache): the SAME pdf bytes parse to the SAME result, so a
+  // prior successful parse (result zip + content-hash marker) is reused instead of
+  // re-spending API quota — and ingest keeps working through MinerU outages/token expiry
+  // (live-caught 2026-07-24: token expired mid-sprint, every PDF ingest died). A dir
+  // without a marker but WITH a zip predates this cache: the dir is keyed by the upload's
+  // own filename, so its zip IS that file's parse — adopt it and write the marker.
+  const hash = createHash('sha1').update(bytes).digest('hex');
+  const markerPath = path.join(outDir, 'mineru.sha1');
+  const cachedZip = path.join(outDir, 'mineru.zip');
+  let zipPath = null;
+  const marker = await readFile(markerPath, 'utf8').catch(() => null);
+  const zipExists = await access(cachedZip).then(() => true, () => false);
+  if (zipExists && (marker?.trim() === hash || marker === null)) {
+    zipPath = cachedZip;
+    if (marker === null) await writeFile(markerPath, hash);
+    console.error(`[ingest] reusing prior MinerU parse for ${path.basename(pdfPath)} (sha1 ${hash.slice(0, 10)}…) — no API call`);
+  } else {
+    ({ zipPath } = await parsePdfWithMineru(bytes, { fileName: path.basename(pdfPath), outDir, env }));
+    await writeFile(markerPath, hash);
+  }
   const { markdown, images } = await unpackMineru(zipPath, outDir);
 
   // Full-page PNGs (image in context) alongside MinerU's isolated figures — both feed the
@@ -52,6 +72,8 @@ export async function ingestPdf(pdfPath, { workDir = '.data/ingest', env = proce
   const describedFigures = await mapWithConcurrency(images.slice(0, maxFigures), 4, async (img) => {
     let caption = img.sourceCaption ?? '';
     let whatItShows = '';
+    let transcript = '';
+    let components = [];
     // ONE retry, then a page-anchored fallback caption: a silently-failed description used
     // to ERASE the figure from the whole pipeline (live-caught: the snowflake-schema
     // diagram never reached the Teacher while its star-schema sibling did — the comparison
@@ -61,12 +83,19 @@ export async function ingestPdf(pdfPath, { workDir = '.data/ingest', env = proce
         const seen = await describeImage({ imagePath: img.path });
         caption = caption || seen.caption;
         whatItShows = seen.whatItShows;
+        transcript = seen.transcript ?? '';
+        components = seen.components ?? [];
       } catch {
         // vision unavailable this attempt
       }
     }
     if (!caption.trim()) caption = `Source figure on page ${img.page ?? '?'} (undescribed — teach it from the surrounding source text)`;
-    return { id: img.id, kind: 'figure', url: img.path, caption, whatItShows, ...(img.page ? { page: img.page } : {}), ...(img.bbox ? { bbox: normalizeBbox(img.bbox) } : {}) };
+    return {
+      id: img.id, kind: 'figure', url: img.path, caption, whatItShows,
+      ...(transcript ? { transcript } : {}),
+      ...(components.length ? { components } : {}),
+      ...(img.page ? { page: img.page } : {}), ...(img.bbox ? { bbox: normalizeBbox(img.bbox) } : {}),
+    };
   }).then((settled) => settled.map((r, i) => (r.status === 'fulfilled'
     ? r.value
     : { id: images[i].id, kind: 'figure', url: images[i].path, caption: images[i].sourceCaption || `Source figure on page ${images[i].page ?? '?'}`, ...(images[i].page ? { page: images[i].page } : {}) })));

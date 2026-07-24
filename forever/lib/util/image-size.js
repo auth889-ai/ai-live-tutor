@@ -1,8 +1,9 @@
 // Image pixel dimensions from raw bytes (pure, no deps): PNG + JPEG only — the two formats
-// MinerU emits for PDF figures. Needed because Qwen-VL grounding returns ABSOLUTE PIXEL
-// boxes (its training convention since 2.5-VL); to normalize honestly we must know the real
-// width/height and state them in the prompt. Returns null for anything unparseable — the
-// caller degrades honestly rather than guessing a scale.
+// MinerU emits for PDF figures. Note: grounding no longer normalizes by these dims — the
+// vision model was MEASURED (scripts/calibrate-vision-grounding.mjs, 2026-07-24) to answer
+// in 0-1000 normalized space regardless of prompt; real dims remain useful for size checks
+// (Qwen-VL localization degrades beyond 2560px). Returns null for anything unparseable —
+// the caller degrades honestly rather than guessing a scale.
 
 export function imageDimensions(bytes) {
   const b = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);

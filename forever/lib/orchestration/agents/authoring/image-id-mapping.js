@@ -15,10 +15,37 @@ export function buildImageIndex(sourcePack) {
       kind: asset.kind,
       caption: asset.kind === 'page' ? `Full render of source page ${asset.page}` : asset.caption,
       ...(asset.whatItShows ? { whatItShows: asset.whatItShows } : {}),
+      // Depth inputs (research: inventory + in-text references are the two biggest levers):
+      // parts = the figure's own component labels — the Board Director must teach these and
+      // use these EXACT names for annotations/bboxTarget (they double as grounding anchors);
+      // sourceContext = the document's own paragraphs that reference this figure.
+      ...(asset.components?.length ? { parts: asset.components.map((c) => c.label) } : {}),
+      ...(asset.transcript ? { visibleText: asset.transcript.slice(0, 500) } : {}),
+      ...(collectFigureContext(asset, sourcePack).length
+        ? { sourceContext: collectFigureContext(asset, sourcePack) }
+        : {}),
       ...(asset.page ? { page: asset.page } : {}),
     })),
     mapping: new Map(offerable.map((asset) => [asset.id, asset])),
   };
+}
+
+// The document's own words about a figure (research: conditioning the explanation on the
+// paragraphs that REFERENCE the figure is the single biggest depth lever, and it is free —
+// the chunks are already in the SourcePack). Deterministic: extract the figure number from
+// the caption ("Figure 3.2: ..."), return up to 2 chunk snippets that mention it. No LLM.
+export function collectFigureContext(asset, sourcePack) {
+  const caption = `${asset.caption ?? ''} ${asset.sourceCaption ?? ''}`;
+  const match = caption.match(/fig(?:ure)?\.?\s*(\d+(?:[.-]\d+)*)/i);
+  if (!match) return [];
+  const pattern = new RegExp(`fig(?:ure)?\\.?\\s*${match[1].replace(/[.-]/g, '[.-]')}(?![\\d.])`, 'i');
+  const snippets = [];
+  for (const chunk of sourcePack.chunks ?? []) {
+    if (!pattern.test(chunk.text)) continue;
+    snippets.push(chunk.text.slice(0, 400));
+    if (snippets.length >= 2) break;
+  }
+  return snippets;
 }
 
 // Substitute ids -> real urls on image objects; delete image objects that reference
@@ -48,6 +75,9 @@ export function resolveImageIds(objects, index) {
         url: asset.url,
         ...(object.content.page === undefined && asset.page ? { page: asset.page } : {}),
         ...(!object.content.alt && asset.caption ? { alt: asset.caption } : {}),
+        // Ride the vision depth into the object so the Voice Writer (which sees only
+        // object.content) can narrate the figure part-by-part instead of one line.
+        ...(!object.content.whatItShows && asset.whatItShows ? { whatItShows: asset.whatItShows } : {}),
       },
     });
   }

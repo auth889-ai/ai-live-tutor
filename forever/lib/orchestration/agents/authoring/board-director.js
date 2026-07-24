@@ -14,7 +14,7 @@ import { produceObject, finalizeBoardObject } from './board/produce-object.js';
 import { stripHandAuthoredAnimation } from './board/strip-animation.js';
 import { HINT_GUIDES } from './board/hint-guides.js';
 import { repairBoardObject } from './element-repair.js';
-import { groundAnnotations } from '../vision/ground-annotations.js';
+import { groundAnnotations, fetchImageForGrounding } from '../vision/ground-annotations.js';
 import { LAYOUT_REGIONS } from '../../../board/layout/layout-regions.js';
 import { structureViolation } from '../../../board/structures/structure-rules.js';
 
@@ -100,12 +100,24 @@ Rules you must never break:
   write the ID exactly; the system resolves it to the real file, and an unknown id is DELETED>, "alt": <what it shows>,
   "caption": <short caption>, "page": <its source page number, copy from availableImages when present>,
   "bbox": {"x","y","w","h"} (OPTIONAL, all normalized 0-1) to highlight the exact part you are teaching —
-  the full image always stays visible (never cropped), the highlight draws ON TOP.
+  the full image always stays visible (never cropped), the highlight draws ON TOP. If you include "bbox"
+  you MUST also include "bboxTarget": a 2-5 word name of the exact visible part being highlighted (e.g.
+  "the fact table box") — the vision agent re-locates it on the real pixels, and a highlight whose target
+  it cannot find is removed rather than drawn wrong.
   TEACH ON the image with "annotations": an ordered list of teaching marks revealed AS YOU SPEAK:
     [{"verb":"encircle","bbox":{...}}, {"verb":"arrow","bbox":{...},"text":"fact table"},
      {"verb":"underline"|"cross_out"|"highlight"|"pointer","bbox":{...}}, {"verb":"label","bbox":{...},"text":"..."}]
   Order them to match your narration (first thing you mention = first annotation). 2-5 marks, each on the
-  exact region it refers to. Prefer a "figure" when one
+  exact region it refers to. When an availableImages entry carries "parts" (the figure's own inventoried
+  component names), "visibleText" and/or "sourceContext" (the document's own paragraphs about this figure):
+  teach the figure THROUGH its parts — cover each relevant part (what it is, what it does, how it connects),
+  copy the EXACT part names into annotation "text" and "bboxTarget" (they are matched against the figure's
+  located inventory — a paraphrased name loses its anchor), and ground every claim in sourceContext/visibleText.
+  THE IMAGE MUST MATCH THE STORY: place ONLY an image whose whatItShows/parts/visibleText actually contain
+  what you teach on it — "alt" must describe what the image REALLY shows, never what you wish it showed. If
+  no available image shows the thing you need, teach WITHOUT an image object (a diagram object you draw is
+  fine); an image whose marks match nothing in its own inventory is stripped bare by the vision gate.
+  Prefer a "figure" when one
   matches; use a "page" render when the page's own layout/pictures ARE the lesson (a diagram beside its text).
 - Use "relgraph" for a relationship map the student explores (Networking topology/AS paths, History people-places-events, Law citation networks, Agents/RAG chunk graphs). content is {"nodes": [{"id","label","group"}], "edges": [{"source","target","label"}], "title", "directed"}. Only real relationships (engine/API data).
 - Use "mltrainer" for the ML "manipulate it" beat: student drags learning-rate/epochs sliders and watches live gradient descent. content is {"dataset": {"columns","rows": [[x,y]...]}, "title"}. Only for ml_ai lessons; the descent runs deterministically in-browser.
@@ -294,17 +306,60 @@ export async function designBoard({ sourcePack, layout = 'teacher_notebook_code'
   //    is dropped, and if vision is unavailable the annotations go entirely — a wrong
   //    pointer teaches worse than no pointer.
   for (const object of objects) {
-    if (object.renderHint !== 'image' || !object.content?.annotations?.length) continue;
+    if (object.renderHint !== 'image') continue;
+    const hasMarks = object.content?.annotations?.length > 0;
+    const hasNamedHighlight = !!(object.content?.bbox && object.content?.bboxTarget);
+    // A highlight bbox the text model wrote WITHOUT naming its target can never be verified
+    // against the pixels — it is a blind guess of exactly the kind that landed on wrong
+    // parts. Strip it (the full image still shows; unhighlighted beats mis-highlighted).
+    if (object.content?.bbox && !hasNamedHighlight) {
+      const { bbox: _blind, bboxTarget: _t, ...content } = object.content;
+      object.content = content;
+      console.error(`[board] ${object.id}: image highlight bbox had no bboxTarget — removed (unverifiable)`);
+    }
+    if (!hasMarks && !hasNamedHighlight) continue;
     const url = String(object.content.url ?? '');
-    if (/^https?:\/\//.test(url)) continue; // no local pixels to read
     try {
-      const mime = /\.png$/i.test(url) ? 'image/png' : 'image/jpeg';
-      const { annotations, dropped } = await groundAnnotations({ imagePath: url, mime, annotations: object.content.annotations });
-      if (dropped?.length) console.error(`[board] ${object.id}: ${dropped.length} annotation(s) not visually locatable — dropped (${dropped.slice(0, 3).join(' | ')})`);
-      object.content = { ...object.content, annotations };
+      // Remote (web) images are fetched and grounded too — they used to skip this pass and
+      // ship blind guessed bboxes; a fetch failure falls into the catch below and strips
+      // the annotations (honest degrade, same policy as vision-unavailable).
+      const remote = /^https?:\/\//.test(url) ? await fetchImageForGrounding(url) : null;
+      const mime = remote?.mime ?? (/\.png$/i.test(url) ? 'image/png' : 'image/jpeg');
+      // The named highlight rides the same grounding pass as the marks (one vision round
+      // trip): appended as a synthetic intent, split back out by its flag afterwards.
+      const intents = [
+        ...(object.content.annotations ?? []),
+        ...(hasNamedHighlight ? [{ verb: 'highlight', text: object.content.bboxTarget, _imageHighlight: true }] : []),
+      ];
+      // The figure's ingest inventory components serve as name-matched anchors: they rescue
+      // marks the two live vision passes disagreed on (which previously just dropped).
+      const asset = [...imageIndex.mapping.values()].find((a) => a.url === url);
+      const { annotations: grounded, dropped, wrongImage } = await groundAnnotations({
+        imagePath: remote ? undefined : url, imageBytes: remote?.bytes, mime, annotations: intents,
+        anchors: asset?.components ?? [],
+        transcript: asset?.transcript ?? '',
+      });
+      if (wrongImage) {
+        // Live-caught failure class: the author narrated a schema diagram but placed the
+        // sales chart — none of its marks matched anything the figure actually contains.
+        // Ship the figure bare with its TRUE description; never the fabricated story.
+        console.error(`[board] ${object.id}: WRONG-IMAGE — no mark matches the figure's own inventory; annotations/highlight stripped, alt reset to the asset's real description`);
+        const { annotations: _a, bbox: _b, bboxTarget: _t, ...content } = object.content;
+        object.content = { ...content, ...(asset?.caption ? { alt: asset.caption } : {}) };
+        continue;
+      }
+      if (dropped?.length) console.error(`[board] ${object.id}: ${dropped.length} mark(s) not visually locatable — dropped (${dropped.slice(0, 3).join(' | ')})`);
+      const highlight = grounded.find((g) => g._imageHighlight);
+      const annotations = grounded.filter((g) => !g._imageHighlight);
+      const next = { ...object.content, annotations };
+      if (hasNamedHighlight) {
+        if (highlight) next.bbox = highlight.bbox;
+        else { delete next.bbox; delete next.bboxTarget; }
+      }
+      object.content = next;
     } catch (error) {
       console.error(`[board] ${object.id}: vision grounding unavailable (${String(error?.message).slice(0, 80)}) — annotations removed rather than mis-pointed`);
-      const { annotations: removed, ...content } = object.content;
+      const { annotations: removed, bbox: removedBbox, bboxTarget: removedTarget, ...content } = object.content;
       object.content = content;
     }
   }
