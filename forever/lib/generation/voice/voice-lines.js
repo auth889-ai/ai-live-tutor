@@ -1,5 +1,25 @@
 import { validateSourceRef } from '../../source-pack/refs/source-refs.js';
 
+// SPOKEN-ID SCRUB (live-caught 2026-07-24 certification lesson: the tutor said "the
+// normalized schema from fig_004" OUT LOUD — backstage ids are for agents, never for
+// students). Mechanical repair, same class as normalizeVoiceTargets: internal id tokens
+// become natural phrases; anything semantic stays untouched.
+const SPOKEN_ID = /\b(?:from |in |see )?\b(fig|figure|asset|page|chunk|obj|vl|sc)_[a-z0-9]+\b/gi;
+
+export function scrubSpokenInternalIds(lines) {
+  return (lines ?? []).map((line) => {
+    if (typeof line?.text !== 'string' || !SPOKEN_ID.test(line.text)) return line;
+    SPOKEN_ID.lastIndex = 0;
+    const text = line.text.replace(SPOKEN_ID, (match, kind) => {
+      const k = kind.toLowerCase();
+      if (k === 'chunk') return 'the source material';
+      if (k === 'fig' || k === 'figure' || k === 'asset' || k === 'page') return 'this figure';
+      return 'the board';
+    }).replace(/\s{2,}/g, ' ');
+    return { ...line, text };
+  });
+}
+
 export function validateVoiceLine(line) {
   if (!line.id?.trim()) throw new Error('voiceLine.id is required');
   const context = `voiceLine ${line.id}`;

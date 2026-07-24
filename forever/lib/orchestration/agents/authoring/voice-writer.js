@@ -5,7 +5,7 @@
 import { z } from 'zod';
 
 import { runAgentChain } from '../../../qwen/client.js';
-import { validateVoiceLines, normalizeVoiceTargets, normalizeFocusRefs } from '../../../generation/voice/voice-lines.js';
+import { validateVoiceLines, normalizeVoiceTargets, normalizeFocusRefs, scrubSpokenInternalIds } from '../../../generation/voice/voice-lines.js';
 
 const VOICE_SCHEMA = z.object({
   voiceLines: z.array(z.object({
@@ -55,7 +55,10 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
   using the object's whatItShows/alt/caption and the source chunks as your facts. One line per mark,
   synchronized: the student hears the part being named exactly while its mark draws. Never describe
   a part the image does not show, and never compress a multi-part figure into one summary sentence.
-- Order lines top-to-bottom following the board; never claim anything the source chunks do not support.`;
+- Order lines top-to-bottom following the board; never claim anything the source chunks do not support.
+- SPEAK ONLY WHAT IS ON THIS BOARD: never say "on the board you see X" unless X is one of the board
+  objects in your input — a figure that is not placed on THIS scene's board does not exist for the
+  student. Never speak internal ids (fig_004, chunk_0010, obj_x): say "this figure" / "the source".`;
 
   const user = JSON.stringify({
     task: 'Narrate this board for the student.',
@@ -70,7 +73,7 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
     try {
       // Unambiguous slips (targeting a node id instead of its object) are repaired
       // structurally before validation — no model round-trip for a mechanical fix.
-      const voiceLines = normalizeFocusRefs(normalizeVoiceTargets(json.voiceLines, objects));
+      const voiceLines = scrubSpokenInternalIds(normalizeFocusRefs(normalizeVoiceTargets(json.voiceLines, objects)));
       validateVoiceLines(voiceLines, objects);
       return { voiceLines, usage };
     } catch (error) {
