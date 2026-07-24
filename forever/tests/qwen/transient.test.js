@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { callQwenJson, isTransient } from '../../lib/qwen/client.js';
+import { callQwenJson, isTransient, noteProviderFailure, noteProviderSuccess, providerDegraded } from '../../lib/qwen/client.js';
 
 const ENV = { DASHSCOPE_API_KEY: 'test-key', DASHSCOPE_BASE_URL: 'http://qwen.test' };
 // A REAL Response object: the LangChain/OpenAI transport reads status/headers, not a bare {ok, json}.
@@ -43,4 +43,23 @@ test('truncated/invalid JSON is retried in-call; persistent garbage still fails 
   } finally {
     globalThis.fetch = original;
   }
+});
+
+// Circuit breaker: a degraded pool must cost seconds per call, not 15 minutes (live-caught
+// 2026-07-24: 3.9-hour lesson, 16-minute flash routing call). Pure state transitions.
+test('breaker opens after 4 consecutive transient failures and closes on one success', () => {
+  noteProviderSuccess(); // clean slate
+  assert.equal(providerDegraded(), false);
+  for (let i = 0; i < 3; i += 1) noteProviderFailure(1000);
+  assert.equal(providerDegraded(1000), false); // 3 strikes: still healthy
+  noteProviderFailure(1000);
+  assert.equal(providerDegraded(1000), true); // 4th opens it
+  assert.equal(providerDegraded(1000 + 179_000), true); // holds through the cooldown
+  // one SUCCESS closes it immediately — a healthy pool gets its generous retries back
+  noteProviderSuccess();
+  assert.equal(providerDegraded(1000 + 179_000), false);
+  // cooldown expiry alone also closes it (half-open probe path)
+  for (let i = 0; i < 4; i += 1) noteProviderFailure(5000);
+  assert.equal(providerDegraded(5000 + 181_000), false);
+  noteProviderSuccess(); // leave global state clean for other tests
 });

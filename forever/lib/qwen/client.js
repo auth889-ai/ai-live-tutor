@@ -81,6 +81,14 @@ export async function runAgentChain({
   const cacheParams = { agent, model, system, user, temperature, maxTokens };
   const cached = await cacheGet(cacheParams, { env });
   if (cached) return cached;
+  // CIRCUIT BREAKER (live-caught 2026-07-24: a degraded provider window stretched one lesson
+  // to 3.9 HOURS — a 16-minute qwen3.6-flash routing call, 8 scenes dropped anyway. Generous
+  // retries are right for a healthy pool and exactly wrong for a sick one). When the pool is
+  // measurably degraded, fail FAST and let the honest-failure machinery drop scenes quickly.
+  if (providerDegraded()) {
+    retries = Math.min(retries, 1);
+    timeoutMs = Math.min(timeoutMs, 120_000);
+  }
   let lastError;
   // Retry transient failures (timeout/abort, network, 429/5xx) with backoff — the workspace
   // API is intermittently slow, and a whole lesson shouldn't die on one flaky call.
@@ -90,10 +98,13 @@ export async function runAgentChain({
   // whether a fully-failed call deserves a whole new scene attempt.
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
-      return await callOnce();
+      const result = await callOnce();
+      noteProviderSuccess();
+      return result;
     } catch (error) {
       lastError = error;
       const flakyResponse = /returned no content|returned invalid JSON/.test(String(error?.message || error));
+      if (isTransient(error) || flakyResponse) noteProviderFailure();
       if ((!isTransient(error) && !flakyResponse) || attempt === retries) throw error;
       await sleep(1000 * (attempt + 1));
     }
@@ -170,6 +181,34 @@ export async function runAgentChain({
 
 // Exported so the lesson generator can distinguish "the provider was flaky" (worth a second
 // chance) from "the content failed its contract" (a real quality rejection).
+// ─── provider circuit breaker (module state, ONE door = one health view) ───────────────
+// 4 consecutive transient failures across ANY agents => degraded for 3 minutes: retries
+// clamp to 1 and timeout to 120s, so a sick pool costs seconds per call, not 15 minutes.
+// One success closes it instantly. Pure state helpers, unit-tested without a network.
+const BREAKER_THRESHOLD = 4;
+const BREAKER_COOLDOWN_MS = 180_000;
+const breaker = { consecutive: 0, degradedUntil: 0 };
+
+export function noteProviderFailure(now = Date.now()) {
+  breaker.consecutive += 1;
+  if (breaker.consecutive >= BREAKER_THRESHOLD && now >= breaker.degradedUntil) {
+    breaker.degradedUntil = now + BREAKER_COOLDOWN_MS;
+    console.error(`[qwen] provider degraded (${breaker.consecutive} consecutive transient failures) — failing fast for ${BREAKER_COOLDOWN_MS / 1000}s (retries→1, timeout→120s)`);
+  }
+}
+
+export function noteProviderSuccess() {
+  breaker.consecutive = 0;
+  breaker.degradedUntil = 0;
+}
+
+export function providerDegraded(now = Date.now()) {
+  // Time-based only: when the cooldown lapses the breaker goes HALF-OPEN — the next call
+  // probes with full patience; its failure re-opens (consecutive is still >= threshold),
+  // its success closes for good.
+  return now < breaker.degradedUntil;
+}
+
 export function isTransient(error) {
   const m = String(error?.message || error);
   return (
