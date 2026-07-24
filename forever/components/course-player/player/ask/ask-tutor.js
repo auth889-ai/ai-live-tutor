@@ -7,11 +7,35 @@
 
 import { useRef, useState } from 'react';
 
+import { AskSceneViewer } from './ask-scene-viewer.js';
+
 const V = (name) => `var(${name})`;
 
 export function AskTutor({ lessonId, sceneId, sceneTitle, setHold }) {
   const [question, setQuestion] = useState('');
-  const [thread, setThread] = useState([]); // {q, answer, grounding, followUp}
+  const [thread, setThread] = useState([]); // {q, answer, grounding, followUp, audio?, scene?}
+  const [sceneBusy, setSceneBusy] = useState(null); // index of the turn whose board is being built
+
+  // "Teach me this on a board": the question re-enters the REAL scene pipeline server-side
+  // (sources → plan → board objects → grounded marks → narration → voice → review gates)
+  // and comes back as a fresh interactive scene played inline.
+  async function buildScene(index) {
+    setSceneBusy(index);
+    try {
+      const response = await fetch(`/api/lessons/${lessonId}/ask-scene`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: thread[index].q, sceneId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'The tutor could not build a scene');
+      setThread((prev) => prev.map((t, j) => (j === index ? { ...t, scene: data.scene } : t)));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSceneBusy(null);
+    }
+  }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const inputRef = useRef(null);
@@ -53,6 +77,11 @@ export function AskTutor({ lessonId, sceneId, sceneTitle, setHold }) {
         <div key={index} style={{ marginBottom: 10, fontSize: 13.5, lineHeight: 1.55 }}>
           <div style={{ fontWeight: 650, color: V('--ink') }}>You <span style={{ fontWeight: 400, color: V('--ink-muted'), fontSize: 11.5 }}>(at “{turn.at}”)</span>: {turn.q}</div>
           <div style={{ color: V('--ink-body'), marginTop: 3 }}>{turn.answer}</div>
+          {turn.audio && (
+            /* The tutor SPEAKS its answer — same voice as the lesson; autoplays once when
+               the answer arrives, replayable from the control. */
+            <audio src={turn.audio} controls autoPlay style={{ marginTop: 6, width: '100%', height: 32 }} />
+          )}
           {turn.followUp && (
             <div style={{ marginTop: 5, color: '#8A6021', background: '#FEF3E2', borderRadius: 9, padding: '6px 10px', fontSize: 12.5 }}>
               🤔 {turn.followUp}
@@ -61,6 +90,13 @@ export function AskTutor({ lessonId, sceneId, sceneTitle, setHold }) {
           {turn.grounding && (
             <div style={{ marginTop: 3, fontSize: 11, color: V('--ink-muted') }}>grounding: {turn.grounding}</div>
           )}
+          {!turn.scene && (
+            <button disabled={sceneBusy !== null} onClick={() => buildScene(index)}
+              style={{ marginTop: 6, border: `1px dashed ${V('--border')}`, background: '#fff', borderRadius: 8, padding: '4px 12px', fontSize: 11.5, cursor: 'pointer', color: V('--ink-muted') }}>
+              {sceneBusy === index ? '🏛️ the society is building your board… (sources → board → marks → review → voice, ~1-3 min)' : '🎬 Teach me this on a board'}
+            </button>
+          )}
+          {turn.scene && <AskSceneViewer scene={turn.scene} onClose={() => setThread((prev) => prev.map((t, j) => (j === index ? { ...t, scene: null, sceneClosed: true } : t)))} />}
         </div>
       ))}
       {error && <div style={{ fontSize: 12.5, color: '#a33d2e', marginBottom: 8 }}>{error}</div>}

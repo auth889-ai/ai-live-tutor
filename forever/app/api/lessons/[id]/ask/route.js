@@ -39,7 +39,21 @@ export async function POST(request, { params }) {
       question,
       chunks,
     });
-    return Response.json({ answer, grounding, followUp });
+    // VOICED ANSWER: the tutor SPEAKS its explanation (same voice as the lesson). Returned
+    // as a data URL — Q&A clips are ephemeral (no store cleanup), and the per-text TTS
+    // cache still deduplicates repeat questions. Voice failure never blocks the text answer.
+    let audio = null;
+    if (process.env.DISABLE_TTS !== '1' && body.voice !== false) {
+      try {
+        const { pickSynth } = await import('../../../../../lib/tts/voice-lesson.js');
+        const speech = [answer, followUp].filter(Boolean).join(' ');
+        const clip = await pickSynth()({ text: speech.slice(0, 2500) });
+        if (clip?.bytes?.length) audio = `data:audio/mpeg;base64,${Buffer.from(clip.bytes).toString('base64')}`;
+      } catch (error) {
+        console.error(`[ask] answer voicing failed (text answer still served): ${String(error?.message).slice(0, 120)}`);
+      }
+    }
+    return Response.json({ answer, grounding, followUp, ...(audio ? { audio } : {}) });
   } catch (error) {
     return Response.json({ error: 'The tutor could not answer right now — try again.', detail: String(error?.message).slice(0, 200) }, { status: 502 });
   }
