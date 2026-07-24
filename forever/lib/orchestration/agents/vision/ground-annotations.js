@@ -10,6 +10,7 @@
 import { readFile } from 'node:fs/promises';
 import { callQwenVisionJson } from '../../../qwen/vision.js';
 import { toFractionalBbox, bboxIoU, bboxMean } from '../../../util/image-size.js';
+import { prepareImageForVision, cropAroundBbox } from '../../../util/image-prep.js';
 
 // COORDINATE SPACE — measured, not assumed (scripts/calibrate-vision-grounding.mjs, the
 // rerunnable authority; run it again whenever MODEL_VISION changes). Verdict for
@@ -123,7 +124,10 @@ export async function groundAnnotations({ imagePath, imageBytes, mime = 'image/j
       wrongImage: true,
     };
   }
-  const bytes = imageBytes ?? (await readFile(imagePath));
+  const raw = imageBytes ?? (await readFile(imagePath));
+  const prepped = await prepareImageForVision(raw, mime); // ≤2560px: inside Qwen-VL's reliable range
+  const bytes = prepped.bytes;
+  mime = prepped.mime;
   const base64 = Buffer.from(bytes).toString('base64');
 
   const system = `You are the Vision Grounding agent of an AI tutor. You are given an image and a list of
@@ -166,10 +170,16 @@ Report "found": false for any mark whose target is NOT actually visible in the i
 
   const grounded = [];
   const dropped = [];
+  const soft = []; // consensus marks with NO anchor corroboration -> blind crop-verify below
   annotations.forEach((annotation, index) => {
     const bbox = byIndex.get(index);
     if (bbox && bbox.w * bbox.h > MAX_MARK_AREA) { dropped.push(annotation.text ?? annotation.verb); return; }
-    if (bbox) { grounded.push({ ...annotation, bbox }); return; }
+    if (bbox) {
+      const mark = { ...annotation, bbox };
+      grounded.push(mark);
+      if (!matchAnchor(annotation.text ?? annotation.alt ?? '', anchors)) soft.push(mark);
+      return;
+    }
     // ANCHOR RESCUE: the two live passes disagreed (or found nothing) — before dropping,
     // try the ingest inventory by NAME. A name-matched component box is pixel-derived and
     // retrieval-matched, so it beats losing the mark; consensus (when it exists) still wins.
@@ -177,5 +187,38 @@ Report "found": false for any mark whose target is NOT actually visible in the i
     if (anchor) grounded.push({ ...annotation, bbox: anchor.bbox, groundedBy: 'anchor' });
     else dropped.push(annotation.text ?? annotation.verb);
   });
+
+  // BLIND CROP-VERIFY (research: naive "is this right?" self-checks COLLAPSE accuracy —
+  // the working variant is an OPEN question on a zoomed crop, then a text match). Only for
+  // soft marks (no anchor vouches for them), capped to bound latency/cost; a verify-call
+  // failure keeps the mark (provider weather must not delete teaching), a confident
+  // mismatch deletes it (drawn-wrong teaches worse than absent).
+  const toVerify = soft.slice(0, 3);
+  for (const mark of toVerify) {
+    try {
+      const crop = await cropAroundBbox(bytes, mark.bbox, { mime });
+      if (!crop) continue;
+      const { json } = await callQwenVisionJson({
+        agent: 'vision_crop_verify',
+        system: 'You are looking at a small CROP from a larger figure. Describe what is at the CENTER of this crop — name any visible text verbatim. Output ONLY JSON: {"center": "a few words", "visibleText": "any text you can read, verbatim"}',
+        user: 'What is at the center of this crop?',
+        images: [{ base64: Buffer.from(crop.bytes).toString('base64'), mime: crop.mime }],
+        maxTokens: 300,
+        timeoutMs: 120_000,
+      });
+      const seen = `${json.center ?? ''} ${json.visibleText ?? ''}`;
+      const target = mark.text ?? mark.alt ?? '';
+      const verdict = intentsMatchFigure([{ text: target }], { anchors: [], transcript: seen });
+      if (verdict.checkable && verdict.matched === 0) {
+        const at = grounded.indexOf(mark);
+        if (at >= 0) grounded.splice(at, 1);
+        dropped.push(target);
+      } else {
+        mark.groundedBy = 'consensus+crop';
+      }
+    } catch {
+      // verify unavailable -> the double-pass consensus stands on its own
+    }
+  }
   return { annotations: grounded, dropped, usage };
 }

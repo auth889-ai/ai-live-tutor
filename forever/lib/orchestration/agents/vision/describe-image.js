@@ -9,6 +9,7 @@
 import { readFile } from 'node:fs/promises';
 import { callQwenVisionJson } from '../../../qwen/vision.js';
 import { bboxFromModelAnswer } from './ground-annotations.js';
+import { prepareImageForVision } from '../../../util/image-prep.js';
 
 const COMPONENT_KINDS = new Set(['label', 'box', 'arrow', 'axis', 'node', 'region', 'symbol', 'other']);
 const MAX_COMPONENTS = 24;
@@ -32,8 +33,12 @@ export function parseComponents(raw) {
 }
 
 export async function describeImage({ imagePath, imageBytes, mime = 'image/png' }) {
-  const bytes = imageBytes ?? (await readFile(imagePath));
-  const base64 = Buffer.from(bytes).toString('base64');
+  const raw = imageBytes ?? (await readFile(imagePath));
+  // Qwen-VL localization drifts beyond 2560px (official guidance); page renders exceed it.
+  // Coordinates stay valid — the model answers in 0-1000 relative space.
+  const prepped = await prepareImageForVision(raw, mime);
+  const base64 = Buffer.from(prepped.bytes).toString('base64');
+  mime = prepped.mime;
 
   const system = `You are the Vision agent of an AI tutor. Look at the image (a figure/diagram/page from
 learning material) and inventory it so a teacher can teach EVERY part of it. Output ONLY JSON:
