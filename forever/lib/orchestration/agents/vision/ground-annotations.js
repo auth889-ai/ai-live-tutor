@@ -175,7 +175,9 @@ Report "found": false for any mark whose target is NOT actually visible in the i
     const bbox = byIndex.get(index);
     if (bbox && bbox.w * bbox.h > MAX_MARK_AREA) { dropped.push(annotation.text ?? annotation.verb); return; }
     if (bbox) {
-      const mark = { ...annotation, bbox };
+      // Provenance tag ALWAYS (correctness kernel rule: an untagged mark is indistinguishable
+      // from the blind era and fails the audit) — crop-verify upgrades it to consensus+crop.
+      const mark = { ...annotation, bbox, groundedBy: 'consensus' };
       grounded.push(mark);
       if (!matchAnchor(annotation.text ?? annotation.alt ?? '', anchors)) soft.push(mark);
       return;

@@ -178,5 +178,61 @@ Rules:
       focusFigureIds: [],
     });
   }
+  repairCoverage(scenes, { figures, chunkIds });
   return { lessonTitle: String(json.lessonTitle || sourcePack.title).trim(), scenes, usage };
+}
+
+// COVERAGE GUARANTEE (user requirement 2026-07-26: "it must explain ALL things from the
+// user's input"): every source figure and every chunk is OWNED by some scene — enforced
+// deterministically like the beat guarantees, never left to the model's attention span.
+// Unassigned figures go to the scene whose story matches their caption; genuinely homeless
+// figures get their own professor-at-the-wall-chart scene (capped — beyond the cap they are
+// attached round-robin so NOTHING from the document is silently dropped).
+const MAX_ADDED_FIGURE_SCENES = 3;
+export function repairCoverage(scenes, { figures = [], chunkIds = new Set() } = {}) {
+  const tokensOf = (s) => new Set(String(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ').filter((t) => t.length >= 4));
+  const tail = (s) => ['edge_cases', 'recap', 'practice'].includes(s.pedagogicalRole);
+  const assigned = new Set(scenes.flatMap((s) => s.focusFigureIds ?? []));
+  let addedScenes = 0;
+  for (const figure of figures) {
+    if (assigned.has(figure.figureId)) continue;
+    const figTokens = tokensOf(`${figure.caption ?? ''} ${figure.whatItShows ?? ''}`);
+    let best = null;
+    let bestOverlap = 0;
+    for (const scene of scenes) {
+      if (tail(scene) || scene.coverageAdded) continue;
+      const overlap = [...tokensOf(`${scene.title} ${scene.directive}`)].filter((t) => figTokens.has(t)).length;
+      if (overlap > bestOverlap) { best = scene; bestOverlap = overlap; }
+    }
+    if (best && bestOverlap >= 1) {
+      best.focusFigureIds = [...(best.focusFigureIds ?? []), figure.figureId];
+      best.directive += ` ALSO place and teach the assigned source figure ("${String(figure.caption ?? '').slice(0, 80)}") part by part on this board.`;
+    } else if (addedScenes < MAX_ADDED_FIGURE_SCENES) {
+      addedScenes += 1;
+      const at = scenes.findIndex(tail);
+      scenes.splice(at === -1 ? scenes.length : at, 0, {
+        coverageAdded: true,
+        title: `The Figure, Explained: ${String(figure.caption ?? 'source figure').slice(0, 60)}`,
+        pedagogicalRole: 'visualize',
+        directive: `Teach the source figure "${String(figure.caption ?? '').slice(0, 80)}" the way a professor works a wall chart: place it, walk EVERY labeled part in order (what it is, what it does, how it connects), tie each part to the source's own words, and write your own 2-4 takeaway notes beside it.`,
+        focusChunkIds: [...chunkIds],
+        focusFigureIds: [figure.figureId],
+      });
+    } else {
+      const fewest = scenes.filter((s) => !tail(s)).sort((a, b) => (a.focusFigureIds?.length ?? 0) - (b.focusFigureIds?.length ?? 0))[0];
+      if (fewest) {
+        fewest.focusFigureIds = [...(fewest.focusFigureIds ?? []), figure.figureId];
+        fewest.directive += ` ALSO place and teach the source figure ("${String(figure.caption ?? '').slice(0, 80)}").`;
+      }
+    }
+    assigned.add(figure.figureId);
+  }
+  // Chunks: anything no scene focuses on is folded into the recap (which the beat guarantee
+  // above ensures exists) — the recap must at least touch every idea the document brought.
+  const covered = new Set(scenes.flatMap((s) => s.focusChunkIds ?? []));
+  const recap = scenes.find((s) => s.pedagogicalRole === 'recap');
+  if (recap) {
+    for (const id of chunkIds) if (!covered.has(id)) recap.focusChunkIds.push(id);
+  }
+  return scenes;
 }
