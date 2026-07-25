@@ -1197,6 +1197,14 @@ rooms = [[INF, -1, 0, INF], [INF, INF, INF, -1], [INF, -1, INF, -1], [0, -1, INF
                 count += 1
     return count`, 'closed_islands([[1, 1, 1, 1], [1, 0, 0, 1], [1, 0, 0, 1], [1, 1, 1, 0]])'],
 
+  ['graphs', 'Bellman-Ford over a raw edge list (PROMOTED from frontier 2026-07-26: edge-list-graph lens renders the true network)', `def bellman_ford(n, edges, src):
+    dist = [float('inf')] * n
+    dist[src] = 0
+    for _ in range(n - 1):
+        for u, v, w in edges:
+            if dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+    return dist`, 'bellman_ford(5, [[0, 1, 6], [0, 2, 7], [1, 2, 8], [1, 3, 5], [2, 3, -3], [1, 4, -4], [3, 4, 9]], 0)'],
   ['graphs', 'LC133 Clone Graph (object graph via neighbors attribute)', `class Node:
     def __init__(self, val):
         self.val = val
@@ -1246,14 +1254,6 @@ const FRONTIER = [
   // correct-but-not-the-network-drawing; the synthesized-adjacency upgrade (build {u:[v]}
   // from the recorded edge list, reuse compileGraphWalk) is what promotes these as GRAPH
   // teaching. Promote only when they render nodes/edges, not when any lens claims them.
-  ['Bellman-Ford over a raw edge list (V-1 relaxation rounds)', `def bellman_ford(n, edges, src):
-    dist = [float('inf')] * n
-    dist[src] = 0
-    for _ in range(n - 1):
-        for u, v, w in edges:
-            if dist[u] + w < dist[v]:
-                dist[v] = dist[u] + w
-    return dist`, 'bellman_ford(5, [[0, 1, 6], [0, 2, 7], [1, 2, 8], [1, 3, 5], [2, 3, -3], [1, 4, -4], [3, 4, 9]], 0)'],
   ['Kruskal MST (sorted edge list + union-find)', `def kruskal(n, edges):
     parent = list(range(n))
     def find(x):

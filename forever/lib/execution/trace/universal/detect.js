@@ -18,6 +18,7 @@ import { detectDivideConquer, compileDivideConquerLens } from './lenses/divide-c
 import { detectIntervals, compileIntervalsLens } from './lenses/intervals.js';
 import { detectDpTable, compileDpTableLens } from './lenses/dp-table.js';
 import { detectGraphAdjacency, compileGraphAdjacency } from './lenses/graph-adjacency.js';
+import { detectEdgeListGraph, compileEdgeListGraph } from './lenses/edge-list-graph.js';
 import { detectUnionFind, compileUnionFind } from './lenses/union-find.js';
 import { detectAdjacencyMatrix, compileAdjacencyMatrix } from './lenses/adjacency-matrix.js';
 
@@ -35,6 +36,11 @@ export const LENS_DETECTORS = Object.freeze([
   // in sweep order, so dp-table co-fires on every merge-intervals run — but the intervals
   // detector demanded s<=e pairs, a stable input AND a fusion; the more specific reading wins.
   { key: 'intervals', detect: detectIntervals, compile: compileIntervalsLens },
+  // edge-list-graph (0.91) above dp-table (0.9) BY DESIGN: Bellman-Ford's dist list is also
+  // a filling 1D table, so dp-table claims it first — but the network drawing is the lesson.
+  // The 0.91 is earned by the strictest evidence set in the registry (unpack loop + stable
+  // id-consistent edge list + decrease-ONLY dist); anything less specific falls through.
+  { key: 'edge-list-graph', detect: detectEdgeListGraph, compile: compileEdgeListGraph },
   { key: 'dp-table', detect: detectDpTable, compile: compileDpTableLens },
   { key: 'grid-walk', detect: detectGridWalk, compile: compileGridWalk },
   // graph-adjacency (0.88) between the boards and the object lenses: a walked adjacency dict
