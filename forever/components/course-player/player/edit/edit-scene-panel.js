@@ -27,11 +27,16 @@ export function EditScenePanel({ lessonId, scene, onClose }) {
   })));
   const [status, setStatus] = useState(''); // '' | 'saving' | error text
   const [newLines, setNewLines] = useState([]); // brand-new narration the human writes
+  const [newObjs, setNewObjs] = useState([]); // human board additions: {kind, text|values|url+alt+displayWidth}
+  const [imageWidths, setImageWidths] = useState(() => Object.fromEntries(imageObjects.map((o) => [o.id, o.content.displayWidth ?? 1])));
   const changedLines = lines.filter((l) => l.text !== l.original);
   const changedObjects = objects.filter((o) => o.content !== o.original);
   const addedLines = newLines.filter((l) => l.text.trim());
   const changedMarks = markSets.filter((m) => JSON.stringify(m.annotations) !== m.original);
-  const dirty = changedLines.length + changedObjects.length + addedLines.length + changedMarks.length > 0;
+  const addedObjs = newObjs.filter((o) => (o.kind === 'text' && o.text?.trim()) || (o.kind === 'array' && o.values?.trim()) || (o.kind === 'image' && o.url));
+  const changedWidths = imageObjects.filter((o) => (imageWidths[o.id] ?? 1) !== (o.content.displayWidth ?? 1));
+  const dirty = changedLines.length + changedObjects.length + addedLines.length + changedMarks.length + addedObjs.length + changedWidths.length > 0;
+  const knownImages = [...new Set((scene.objects ?? []).filter((o) => o.renderHint === 'image' && o.content?.url).map((o) => o.content.url))];
 
   const save = async () => {
     setStatus('saving');
@@ -44,6 +49,12 @@ export function EditScenePanel({ lessonId, scene, onClose }) {
           objects: changedObjects.map(({ id, content }) => ({ id, content })),
           newVoiceLines: addedLines.map(({ text }) => ({ text })),
           marks: changedMarks.map(({ objectId, annotations }) => ({ objectId, annotations })),
+          newObjects: addedObjs.map((o) => (o.kind === 'array'
+            ? { kind: 'array', label: o.label, values: o.values.split(',').map((v) => (v.trim() === '' ? 0 : Number.isNaN(Number(v)) ? v.trim() : Number(v))) }
+            : o.kind === 'image'
+              ? { kind: 'image', url: o.url, alt: o.alt || 'inserted figure', displayWidth: Number(o.displayWidth) || 1 }
+              : { kind: 'text', text: o.text })),
+          images: changedWidths.map((o) => ({ objectId: o.id, displayWidth: Number(imageWidths[o.id]) })),
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -91,11 +102,63 @@ export function EditScenePanel({ lessonId, scene, onClose }) {
             TEACHING MARKS (you see the image — your marks are the verification)
           </div>
           {markSets.map((set, i) => (
-            <MarkEditor key={set.objectId} url={set.url} annotations={set.annotations}
-              onChange={(annotations) => setMarkSets((prev) => prev.map((m, j) => (j === i ? { ...m, annotations } : m)))} />
+            <div key={set.objectId} style={{ display: 'grid', gap: 4 }}>
+              <MarkEditor url={set.url} annotations={set.annotations}
+                onChange={(annotations) => setMarkSets((prev) => prev.map((m, j) => (j === i ? { ...m, annotations } : m)))} />
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 11.5, color: V('--ink-muted') }}>
+                image size
+                <input type="range" min="0.2" max="1" step="0.05" value={imageWidths[set.objectId] ?? 1}
+                  onChange={(e) => setImageWidths((prev) => ({ ...prev, [set.objectId]: Number(e.target.value) }))} style={{ flex: 1, maxWidth: 220 }} />
+                {Math.round((imageWidths[set.objectId] ?? 1) * 100)}%
+              </label>
+            </div>
           ))}
         </div>
       )}
+
+      <div style={{ display: 'grid', gap: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: V('--ink-muted') }}>ADD TO BOARD (your own material — kept even without narration)</div>
+        {newObjs.map((o, i) => (
+          <div key={i} style={{ display: 'grid', gap: 6, border: `1px dashed ${V('--border')}`, borderRadius: 10, padding: 10 }}>
+            {o.kind === 'text' && (
+              <textarea value={o.text ?? ''} placeholder="Write your own text block for the board…" style={{ minHeight: 52, fontFamily: 'inherit', fontSize: 13, padding: 8, borderRadius: 8, border: `1px solid ${V('--border')}` }}
+                onChange={(e) => setNewObjs((prev) => prev.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
+            )}
+            {o.kind === 'array' && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={o.label ?? ''} placeholder="name (e.g. nums)" style={{ width: 130, fontSize: 12.5, padding: 7, borderRadius: 8, border: `1px solid ${V('--border')}` }}
+                  onChange={(e) => setNewObjs((prev) => prev.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
+                <input value={o.values ?? ''} placeholder="values, comma separated: 3, 1, 4, 1, 5" style={{ flex: 1, fontSize: 12.5, padding: 7, borderRadius: 8, border: `1px solid ${V('--border')}` }}
+                  onChange={(e) => setNewObjs((prev) => prev.map((x, j) => (j === i ? { ...x, values: e.target.value } : x)))} />
+              </div>
+            )}
+            {o.kind === 'image' && (
+              <div style={{ display: 'grid', gap: 6 }}>
+                <select value={o.url ?? ''} style={{ fontSize: 12.5, padding: 7, borderRadius: 8, border: `1px solid ${V('--border')}` }}
+                  onChange={(e) => setNewObjs((prev) => prev.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))}>
+                  <option value="">choose one of this lesson's figures…</option>
+                  {knownImages.map((u) => <option key={u} value={u}>{u.split('/').pop().slice(0, 48)}</option>)}
+                </select>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input value={o.alt ?? ''} placeholder="what it shows (alt text)" style={{ flex: 1, fontSize: 12.5, padding: 7, borderRadius: 8, border: `1px solid ${V('--border')}` }}
+                    onChange={(e) => setNewObjs((prev) => prev.map((x, j) => (j === i ? { ...x, alt: e.target.value } : x)))} />
+                  <label style={{ fontSize: 11.5, color: V('--ink-muted'), display: 'flex', gap: 6, alignItems: 'center' }}>
+                    size <input type="range" min="0.2" max="1" step="0.05" value={o.displayWidth ?? 1}
+                      onChange={(e) => setNewObjs((prev) => prev.map((x, j) => (j === i ? { ...x, displayWidth: Number(e.target.value) } : x)))} />
+                  </label>
+                </div>
+              </div>
+            )}
+            <button onClick={() => setNewObjs((prev) => prev.filter((_, j) => j !== i))}
+              style={{ justifySelf: 'end', border: 'none', background: 'transparent', color: '#b4231f', fontSize: 11.5, cursor: 'pointer' }}>remove</button>
+          </div>
+        ))}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setNewObjs((prev) => [...prev, { kind: 'text' }])} style={{ border: `1px dashed ${V('--border')}`, background: '#fff', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', color: V('--ink-muted') }}>+ Text</button>
+          <button onClick={() => setNewObjs((prev) => [...prev, { kind: 'array' }])} style={{ border: `1px dashed ${V('--border')}`, background: '#fff', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', color: V('--ink-muted') }}>+ Array</button>
+          <button onClick={() => setNewObjs((prev) => [...prev, { kind: 'image', displayWidth: 1 }])} style={{ border: `1px dashed ${V('--border')}`, background: '#fff', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', color: V('--ink-muted') }}>+ Image</button>
+        </div>
+      </div>
 
       <div style={{ display: 'grid', gap: 8 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: V('--ink-muted') }}>NARRATION (what the tutor speaks)</div>

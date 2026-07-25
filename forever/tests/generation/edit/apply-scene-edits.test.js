@@ -78,3 +78,34 @@ test('human marks: replace annotations on an image object, stamped groundedBy hu
   assert.throws(() => applySceneEdits(withImage, { marks: [{ objectId: 'obj_text', annotations: [] }] }), /only be drawn on image/);
   assert.throws(() => applySceneEdits(withImage, { marks: [{ objectId: 'ghost', annotations: [] }] }), /does not exist/);
 });
+
+test('board editor v2: add text/array/image objects, resize an image, stay visible without re-voice', () => {
+  const withImage = {
+    ...scene,
+    layout: 'teacher_notebook_code',
+    timeline: { actions: [{ id: 'a1', kind: 'write', startMs: 0, durationMs: 500, targetObjectId: 'obj_text' }] },
+    objects: [...scene.objects, { id: 'obj_img', renderHint: 'image', region: scene.objects[0].region ?? 'notebook_area', content: { url: '/assets/x/f.png', alt: 'figure' } }],
+  };
+  const edited = applySceneEdits(withImage, {
+    newObjects: [
+      { kind: 'text', text: 'My own note about joins.' },
+      { kind: 'array', values: [3, 1, 4, 1, 5], label: 'nums' },
+      { kind: 'image', url: '/assets/x/f.png', alt: 'the schema again, small', displayWidth: 0.5 },
+    ],
+    images: [{ objectId: 'obj_img', displayWidth: 0.4 }],
+  });
+  const added = edited.objects.slice(-3);
+  assert.deepEqual(added.map((o) => o.renderHint), ['text', 'table', 'image']);
+  assert.ok(added.every((o) => o.addedBy === 'human' && o.grounding === 'analogy'));
+  assert.equal(added[1].content.rows[0].values.length, 5); // the hand-drawn array cells
+  assert.equal(added[2].content.displayWidth, 0.5);
+  assert.equal(edited.objects.find((o) => o.id === 'obj_img').content.displayWidth, 0.4); // resize
+  assert.equal(edited.audioUrl, '/audio/k/sc_01.mp3'); // nothing spoken changed -> audio kept
+  // visibility: every added object got a write action prepended to the KEPT timeline
+  const writes = edited.timeline.actions.filter((a) => a.kind === 'write' && String(a.targetObjectId).startsWith('obj_user_'));
+  assert.equal(writes.length, 3);
+  // guards
+  assert.throws(() => applySceneEdits(withImage, { newObjects: [{ kind: 'image', url: 'https://evil.example/x.png', alt: 'x' }] }), /own assets/);
+  assert.throws(() => applySceneEdits(withImage, { images: [{ objectId: 'obj_img', displayWidth: 5 }] }), /between 0.2 and 1/);
+  assert.throws(() => applySceneEdits(withImage, { newObjects: [{ kind: 'hologram' }] }), /kind must be/);
+});

@@ -33,8 +33,11 @@ export function ImageView({ content, progress = 1 }) {
     return () => observer.disconnect();
   }, []);
 
+  // displayWidth (0.2-1): the human board editor's image resize — a fraction of the normal
+  // slot; marks keep scaling with the image because everything inside is percentage-based.
+  const widthPct = typeof content.displayWidth === 'number' ? Math.min(1, Math.max(0.2, content.displayWidth)) : 1;
   return (
-    <figure style={{ margin: 0, maxWidth: 720, marginInline: 'auto' }}>
+    <figure style={{ margin: 0, maxWidth: 720 * widthPct, marginInline: 'auto' }}>
       <div ref={boxRef} style={{ position: 'relative', display: 'inline-block', border: '1px solid #f0dcd5', borderRadius: 12, overflow: 'hidden', background: '#fffcfa' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt={alt} style={{ display: 'block', maxWidth: '100%', height: 'auto' }} />

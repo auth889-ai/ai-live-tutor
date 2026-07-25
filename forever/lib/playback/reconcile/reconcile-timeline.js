@@ -51,7 +51,15 @@ export function reconcileTimeline({ sceneId, objects, voiceLines, clips, audioUr
   const actions = [];
   for (const object of objects) {
     const lines = linesByObject.get(object.id) ?? [];
-    if (lines.length === 0) continue;
+    if (lines.length === 0) {
+      // HUMAN-ADDED objects (board editor) are visible from the top of the scene even when
+      // the human wrote no narration for them — silence must not hide their board work.
+      // AI objects keep the old rule: no narration binding, no reveal.
+      if (object.addedBy === 'human') {
+        actions.push({ id: `act_write_${object.id}`, kind: 'write', startMs: 0, durationMs: 800, targetObjectId: object.id });
+      }
+      continue;
+    }
     const first = timingByLine.get(lines[0].id);
     const last = timingByLine.get(lines[lines.length - 1].id);
 

@@ -9,12 +9,65 @@
 import { validateAnnotations } from '../../board/annotations/annotation-content.js';
 
 const MAX_TEXT = 4000;
+const MAX_ARRAY_CELLS = 24;
 
-export function applySceneEdits(scene, { voiceLines = [], objects = [], newVoiceLines = [], marks = [] } = {}) {
-  if (!Array.isArray(voiceLines) || !Array.isArray(objects) || !Array.isArray(newVoiceLines) || !Array.isArray(marks)) {
-    throw new Error('edits must be { voiceLines: [{id, text}], objects: [{id, content}], newVoiceLines: [{text, targetObjectId?}], marks: [{objectId, annotations}] }');
+// Human-added board objects ("write on the board"): text notes, hand-drawn arrays (rendered
+// through the existing table cells), and images re-placed from the lesson's own real assets.
+// Humans author teaching devices, never source facts — so these carry grounding:"analogy"
+// (the contract's honest tag for invented-by-the-teacher devices) and human provenance.
+function buildNewObject(entry, index, region) {
+  const id = `obj_user_${index + 1}`;
+  const base = { id, region, addedBy: 'human' };
+  if (entry?.kind === 'text') {
+    if (typeof entry.text !== 'string' || !entry.text.trim()) throw new Error(`new object ${index + 1}: text needs non-empty text`);
+    if (entry.text.length > MAX_TEXT) throw new Error(`new object ${index + 1}: text too long`);
+    return { ...base, objectType: 'human_note', renderHint: 'text', grounding: 'analogy', content: entry.text };
   }
-  if (!voiceLines.length && !objects.length && !newVoiceLines.length && !marks.length) throw new Error('no edits provided');
+  if (entry?.kind === 'array') {
+    const values = entry.values;
+    if (!Array.isArray(values) || values.length < 1 || values.length > MAX_ARRAY_CELLS) {
+      throw new Error(`new object ${index + 1}: array needs 1-${MAX_ARRAY_CELLS} values`);
+    }
+    if (!values.every((v) => typeof v === 'number' || (typeof v === 'string' && v.length <= 12))) {
+      throw new Error(`new object ${index + 1}: array values must be numbers or short strings`);
+    }
+    return {
+      ...base,
+      objectType: 'human_array',
+      renderHint: 'table',
+      grounding: 'analogy',
+      content: {
+        headers: ['', ...values.map((_, i) => String(i))],
+        rows: [{ label: entry.label?.slice(0, 24) || 'values', values: values.map(String) }],
+      },
+    };
+  }
+  if (entry?.kind === 'image') {
+    const url = String(entry.url ?? '');
+    // Only the lesson's own stored assets — an arbitrary external URL on the board would
+    // bypass every grounding rule the pipeline enforces.
+    if (!/^\/(assets|images|audio)\//.test(url) && !url.startsWith('/dev-')) {
+      throw new Error(`new object ${index + 1}: image url must be one of this lesson's own assets (/assets/...)`);
+    }
+    if (typeof entry.alt !== 'string' || !entry.alt.trim()) throw new Error(`new object ${index + 1}: image needs alt text`);
+    return {
+      ...base,
+      objectType: 'human_image',
+      renderHint: 'image',
+      grounding: 'analogy',
+      content: { url, alt: entry.alt.slice(0, 200), ...(isWidth(entry.displayWidth) ? { displayWidth: entry.displayWidth } : {}) },
+    };
+  }
+  throw new Error(`new object ${index + 1}: kind must be text | array | image`);
+}
+
+const isWidth = (w) => typeof w === 'number' && w >= 0.2 && w <= 1;
+
+export function applySceneEdits(scene, { voiceLines = [], objects = [], newVoiceLines = [], marks = [], newObjects = [], images = [] } = {}) {
+  if (![voiceLines, objects, newVoiceLines, marks, newObjects, images].every(Array.isArray)) {
+    throw new Error('edits must be arrays: { voiceLines, objects, newVoiceLines, marks, newObjects, images }');
+  }
+  if (!voiceLines.length && !objects.length && !newVoiceLines.length && !marks.length && !newObjects.length && !images.length) throw new Error('no edits provided');
 
   const lineById = new Map((scene.voiceLines ?? []).map((line) => [line.id, line]));
   for (const edit of voiceLines) {
@@ -66,24 +119,60 @@ export function applySceneEdits(scene, { voiceLines = [], objects = [], newVoice
     markEdits.set(edit.objectId, annotations);
   }
 
+  // IMAGE LAYOUT edits (resize on the board): displayWidth is pure presentation — no
+  // re-voice, no grounding impact; validated range keeps the image legible.
+  const imageEdits = new Map();
+  for (const edit of images) {
+    const target = objectById.get(edit?.objectId);
+    if (!target) throw new Error(`images target "${edit?.objectId}" does not exist in this scene`);
+    if (target.renderHint !== 'image') throw new Error(`images edits only apply to image objects ("${edit.objectId}" is ${target.renderHint})`);
+    if (!isWidth(edit.displayWidth)) throw new Error(`images "${edit.objectId}": displayWidth must be a number between 0.2 and 1`);
+    imageEdits.set(edit.objectId, edit.displayWidth);
+  }
+
+  // NEW board objects, placed in the same region as the scene's existing material.
+  const region = (scene.objects ?? [])[0]?.region ?? 'notebook_area';
+  const added = newObjects.map((entry, i) => buildNewObject(entry, i, region));
+  const usedIds = new Set((scene.objects ?? []).map((o) => o.id));
+  for (const object of added) {
+    while (usedIds.has(object.id)) object.id = `${object.id}x`;
+    usedIds.add(object.id);
+  }
+
   const lineEdits = new Map(voiceLines.map((e) => [e.id, e.text]));
   const objectEdits = new Map(objects.map((e) => [e.id, e.content]));
   const edited = {
     ...scene,
-    objects: (scene.objects ?? []).map((object) => {
-      let next = object;
-      if (objectEdits.has(object.id)) next = { ...next, content: objectEdits.get(object.id) };
-      if (markEdits.has(object.id)) next = { ...next, content: { ...next.content, annotations: markEdits.get(object.id) } };
-      return next;
-    }),
+    objects: [
+      ...(scene.objects ?? []).map((object) => {
+        let next = object;
+        if (objectEdits.has(object.id)) next = { ...next, content: objectEdits.get(object.id) };
+        if (markEdits.has(object.id)) next = { ...next, content: { ...next.content, annotations: markEdits.get(object.id) } };
+        if (imageEdits.has(object.id)) next = { ...next, content: { ...next.content, displayWidth: imageEdits.get(object.id) } };
+        return next;
+      }),
+      ...added,
+    ],
     voiceLines: [
       ...(scene.voiceLines ?? []).map((line) => (lineEdits.has(line.id) ? { ...line, text: lineEdits.get(line.id) } : line)),
       ...appended,
     ],
   };
   // Clearing audioUrl is what makes voiceScene actually re-voice (it early-returns on a
-  // voiced scene). Mark-only edits change nothing SPOKEN — keep the audio and timeline.
+  // voiced scene). Mark/layout-only edits change nothing SPOKEN — keep the audio; adding
+  // board objects also keeps it (the human narrates them by adding lines if they want).
   const spokenChanged = voiceLines.length || newVoiceLines.length || objects.length;
   if (spokenChanged) delete edited.audioUrl;
+  // Keeping the existing audio/timeline (mark/layout/add-only edits): human-added objects
+  // still need a write action or the player never shows them (visibility = timeline).
+  if (!spokenChanged && added.length && edited.timeline?.actions) {
+    edited.timeline = {
+      ...edited.timeline,
+      actions: [
+        ...added.map((object) => ({ id: `act_write_${object.id}`, kind: 'write', startMs: 0, durationMs: 800, targetObjectId: object.id })),
+        ...edited.timeline.actions,
+      ],
+    };
+  }
   return edited;
 }
