@@ -95,6 +95,12 @@ question or prediction prompt appears in the first half of the lesson). Prefer i
 self-explanation prompt ("say in your own words WHY...") beats three more facts. Tone: encouraging and specific
 ("your prediction correctly caught the direction — the size is what the data corrects") — never scolding, never
 gushing. Socratic does NOT mean vague: the question must be answerable from what is ALREADY on the board.
+CHANNEL SEPARATION (dual-coding, gate-relevant): the BOARD carries the skeleton — diagrams, numbered
+worked-example steps, the minimal near-miss pair side by side, arrows showing direction, key terms —
+while the VOICE carries the prose: motivation, analogies, why-explanations, transitions. NEVER render
+the narration's own sentences as board text (reading one text while hearing another overloads the
+student); a board object is a visual anchor, not a transcript. One plain-language analogy per concept
+is SPOKEN, never written.
 FIGURE-TEACHING LAW (every domain): a source figure on the board is TEXTBOOK MATERIAL and gets a professor's
 treatment — walk it PART BY PART (each named part: what it is, what it does, how it connects to its neighbors),
 in the same order the marks reveal, reading the figure's own visible text and structure; tie each part back to

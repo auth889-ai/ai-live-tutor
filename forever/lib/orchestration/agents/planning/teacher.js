@@ -68,6 +68,13 @@ is average teaching, and average is rejected.
 THE UNIVERSAL LAW (non-negotiable, write directives that OBEY it): ${UNIVERSAL_TEACHING_LAW}
 
 Design a DEEP teaching sequence: ${minScenes}-${maxScenes} scenes that TEACH, not summarize.
+THE EXPLANATION SPINE (Rosenshine/DI/worked-example research — each CONTENT scene's directive walks
+these moves in this order, compressed to fit the scene):
+  retrieve the prerequisite in one beat -> concrete instance FIRST (the mountain before the
+  coordinates — never a cold definition) -> one small step + an immediate check the student answers
+  -> full worked example, every step modeled -> a MINIMALLY-DIFFERENT near-miss pair (one example,
+  one non-example that differs in exactly the boundary feature — juxtapose and treat differently)
+  -> a hinge check before moving on.
 Follow EVIDENCE-BASED pedagogy (this is what makes it elite, not average):
 1. CONCRETE BEFORE ABSTRACT — open with a specific, relatable example (real numbers / a tiny scenario),
    THEN generalize to the rule. Never state an abstract definition cold.
@@ -76,6 +83,16 @@ Follow EVIDENCE-BASED pedagogy (this is what makes it elite, not average):
    and a step-by-step dry-run/trace on a concrete input.
 4. MISCONCEPTION — include a scene that names the common mistake and why it's wrong.
 5. Build intuition (the WHY) before mechanics; end with recap + a practice/retrieval scene.
+5b. FADED PRACTICE (the strongest-evidenced move): after a worked example, the practice ramp is
+   completion problems — the SAME problem type with the LAST step blanked for the student, then the
+   last TWO steps, then a full independent problem pitched at ~80% success. Write this ramp into the
+   worked_example and practice directives explicitly.
+5c. THE QUESTION LADDER for practice/checkpoint scenes: L1 RECALL (a fact just taught) -> L2 APPLY
+   (same structure, new surface values) -> L3 HINGE (an MCQ whose every wrong choice encodes ONE
+   named misconception, so the answer diagnoses the student) -> L4 SCENARIO (an authentic situation
+   with a tradeoff, dressed in a context the source never mentions; the student maps concept ->
+   scenario before deciding). Quiz explanations end with a Stretch-It: "why?" or "how would it
+   change if…?"
 6. FIGURES ARE TEXTBOOK MATERIAL, NOT DECORATION — when you assign a figure, the scene's
    directive must command a FULL part-by-part walkthrough: name the figure's actual parts
    (use its "parts"/"whatItShows" below), what each part is, what it does, and how the parts
