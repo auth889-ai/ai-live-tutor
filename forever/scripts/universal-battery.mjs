@@ -1205,6 +1205,128 @@ rooms = [[INF, -1, 0, INF], [INF, INF, INF, -1], [INF, -1, INF, -1], [0, -1, INF
             if dist[u] + w < dist[v]:
                 dist[v] = dist[u] + w
     return dist`, 'bellman_ford(5, [[0, 1, 6], [0, 2, 7], [1, 2, 8], [1, 3, 5], [2, 3, -3], [1, 4, -4], [3, 4, 9]], 0)'],
+  // ═══ BATCH 1b (2026-07-26) — graph-100 expansion, part 2 ═══
+  ['graphs', 'Kosaraju SCC (two DFS passes + transpose)', `def kosaraju(adj, n):
+    order = []
+    seen = set()
+    def dfs1(u):
+        seen.add(u)
+        for v in adj[u]:
+            if v not in seen:
+                dfs1(v)
+        order.append(u)
+    for u in range(n):
+        if u not in seen:
+            dfs1(u)
+    radj = {u: [] for u in range(n)}
+    for u in range(n):
+        for v in adj[u]:
+            radj[v].append(u)
+    comp = {}
+    def dfs2(u, label):
+        comp[u] = label
+        for v in radj[u]:
+            if v not in comp:
+                dfs2(v, label)
+    labels = 0
+    for u in reversed(order):
+        if u not in comp:
+            dfs2(u, labels)
+            labels += 1
+    return labels
+adj = {0: [1], 1: [2], 2: [0, 3], 3: [4], 4: [3]}`, 'kosaraju(adj, 5)'],
+
+  ['graphs', 'LC1466 Reorder Routes (signed adjacency, count flips)', `from collections import deque
+def min_reorder(n, adj):
+    q = deque([0])
+    seen = {0}
+    flips = 0
+    while q:
+        u = q.popleft()
+        for v, needs_flip in adj[u]:
+            if v not in seen:
+                seen.add(v)
+                if needs_flip:
+                    flips += 1
+                q.append(v)
+    return flips
+adj = {0: [(1, 1), (2, 0)], 1: [(0, 0), (3, 1)], 2: [(0, 1)], 3: [(1, 0)]}`, 'min_reorder(4, adj)'],
+
+  ['graphs', 'LC851 Loud and Rich (DFS on richer-than graph, min quiet)', `def loud_rich(adj, quiet):
+    n = len(quiet)
+    answer = [-1] * n
+    def dfs(u):
+        if answer[u] != -1:
+            return answer[u]
+        answer[u] = u
+        for v in adj[u]:
+            best = dfs(v)
+            if quiet[best] < quiet[answer[u]]:
+                answer[u] = best
+        return answer[u]
+    for u in range(n):
+        dfs(u)
+    return answer
+adj = {0: [1], 1: [2], 2: [], 3: [1]}`, 'loud_rich(adj, [3, 2, 5, 1])'],
+
+  ['graphs', 'LC1557 Minimum Vertices to Reach All (indegree-zero set)', `def find_smallest(n, adj):
+    indegree = {u: 0 for u in range(n)}
+    for u in range(n):
+        for v in adj[u]:
+            indegree[v] += 1
+    return [u for u in range(n) if indegree[u] == 0]
+adj = {0: [1], 1: [], 2: [1], 3: [4], 4: [], 5: [4]}`, 'find_smallest(6, adj)'],
+
+  ['grids', 'LC934 Shortest Bridge (DFS paint island, BFS expand)', `from collections import deque
+def shortest_bridge(grid):
+    n = len(grid)
+    q = deque()
+    def paint(r, c):
+        if not (0 <= r < n and 0 <= c < n) or grid[r][c] != 1:
+            return
+        grid[r][c] = 2
+        q.append((r, c, 0))
+        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            paint(r + dr, c + dc)
+    found = False
+    for r in range(n):
+        for c in range(n):
+            if grid[r][c] == 1 and not found:
+                paint(r, c)
+                found = True
+    while q:
+        r, c, d = q.popleft()
+        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < n and 0 <= nc < n:
+                if grid[nr][nc] == 1:
+                    return d
+                if grid[nr][nc] == 0:
+                    grid[nr][nc] = 2
+                    q.append((nr, nc, d + 1))
+    return -1`, 'shortest_bridge([[0, 1, 0], [0, 0, 0], [0, 0, 1]])'],
+
+  ['grids', 'LC1631 Path With Minimum Effort (Dijkstra over grid cells)', `import heapq
+def min_effort(heights):
+    rows, cols = len(heights), len(heights[0])
+    effort = {(r, c): float('inf') for r in range(rows) for c in range(cols)}
+    effort[(0, 0)] = 0
+    pq = [(0, 0, 0)]
+    while pq:
+        e, r, c = heapq.heappop(pq)
+        if (r, c) == (rows - 1, cols - 1):
+            return e
+        if e > effort[(r, c)]:
+            continue
+        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < rows and 0 <= nc < cols:
+                ne = max(e, abs(heights[nr][nc] - heights[r][c]))
+                if ne < effort[(nr, nc)]:
+                    effort[(nr, nc)] = ne
+                    heapq.heappush(pq, (ne, nr, nc))
+    return 0`, 'min_effort([[1, 2, 2], [3, 8, 2], [5, 3, 5]])'],
+
   ['graphs', 'LC133 Clone Graph (object graph via neighbors attribute)', `class Node:
     def __init__(self, val):
         self.val = val
