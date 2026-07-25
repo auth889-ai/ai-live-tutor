@@ -74,6 +74,7 @@ STRUCTURE RULES (from real course calibration — violations are rejected):
         })),
       })),
     };
+    repairCourseCoverage(outline, sourcePack);
 
     try {
       validateCourseOutline(outline);
@@ -83,4 +84,46 @@ STRUCTURE RULES (from real course calibration — violations are rejected):
     }
   }
   throw new Error(`Dean could not produce a valid course outline: ${problem}`);
+}
+
+// COURSE-LEVEL COVERAGE GUARANTEE (user requirement 2026-07-26: "never skip a single word
+// of the PDF"): the lesson-level guarantee (teacher.js repairCoverage) only covers chunks
+// the Dean handed that lesson — anything the Dean never assigned was legally skipped.
+// Deterministic repair: every chunk of the SourcePack is owned by >=1 lesson. Unassigned
+// chunks join the lesson whose title/description shares their vocabulary; chunks with no
+// textual home become "Deep Dive: the material nobody covered" lessons (capped per episode
+// append; nothing is ever silently dropped).
+export function repairCourseCoverage(outline, sourcePack) {
+  const lessons = (outline.episodes ?? []).flatMap((e) => e.lessons ?? []);
+  if (!lessons.length) return outline;
+  const covered = new Set(lessons.flatMap((l) => l.focusChunkIds ?? []));
+  const tokensOf = (s) => new Set(String(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ').filter((t) => t.length >= 4));
+  const orphans = [];
+  for (const chunk of sourcePack.chunks ?? []) {
+    if (covered.has(chunk.id)) continue;
+    const chunkTokens = tokensOf(chunk.text.slice(0, 400));
+    let best = null;
+    let bestOverlap = 0;
+    for (const lesson of lessons) {
+      const overlap = [...tokensOf(`${lesson.title} ${lesson.description ?? ''} ${lesson.goal ?? ''}`)].filter((t) => chunkTokens.has(t)).length;
+      if (overlap > bestOverlap) { best = lesson; bestOverlap = overlap; }
+    }
+    if (best && bestOverlap >= 2) best.focusChunkIds.push(chunk.id);
+    else orphans.push(chunk.id);
+  }
+  if (orphans.length) {
+    const lastEpisode = outline.episodes.at(-1);
+    // ~6 chunks per deep-dive lesson keeps each within a real lesson's teaching span.
+    for (let i = 0; i < orphans.length; i += 6) {
+      lastEpisode.lessons.push({
+        id: `ep_${String(outline.episodes.length).padStart(2, '0')}_dd_${Math.floor(i / 6) + 1}`,
+        title: `Deep Dive: What the Chapters Also Say (part ${Math.floor(i / 6) + 1})`,
+        minutes: 8,
+        goal: 'Teach the source material no other lesson covered — fully, not as a footnote.',
+        focusChunkIds: orphans.slice(i, i + 6),
+      });
+    }
+    console.error(`[dean] course coverage repair: ${orphans.length} unassigned chunk(s) -> ${Math.ceil(orphans.length / 6)} deep-dive lesson(s); nothing skipped`);
+  }
+  return outline;
 }
