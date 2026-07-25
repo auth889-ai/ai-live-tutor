@@ -43,3 +43,22 @@ test('GRID-AS-GRAPH is rejected toward diagramType grid (live screenshot: 3x4 DP
   const tree = [{ id: 't', renderHint: 'diagram', content: { diagramType: 'graph', nodes: [{ id: '1', label: '8' }, { id: '2', label: '3' }, { id: '3', label: '10' }, { id: '4', label: '14' }], edges: [{ from: '1', to: '2' }] } }];
   assert.equal(structureViolation(tree, { title: 'BST insert', directive: 'tree walk' }), null);
 });
+
+test('SLIDE-ALONE: a figure with no tutor notes is a violation; figure + own notes passes', () => {
+  const brief = { title: 'The star schema', directive: 'teach from the source figure' };
+  const slideOnly = [
+    { id: 'title', objectType: 'scene_title', renderHint: 'text', content: 'Star schema' },
+    { id: 'fig', renderHint: 'image', content: { url: '/assets/f.png', alt: 'star schema' } },
+  ];
+  assert.match(structureViolation(slideOnly, brief), /slide alone is reading, not teaching/);
+  const withNotes = [
+    ...slideOnly,
+    { id: 'notes', objectType: 'key_points', renderHint: 'list', content: { items: ['Fact table holds measures, one row per sale', 'Dimensions hold context; join by FK', 'Price lives ONCE — the whole point'] } },
+  ];
+  assert.equal(structureViolation(withNotes, brief), null);
+  // a caption fragment is not notes
+  const withFragment = [...slideOnly, { id: 'cap', renderHint: 'text', content: 'Figure 2.1' }];
+  assert.match(structureViolation(withFragment, brief), /slide alone/);
+  // boards without figures are untouched by the rule
+  assert.equal(structureViolation([{ id: 't', renderHint: 'text', content: 'plain concept scene with a long enough body' }], { title: 'x', directive: 'y' }), null);
+});

@@ -24,6 +24,29 @@ export function structureViolation(objects, brief) {
       }
     }
   }
+  // SLIDE-ALONE RULE (user requirement 2026-07-26: "explain like a real human tutor, not
+  // just reading the slide"): a source figure may never be the whole board. A real tutor
+  // shows the figure AND writes their own notes beside it — takeaways in their own words,
+  // the trap to avoid, a simplifying mini-table. Deterministic and repairable.
+  const images = (objects ?? []).filter((o) => o?.renderHint === 'image');
+  if (images.length > 0) {
+    const NOTE_HINTS = new Set(['text', 'list', 'callout', 'table', 'math', 'timeline', 'code', 'diagram']);
+    const hasTutorNotes = (objects ?? []).some((o) => {
+      if (!NOTE_HINTS.has(o?.renderHint) || o.objectType === 'scene_title' || o.decorative) return false;
+      const body = typeof o.content === 'string' ? o.content : JSON.stringify(o.content ?? '');
+      return body.length >= 40; // a real note, not a caption fragment
+    });
+    if (!hasTutorNotes) {
+      return (
+        `object ${images[0].id}: this board shows a source figure with NO tutor notes — a slide alone ` +
+        `is reading, not teaching. ADD your own notes object beside the figure: a "list" of 2-4 key ` +
+        `takeaways IN YOUR OWN WORDS, or a "callout" naming the common trap, or a small "table" that ` +
+        `simplifies what the figure shows — derived from the figure and the source chunks, never a ` +
+        `transcription of the image.`
+      );
+    }
+  }
+
   const conceptText = `${brief?.title ?? ''} ${brief?.directive ?? ''}`;
   if (!STRUCTURAL_CONCEPTS.test(conceptText)) return null;
 
