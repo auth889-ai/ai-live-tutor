@@ -15,7 +15,9 @@ import { dryRunQualityIssue } from '../lib/orchestration/agents/coding/execution
 
 const exec = async ({ source }) => {
   try {
-    return { stdout: execFileSync('python3', ['-c', source], { encoding: 'utf8', timeout: 15_000 }), stderr: '', timedOut: false };
+    // maxBuffer: a state-space BFS recording (LC752-class) exceeds Node's 1MB default —
+    // truncation surfaced as a phantom "no @@UNIREC line" (live-caught, batch 1a).
+    return { stdout: execFileSync('python3', ['-c', source], { encoding: 'utf8', timeout: 15_000, maxBuffer: 64 * 1024 * 1024 }), stderr: '', timedOut: false };
   } catch (err) {
     return { stdout: String(err.stdout ?? ''), stderr: String(err.stderr ?? err.message), timedOut: false };
   }
@@ -898,6 +900,322 @@ def last_stone(stones):
     while b:
         a, b = b, a % b
     return a`, 'gcd(48, 18)'],
+
+  // ═══ BATCH 1a (2026-07-25) — graph-100 expansion, part 1: 18 unseen graph problems ═══
+  ['graphs', 'LC210 Course Schedule II (Kahn topo order output)', `from collections import deque
+def find_order(n, adj, indegree):
+    q = deque([u for u in range(n) if indegree[u] == 0])
+    order = []
+    while q:
+        u = q.popleft()
+        order.append(u)
+        for v in adj[u]:
+            indegree[v] -= 1
+            if indegree[v] == 0:
+                q.append(v)
+    return order if len(order) == n else []
+adj = {0: [1, 2], 1: [3], 2: [3], 3: []}
+indegree = {0: 0, 1: 1, 2: 1, 3: 2}`, 'find_order(4, adj, indegree)'],
+
+  ['graphs', 'LC743 Network Delay Time (Dijkstra, answer = farthest node)', `import heapq
+def network_delay(g, n, k):
+    dist = {u: float('inf') for u in range(1, n + 1)}
+    dist[k] = 0
+    pq = [(0, k)]
+    while pq:
+        d, u = heapq.heappop(pq)
+        if d > dist[u]:
+            continue
+        for v, w in g[u]:
+            if d + w < dist[v]:
+                dist[v] = d + w
+                heapq.heappush(pq, (dist[v], v))
+    worst = max(dist.values())
+    return worst if worst != float('inf') else -1
+g = {1: [(2, 1)], 2: [(3, 1)], 3: [(4, 1)], 4: []}`, 'network_delay(g, 4, 2)'],
+
+  ['graphs', 'LC787 Cheapest Flights Within K Stops (round-limited relaxation)', `def cheapest(g, n, src, dst, k):
+    dist = {i: float('inf') for i in range(n)}
+    dist[src] = 0
+    for _ in range(k + 1):
+        nxt = dict(dist)
+        for u in range(n):
+            if dist[u] == float('inf'):
+                continue
+            for v, w in g[u]:
+                if dist[u] + w < nxt[v]:
+                    nxt[v] = dist[u] + w
+        dist = nxt
+    return dist[dst] if dist[dst] != float('inf') else -1
+g = {0: [(1, 100), (2, 500)], 1: [(2, 100)], 2: [], 3: []}`, 'cheapest(g, 4, 0, 2, 1)'],
+
+  ['graphs', 'LC1971 Find if Path Exists (BFS reachability)', `from collections import deque
+def path_exists(adj, src, dst):
+    q = deque([src])
+    seen = {src}
+    while q:
+        u = q.popleft()
+        if u == dst:
+            return True
+        for v in adj[u]:
+            if v not in seen:
+                seen.add(v)
+                q.append(v)
+    return False
+adj = {0: [1, 2], 1: [0], 2: [0], 3: [4], 4: [3], 5: []}`, 'path_exists(adj, 0, 5)'],
+
+  ['graphs', 'LC841 Keys and Rooms (DFS with a stack of keys)', `def can_visit_all(rooms):
+    seen = {0}
+    stack = [0]
+    while stack:
+        room = stack.pop()
+        for key in rooms[room]:
+            if key not in seen:
+                seen.add(key)
+                stack.append(key)
+    return len(seen) == len(rooms)`, 'can_visit_all([[1], [2], [3], []])'],
+
+  ['graphs', 'LC886 Possible Bipartition (2-coloring the dislike graph)', `from collections import deque
+def possible_bipartition(n, adj):
+    color = {}
+    for start in range(1, n + 1):
+        if start in color:
+            continue
+        color[start] = 0
+        q = deque([start])
+        while q:
+            u = q.popleft()
+            for v in adj[u]:
+                if v not in color:
+                    color[v] = 1 - color[u]
+                    q.append(v)
+                elif color[v] == color[u]:
+                    return False
+    return True
+adj = {1: [2, 3], 2: [1, 4], 3: [1], 4: [2]}`, 'possible_bipartition(4, adj)'],
+
+  ['graphs', 'LC399 Evaluate Division (weighted DFS, ratio product)', `def calc(g, src, dst):
+    seen = set()
+    stack = [(src, 1.0)]
+    while stack:
+        node, ratio = stack.pop()
+        if node == dst:
+            return ratio
+        seen.add(node)
+        for nxt, w in g[node]:
+            if nxt not in seen:
+                stack.append((nxt, ratio * w))
+    return -1.0
+g = {'a': [('b', 2.0)], 'b': [('a', 0.5), ('c', 3.0)], 'c': [('b', 1.0 / 3.0)]}`, "calc(g, 'a', 'c')"],
+
+  ['graphs', 'LC323 Number of Connected Components (build adjacency, DFS)', `def count_components(n, edges):
+    adj = {i: [] for i in range(n)}
+    for u, v in edges:
+        adj[u].append(v)
+        adj[v].append(u)
+    seen = set()
+    count = 0
+    for start in range(n):
+        if start in seen:
+            continue
+        count += 1
+        stack = [start]
+        seen.add(start)
+        while stack:
+            u = stack.pop()
+            for v in adj[u]:
+                if v not in seen:
+                    seen.add(v)
+                    stack.append(v)
+    return count`, 'count_components(5, [[0, 1], [1, 2], [3, 4]])'],
+
+  ['graphs', 'LC261 Graph Valid Tree (edge count + full reachability)', `from collections import deque
+def valid_tree(n, edges):
+    if len(edges) != n - 1:
+        return False
+    adj = {i: [] for i in range(n)}
+    for u, v in edges:
+        adj[u].append(v)
+        adj[v].append(u)
+    seen = {0}
+    q = deque([0])
+    while q:
+        u = q.popleft()
+        for v in adj[u]:
+            if v not in seen:
+                seen.add(v)
+                q.append(v)
+    return len(seen) == n`, 'valid_tree(5, [[0, 1], [0, 2], [0, 3], [1, 4]])'],
+
+  ['graphs', 'LC1976 Number of Ways to Arrive (Dijkstra + path counting)', `import heapq
+def count_paths(g, n):
+    dist = {i: float('inf') for i in range(n)}
+    ways = {i: 0 for i in range(n)}
+    dist[0] = 0
+    ways[0] = 1
+    pq = [(0, 0)]
+    while pq:
+        d, u = heapq.heappop(pq)
+        if d > dist[u]:
+            continue
+        for v, w in g[u]:
+            nd = d + w
+            if nd < dist[v]:
+                dist[v] = nd
+                ways[v] = ways[u]
+                heapq.heappush(pq, (nd, v))
+            elif nd == dist[v]:
+                ways[v] += ways[u]
+    return ways[n - 1]
+g = {0: [(1, 2), (2, 5)], 1: [(0, 2), (2, 3), (3, 3)], 2: [(0, 5), (1, 3), (3, 1)], 3: [(1, 3), (2, 1)]}`, 'count_paths(g, 4)'],
+
+  ['graphs', 'LC684 Redundant Connection (union-find over the edge stream)', `def find_redundant(edges, n):
+    parent = list(range(n + 1))
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    for u, v in edges:
+        ru, rv = find(u), find(v)
+        if ru == rv:
+            return [u, v]
+        parent[rv] = ru
+    return []`, 'find_redundant([[1, 2], [1, 3], [2, 3]], 3)'],
+
+  ['graphs', 'LC433 Minimum Genetic Mutation (implicit BFS over the bank)', `from collections import deque
+def min_mutation(start, end, bank):
+    bankset = set(bank)
+    q = deque([(start, 0)])
+    seen = {start}
+    while q:
+        gene, steps = q.popleft()
+        if gene == end:
+            return steps
+        for i in range(len(gene)):
+            for ch in 'ACGT':
+                nxt = gene[:i] + ch + gene[i + 1:]
+                if nxt in bankset and nxt not in seen:
+                    seen.add(nxt)
+                    q.append((nxt, steps + 1))
+    return -1`, "min_mutation('AACCGGTT', 'AAACGGTA', ['AACCGGTA', 'AACCGCTA', 'AAACGGTA'])"],
+
+  ['graphs', 'LC752 Open the Lock (implicit BFS over wheel states)', `from collections import deque
+def open_lock(deadends, target):
+    dead = set(deadends)
+    if '0000' in dead:
+        return -1
+    q = deque([('0000', 0)])
+    seen = {'0000'}
+    while q:
+        state, turns = q.popleft()
+        if state == target:
+            return turns
+        for i in range(4):
+            d = int(state[i])
+            for nd in ((d + 1) % 10, (d - 1) % 10):
+                nxt = state[:i] + str(nd) + state[i + 1:]
+                if nxt not in dead and nxt not in seen:
+                    seen.add(nxt)
+                    q.append((nxt, turns + 1))
+    return -1`, "open_lock(['0011'], '0022')"],
+
+  ['grids', 'LC1091 Shortest Path in Binary Matrix (8-direction BFS)', `from collections import deque
+def shortest_clear_path(grid):
+    n = len(grid)
+    if grid[0][0] or grid[n - 1][n - 1]:
+        return -1
+    q = deque([(0, 0, 1)])
+    seen = {(0, 0)}
+    while q:
+        r, c, d = q.popleft()
+        if (r, c) == (n - 1, n - 1):
+            return d
+        for dr in (-1, 0, 1):
+            for dc in (-1, 0, 1):
+                if dr == 0 and dc == 0:
+                    continue
+                nr, nc = r + dr, c + dc
+                if 0 <= nr < n and 0 <= nc < n and grid[nr][nc] == 0 and (nr, nc) not in seen:
+                    seen.add((nr, nc))
+                    q.append((nr, nc, d + 1))
+    return -1`, 'shortest_clear_path([[0, 0, 0], [1, 1, 0], [1, 1, 0]])'],
+
+  ['grids', 'LC417 Pacific Atlantic Water Flow (two multi-source DFS)', `def pac_atl(heights):
+    rows, cols = len(heights), len(heights[0])
+    pac = set()
+    atl = set()
+    def dfs(r, c, seen):
+        seen.add((r, c))
+        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < rows and 0 <= nc < cols and (nr, nc) not in seen and heights[nr][nc] >= heights[r][c]:
+                dfs(nr, nc, seen)
+    for c in range(cols):
+        dfs(0, c, pac)
+        dfs(rows - 1, c, atl)
+    for r in range(rows):
+        dfs(r, 0, pac)
+        dfs(r, cols - 1, atl)
+    return sorted(pac & atl)`, 'pac_atl([[1, 2, 3], [8, 9, 4], [7, 6, 5]])'],
+
+  ['grids', 'LC286 Walls and Gates (multi-source BFS from every gate)', `from collections import deque
+INF = 2147483647
+def walls_gates(rooms):
+    q = deque()
+    for r in range(len(rooms)):
+        for c in range(len(rooms[0])):
+            if rooms[r][c] == 0:
+                q.append((r, c))
+    while q:
+        r, c = q.popleft()
+        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < len(rooms) and 0 <= nc < len(rooms[0]) and rooms[nr][nc] == INF:
+                rooms[nr][nc] = rooms[r][c] + 1
+                q.append((nr, nc))
+    return rooms
+rooms = [[INF, -1, 0, INF], [INF, INF, INF, -1], [INF, -1, INF, -1], [0, -1, INF, INF]]`, 'walls_gates(rooms)'],
+
+  ['grids', 'LC1254 Number of Closed Islands (border-touch disqualifies)', `def closed_islands(grid):
+    rows, cols = len(grid), len(grid[0])
+    def dfs(r, c):
+        if not (0 <= r < rows and 0 <= c < cols):
+            return False
+        if grid[r][c] == 1:
+            return True
+        grid[r][c] = 1
+        closed = True
+        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            if not dfs(r + dr, c + dc):
+                closed = False
+        return closed
+    count = 0
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] == 0 and dfs(r, c):
+                count += 1
+    return count`, 'closed_islands([[1, 1, 1, 1], [1, 0, 0, 1], [1, 0, 0, 1], [1, 1, 1, 0]])'],
+
+  ['graphs', 'LC133 Clone Graph (object graph via neighbors attribute)', `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.neighbors = []
+def clone(node, seen=None):
+    if seen is None:
+        seen = {}
+    if node in seen:
+        return seen[node]
+    copy = Node(node.val)
+    seen[node] = copy
+    for nb in node.neighbors:
+        copy.neighbors.append(clone(nb, seen))
+    return copy
+n1, n2, n3, n4 = Node(1), Node(2), Node(3), Node(4)
+n1.neighbors = [n2, n4]
+n2.neighbors = [n1, n3]
+n3.neighbors = [n2, n4]
+n4.neighbors = [n1, n3]`, 'clone(n1)'],
 ];
 
 // THE FRONTIER — every KNOWN-GAP shape, run and reported honestly. These rows are excluded
@@ -920,6 +1238,75 @@ const FRONTIER = [
         cur = max(x, cur + x)
         best = max(best, cur)
     return best`, 'max_sub([-2, 1, -3, 4, -1, 2, 1, -5, 4])'],
+
+  // ═══ BATCH 1a frontier (2026-07-25): the EDGE-LIST family. MEASURED same day: none of
+  // these floor — they land verified TABLE/ARRAY lenses (Bellman-Ford/Prim → dp-table,
+  // Kruskal → union-find, Floyd-Warshall → grid-walk, Town Judge → pointer-array). Held in
+  // the frontier DELIBERATELY despite "lens landed": a table view of Bellman-Ford is
+  // correct-but-not-the-network-drawing; the synthesized-adjacency upgrade (build {u:[v]}
+  // from the recorded edge list, reuse compileGraphWalk) is what promotes these as GRAPH
+  // teaching. Promote only when they render nodes/edges, not when any lens claims them.
+  ['Bellman-Ford over a raw edge list (V-1 relaxation rounds)', `def bellman_ford(n, edges, src):
+    dist = [float('inf')] * n
+    dist[src] = 0
+    for _ in range(n - 1):
+        for u, v, w in edges:
+            if dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+    return dist`, 'bellman_ford(5, [[0, 1, 6], [0, 2, 7], [1, 2, 8], [1, 3, 5], [2, 3, -3], [1, 4, -4], [3, 4, 9]], 0)'],
+  ['Kruskal MST (sorted edge list + union-find)', `def kruskal(n, edges):
+    parent = list(range(n))
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    total = 0
+    picked = []
+    for w, u, v in sorted(edges):
+        ru, rv = find(u), find(v)
+        if ru != rv:
+            parent[rv] = ru
+            total += w
+            picked.append((u, v, w))
+    return total, picked`, 'kruskal(4, [(1, 0, 1), (3, 1, 2), (2, 0, 2), (4, 2, 3), (5, 1, 3)])'],
+  ['Floyd-Warshall (all-pairs, triple loop — a table algorithm by nature)', `def floyd_warshall(dist):
+    n = len(dist)
+    for k in range(n):
+        for i in range(n):
+            for j in range(n):
+                if dist[i][k] + dist[k][j] < dist[i][j]:
+                    dist[i][j] = dist[i][k] + dist[k][j]
+    return dist
+INF = float('inf')`, 'floyd_warshall([[0, 3, INF, 7], [8, 0, 2, INF], [5, INF, 0, 1], [2, INF, INF, 0]])'],
+  ['LC1584 Min Cost to Connect Points (Prim over an implicit complete graph)', `def min_cost_connect(points):
+    n = len(points)
+    in_mst = [False] * n
+    min_dist = [float('inf')] * n
+    min_dist[0] = 0
+    total = 0
+    for _ in range(n):
+        u = -1
+        for i in range(n):
+            if not in_mst[i] and (u == -1 or min_dist[i] < min_dist[u]):
+                u = i
+        in_mst[u] = True
+        total += min_dist[u]
+        for v in range(n):
+            if not in_mst[v]:
+                d = abs(points[u][0] - points[v][0]) + abs(points[u][1] - points[v][1])
+                if d < min_dist[v]:
+                    min_dist[v] = d
+    return total`, 'min_cost_connect([[0, 0], [2, 2], [3, 10], [5, 2], [7, 0]])'],
+  ['LC997 Find the Town Judge (degree counting, not a walk)', `def find_judge(n, trust):
+    score = [0] * (n + 1)
+    for a, b in trust:
+        score[a] -= 1
+        score[b] += 1
+    for person in range(1, n + 1):
+        if score[person] == n - 1:
+            return person
+    return -1`, 'find_judge(3, [[1, 3], [2, 3], [3, 1]])'],
 ];
 
 const rows = [];

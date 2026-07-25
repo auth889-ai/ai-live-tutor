@@ -25,7 +25,9 @@ export function assertEntryNamesDefined(entry, code) {
   const names = noStrings.match(/(?<![\w.])[A-Za-z_]\w*(?!\s*=[^=])/g) ?? [];
   for (const name of new Set(names)) {
     if (PY_BUILTINS.has(name)) continue;
-    const defined = new RegExp(`^(?:${name}\\s*=[^=]|def\\s+${name}\\s*\\(|class\\s+${name}\\b)`, 'm').test(code);
+    // Accepts plain assignment, def/class, AND tuple-unpacking targets
+    // ("n1, n2 = Node(1), Node(2)" defines n1 and n2 — live-caught by battery batch 1a).
+    const defined = new RegExp(`^(?:${name}\\s*=[^=]|def\\s+${name}\\s*\\(|class\\s+${name}\\b|(?:[A-Za-z_]\\w*\\s*,\\s*)*${name}\\s*(?:,\\s*[A-Za-z_]\\w*)*\\s*=[^=])`, 'm').test(code);
     if (!defined) {
       throw new Error(`entry references "${name}" but the code never defines it at module top level — add the concrete build lines to the code (e.g. ${name} = ...) so the entry can run on a real instance.`);
     }
