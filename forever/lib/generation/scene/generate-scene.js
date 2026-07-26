@@ -138,7 +138,7 @@ export async function generateSceneFromSourcePack(
   // are guaranteed to match the animated state — single source of truth, no drift.
   const narratable = objects.filter((o) => o.renderHint !== 'algorithm');
   if (narratable.length) onStep('The Voice Writer is narrating the board');
-  const voice = narratable.length ? await voiceAgent({ objects: narratable, sourcePack }) : { voiceLines: [], usage: null };
+  const voice = narratable.length ? await voiceAgent({ objects: narratable, sourcePack, brief }) : { voiceLines: [], usage: null };
   const algoLines = algorithmObject ? voiceLinesForTrace(algorithmObject) : [];
   // PACING (live-caught: 3.5 MINUTES of framing narration before the trace began — the
   // beginner-depth rule lavished ~24 lines on a title and a callout while the scene's real

@@ -205,7 +205,10 @@ async function produceLesson({ sourcePack, outlineLesson = null, episode = null,
         gate: { ok: verdict.ok, violations: verdict.violations.length, repaired: firstCount - verdict.violations.length, rules: [...new Set(verdict.violations.map((v) => v.rule))] },
       };
     } catch (e) {
-      console.error(`[gate] self-repair failed open: ${String(e?.message ?? e).slice(0, 160)}`);
+      // Infra failure ≠ quality failure: record that the gate never ran (distinguishable
+      // from gate.ok=false in the manifest and the kernel), ship the lesson.
+      console.error(`[gate] gate could not run (infra): ${String(e?.message ?? e).slice(0, 160)}`);
+      finalLesson = { ...finalLesson, gate: { ok: null, unavailable: true } };
     }
   }
 
@@ -227,9 +230,19 @@ async function produceLesson({ sourcePack, outlineLesson = null, episode = null,
   }
 
   // Wait out any in-flight partial write, then the FINAL save replaces the building shell
-  // with the canonical lesson (status ready, no sceneIndex bookkeeping, drops resolved).
+  // with the canonical lesson. FAIL-CLOSED BY DEFAULT (external audit 2026-07-26 caught the
+  // gate failing open: gate.ok=false lessons shipped as 'ready' with only a log line):
+  // a lesson whose gate RAN and still has violations after repair-to-convergence is saved
+  // as 'needs_review' — visible, playable via direct link, but honestly labeled — never
+  // silently 'ready'. A gate that could not run (infra error) is NOT a failed gate; it
+  // ships with gate:'unavailable' recorded. LESSON_GATE_STRICT=0 restores fail-open for
+  // demo resilience under provider outages (documented tradeoff, off by default).
   await writer.flush();
-  finalLesson = { ...finalLesson, status: 'ready' };
+  const gateFailed = finalLesson.gate && finalLesson.gate.ok === false && env.LESSON_GATE_STRICT !== '0';
+  finalLesson = { ...finalLesson, status: gateFailed ? 'needs_review' : 'ready' };
+  if (gateFailed) {
+    report(makeProgress({ phase: 'saving', message: `Gate: ${finalLesson.gate.violations} unresolved issue(s) — saved as needs_review, not published as ready`, ...watchable() }));
+  }
   await save(lessonId, finalLesson, { ownerId });
   return { lessonId, lesson: finalLesson };
 }

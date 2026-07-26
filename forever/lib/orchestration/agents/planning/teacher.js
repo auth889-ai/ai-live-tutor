@@ -43,8 +43,12 @@ export async function designPedagogy({ sourcePack, minScenes, maxScenes, domain 
   // the figure it should teach FROM (like focusChunkIds, but for pictures — the lever
   // that makes PDF lessons visual instead of self-drawn; live-caught: 24 figures offered
   // at board level, only 1 ever placed — assignment must happen at LESSON level).
+  // EVERY figure gets planning-level coverage — captionless ones too (external audit: the
+  // caption filter silently excluded them from the coverage guarantee). Fallback caption
+  // keeps them plannable; ingest normally captions everything anyway.
   const figures = (sourcePack.assets ?? [])
-    .filter((asset) => asset.kind === 'figure' && asset.caption?.trim())
+    .filter((asset) => asset.kind === 'figure')
+    .map((asset) => (asset.caption?.trim() ? asset : { ...asset, caption: `Source figure${asset.page ? ` on page ${asset.page}` : ''}` }))
     .map((asset) => ({
       figureId: asset.id,
       caption: asset.caption,

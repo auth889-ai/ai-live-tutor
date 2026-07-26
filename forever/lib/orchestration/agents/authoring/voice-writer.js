@@ -5,7 +5,7 @@
 import { z } from 'zod';
 
 import { runAgentChain } from '../../../qwen/client.js';
-import { validateVoiceLines, normalizeVoiceTargets, normalizeFocusRefs, scrubSpokenInternalIds } from '../../../generation/voice/voice-lines.js';
+import { validateVoiceLines, validateVoiceDepth, keytermCoverage, normalizeVoiceTargets, normalizeFocusRefs, scrubSpokenInternalIds } from '../../../generation/voice/voice-lines.js';
 
 const VOICE_SCHEMA = z.object({
   voiceLines: z.array(z.object({
@@ -22,7 +22,7 @@ const VOICE_SCHEMA = z.object({
   })).min(1),
 });
 
-export async function writeVoice({ objects, sourcePack }) {
+export async function writeVoice({ objects, sourcePack, brief = null }) {
   const system = `You are the Voice Writer of an AI tutor: what the teacher SAYS while the board is written.
 Output ONLY JSON: {"voiceLines":[{"id","text","targetObjectId","focusRef"?,"traceStep"?}]}
 POINT WHILE YOU SPEAK (this is what makes it feel like a real teacher, not a slideshow):
@@ -75,6 +75,14 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
       // structurally before validation — no model round-trip for a mechanical fix.
       const voiceLines = scrubSpokenInternalIds(normalizeFocusRefs(normalizeVoiceTargets(json.voiceLines, objects)));
       validateVoiceLines(voiceLines, objects);
+      // DEPTH + COVERAGE are BLOCKING here (external audit: they were prompt-only): the
+      // retry loop gets the named reason; a scene that cannot reach the floor after repair
+      // drops honestly upstream rather than shipping a summary.
+      validateVoiceDepth(voiceLines, objects, { role: brief?.pedagogicalRole ?? '' });
+      const coverage = keytermCoverage(voiceLines, sourcePack.chunks.map((c) => c.text).join(' '));
+      if (coverage.ratio < 0.25) {
+        throw new Error(`the narration never speaks the source's own key terms (missing: ${coverage.missing.join(', ')}) — teach THIS material, naming its concepts explicitly`);
+      }
       return { voiceLines, usage };
     } catch (error) {
       lastError = error.message;

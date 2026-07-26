@@ -20,6 +20,59 @@ export function scrubSpokenInternalIds(lines) {
   });
 }
 
+// DEPTH FLOOR — a BLOCKING validator, not a prompt request (external audit 2026-07-26:
+// "thin scenes fail the depth floor" was only true in the after-the-fact kernel; the
+// generation path accepted 5 short lines). Deterministic and role-aware; failures throw
+// with a repairable reason so the Voice Writer's retry loop fixes exactly what's named.
+// Also enforces MARK COVERAGE: an image object's named marks must actually be narrated —
+// pointing at a part the voice never mentions is slide-waving, not teaching.
+const SHORT_ROLES = new Set(['recap', 'checkpoint', 'practice', 'qa']);
+const tokensOfText = (s) => new Set(String(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ').filter((t) => t.length >= 4));
+
+export function validateVoiceDepth(lines, objects, { role = '' } = {}) {
+  const narratable = (objects ?? []).filter((o) => o.renderHint !== 'algorithm' && !o.decorative);
+  if (SHORT_ROLES.has(role) || narratable.length <= 1) return lines; // structurally short scenes are honest
+  const totalWords = (lines ?? []).reduce((n, l) => n + String(l.text ?? '').split(/\s+/).filter(Boolean).length, 0);
+  if ((lines ?? []).length < 6) {
+    throw new Error(`only ${lines.length} voice lines — a taught scene needs at least 6 (write 4-8 sentences per board object, one idea each)`);
+  }
+  if (totalWords < 150) {
+    throw new Error(`only ${totalWords} spoken words — a taught scene explains (concrete example, why it matters, the mistake to avoid), it does not summarize`);
+  }
+  const spoken = tokensOfText((lines ?? []).map((l) => l.text).join(' '));
+  for (const object of (objects ?? []).filter((o) => o.renderHint === 'image')) {
+    const marks = (object.content?.annotations ?? []).filter((a) => a.text?.trim());
+    if (marks.length < 2) continue;
+    const named = marks.filter((a) => {
+      const t = [...tokensOfText(a.text)];
+      return t.length === 0 || t.some((token) => spoken.has(token));
+    });
+    if (named.length < Math.ceil(marks.length / 2)) {
+      throw new Error(`the figure ${object.id} carries ${marks.length} teaching marks but the narration names only ${named.length} of them — narrate the marked parts IN ORDER (what each is, what it does, how it connects)`);
+    }
+  }
+  return lines;
+}
+
+// KEYTERM COVERAGE ("explained, not just cited" — research: the one deterministic check
+// reliable enough to gate on): the scene's source text's dominant content words must
+// actually be SPOKEN. Blocks at near-zero coverage (the scene talks about something else);
+// the repair message names the missing terms so the retry fixes exactly that.
+const STOP = new Set(['about', 'after', 'before', 'between', 'could', 'every', 'first', 'other', 'their', 'there', 'these', 'thing', 'those', 'through', 'under', 'water', 'where', 'which', 'while', 'would', 'should', 'because', 'table', 'value', 'values', 'using', 'given', 'shown', 'figure']);
+
+export function keytermCoverage(lines, sourceText) {
+  const counts = new Map();
+  for (const w of String(sourceText ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ')) {
+    if (w.length < 5 || STOP.has(w)) continue;
+    counts.set(w, (counts.get(w) ?? 0) + 1);
+  }
+  const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([w]) => w);
+  if (top.length < 3) return { ratio: 1, missing: [] }; // too little source text to judge
+  const spoken = new Set(String((lines ?? []).map((l) => l.text).join(' ')).toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' '));
+  const missing = top.filter((w) => !spoken.has(w));
+  return { ratio: (top.length - missing.length) / top.length, missing };
+}
+
 export function validateVoiceLine(line) {
   if (!line.id?.trim()) throw new Error('voiceLine.id is required');
   const context = `voiceLine ${line.id}`;
