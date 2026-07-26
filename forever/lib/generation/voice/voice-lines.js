@@ -35,7 +35,7 @@ export function validateVoiceDepth(lines, objects, { role = '' } = {}) {
   // Bypass is NARROW (external audit: one-object scenes escaped the floor): only true
   // short-form roles, or single-object scenes WITHOUT a figure — a figure scene always
   // owes part-by-part depth, and its mark-coverage check below must always run.
-  if ((SHORT_ROLES.has(role) || narratable.length <= 1) && !hasFigure) return lines;
+  if (SHORT_ROLES.has(role) && !hasFigure) return lines;
   // Floors raised 2026-07-26 (user: "explanation is too short" — best-teacher depth means
   // a lecture segment, not a caption): 8 lines / 220 words BLOCK; the prompt band is
   // 450-900 words, so these floors only catch genuine summaries, not style variance.
@@ -54,7 +54,7 @@ export function validateVoiceDepth(lines, objects, { role = '' } = {}) {
       const t = [...tokensOfText(a.text)];
       return t.length === 0 || t.some((token) => spoken.has(token));
     });
-    if (named.length < Math.ceil(marks.length / 2)) {
+    if (named.length < Math.ceil(marks.length * 0.75)) {
       throw new Error(`the figure ${object.id} carries ${marks.length} teaching marks but the narration names only ${named.length} of them — narrate the marked parts IN ORDER (what each is, what it does, how it connects)`);
     }
   }

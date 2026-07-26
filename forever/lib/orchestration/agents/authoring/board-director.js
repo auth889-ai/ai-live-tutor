@@ -365,11 +365,11 @@ export async function designBoard({ sourcePack, layout = 'teacher_notebook_code'
       // the inventory itself: boxes are pixel-derived at ingest, labels are the figure's
       // own part names (provenance "anchor", no vision spend). The voice mark-coverage
       // validator then forces the narration to actually teach them.
-      if (annotations.length < 2 && (asset?.components?.length ?? 0) >= 4) {
+      if ((asset?.components?.length ?? 0) >= 4 && annotations.length < Math.min(4, Math.ceil(asset.components.length / 2))) {
         // highlight-first (user feedback: arrows at static regions read wrong; a marker
         // band like OpenMAIC's highlight action is the honest default for "this part here")
         const verbs = ['highlight', 'encircle', 'underline', 'highlight'];
-        const synthesized = asset.components.slice(0, 4).map((component, i) => ({
+        const synthesized = asset.components.slice(0, 6).map((component, i) => ({
           verb: verbs[i % verbs.length],
           text: component.label,
           bbox: component.bbox,

@@ -82,7 +82,7 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
       // drops honestly upstream rather than shipping a summary.
       validateVoiceDepth(voiceLines, objects, { role: brief?.pedagogicalRole ?? '' });
       const coverage = keytermCoverage(voiceLines, sourcePack.chunks.map((c) => c.text).join(' '));
-      if (coverage.ratio < 0.25) {
+      if (coverage.ratio < 0.5) {
         throw new Error(`the narration never speaks the source's own key terms (missing: ${coverage.missing.join(', ')}) — teach THIS material, naming its concepts explicitly`);
       }
       return { voiceLines, usage };

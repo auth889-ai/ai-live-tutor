@@ -26,15 +26,14 @@ test('depth floor: 6+ substantial lines pass; 5 short lines throw with a repaira
   assert.throws(() => validateVoiceDepth(thin, objs, { role: 'intuition' }), /spoken words/);
   // structurally short scenes are exempt
   validateVoiceDepth(rich.slice(0, 2), objs, { role: 'recap' });
-  validateVoiceDepth(rich.slice(0, 2), [objs[0]], { role: 'intuition' });
 });
 
 test('mark coverage: narration must name at least half the figure marks', () => {
   const withImg = [...objs, { id: 'img', renderHint: 'image', content: { url: '/x.png', annotations: [
     { verb: 'encircle', text: 'fact table' }, { verb: 'arrow', text: 'dimension join' },
   ] } }];
-  const naming = [...rich, line('v9', 'The fact table sits in the center of the whole design.')];
-  validateVoiceDepth(naming, withImg, { role: 'intuition' }); // names 1 of 2 = half
+  const naming = [...rich, line('v9', 'The fact table sits in the center, reached through the dimension join on the left.')];
+  validateVoiceDepth(naming, withImg, { role: 'intuition' }); // names 2 of 2 (75% floor)
   assert.throws(() => validateVoiceDepth(rich, withImg, { role: 'intuition' }), /teaching marks/);
 });
 
