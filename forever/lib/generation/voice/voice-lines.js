@@ -36,12 +36,15 @@ export function validateVoiceDepth(lines, objects, { role = '' } = {}) {
   // short-form roles, or single-object scenes WITHOUT a figure — a figure scene always
   // owes part-by-part depth, and its mark-coverage check below must always run.
   if ((SHORT_ROLES.has(role) || narratable.length <= 1) && !hasFigure) return lines;
+  // Floors raised 2026-07-26 (user: "explanation is too short" — best-teacher depth means
+  // a lecture segment, not a caption): 8 lines / 220 words BLOCK; the prompt band is
+  // 450-900 words, so these floors only catch genuine summaries, not style variance.
   const totalWords = (lines ?? []).reduce((n, l) => n + String(l.text ?? '').split(/\s+/).filter(Boolean).length, 0);
-  if ((lines ?? []).length < 6) {
-    throw new Error(`only ${lines.length} voice lines — a taught scene needs at least 6 (write 4-8 sentences per board object, one idea each)`);
+  if ((lines ?? []).length < 8) {
+    throw new Error(`only ${lines.length} voice lines — a taught scene needs at least 8 (write 6-10 sentences per board object, one idea each)`);
   }
-  if (totalWords < 150) {
-    throw new Error(`only ${totalWords} spoken words — a taught scene explains (concrete example, why it matters, the mistake to avoid), it does not summarize`);
+  if (totalWords < 220) {
+    throw new Error(`only ${totalWords} spoken words — a taught scene explains at lecture depth (concrete example, why it matters, the walk-through, the mistake to avoid); it never summarizes`);
   }
   const spoken = tokensOfText((lines ?? []).map((l) => l.text).join(' '));
   for (const object of (objects ?? []).filter((o) => o.renderHint === 'image')) {

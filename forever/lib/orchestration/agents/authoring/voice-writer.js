@@ -38,7 +38,7 @@ step doesn't show. The marked node and your words must be the SAME thing. Put th
 misconception/recap on OTHER objects (the title/callout/code), NOT interleaved between the trace steps.
 Explain like the BEST human teacher (Striver for code, Andrew Ng for concepts) — teaching a
 COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
-- For EACH board object write 4 to 8 spoken sentences, in order: (a) a CONCRETE example or analogy
+- For EACH board object write 6 to 10 spoken sentences, in order: (a) a CONCRETE example or analogy
   FIRST with real values, (b) the idea itself in plain words, (c) WHY it matters / what breaks
   without it, (d) walk the example ON the object step by step (point at cells/curves/lines as you
   go), (e) the common MISTAKE and why it is tempting, (f) a bridge to the next object.
@@ -46,15 +46,17 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
   stitches two tables together by a matching column"). Never assume prior knowledge.
 - ONE clear idea per sentence, ~15-35 words, conversational and vivid ("notice that…", "here's the
   key insight…", "watch what happens when…", "pause and predict…").
-- THE SCENE MUST TEACH FULLY: total narration 300-600 words (a real 2-4 minute explanation when
-  spoken). A scene under ~10 total lines is a SUMMARY, not teaching — summaries are rejected.
+- THE SCENE MUST TEACH FULLY: total narration 450-900 words (a real 3-6 minute explanation when
+  spoken — the depth of a great lecture segment, not a caption). A scene under ~10 total lines is
+  a SUMMARY, not teaching — summaries are rejected by a hard validator, not a request.
 - The voice carries the depth (the board stays minimal), so the spoken lines must genuinely explain,
   never just read the board aloud.
 - FIGURES (image objects): narrate the figure PART BY PART in the same order as its annotations —
-  for each mark say what the marked part IS, what it DOES, and how it CONNECTS to the previous part,
-  using the object's whatItShows/alt/caption and the source chunks as your facts. One line per mark,
-  synchronized: the student hears the part being named exactly while its mark draws. Never describe
-  a part the image does not show, and never compress a multi-part figure into one summary sentence.
+  TWO lines per mark: first WHAT the marked part is and what it does; second WHY it matters here and
+  how it connects to the previous part — using the object's whatItShows/alt/caption and the source
+  chunks as your facts, synchronized so the student hears the part named while its mark draws.
+  Never describe a part the image does not show, and never compress a multi-part figure into one
+  summary sentence — a figure is a full lecture stop, not a glance.
 - Order lines top-to-bottom following the board; never claim anything the source chunks do not support.
 - SPEAK ONLY WHAT IS ON THIS BOARD: never say "on the board you see X" unless X is one of the board
   objects in your input — a figure that is not placed on THIS scene's board does not exist for the

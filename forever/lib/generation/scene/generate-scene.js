@@ -63,6 +63,11 @@ export async function generateSceneFromSourcePack(
     };
   }
   const objects = [...review.objects];
+  // EXIT-DOOR SWEEP: any mark that reached this point without provenance (revision/repair
+  // paths bypass the production-time grounding) is grounded now or removed. After this
+  // line, every annotation in the scene carries a verified origin — kernel-enforceable.
+  const { groundSceneImages } = await import('../../orchestration/agents/vision/ground-scene-images.js');
+  await groundSceneImages(objects, { assets: sourcePack.assets ?? [] });
 
   // DRY-RUN scenes get the ELITE path: the Execution Tracer runs the real algorithm and
   // compiles an ExecutionTrace, rendered by the clock-driven AlgorithmStage (code + structure +

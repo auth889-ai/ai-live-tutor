@@ -105,8 +105,12 @@ Rules you must never break:
   "the fact table box") — the vision agent re-locates it on the real pixels, and a highlight whose target
   it cannot find is removed rather than drawn wrong.
   TEACH ON the image with "annotations": an ordered list of teaching marks revealed AS YOU SPEAK:
-    [{"verb":"encircle","bbox":{...}}, {"verb":"arrow","bbox":{...},"text":"fact table"},
-     {"verb":"underline"|"cross_out"|"highlight"|"pointer","bbox":{...}}, {"verb":"label","bbox":{...},"text":"..."}]
+    [{"verb":"highlight","bbox":{...},"text":"fact table"}, {"verb":"encircle","bbox":{...}},
+     {"verb":"underline"|"cross_out"|"pointer","bbox":{...}}, {"verb":"label","bbox":{...},"text":"..."}]
+  VERB CHOICE (user-tested): HIGHLIGHT and ENCIRCLE are the default marks — a soft band over the
+  region being taught reads like a teacher's marker pen and forgives small box error. Use "arrow"
+  ONLY for direction/flow between two named parts (A feeds B); a decorative arrow at a region that
+  merely EXISTS is wrong — highlight it instead.
   Order them to match your narration (first thing you mention = first annotation). 2-5 marks, each on the
   exact region it refers to. When an availableImages entry carries "parts" (the figure's own inventoried
   component names), "visibleText" and/or "sourceContext" (the document's own paragraphs about this figure):
@@ -362,7 +366,9 @@ export async function designBoard({ sourcePack, layout = 'teacher_notebook_code'
       // own part names (provenance "anchor", no vision spend). The voice mark-coverage
       // validator then forces the narration to actually teach them.
       if (annotations.length < 2 && (asset?.components?.length ?? 0) >= 4) {
-        const verbs = ['encircle', 'arrow', 'label', 'pointer'];
+        // highlight-first (user feedback: arrows at static regions read wrong; a marker
+        // band like OpenMAIC's highlight action is the honest default for "this part here")
+        const verbs = ['highlight', 'encircle', 'underline', 'highlight'];
         const synthesized = asset.components.slice(0, 4).map((component, i) => ({
           verb: verbs[i % verbs.length],
           text: component.label,

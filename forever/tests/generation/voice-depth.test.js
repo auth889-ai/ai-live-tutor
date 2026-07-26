@@ -15,12 +15,14 @@ const rich = [
   line('v4', 'Sales barely change at all, which tells us that position alone does not create demand for weak products no matter how visible we make them to shoppers.'),
   line('v5', 'The common mistake is assuming placement fixes everything, and it is tempting because placement is the easiest thing a manager can control on any given morning.'),
   line('v6', 'So the rule becomes simple: measure the product first, then spend your best positions on proven winners, and check the numbers again every single week.'),
+  line('v7', 'Notice also what the manager did not do: nothing about the price changed, nothing about the packaging changed, only the physical position moved between the shelves.'),
+  line('v8', 'That isolation is the whole trick of honest measurement — when you change exactly one thing at a time you can finally trust what the weekly numbers tell you about cause and effect inside your own store.'),
 ];
 
 test('depth floor: 6+ substantial lines pass; 5 short lines throw with a repairable reason', () => {
   validateVoiceDepth(rich, objs, { role: 'intuition' });
-  assert.throws(() => validateVoiceDepth(rich.slice(0, 5), objs, { role: 'intuition' }), /at least 6/);
-  const thin = Array.from({ length: 7 }, (_, i) => line(`t${i}`, 'Short line here.'));
+  assert.throws(() => validateVoiceDepth(rich.slice(0, 7), objs, { role: 'intuition' }), /at least 8/);
+  const thin = Array.from({ length: 9 }, (_, i) => line(`t${i}`, 'Short line here.'));
   assert.throws(() => validateVoiceDepth(thin, objs, { role: 'intuition' }), /spoken words/);
   // structurally short scenes are exempt
   validateVoiceDepth(rich.slice(0, 2), objs, { role: 'recap' });
@@ -31,7 +33,7 @@ test('mark coverage: narration must name at least half the figure marks', () => 
   const withImg = [...objs, { id: 'img', renderHint: 'image', content: { url: '/x.png', annotations: [
     { verb: 'encircle', text: 'fact table' }, { verb: 'arrow', text: 'dimension join' },
   ] } }];
-  const naming = [...rich, line('v7', 'The fact table sits in the center of the whole design.')];
+  const naming = [...rich, line('v9', 'The fact table sits in the center of the whole design.')];
   validateVoiceDepth(naming, withImg, { role: 'intuition' }); // names 1 of 2 = half
   assert.throws(() => validateVoiceDepth(rich, withImg, { role: 'intuition' }), /teaching marks/);
 });
@@ -50,7 +52,7 @@ test('figure scenes NEVER bypass the floor — even short roles and single-objec
     { verb: 'encircle', text: 'fact table' }, { verb: 'arrow', text: 'dimension join' },
   ] } }];
   // single object + figure: floor applies (would have bypassed before the fix)
-  assert.throws(() => validateVoiceDepth([line('v1', 'One short line.')], figOnly, { role: 'intuition' }), /at least 6/);
+  assert.throws(() => validateVoiceDepth([line('v1', 'One short line.')], figOnly, { role: 'intuition' }), /at least 8/);
   // short role + figure: still applies
-  assert.throws(() => validateVoiceDepth([line('v1', 'One short line.')], figOnly, { role: 'recap' }), /at least 6/);
+  assert.throws(() => validateVoiceDepth([line('v1', 'One short line.')], figOnly, { role: 'recap' }), /at least 8/);
 });
