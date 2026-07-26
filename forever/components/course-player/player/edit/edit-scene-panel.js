@@ -8,11 +8,46 @@
 // audio URL, so the clock, karaoke and timeline are rebuilt from the saved artifact —
 // never from optimistic client state.
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { MarkEditor } from './mark-editor.js';
 
 const V = (name) => `var(${name})`;
+
+// Drag-corner image resize (the direct-manipulation half of "insert img and resize"):
+// live preview at the chosen fraction of the board slot; the corner handle drags width
+// between 20% and 100%. Saved as content.displayWidth — the player honors it everywhere.
+function ResizableImagePreview({ url, width, onChange }) {
+  const boxRef = useRef(null);
+  const drag = useRef(null);
+  return (
+    <div style={{ position: 'relative', width: `${Math.round(width * 100)}%`, minWidth: 90, transition: drag.current ? 'none' : 'width .1s' }} ref={boxRef}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt="resize preview" draggable={false} style={{ width: '100%', display: 'block', borderRadius: 10, border: `1px solid var(--border)` }} />
+      <div
+        onPointerDown={(e) => {
+          e.preventDefault();
+          drag.current = { startX: e.clientX, startWidth: boxRef.current.getBoundingClientRect().width, parent: boxRef.current.parentElement.getBoundingClientRect().width };
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e) => {
+          if (!drag.current) return;
+          const px = drag.current.startWidth + (e.clientX - drag.current.startX);
+          onChange(Math.min(1, Math.max(0.2, px / drag.current.parent)));
+        }}
+        onPointerUp={() => { drag.current = null; }}
+        title="drag to resize"
+        style={{
+          position: 'absolute', right: -9, bottom: -9, width: 18, height: 18, cursor: 'nwse-resize',
+          background: '#fff', border: '2px solid #EF6154', borderRadius: '50%', boxShadow: '0 1px 4px rgba(0,0,0,.25)',
+        }}
+      />
+      <span style={{ position: 'absolute', left: 6, bottom: 6, fontSize: 10.5, fontWeight: 700, color: '#fff', background: 'rgba(0,0,0,.45)', borderRadius: 6, padding: '1px 7px' }}>
+        {Math.round(width * 100)}%
+      </span>
+    </div>
+  );
+}
 
 export function EditScenePanel({ lessonId, scene, onClose }) {
   const editableObjects = (scene.objects ?? []).filter((o) => typeof o.content === 'string');
@@ -88,9 +123,19 @@ export function EditScenePanel({ lessonId, scene, onClose }) {
 
       {objects.length > 0 && (
         <div style={{ display: 'grid', gap: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: V('--ink-muted') }}>BOARD TEXT</div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: V('--ink-muted') }}>
+            BOARD TEXT — click into any block and type; it saves back onto the board
+          </div>
           {objects.map((object, i) => (
-            <textarea key={object.id} value={object.content} style={areaStyle}
+            /* board-styled in-place block (Gamma pattern): looks like the board, edits like a doc */
+            <textarea key={object.id} value={object.content}
+              style={{
+                ...areaStyle,
+                fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: 17, lineHeight: 1.6,
+                background: object.content !== object.original ? '#fff8f0' : '#fffdf8',
+                border: `1px dashed ${object.content !== object.original ? '#EF6154' : V('--border')}`,
+              }}
+              rows={Math.max(2, Math.ceil(object.content.length / 90))}
               onChange={(e) => setObjects((prev) => prev.map((o, j) => (j === i ? { ...o, content: e.target.value } : o)))} />
           ))}
         </div>
@@ -105,12 +150,9 @@ export function EditScenePanel({ lessonId, scene, onClose }) {
             <div key={set.objectId} style={{ display: 'grid', gap: 4 }}>
               <MarkEditor url={set.url} annotations={set.annotations}
                 onChange={(annotations) => setMarkSets((prev) => prev.map((m, j) => (j === i ? { ...m, annotations } : m)))} />
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 11.5, color: V('--ink-muted') }}>
-                image size
-                <input type="range" min="0.2" max="1" step="0.05" value={imageWidths[set.objectId] ?? 1}
-                  onChange={(e) => setImageWidths((prev) => ({ ...prev, [set.objectId]: Number(e.target.value) }))} style={{ flex: 1, maxWidth: 220 }} />
-                {Math.round((imageWidths[set.objectId] ?? 1) * 100)}%
-              </label>
+              <div style={{ fontSize: 11, color: V('--ink-muted') }}>displayed size — drag the coral corner handle:</div>
+              <ResizableImagePreview url={set.url} width={imageWidths[set.objectId] ?? 1}
+                onChange={(w) => setImageWidths((prev) => ({ ...prev, [set.objectId]: w }))} />
             </div>
           ))}
         </div>
@@ -139,14 +181,12 @@ export function EditScenePanel({ lessonId, scene, onClose }) {
                   <option value="">choose one of this lesson's figures…</option>
                   {knownImages.map((u) => <option key={u} value={u}>{u.split('/').pop().slice(0, 48)}</option>)}
                 </select>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <input value={o.alt ?? ''} placeholder="what it shows (alt text)" style={{ flex: 1, fontSize: 12.5, padding: 7, borderRadius: 8, border: `1px solid ${V('--border')}` }}
-                    onChange={(e) => setNewObjs((prev) => prev.map((x, j) => (j === i ? { ...x, alt: e.target.value } : x)))} />
-                  <label style={{ fontSize: 11.5, color: V('--ink-muted'), display: 'flex', gap: 6, alignItems: 'center' }}>
-                    size <input type="range" min="0.2" max="1" step="0.05" value={o.displayWidth ?? 1}
-                      onChange={(e) => setNewObjs((prev) => prev.map((x, j) => (j === i ? { ...x, displayWidth: Number(e.target.value) } : x)))} />
-                  </label>
-                </div>
+                <input value={o.alt ?? ''} placeholder="what it shows (alt text)" style={{ fontSize: 12.5, padding: 7, borderRadius: 8, border: `1px solid ${V('--border')}` }}
+                  onChange={(e) => setNewObjs((prev) => prev.map((x, j) => (j === i ? { ...x, alt: e.target.value } : x)))} />
+                {o.url && (
+                  <ResizableImagePreview url={o.url} width={o.displayWidth ?? 1}
+                    onChange={(w) => setNewObjs((prev) => prev.map((x, j) => (j === i ? { ...x, displayWidth: w } : x)))} />
+                )}
               </div>
             )}
             <button onClick={() => setNewObjs((prev) => prev.filter((_, j) => j !== i))}

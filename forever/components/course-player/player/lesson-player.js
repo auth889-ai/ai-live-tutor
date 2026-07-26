@@ -287,11 +287,6 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
           {player.audioUrl && (
             <audio ref={player.audioRef} src={player.audioUrl} preload="auto" key={player.audioUrl} />
           )}
-          {editing && lessonId && (
-            <div style={{ marginBottom: 14 }}>
-              <EditScenePanel lessonId={lessonId} scene={scene} onClose={() => setEditing(false)} />
-            </div>
-          )}
           <div style={{
             background: `linear-gradient(180deg, ${V('--theater-surface')}, ${V('--theater-bg')} 70%)`,
             borderRadius: 24, padding: 16,
@@ -299,9 +294,18 @@ export function LessonPlayer({ lesson, pending = [], lessonId = null }) {
             boxShadow: '0 2px 4px rgba(27,16,13,.22), 0 14px 32px rgba(27,16,13,.30), 0 40px 80px rgba(27,16,13,.26), inset 0 1px 0 rgba(247,233,227,.10), inset 0 0 0 1px rgba(27,16,13,.4)',
           }}>
             <div ref={stageRef} style={{ background: V('--surface'), borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 0 rgba(255,255,255,.08)', position: 'relative' }}>
-              <StagePresenter scene={scene} tMs={tMs} title={scene.title} setHold={player.setHold} />
+              {/* EDIT MODE takes over the STAGE itself (Gamma block-editing pattern): the
+                  board's blocks become editable in place of the playback surface — text
+                  types like a doc, images resize by corner handle, marks drag on pixels. */}
+              {editing && lessonId ? (
+                <div style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+                  <EditScenePanel lessonId={lessonId} scene={scene} onClose={() => setEditing(false)} />
+                </div>
+              ) : (
+                <StagePresenter scene={scene} tMs={tMs} title={scene.title} setHold={player.setHold} />
+              )}
               {/* STALL-RESUME: caught up with the society — playback resumes by itself. */}
-              {player.stalled && <StallOverlay />}
+              {!editing && player.stalled && <StallOverlay />}
             </div>
 
             {/* dark glass controls — chrome lives inside the theater */}
