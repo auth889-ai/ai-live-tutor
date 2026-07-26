@@ -52,10 +52,13 @@ export function reconcileTimeline({ sceneId, objects, voiceLines, clips, audioUr
   for (const object of objects) {
     const lines = linesByObject.get(object.id) ?? [];
     if (lines.length === 0) {
-      // HUMAN-ADDED objects (board editor) are visible from the top of the scene even when
-      // the human wrote no narration for them — silence must not hide their board work.
-      // AI objects keep the old rule: no narration binding, no reveal.
-      if (object.addedBy === 'human') {
+      // UNNARRATED objects are STILL VISIBLE from the top of the scene (write at 0):
+      // human board-editor additions AND the society's own beat cards. The old rule
+      // (no narration binding -> never revealed) silently hid real content — kernel-caught
+      // 2026-07-26: misconception/checkpoint/recap cards were generated, saved, and never
+      // shown to a single student. A board object exists to be seen; narration timing is
+      // a bonus, not a visibility license.
+      if (!object.decorative) {
         actions.push({ id: `act_write_${object.id}`, kind: 'write', startMs: 0, durationMs: 800, targetObjectId: object.id });
       }
       continue;
