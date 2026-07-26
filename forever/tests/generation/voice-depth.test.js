@@ -44,3 +44,13 @@ test('keytermCoverage: measures whether the source vocabulary is actually spoken
   assert.ok(bad.ratio < 0.25);
   assert.ok(bad.missing.includes('normalization'));
 });
+
+test('figure scenes NEVER bypass the floor — even short roles and single-object boards', () => {
+  const figOnly = [{ id: 'img', renderHint: 'image', content: { url: '/x.png', annotations: [
+    { verb: 'encircle', text: 'fact table' }, { verb: 'arrow', text: 'dimension join' },
+  ] } }];
+  // single object + figure: floor applies (would have bypassed before the fix)
+  assert.throws(() => validateVoiceDepth([line('v1', 'One short line.')], figOnly, { role: 'intuition' }), /at least 6/);
+  // short role + figure: still applies
+  assert.throws(() => validateVoiceDepth([line('v1', 'One short line.')], figOnly, { role: 'recap' }), /at least 6/);
+});

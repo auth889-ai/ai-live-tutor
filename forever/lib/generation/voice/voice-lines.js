@@ -31,7 +31,11 @@ const tokensOfText = (s) => new Set(String(s).toLowerCase().replace(/[^a-z0-9]+/
 
 export function validateVoiceDepth(lines, objects, { role = '' } = {}) {
   const narratable = (objects ?? []).filter((o) => o.renderHint !== 'algorithm' && !o.decorative);
-  if (SHORT_ROLES.has(role) || narratable.length <= 1) return lines; // structurally short scenes are honest
+  const hasFigure = (objects ?? []).some((o) => o.renderHint === 'image');
+  // Bypass is NARROW (external audit: one-object scenes escaped the floor): only true
+  // short-form roles, or single-object scenes WITHOUT a figure — a figure scene always
+  // owes part-by-part depth, and its mark-coverage check below must always run.
+  if ((SHORT_ROLES.has(role) || narratable.length <= 1) && !hasFigure) return lines;
   const totalWords = (lines ?? []).reduce((n, l) => n + String(l.text ?? '').split(/\s+/).filter(Boolean).length, 0);
   if ((lines ?? []).length < 6) {
     throw new Error(`only ${lines.length} voice lines — a taught scene needs at least 6 (write 4-8 sentences per board object, one idea each)`);

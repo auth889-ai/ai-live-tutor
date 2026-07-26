@@ -151,6 +151,30 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
     await runPass(beatRescue, 1);
   }
 
+  // COVERAGE RESCUE (external audit: "lost coverage is detected but not restored"): a dead
+  // scene whose figures/chunks no surviving scene owns gets ONE more attempt — same
+  // stochastic-retry logic as the beat rescue, aimed at content instead of structure. After
+  // this pass, remaining holes are recorded and fail the ready-gate honestly.
+  const survivedIds = { chunks: new Set(), figures: new Set() };
+  results.forEach((r, i) => {
+    if (!r) return;
+    for (const id of briefs[i].focusChunkIds ?? []) survivedIds.chunks.add(id);
+    for (const id of briefs[i].focusFigureIds ?? []) survivedIds.figures.add(id);
+  });
+  const coverageRescue = failures
+    .map((e, i) => {
+      if (!e) return null;
+      const lostFigure = (briefs[i].focusFigureIds ?? []).some((id) => !survivedIds.figures.has(id));
+      const lostChunk = (briefs[i].focusChunkIds ?? []).some((id) => !survivedIds.chunks.has(id));
+      return lostFigure || lostChunk ? i : null;
+    })
+    .filter((i) => i !== null);
+  if (coverageRescue.length > 0) {
+    done = sceneTotal - coverageRescue.length;
+    onProgress({ phase: 'generating', message: `Rescuing ${coverageRescue.length} scene(s) whose source content no other scene covers`, sceneDone: done, sceneTotal });
+    await runPass(coverageRescue, 1);
+  }
+
   const scenes = results.filter(Boolean);
   const skippedScenes = failures
     .map((e, i) => (e ? { title: briefs[i].title, pedagogicalRole: briefs[i].pedagogicalRole, reason: String(e?.message ?? e).slice(0, 300) } : null))
