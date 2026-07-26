@@ -19,7 +19,16 @@ export function finalizeBoardObject(raw, { sourcePack, layout, brief, imageIndex
     layout, brief, chunkIds: sourcePack.chunks.map((chunk) => chunk.id),
   });
   validateBoardObject(object, layout);
-  if (object.decorative !== true && object.grounding !== 'analogy'
+  // IMAGE OBJECTS ARE SELF-GROUNDING: a placed source figure IS its own provenance (the
+  // asset came from the document; the vision gate owns its marks). Models kept writing
+  // the figure's own id as a "chunkId" (live-caught: figure_fig_002 dropped for citing
+  // fig_002) — demanding a text-chunk citation for an image object was a category error
+  // that deleted exactly the objects the coverage guarantee protects.
+  if (object.renderHint === 'image' && !sourcePack.chunks.some((c) => c.id === object.sourceRef?.chunkId)) {
+    delete object.sourceRef;
+    object.grounding = 'source-figure';
+  }
+  if (object.decorative !== true && object.grounding !== 'analogy' && object.grounding !== 'source-figure'
     && !sourcePack.chunks.some((chunk) => chunk.id === object.sourceRef?.chunkId)) {
     throw new Error(`object ${object.id} cites unknown chunk ${object.sourceRef?.chunkId} — copy ONE of the real chunkIds EXACTLY: ${sourcePack.chunks.slice(0, 8).map((chunk) => chunk.id).join(', ')}`);
   }

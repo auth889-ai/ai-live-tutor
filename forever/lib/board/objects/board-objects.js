@@ -64,7 +64,9 @@ export function validateBoardObject(object, layout) {
   // motivational callout — has no source chunk by nature; it declares grounding:"analogy"
   // instead of faking a citation (measured live: motivate/intuition scenes died for lacking
   // sourceRefs on analogies). The Grounding Auditor still audits it against the source.
-  if (object.decorative !== true && object.grounding !== 'analogy') {
+  // grounding:"source-figure" = a placed document figure: the asset IS the provenance
+  // (live-caught: image objects were dropped for citing their own figure id as a chunkId).
+  if (object.decorative !== true && object.grounding !== 'analogy' && !(object.grounding === 'source-figure' && object.renderHint === 'image')) {
     if (!object.sourceRef) {
       throw new Error(`${context} needs a sourceRef — every factual board object carries source proof (a teaching analogy may declare "grounding":"analogy" instead)`);
     }

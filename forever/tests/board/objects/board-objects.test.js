@@ -88,3 +88,15 @@ test('manipulable objects validate through the board contract (the "manipulate i
   const evil = { ...manipulable, content: { ...manipulable.content, curves: [{ id: 'e', label: 'E', formula: 'eval_me', coeffs: { k: '@param' } }] } };
   assert.throws(() => validateBoardObject(evil, 'teacher_notebook'), /formula must be one of/);
 });
+
+test('a placed source figure is self-grounding: grounding source-figure needs no chunk citation', () => {
+  validateBoardObject({
+    id: 'fig1', objectType: 'source_figure', renderHint: 'image', region: 'notebook_area',
+    grounding: 'source-figure', content: { url: '/assets/x/f.png', alt: 'the ER diagram from page 3' },
+  }, 'teacher_notebook_code');
+  // but source-figure on a NON-image object still demands a citation (no laundering facts through the tag)
+  assert.throws(() => validateBoardObject({
+    id: 't1', objectType: 'claim', renderHint: 'text', region: 'notebook_area',
+    grounding: 'source-figure', content: 'a factual claim with no source',
+  }, 'teacher_notebook_code'), /needs a sourceRef/);
+});
