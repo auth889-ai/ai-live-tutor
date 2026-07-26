@@ -55,3 +55,11 @@ test('figure scenes NEVER bypass the floor — even short roles and single-objec
   // short role + figure: still applies
   assert.throws(() => validateVoiceDepth([line('v1', 'One short line.')], figOnly, { role: 'recap' }), /at least 8/);
 });
+
+test('teaching-moves floor: move-free filler fails even at length; real teaching passes', () => {
+  const filler = Array.from({ length: 9 }, (_, i) => line(`f${i}`,
+    'Data things happen in many various systems and structures across different situations generally speaking overall in practice with numerous relevant considerations involved throughout the entire broader landscape today.'));
+  assert.throws(() => validateVoiceDepth(filler, objs, { role: 'intuition' }), /teaching moves/);
+  // `rich` fixture has example (imagine/numbers), causal (because), misconception (mistake) => passes
+  validateVoiceDepth(rich, objs, { role: 'intuition' });
+});

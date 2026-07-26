@@ -46,6 +46,25 @@ export function validateVoiceDepth(lines, objects, { role = '' } = {}) {
   if (totalWords < 220) {
     throw new Error(`only ${totalWords} spoken words — a taught scene explains at lecture depth (concrete example, why it matters, the walk-through, the mistake to avoid); it never summarizes`);
   }
+  // TEACHING-MOVES FLOOR (audit round 4: 220 words of meaningless filler passed — length
+  // is not teaching). The five moves of the explanation spine, detected deterministically;
+  // a taught scene must show at least 3. Filler shows none; any honest lesson segment
+  // (definition + example + why, or example + check + trap) clears it. Research ranked
+  // these markers low-FP (definition/example) to moderate (causal) — 3-of-5 keeps the
+  // combined false-positive risk near zero while killing move-free filler.
+  const all = (lines ?? []).map((l) => String(l.text ?? '')).join(' ');
+  const moves = {
+    definition: /\b(is a|is an|is the|refers to|means that|we call|known as|defined as)\b/i.test(all),
+    example: /\b(for example|for instance|imagine|suppose|say you|let's say|consider a|picture a)\b/i.test(all) || /\b\d{2,}\b/.test(all),
+    causal: /\b(because|so that|therefore|which means|that's why|as a result|this is why|the reason)\b/i.test(all),
+    checkin: (lines ?? []).some((l) => /\?\s*$/.test(String(l.text ?? '').trim())),
+    misconception: /\b(mistake|misconception|tempting|careful|trap|gotcha|watch out|wrongly|common error)\b/i.test(all),
+  };
+  const shown = Object.entries(moves).filter(([, v]) => v).map(([k]) => k);
+  if (shown.length < 3) {
+    const missing = Object.keys(moves).filter((k) => !moves[k]);
+    throw new Error(`narration shows only ${shown.length}/5 teaching moves (${shown.join(', ') || 'none'}) — a taught scene needs at least 3 of: a DEFINITION in plain words, a CONCRETE example, a BECAUSE/why explanation, a question the student answers, the common mistake. Missing: ${missing.join(', ')}`);
+  }
   const spoken = tokensOfText((lines ?? []).map((l) => l.text).join(' '));
   for (const object of (objects ?? []).filter((o) => o.renderHint === 'image')) {
     const marks = (object.content?.annotations ?? []).filter((a) => a.text?.trim());
@@ -54,7 +73,8 @@ export function validateVoiceDepth(lines, objects, { role = '' } = {}) {
       const t = [...tokensOfText(a.text)];
       return t.length === 0 || t.some((token) => spoken.has(token));
     });
-    if (named.length < Math.ceil(marks.length * 0.75)) {
+    const nameFloor = marks.length <= 3 ? marks.length : Math.ceil(marks.length * 0.8);
+    if (named.length < nameFloor) {
       throw new Error(`the figure ${object.id} carries ${marks.length} teaching marks but the narration names only ${named.length} of them — narrate the marked parts IN ORDER (what each is, what it does, how it connects)`);
     }
   }
