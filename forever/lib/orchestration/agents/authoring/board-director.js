@@ -354,7 +354,24 @@ export async function designBoard({ sourcePack, layout = 'teacher_notebook_code'
       }
       if (dropped?.length) console.error(`[board] ${object.id}: ${dropped.length} mark(s) not visually locatable — dropped (${dropped.slice(0, 3).join(' | ')})`);
       const highlight = grounded.find((g) => g._imageHighlight);
-      const annotations = grounded.filter((g) => !g._imageHighlight);
+      let annotations = grounded.filter((g) => !g._imageHighlight);
+      // UNDER-MARKED FIGURE FLOOR (external audit: a 10-part figure with 2 model marks
+      // passed every gate — the parts the model ignored stayed untaught). When the
+      // inventory knows >=4 parts and fewer than 2 marks survived, synthesize marks from
+      // the inventory itself: boxes are pixel-derived at ingest, labels are the figure's
+      // own part names (provenance "anchor", no vision spend). The voice mark-coverage
+      // validator then forces the narration to actually teach them.
+      if (annotations.length < 2 && (asset?.components?.length ?? 0) >= 4) {
+        const verbs = ['encircle', 'arrow', 'label', 'pointer'];
+        const synthesized = asset.components.slice(0, 4).map((component, i) => ({
+          verb: verbs[i % verbs.length],
+          text: component.label,
+          bbox: component.bbox,
+          groundedBy: 'anchor',
+        }));
+        console.error(`[board] ${object.id}: only ${annotations.length} mark(s) survived on a ${asset.components.length}-part figure — synthesized ${synthesized.length} inventory-anchored marks`);
+        annotations = [...annotations, ...synthesized.filter((s) => !annotations.some((a) => a.text === s.text))];
+      }
       const next = { ...object.content, annotations };
       if (hasNamedHighlight) {
         if (highlight) next.bbox = highlight.bbox;

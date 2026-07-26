@@ -238,10 +238,13 @@ async function produceLesson({ sourcePack, outlineLesson = null, episode = null,
   // ships with gate:'unavailable' recorded. LESSON_GATE_STRICT=0 restores fail-open for
   // demo resilience under provider outages (documented tradeoff, off by default).
   await writer.flush();
-  const gateFailed = finalLesson.gate && finalLesson.gate.ok === false && env.LESSON_GATE_STRICT !== '0';
+  // COVERAGE HOLES count as gate failures (audit #4): a lesson whose plan promised figures/
+  // chunks that its surviving scenes no longer deliver is incomplete, not ready.
+  const holes = (finalLesson.coverage?.lostFigures?.length ?? 0) + (finalLesson.coverage?.lostChunks?.length ?? 0);
+  const gateFailed = ((finalLesson.gate && finalLesson.gate.ok === false) || holes > 0) && env.LESSON_GATE_STRICT !== '0';
   finalLesson = { ...finalLesson, status: gateFailed ? 'needs_review' : 'ready' };
   if (gateFailed) {
-    report(makeProgress({ phase: 'saving', message: `Gate: ${finalLesson.gate.violations} unresolved issue(s) — saved as needs_review, not published as ready`, ...watchable() }));
+    report(makeProgress({ phase: 'saving', message: `Gate: ${finalLesson.gate?.ok === false ? `${finalLesson.gate.violations} unresolved issue(s)` : ''}${finalLesson.gate?.ok === false && holes ? ' + ' : ''}${holes ? `${holes} coverage hole(s) from dropped scenes` : ''} — saved as needs_review, not published as ready`, ...watchable() }));
   }
   await save(lessonId, finalLesson, { ownerId });
   return { lessonId, lesson: finalLesson };

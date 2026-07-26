@@ -166,6 +166,40 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
     domain, // persists so Ask-the-Tutor answers in the lesson's own specialist register
     skippedScenes: skipped,
     skippedSceneReasons: skippedScenes,
+    // POST-DROP COVERAGE (external audit #4: the planning-level guarantee stopped being
+    // true the moment scenes dropped, and nothing recomputed it): what the SURVIVING
+    // scenes actually cover, verified against the plan — stored on the manifest so the
+    // gate/kernel/UI judge the lesson by what shipped, not what was intended.
+    coverage: computeSurvivedCoverage(briefs, results, sourcePack),
     scenes, // already in final stored shape (flattened per scene, possibly voiced/published by onScene)
+  };
+}
+
+// Deterministic diff of planned vs survived coverage. Chunks/figures whose ONLY owning
+// scenes dropped are the lesson's honest holes; the gate downgrades on lost figures.
+export function computeSurvivedCoverage(briefs, results, sourcePack) {
+  const planned = { chunks: new Set(), figures: new Set() };
+  const survived = { chunks: new Set(), figures: new Set() };
+  briefs.forEach((brief, i) => {
+    for (const id of brief.focusChunkIds ?? []) planned.chunks.add(id);
+    for (const id of brief.focusFigureIds ?? []) planned.figures.add(id);
+    if (results[i]) {
+      for (const id of brief.focusChunkIds ?? []) survived.chunks.add(id);
+      for (const id of brief.focusFigureIds ?? []) survived.figures.add(id);
+    }
+  });
+  const chunkTitle = new Map((sourcePack.chunks ?? []).map((c) => [c.id, c.text.slice(0, 60)]));
+  const lostChunks = [...planned.chunks].filter((id) => !survived.chunks.has(id));
+  const lostFigures = [...planned.figures].filter((id) => !survived.figures.has(id));
+  if (lostChunks.length || lostFigures.length) {
+    console.error(`[lesson] COVERAGE HOLES after drops: ${lostFigures.length} figure(s) ${JSON.stringify(lostFigures)}, ${lostChunks.length} chunk(s) — the plan promised these and the surviving scenes do not deliver them`);
+  }
+  return {
+    plannedChunks: planned.chunks.size,
+    survivedChunks: survived.chunks.size,
+    plannedFigures: planned.figures.size,
+    survivedFigures: survived.figures.size,
+    lostFigures,
+    lostChunks: lostChunks.map((id) => ({ id, about: chunkTitle.get(id) ?? '' })),
   };
 }
