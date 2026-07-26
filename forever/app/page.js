@@ -53,7 +53,8 @@ function Landing() {
       <nav style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '22px 0 8px' }}>
         <span style={{ width: 34, height: 34, borderRadius: 10, background: UI.accent, color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 17 }}>F</span>
         <span style={{ fontWeight: 800, fontSize: 19 }}>Forever <span style={{ fontWeight: 500, fontSize: 13, color: UI.muted }}>AI Tutor</span></span>
-        <a href="/login" style={{ marginLeft: 'auto', padding: '9px 22px', borderRadius: 999, textDecoration: 'none', fontWeight: 700, fontSize: 14, background: UI.accent, color: '#fff', boxShadow: '0 6px 18px rgba(244,115,104,0.35)' }}>Sign in</a>
+        <a href="https://github.com/auth889-ai/ai-live-tutor" style={{ marginLeft: 'auto', padding: '9px 18px', borderRadius: 999, textDecoration: 'none', fontWeight: 700, fontSize: 14, color: UI.text, border: `1.5px solid ${UI.border}`, background: '#fff' }}>★ GitHub</a>
+        <a href="/login" style={{ padding: '9px 22px', borderRadius: 999, textDecoration: 'none', fontWeight: 700, fontSize: 14, background: UI.accent, color: '#fff', boxShadow: '0 6px 18px rgba(244,115,104,0.35)' }}>Sign in</a>
       </nav>
 
       {/* hero */}
@@ -101,6 +102,37 @@ function Landing() {
           // eslint-disable-next-line @next/next/no-img-element
           <img key={src} src={src} alt={alt}
             style={{ height: h, width: 'auto', maxWidth: '85vw', objectFit: 'cover', borderRadius: 16, transform: `rotate(${tilt}deg)`, boxShadow: '0 16px 40px rgba(58,46,34,0.18)', border: '5px solid #fff' }} />
+        ))}
+      </section>
+
+      {/* trust marquee (CodeTwin-style band): the four promises, scrolling */}
+      <section style={{ overflow: 'hidden', whiteSpace: 'nowrap', borderTop: `1px solid ${UI.border}`, borderBottom: `1px solid ${UI.border}`, padding: '12px 0', margin: '0 -20px 30px', background: '#fff' }}>
+        <style>{`@keyframes foreverMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }`}</style>
+        <div style={{ display: 'inline-block', animation: 'foreverMarquee 28s linear infinite', fontWeight: 800, fontSize: 13.5, letterSpacing: 1.1, color: UI.accentDark }}>
+          {[0, 1].map((k) => (
+            <span key={k}>
+              {'REALLY-EXECUTED CODE · EVERY CLAIM SOURCE-PROOFED · A SOCIETY OF AGENTS, NOT ONE PROMPT · OPEN SOURCE, YOUR OWN QWEN KEY · '}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* CodeTwin-style alternating feature blocks — real product screenshots, real claims */}
+      <section style={{ padding: '10px 0 30px', display: 'grid', gap: 34 }}>
+        {[
+          ['The signature move', 'Algorithms animated from code that really ran.', 'The engine executes the algorithm in a sandbox and drives the screen from the recording — the active line, pointers riding the array, per-node state, a step-by-step trace table. Change the input and the whole animation re-derives from a fresh run of YOUR values.', '/images/land-dryrun.png', false],
+          ['Receipts, not vibes', 'Every lesson signed by the society that argued over it.', 'Proposals, objections, repairs — the debate is stored and shown: "12 steps · 9 objections · 1 repair · verified". A grounding auditor blocks any claim your material does not support; a dry-run without a real trace refuses to ship.', '/images/land-society.png', true],
+          ['Your material, honored', 'Real figures from your PDF, taught part by part.', 'Figures are lifted with their pages, inventoried by vision, and taught like a professor at a wall chart — highlights land on the exact parts being named, side notes are written in the tutor’s own words, and every figure carries its "Source · page N" chip.', '/images/land-figure.png', false],
+        ].map(([kicker, title, body, img, flip]) => (
+          <div key={img} style={{ display: 'flex', gap: 26, alignItems: 'center', flexWrap: 'wrap', flexDirection: flip ? 'row-reverse' : 'row' }}>
+            <div style={{ flex: '1 1 300px', minWidth: 280 }}>
+              <div style={{ color: UI.accentDark, fontWeight: 800, fontSize: 12.5, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 }}>{kicker}</div>
+              <h3 style={{ fontSize: 26, margin: '0 0 10px', letterSpacing: -0.5, fontWeight: 800, lineHeight: 1.2 }}>{title}</h3>
+              <p style={{ color: UI.muted, fontSize: 15, lineHeight: 1.65, margin: 0 }}>{body}</p>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={img} alt={title} style={{ flex: '1 1 380px', minWidth: 300, maxWidth: '100%', borderRadius: 16, border: '5px solid #fff', boxShadow: '0 18px 50px rgba(58,46,34,0.22)' }} />
+          </div>
         ))}
       </section>
 
@@ -165,6 +197,39 @@ function Landing() {
         </div>
       </section>
 
+      {/* self-host quickstart (CodeTwin's 60-seconds block, honestly ours) */}
+      <section style={{ padding: '30px 0 8px', textAlign: 'center' }}>
+        <div style={overline}>SELF-HOST</div>
+        <h2 style={h2}>Yours to run — open source, your own key</h2>
+        <p style={sub}>No subscription. You spend only when a lesson is generated, on your own Qwen Cloud usage.</p>
+        <pre style={{ textAlign: 'left', maxWidth: 640, margin: '0 auto', background: '#241a12', color: '#f7e9e3', borderRadius: 14, padding: '18px 22px', fontSize: 13.5, lineHeight: 1.8, overflowX: 'auto', boxShadow: '0 14px 40px rgba(58,46,34,0.25)' }}>
+{`git clone https://github.com/auth889-ai/ai-live-tutor
+cd ai-live-tutor/forever && npm install
+cp .env.example .env   # set DASHSCOPE_API_KEY
+npm run dev:all        # your tutor on :3000`}
+        </pre>
+      </section>
+
+      {/* FAQ */}
+      <section style={{ padding: '34px 0 8px', maxWidth: 760, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center' }}><div style={overline}>QUESTIONS</div></div>
+        <h2 style={h2}>Fair questions, honest answers</h2>
+        <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
+          {[
+            ['Is the algorithm animation generated by the AI?', 'No — that is the point. The code is executed for real in a sandbox and the animation is compiled from the recording. A scene that cannot produce a real execution trace refuses to ship.'],
+            ['What stops the tutor from making things up?', 'A grounding auditor with blocking power: every factual board object must cite your material, numbers must come from the source or an executed computation, and figure marks are verified against the actual pixels — unverifiable marks are dropped, never drawn.'],
+            ['Can I fix a lesson I don’t like?', 'Yes — open any scene you own, rewrite the narration or board text, add your own notes, draw or move the teaching marks yourself, and only your changed lines are re-voiced.'],
+            ['What does it cost?', 'The software is free (AGPL-3.0). Generation runs on your own Qwen Cloud key, so you pay your provider only for what you generate — there is no subscription and no middleman.'],
+            ['What happens when generation fails?', 'It fails honestly: dropped scenes carry recorded reasons, lessons with unresolved quality issues are labeled for review instead of being published silently, and nothing is ever replaced with fake fallback content.'],
+          ].map(([q, a]) => (
+            <details key={q} style={{ background: '#fff', border: `1px solid ${UI.border}`, borderRadius: 14, padding: '14px 18px' }}>
+              <summary style={{ fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>{q}</summary>
+              <p style={{ color: UI.muted, fontSize: 14, lineHeight: 1.6, margin: '10px 0 2px' }}>{a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       {/* closing CTA band */}
       <section
         style={{
@@ -181,6 +246,12 @@ function Landing() {
       </section>
 
       <footer style={{ borderTop: `1px solid ${UI.border}`, marginTop: 44, padding: '22px 0', textAlign: 'center', color: UI.muted, fontSize: 13 }}>
+        <div style={{ display: 'flex', gap: 18, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 10, fontWeight: 700 }}>
+          <a href="https://github.com/auth889-ai/ai-live-tutor" style={{ color: UI.text, textDecoration: 'none' }}>GitHub</a>
+          <a href="https://github.com/auth889-ai/ai-live-tutor/blob/main/forever/README.md" style={{ color: UI.text, textDecoration: 'none' }}>Docs</a>
+          <a href="https://github.com/auth889-ai/ai-live-tutor/blob/main/LICENSE" style={{ color: UI.text, textDecoration: 'none' }}>License</a>
+          <a href="/login" style={{ color: UI.accentDark, textDecoration: 'none' }}>Get started</a>
+        </div>
         <span style={{ fontWeight: 800, color: UI.text }}>◎ Forever</span> — an open-source AI tutor course platform ·
         built on Qwen Cloud for the Global AI Hackathon (Track 3: Agent Society) · AGPL-3.0
       </footer>
