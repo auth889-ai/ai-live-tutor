@@ -73,6 +73,15 @@ export function validateVoiceDepth(lines, objects, { role = '' } = {}) {
       const t = [...tokensOfText(a.text)];
       return t.length === 0 || t.some((token) => spoken.has(token));
     });
+    // FULL-EXPLANATION FLOOR (user law 2026-07-27: every part fully explained, never
+    // shortly): beyond NAMING the parts, the figure must carry real narration WEIGHT —
+    // at least ~2 spoken lines per mark bound to this object (the two-lines-per-mark
+    // contract, count-enforced so synonyms can't dodge it).
+    const figureLines = (lines ?? []).filter((l) => l.targetObjectId === object.id).length;
+    const weightFloor = Math.max(4, marks.length * 2 - 1);
+    if (figureLines < weightFloor) {
+      throw new Error(`the figure ${object.id} has ${marks.length} marked parts but only ${figureLines} narration lines bound to it — a fully-taught figure needs ~2 lines per part (${weightFloor}+): for EACH mark say what it IS, then WHY it matters and how it connects`);
+    }
     const nameFloor = marks.length <= 3 ? marks.length : Math.ceil(marks.length * 0.8);
     if (named.length < nameFloor) {
       throw new Error(`the figure ${object.id} carries ${marks.length} teaching marks but the narration names only ${named.length} of them — narrate the marked parts IN ORDER (what each is, what it does, how it connects)`);

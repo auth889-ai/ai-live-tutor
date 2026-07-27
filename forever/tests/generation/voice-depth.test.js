@@ -32,9 +32,10 @@ test('mark coverage: narration must name at least half the figure marks', () => 
   const withImg = [...objs, { id: 'img', renderHint: 'image', content: { url: '/x.png', annotations: [
     { verb: 'encircle', text: 'fact table' }, { verb: 'arrow', text: 'dimension join' },
   ] } }];
-  const naming = [...rich, line('v9', 'The fact table sits in the center, reached through the dimension join on the left.')];
+  const naming = [...rich, line('v9', 'The fact table sits in the center, reached through the dimension join on the left.'),
+    line('v10', 'That join is the whole story here.'), line('v11', 'And the fact table earns its place by holding every measure.'), line('v12', 'Notice how the dimension join carries the keys across.')].map((l, i) => (i >= 8 ? { ...l, targetObjectId: 'img' } : l));
   validateVoiceDepth(naming, withImg, { role: 'intuition' }); // names 2 of 2 (75% floor)
-  assert.throws(() => validateVoiceDepth(rich, withImg, { role: 'intuition' }), /teaching marks/);
+  assert.throws(() => validateVoiceDepth(rich, withImg, { role: 'intuition' }), /narration lines bound|teaching marks/);
 });
 
 test('keytermCoverage: measures whether the source vocabulary is actually spoken', () => {
