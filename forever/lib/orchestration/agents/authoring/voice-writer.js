@@ -20,11 +20,11 @@ const VOICE_SCHEMA = z.object({
     focusRef: z.preprocess((v) => (typeof v === 'string' || typeof v === 'number' ? v : undefined), z.union([z.string(), z.number()]).optional()),
     traceStep: z.preprocess((v) => (Number.isInteger(v) ? v : undefined), z.number().int().optional()),
   })).min(1),
-  // TYPED TEACHING CONTRACT (optional, backward compatible): the model declares which lines
-  // carry which teaching move so validation checks TYPED EVIDENCE instead of regex-guessing.
-  // Defensive shape (same class as focusRef above): a malformed teachingMoves field must
-  // never kill a scene's narration — garbage entries drop, a non-array drops the field, and
-  // an omitted field falls back to the regex path. Loose `type` on purpose: an unknown move
+  // TYPED TEACHING CONTRACT: the model declares which lines carry which teaching move so
+  // validation checks TYPED EVIDENCE instead of regex-guessing. The field is REQUIRED by
+  // validation (an omission throws a NAMED, repairable violation below) but stays optional
+  // in the schema on purpose — a malformed teachingMoves field must reach the named-retry
+  // path, never die as an opaque schema error. Loose `type` on purpose too: an unknown move
   // type gets a NAMED violation from validateTeachingContract (repairable), not a schema death.
   teachingMoves: z.preprocess(
     (v) => (Array.isArray(v) ? v.filter((m) => m && typeof m === 'object') : undefined),
@@ -120,19 +120,16 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
       // TYPED TEACHING CONTRACT (structured evidence beats regex-guessing): the contract is
       // REQUIRED — an omitted field is itself a violation, retried like any other, so the
       // model cannot dodge the strict rules by staying silent (same fail-closed stance as
-      // every other gate; TEACHING_CONTRACT_STRICT=0 relaxes to the legacy regex-only path).
-      let teachingMoves = null;
-      const contractStrict = process.env.TEACHING_CONTRACT_STRICT !== '0';
-      if (json.teachingMoves?.length) {
-        const violations = validateTeachingContract(json.teachingMoves, voiceLines, sourcePack.chunks);
-        if (violations.length > 0) {
-          throw new Error(`the declared teaching contract is structurally invalid — ${violations.join('; ')}`);
-        }
-        teachingMoves = json.teachingMoves;
-      } else if (contractStrict) {
+      // every other gate). No env opt-out: the old TEACHING_CONTRACT_STRICT=0 escape let a
+      // deployment silently ship regex-only narration; the audit closed it for good.
+      if (!json.teachingMoves?.length) {
         throw new Error('no teachingMoves declared — the typed teaching contract is required: list every move (definition, concrete_example, mechanism at minimum) with the voice line ids that carry it and the chunkId it teaches');
       }
-      return { voiceLines, teachingMoves, usage };
+      const violations = validateTeachingContract(json.teachingMoves, voiceLines, sourcePack.chunks);
+      if (violations.length > 0) {
+        throw new Error(`the declared teaching contract is structurally invalid — ${violations.join('; ')}`);
+      }
+      return { voiceLines, teachingMoves: json.teachingMoves, usage };
     } catch (error) {
       lastError = error.message;
     }

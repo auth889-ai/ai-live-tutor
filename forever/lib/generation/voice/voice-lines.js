@@ -157,11 +157,24 @@ const CORE_MOVES = ['definition', 'concrete_example', 'mechanism'];
 // ("let's", "that's") would false-positive it; double/curly quotes and backticks are safe.
 const CONCRETE_MARKER = /\d|["“”`]|\b(for example|suppose|say we|imagine)\b/i;
 const CAUSAL_MARKER = /\b(because|so that|therefore|which means|leads to|that's why)\b/i;
+// A definition must actually DEFINE — the copular/defining frame, not just mention a term.
+const DEFINING_PATTERN = /\b(is a|is an|is the|means|refers to|defined as)\b/i;
+
+// SEMANTIC FLOOR (audit: "a number alone in generic prose passes the evidence rules"):
+// the same content-word machinery as keytermCoverage (>=5 chars, non-stopword), applied
+// per MOVE — a move's cited lines must speak at least one content word OF THE CHUNK the
+// move claims to teach. Deterministic, no LLM; failures name the chunk and its candidate
+// terms so the repair retry knows exactly which vocabulary to weave in.
+const contentWordsOf = (text) => new Set(
+  String(text ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ')
+    .filter((w) => w.length >= 5 && !STOP.has(w)),
+);
 
 export function validateTeachingContract(moves, lines, chunks) {
   const violations = [];
   const lineById = new Map((lines ?? []).map((l) => [String(l.id), String(l.text ?? '')]));
   const chunkIds = (chunks ?? []).length ? new Set(chunks.map((c) => String(c?.id))) : null;
+  const chunkById = new Map((chunks ?? []).map((c) => [String(c?.id), c]));
   const typesByLine = new Map(); // lineId -> Set of move types citing it
 
   const present = new Set((moves ?? []).map((m) => m?.type));
@@ -199,8 +212,39 @@ export function validateTeachingContract(moves, lines, chunks) {
     if (move?.type === 'mechanism' && known.length > 0 && !CAUSAL_MARKER.test(citedText)) {
       violations.push(`${label}: cited lines carry no cause-effect marker (because/so that/therefore/which means/leads to/that's why) — a mechanism must explain WHY, not restate WHAT`);
     }
+    if (move?.type === 'definition' && known.length > 0 && !DEFINING_PATTERN.test(citedText)) {
+      violations.push(`${label}: cited lines never actually DEFINE (no "is a/is an/is the/means/refers to/defined as") — a definition names the concept and says what it is in plain words`);
+    }
     if (chunkIds && !chunkIds.has(String(move?.chunkId))) {
       violations.push(`${label}: chunkId "${move?.chunkId ?? 'none'}" is not one of this scene's focused chunks (${[...chunkIds].join(', ')})`);
+    }
+
+    // SEMANTIC FLOOR — evidence must be ABOUT the cited chunk, not generic prose that
+    // happens to carry a digit or a "because". Judged only when the cited chunk resolves
+    // and has judgeable vocabulary (same too-thin-to-judge stance as keytermCoverage).
+    const chunk = chunkById.get(String(move?.chunkId));
+    const chunkWords = chunk ? contentWordsOf(chunk.text) : null;
+    if (known.length > 0 && chunkWords?.size) {
+      const spokenCited = contentWordsOf(citedText);
+      const speaksChunk = [...chunkWords].some((w) => spokenCited.has(w));
+      const candidates = topTerms(chunk.text, 6);
+      const named = candidates.length ? candidates : [...chunkWords].slice(0, 6);
+      if (move?.type === 'concrete_example' && !speaksChunk) {
+        violations.push(`${label}: cited lines never speak the cited chunk's own content — a real example is built FROM ${move.chunkId}'s material; weave in one of its terms (e.g. ${named.join(', ')})`);
+      }
+      if (move?.type === 'definition' && !speaksChunk) {
+        violations.push(`${label}: cited lines define without using any content word from ${move.chunkId} — define THIS chunk's concept using its own vocabulary (e.g. ${named.join(', ')})`);
+      }
+      if (move?.type === 'mechanism' && CAUSAL_MARKER.test(citedText)) {
+        // The cause-effect SENTENCE itself must be about the chunk — a causal marker in
+        // generic filler ("because reasons") is not a mechanism of this material.
+        const causalOnChunk = citedText.split(/[.!?]+/)
+          .filter((sentence) => CAUSAL_MARKER.test(sentence))
+          .some((sentence) => [...contentWordsOf(sentence)].some((w) => chunkWords.has(w)));
+        if (!causalOnChunk) {
+          violations.push(`${label}: the cause-effect sentence never mentions ${move.chunkId}'s own content — explain WHY using the chunk's terms (e.g. ${named.join(', ')})`);
+        }
+      }
     }
   });
 
