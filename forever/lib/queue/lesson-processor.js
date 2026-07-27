@@ -241,7 +241,11 @@ async function produceLesson({ sourcePack, outlineLesson = null, episode = null,
   // COVERAGE HOLES count as gate failures (audit #4): a lesson whose plan promised figures/
   // chunks that its surviving scenes no longer deliver is incomplete, not ready.
   const holes = (finalLesson.coverage?.lostFigures?.length ?? 0) + (finalLesson.coverage?.lostChunks?.length ?? 0);
-  const gateFailed = ((finalLesson.gate && finalLesson.gate.ok === false) || holes > 0) && env.LESSON_GATE_STRICT !== '0';
+  // H4 (universal fail-closed): a gate that RAN and failed, a gate that COULD NOT RUN, or
+  // coverage holes — none of these may silently become 'ready' under strict (default).
+  // Coding lessons' correctness gate is the execution layer itself (traces are run, not
+  // cited), so the repair gate stays non-coding by design — but infra honesty is universal.
+  const gateFailed = ((finalLesson.gate && (finalLesson.gate.ok === false || finalLesson.gate.unavailable === true)) || holes > 0) && env.LESSON_GATE_STRICT !== '0';
   finalLesson = { ...finalLesson, status: gateFailed ? 'needs_review' : 'ready' };
   if (gateFailed) {
     report(makeProgress({ phase: 'saving', message: `Gate: ${finalLesson.gate?.ok === false ? `${finalLesson.gate.violations} unresolved issue(s)` : ''}${finalLesson.gate?.ok === false && holes ? ' + ' : ''}${holes ? `${holes} coverage hole(s) from dropped scenes` : ''} — saved as needs_review, not published as ready`, ...watchable() }));
