@@ -144,6 +144,74 @@ export function perChunkKeytermCoverage(lines, chunks) {
   });
 }
 
+// TYPED TEACHING CONTRACT (replaces regex-guessing with typed evidence): instead of
+// hoping varied filler happens to match the teaching-move regexes above, the Voice Writer
+// DECLARES which lines carry which move ({type, voiceLineIds, chunkId}) and this validator
+// checks the structure deterministically — no model calls. A cited line must actually
+// carry its move's evidence (a concrete value for an example, a causal marker for a
+// mechanism), one line cannot be everything, and every citation must resolve. Returns an
+// array of violation strings (empty = pass) so the repair retry is told exactly what to fix.
+const MOVE_TYPES = new Set(['definition', 'concrete_example', 'mechanism', 'worked_step', 'learner_check']);
+const CORE_MOVES = ['definition', 'concrete_example', 'mechanism'];
+// Quoted-value detection deliberately excludes the straight apostrophe — contractions
+// ("let's", "that's") would false-positive it; double/curly quotes and backticks are safe.
+const CONCRETE_MARKER = /\d|["“”`]|\b(for example|suppose|say we|imagine)\b/i;
+const CAUSAL_MARKER = /\b(because|so that|therefore|which means|leads to|that's why)\b/i;
+
+export function validateTeachingContract(moves, lines, chunks) {
+  const violations = [];
+  const lineById = new Map((lines ?? []).map((l) => [String(l.id), String(l.text ?? '')]));
+  const chunkIds = (chunks ?? []).length ? new Set(chunks.map((c) => String(c?.id))) : null;
+  const typesByLine = new Map(); // lineId -> Set of move types citing it
+
+  const present = new Set((moves ?? []).map((m) => m?.type));
+  for (const core of CORE_MOVES) {
+    if (!present.has(core)) {
+      violations.push(`no ${core} move declared — a taught scene needs at least a definition, a concrete_example, and a mechanism`);
+    }
+  }
+
+  (moves ?? []).forEach((move, index) => {
+    const label = `teachingMoves[${index}] (${move?.type ?? 'untyped'})`;
+    if (!MOVE_TYPES.has(move?.type)) {
+      violations.push(`${label}: unknown move type — use definition|concrete_example|mechanism|worked_step|learner_check`);
+    }
+    const cited = (move?.voiceLineIds ?? []).map(String);
+    if (cited.length === 0) {
+      violations.push(`${label}: cites no voiceLineIds — every move must name the lines that carry it`);
+    }
+    const known = [];
+    for (const id of cited) {
+      if (!lineById.has(id)) {
+        violations.push(`${label}: cites unknown voice line "${id}" — cite only ids from voiceLines`);
+        continue;
+      }
+      known.push(id);
+      if (MOVE_TYPES.has(move?.type)) {
+        if (!typesByLine.has(id)) typesByLine.set(id, new Set());
+        typesByLine.get(id).add(move.type);
+      }
+    }
+    const citedText = known.map((id) => lineById.get(id)).join(' ');
+    if (move?.type === 'concrete_example' && known.length > 0 && !CONCRETE_MARKER.test(citedText)) {
+      violations.push(`${label}: cited lines carry no concrete value (a number, a quoted value, or "for example/suppose/say we/imagine") — a concrete example must show real values, not gesture at them`);
+    }
+    if (move?.type === 'mechanism' && known.length > 0 && !CAUSAL_MARKER.test(citedText)) {
+      violations.push(`${label}: cited lines carry no cause-effect marker (because/so that/therefore/which means/leads to/that's why) — a mechanism must explain WHY, not restate WHAT`);
+    }
+    if (chunkIds && !chunkIds.has(String(move?.chunkId))) {
+      violations.push(`${label}: chunkId "${move?.chunkId ?? 'none'}" is not one of this scene's focused chunks (${[...chunkIds].join(', ')})`);
+    }
+  });
+
+  for (const [lineId, types] of typesByLine) {
+    if (types.size > 2) {
+      violations.push(`voice line ${lineId} is cited by ${types.size} different move types (${[...types].join(', ')}) — one line cannot carry more than 2 moves; spread the teaching across distinct sentences`);
+    }
+  }
+  return violations;
+}
+
 export function validateVoiceLine(line) {
   if (!line.id?.trim()) throw new Error('voiceLine.id is required');
   const context = `voiceLine ${line.id}`;

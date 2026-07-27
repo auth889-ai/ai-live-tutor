@@ -154,7 +154,10 @@ export async function generateSceneFromSourcePack(
   const { timeline, durationMs } = compileProvisionalTimeline({ sceneId: id, objects, voiceLines });
 
   return {
-    scene: { sceneId: id, layout, objects, voiceLines },
+    // teachingMoves: the Voice Writer's typed teaching contract (which lines carry which
+    // move), stored on the scene so auditors read declared evidence, not regex guesses.
+    // Absent for pre-contract scenes and voice agents that never declared moves.
+    scene: { sceneId: id, layout, objects, voiceLines, ...(voice.teachingMoves?.length ? { teachingMoves: voice.teachingMoves } : {}) },
     timeline,
     durationMs,
     sourcePack,

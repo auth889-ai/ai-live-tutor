@@ -5,7 +5,7 @@
 import { z } from 'zod';
 
 import { runAgentChain } from '../../../qwen/client.js';
-import { validateVoiceLines, validateVoiceDepth, keytermCoverage, perChunkKeytermCoverage, normalizeVoiceTargets, normalizeFocusRefs, scrubSpokenInternalIds } from '../../../generation/voice/voice-lines.js';
+import { validateVoiceLines, validateVoiceDepth, validateTeachingContract, keytermCoverage, perChunkKeytermCoverage, normalizeVoiceTargets, normalizeFocusRefs, scrubSpokenInternalIds } from '../../../generation/voice/voice-lines.js';
 
 const VOICE_SCHEMA = z.object({
   voiceLines: z.array(z.object({
@@ -20,11 +20,33 @@ const VOICE_SCHEMA = z.object({
     focusRef: z.preprocess((v) => (typeof v === 'string' || typeof v === 'number' ? v : undefined), z.union([z.string(), z.number()]).optional()),
     traceStep: z.preprocess((v) => (Number.isInteger(v) ? v : undefined), z.number().int().optional()),
   })).min(1),
+  // TYPED TEACHING CONTRACT (optional, backward compatible): the model declares which lines
+  // carry which teaching move so validation checks TYPED EVIDENCE instead of regex-guessing.
+  // Defensive shape (same class as focusRef above): a malformed teachingMoves field must
+  // never kill a scene's narration — garbage entries drop, a non-array drops the field, and
+  // an omitted field falls back to the regex path. Loose `type` on purpose: an unknown move
+  // type gets a NAMED violation from validateTeachingContract (repairable), not a schema death.
+  teachingMoves: z.preprocess(
+    (v) => (Array.isArray(v) ? v.filter((m) => m && typeof m === 'object') : undefined),
+    z.array(z.object({
+      type: z.coerce.string(),
+      voiceLineIds: z.preprocess((v) => (Array.isArray(v) ? v : []), z.array(z.coerce.string())),
+      chunkId: z.coerce.string().optional(),
+    })).optional(),
+  ),
 });
 
-export async function writeVoice({ objects, sourcePack, brief = null }) {
+export async function writeVoice({ objects, sourcePack, brief = null }, deps = {}) {
+  const call = deps.runAgentChain ?? runAgentChain;
   const system = `You are the Voice Writer of an AI tutor: what the teacher SAYS while the board is written.
-Output ONLY JSON: {"voiceLines":[{"id","text","targetObjectId","focusRef"?,"traceStep"?}]}
+Output ONLY JSON: {"voiceLines":[{"id","text","targetObjectId","focusRef"?,"traceStep"?}],"teachingMoves":[{"type","voiceLineIds","chunkId"}]}
+DECLARE YOUR TEACHING MOVES (typed evidence, not vibes): in "teachingMoves", say which lines carry which move.
+- "type" is one of "definition" | "concrete_example" | "mechanism" | "worked_step" | "learner_check".
+- "voiceLineIds" lists the ids of the voice lines that CARRY that move; "chunkId" is the id of the source chunk it teaches.
+- Required: at least one definition, one concrete_example, and one mechanism.
+- A concrete_example's cited lines must contain a real value (a number, a quoted value, or "for example/suppose/imagine").
+- A mechanism's cited lines must contain a cause-effect word (because/so that/therefore/which means/leads to/that's why).
+- One line may carry at most 2 move types — a single sentence cannot be the definition AND the example AND the why.
 POINT WHILE YOU SPEAK (this is what makes it feel like a real teacher, not a slideshow):
 - When a line discusses a specific SUB-ELEMENT of its target object, set "focusRef" to that element's id so it
   highlights AS you say it: for a "graph" object use the node id (e.g. "8"); for a "code" object use the 1-based
@@ -65,13 +87,14 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
   const user = JSON.stringify({
     task: 'Narrate this board for the student.',
     board: objects.map((object) => ({ id: object.id, objectType: object.objectType, content: object.content })),
-    sourceChunks: sourcePack.chunks.map((chunk) => chunk.text),
+    // Chunks carry their ids so teachingMoves can cite WHICH chunk each move teaches.
+    sourceChunks: sourcePack.chunks.map((chunk) => ({ id: chunk.id, text: chunk.text })),
   });
 
   let lastError;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const repair = attempt === 0 ? '' : `\nYour previous output was rejected: ${lastError}. Fix exactly that and output the full JSON again.`;
-    const { json, usage } = await runAgentChain({ agent: 'voice_writer', system: system + repair, user, temperature: 0.6, schema: VOICE_SCHEMA });
+    const { json, usage } = await call({ agent: 'voice_writer', system: system + repair, user, temperature: 0.6, schema: VOICE_SCHEMA });
     try {
       // Unambiguous slips (targeting a node id instead of its object) are repaired
       // structurally before validation — no model round-trip for a mechanical fix.
@@ -94,7 +117,19 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
         const named = skippedChunks.map((c) => `${c.chunkId} (missing: ${c.missing.join(', ')})`).join('; ');
         throw new Error(`the narration skips assigned source material — every focused chunk must be taught, but these go unspoken: ${named}. Weave each chunk's concepts into the explanation explicitly`);
       }
-      return { voiceLines, usage };
+      // TYPED TEACHING CONTRACT (structured evidence beats regex-guessing): when the model
+      // declared its moves, they must be structurally sound — every violation is named so
+      // the retry fixes exactly that. When it omitted the field, the regex path above
+      // already gated depth (backward compatible — the field is not hard-required yet).
+      let teachingMoves = null;
+      if (json.teachingMoves?.length) {
+        const violations = validateTeachingContract(json.teachingMoves, voiceLines, sourcePack.chunks);
+        if (violations.length > 0) {
+          throw new Error(`the declared teaching contract is structurally invalid — ${violations.join('; ')}`);
+        }
+        teachingMoves = json.teachingMoves;
+      }
+      return { voiceLines, teachingMoves, usage };
     } catch (error) {
       lastError = error.message;
     }

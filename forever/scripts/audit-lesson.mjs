@@ -104,6 +104,13 @@ for (const scene of lesson.scenes ?? []) {
     }
   }
 
+  // 6c. UNTYPED TEACHING — a substantial scene (≥6 voice lines) with no recorded
+  // teachingMoves predates the typed teaching contract: its depth was regex-guessed, not
+  // declared. WARN tier: pre-contract lessons are not wrong, just unverifiable by type.
+  if (voiceLines.length >= 6 && !(scene.teachingMoves?.length)) {
+    add(scene.sceneId, 'WARN', 'untyped-teaching', `${voiceLines.length} voice lines but no teachingMoves recorded (pre-contract era) — regenerate to get typed evidence`);
+  }
+
   // 7. DEPTH FLOOR — a "taught" scene with fewer than 6 narration lines is a summary.
   if (voiceLines.length > 0 && voiceLines.length < 6 && !['recap', 'checkpoint', 'practice'].some((r) => scene.pedagogicalRole?.includes(r) || /recap|checkpoint|practice/i.test(scene.title))) {
     add(scene.sceneId, 'WARN', 'thin-narration', `${voiceLines.length} lines — the depth rules demand a real explanation`);
