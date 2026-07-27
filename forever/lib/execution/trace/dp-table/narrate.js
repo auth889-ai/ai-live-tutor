@@ -21,7 +21,7 @@ function relName([a, b], r, c) {
   return `dp[${a}][${b}]`;
 }
 
-export function narrateWrite({ r, c, value, old, isBase , proved = false , informative = true , readCells = null , chosen = null , tookBest = false }) {
+export function narrateWrite({ r, c, value, old, isBase , proved = false , informative = true , readCells = null , chosen = null , tookBest = false , readsInstrumented = false }) {
   const was = old !== undefined && old !== null ? ` (it was ${JSON.stringify(old)})` : '';
   // STRIVER GRAMMAR, recorded facts only: fires ONLY when this write's timestep RECORDED dp
   // reads — every cell named below was actually read by the run, so "we look at" is literal.
@@ -39,8 +39,13 @@ export function narrateWrite({ r, c, value, old, isBase , proved = false , infor
   // VERIFIED-TEMPLATES LAW (external review #2, reproduced 2026-07-20): 'computed from
   // neighbours' may only be said when neighbour reads were RECORDED — a constant write
   // (dp[i][j] = 1) uses no neighbours, and saying otherwise is a false explanation.
+  // Inference-deletion corollary (2026-07-28): a recording WITHOUT read instrumentation
+  // carries no read evidence either way — so it claims neither a dependency NOR "assigned
+  // directly"; it narrates the bare write and nothing more.
   if (!proved) {
-    return `dp[${r}][${c}] becomes ${JSON.stringify(value)}${was}. No reads of other cells were recorded for this write — the value was assigned directly. Watch WHERE the filled region grows: the order tells you how the loop sweeps the table.`;
+    return readsInstrumented
+      ? `dp[${r}][${c}] becomes ${JSON.stringify(value)}${was}. No reads of other cells were recorded for this write — the value was assigned directly. Watch WHERE the filled region grows: the order tells you how the loop sweeps the table.`
+      : `dp[${r}][${c}] becomes ${JSON.stringify(value)}${was}. This recording carries no read instrumentation, so no dependency is claimed for this write. Watch WHERE the filled region grows: the order tells you how the loop sweeps the table.`;
   }
   if (!informative) {
     return `dp[${r}][${c}] becomes ${JSON.stringify(value)}${was}. The write's expression read other cells (recorded — they light up), but the written value is constant across the run, so no value flow is claimed from them.`;

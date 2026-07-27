@@ -5,9 +5,11 @@
 // with its actual old -> new values, and the terminal beat reads the answer out of the table.
 // A table the code grows row-by-row (dp.append) is handled: the view sizes to the FINAL
 // dimensions and cells simply appear when the run created them. Only observed writes are ever
-// shown — and dependency highlights are PROVED, never guessed: a write's reads light up only
-// when exactly ONE arithmetic rule (diag+1 / top+left / max(top,left))
-// reproduces the written value from the prior table state; any ambiguity means no highlight.
+// shown — and dependency highlights come ONLY from RECORDED reads (correctness lock,
+// 2026-07-28: the old arithmetic-consensus fallback — "exactly one of diag+1 / top+left /
+// max(top,left) reproduces the value" — could still invent an arrow no runtime read backs,
+// so it was DELETED). No recorded read → reads: [] and no arrow: an honest bare write
+// beats a guessed arrow, every time.
 
 import { validateExecutionTrace } from '../../../board/execution/execution-trace.js';
 
@@ -156,9 +158,11 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
     const rowCol0 = writes.every(([r, c]) => (rows > 1 ? r === 0 || c === 0 : c === 0));
     const phase = stepReads.length === 0 && ((directReads ? !dpReadBefore[evAt] : false) || rowCol0) ? 'base' : 'fill';
 
-    // PROVED-DEPENDENCY INFERENCE (the AlgoTutor-mockup arrows, honestly): single-cell,
-    // non-base writes only. Candidates from the PRE-write state; exactly one matching rule
-    // -> highlight those reads + name the rule; zero or several matches -> nothing.
+    // PROVED DEPENDENCIES — provenance mode ONLY (correctness lock, 2026-07-28): arrows come
+    // exclusively from reads the run RECORDED on the writing line. The arithmetic-inference
+    // fallback that used to live in an else-branch here (derive reads from formula/position
+    // when none were recorded) is DELETED: no runtime read -> no arrow, whatever the numbers
+    // coincidentally satisfy. A write without recorded reads ships as an honest bare write.
     let proved = null;
     if (directReads && writes.length === 1) {
       // PROVENANCE MODE: arrows come ONLY from recorded reads executed on the writing line
@@ -198,27 +202,17 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
         proved = { rule: rule ?? (informative ? 'from read cells' : 'reads recorded — value not derived from them'), reads: cells.map((c) => c.p) };
         provedByCell.set(`${wr},${wc}`, { rule: proved.rule, cells });
       }
-    } else if (informative && writes.length === 1) {
-      const [r, c] = writes[0];
-      if (r > 0 || c > 0) {
-        const val = ev.table[r]?.[c];
-        const top = r > 0 ? known.get(`${r - 1},${c}`) : undefined;
-        const left = c > 0 ? known.get(`${r},${c - 1}`) : undefined;
-        const diag = r > 0 && c > 0 ? known.get(`${r - 1},${c - 1}`) : undefined;
-        const nums = (...vs) => vs.every((v) => typeof v === 'number');
-        const matches = [];
-        if (nums(val, diag) && val === diag + 1) matches.push({ rule: 'diagonal + 1', reads: [[r - 1, c - 1]] });
-        if (nums(val, top, left) && val === top + left) matches.push({ rule: 'top + left', reads: [[r - 1, c], [r, c - 1]] });
-        if (nums(val, top, left) && val === Math.max(top, left)) matches.push({ rule: 'max(top, left)', reads: [[r - 1, c], [r, c - 1]] });
-        if (matches.length === 1) proved = matches[0];
-      }
     }
+    // (Deleted 2026-07-28: the non-provenance else-branch that INFERRED a dependency when
+    // exactly one of diag+1 / top+left / max(top,left) reproduced the value from the prior
+    // table state. Arithmetic coincidence is not evidence — recordings without read
+    // instrumentation now render bare writes and zero arrows, which is the truth they carry.)
 
     const parts = [];
     for (const [r, c, old] of writes.slice(0, 2)) {
       parts.push(narrateWrite({
         r, c, value: known.get(`${r},${c}`), old, isBase: phase === 'base' || r === 0 || c === 0,
-        proved: Boolean(proved), informative,
+        proved: Boolean(proved), informative, readsInstrumented: directReads,
         // Striver-grammar facts (recorded only): the reads this write's timestep logged, and
         // the max/min winners when a recorded op proved them — single-cell writes only.
         readCells: directReads && writes.length === 1 ? stepReads : null,
@@ -259,9 +253,17 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
     // Typed events (B2): every cell write is a cell_update with recorded before/after; a
     // PROVED dependency additionally emits dependency_read events for the cells the rule
     // read — the machine-readable form of the mockups' arrows + formula column.
-    // Stable role + STRUCTURED formula (reviewer rule: "top + left" is formula text, not a
+    // Stable role + STRUCTURED formula (reviewer rule: "sum of reads" is formula text, not a
     // semantic role) — operands reference canonical gridCell ids the resolver can prove.
-    const FORMULA_OPS = { 'diagonal + 1': 'add_one', 'top + left': 'add', 'max(top, left)': 'max' };
+    // Keys are the PROVENANCE-mode rule names only (the inferred-rule names died with the
+    // inference branch); anything unmapped passes through as its literal text.
+    const FORMULA_OPS = {
+      'read + 1': 'add_one', 'sum of reads': 'add', 'max of reads': 'max', 'min of reads': 'min',
+      'max of reads + 1': 'max_add_one', 'min of reads + 1': 'min_add_one',
+      'sum (recorded op)': 'add', 'difference (recorded op)': 'sub', 'product (recorded op)': 'mult',
+      'floor-div (recorded op)': 'floor_div', 'mod (recorded op)': 'mod',
+      'max (recorded op)': 'max', 'min (recorded op)': 'min',
+    };
     stepObj.events = [
       ...writes.map(([r, c, old]) => ({
         eventType: 'cell_update',

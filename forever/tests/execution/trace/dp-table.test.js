@@ -30,10 +30,14 @@ test('LCS through the lens: init scaffold, one visible write per cell, answer re
   assert.equal(init.array2d.values.length, 6, 'all seeded cells render');
   assert.equal(init.array2d.filled, undefined, 'seeded zeros are not the green filled region');
 
-  // Interior writes narrate real old -> new values and mark the write current.
+  // Interior writes narrate real old -> new values and mark the write current. This fixture
+  // has NO read instrumentation, so the write is narrated bare — no dependency claimed, no
+  // arrow drawn, even though diag+1 happens to match arithmetically (inference is deleted).
   const w1 = trace.steps.find((s) => /dp\[1\]\[1\] becomes 1/.test(s.explanation));
   assert.ok(w1, 'the first real write is its own beat');
-  assert.match(w1.explanation, /\(it was 0\).*already-filled neighbours/s);
+  assert.match(w1.explanation, /\(it was 0\).*no dependency is claimed/s);
+  assert.equal(w1.array2d.highlight, undefined, 'no recorded read -> no arrow');
+  assert.equal(w1.array2d.rule, undefined, 'no recorded read -> no rule named');
   assert.deepEqual(w1.array2d.current, [1, 1], 'the written cell glows');
   assert.deepEqual(w1.array2d.values, [[1, 1, 1]], 'only the observed write is shown — nothing invented');
   assert.equal(w1.variables.i, 1, 'the loop indices ride the variables panel');
@@ -107,26 +111,32 @@ test('ADVERSARIAL (unit): a recording with NO reads yields EMPTY reads — no ar
   }
 });
 
-test('PROVED dependency highlights: exactly one arithmetic rule -> reads light up + rule named; ambiguity -> nothing', () => {
+test('INFERENCE DELETED (regression): a write with NO recorded reads ships zero dependency arrows — even when exactly one arithmetic rule matches', () => {
+  // This exact fixture used to earn "rule: diagonal + 1" from the arithmetic-consensus
+  // fallback (dp[1][1]=1 where diag=0 uniquely satisfies diag+1). That fallback is DELETED:
+  // no runtime read in the recording -> reads: [], no highlight, no rule, no dependency_read
+  // event. An honest bare write beats a guessed arrow.
   const events = [
     { line: 3, table: [[0, 0], [0, 0]], locals: {} },                    // init scaffold
-    { line: 7, table: [[0, 0], [0, 1]], locals: { i: 1, j: 1 } },        // dp[1][1]=1: diag+1 UNIQUELY (top+left=0, max=0)
-    { line: 7, table: [[0, 1], [0, 1]], locals: { i: 0, j: 1 } },        // base-row write: no inference
+    { line: 7, table: [[0, 0], [0, 1]], locals: { i: 1, j: 1 } },        // dp[1][1]=1: diag+1 matches UNIQUELY — still no arrow
+    { line: 7, table: [[0, 1], [0, 1]], locals: { i: 0, j: 1 } },        // base-row write
   ];
   const trace = compileDpTable({ events, result: 1, code: 'a\nb\nc\nd\ne\nf\ndp[i][j] = ...', entry: null });
-  const provedStep = trace.steps.find((s) => s.array2d?.rule);
-  assert.ok(provedStep, 'the uniquely-proved write carries a rule');
-  assert.equal(provedStep.array2d.rule, 'diagonal + 1');
-  assert.deepEqual(provedStep.array2d.highlight, [[0, 0]], 'the diagonal READ cell highlights');
-  assert.match(provedStep.explanation, /rule: diagonal \+ 1/);
+  for (const s of trace.steps) {
+    assert.equal(s.array2d?.highlight, undefined, 'no recorded read -> no dependency arrow, ever');
+    assert.equal(s.array2d?.rule, undefined, 'no recorded read -> no rule named from coincidence');
+    assert.ok(!(s.events ?? []).some((e) => e.eventType === 'dependency_read'), 'no dependency_read events without recorded reads');
+    assert.ok(!(s.events ?? []).some((e) => e.formula), 'no formula claimed without recorded reads');
+    assert.ok(!/already-filled neighbours|rule:/.test(s.explanation), 'narration never claims unrecorded dependencies');
+  }
 
-  // Ambiguous case: value 2 where top=1,left=1,diag=1 satisfies BOTH top+left and diag+1.
+  // The formerly "ambiguous" case stays arrow-free too, for the same reason (not ambiguity).
   const ambiguous = [
     { line: 3, table: [[1, 1], [1, 0]], locals: {} },
     { line: 7, table: [[1, 1], [1, 2]], locals: {} },
   ];
   const trace2 = compileDpTable({ events: ambiguous, result: 2, code: 'x\ny\nz\na\nb\nc\nd', entry: null });
   const writeStep = trace2.steps.find((s) => s.array2d?.current);
-  assert.equal(writeStep.array2d.rule, undefined, 'two matching rules -> proved nothing -> no highlight (honesty)');
+  assert.equal(writeStep.array2d.rule, undefined);
   assert.equal(writeStep.array2d.highlight, undefined);
 });
