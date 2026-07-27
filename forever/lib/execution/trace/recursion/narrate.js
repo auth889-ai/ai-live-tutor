@@ -19,8 +19,31 @@ export function narrateBaseCase(child, value, parent) {
   return `${child} hits the base case — the input is now small enough to answer directly, so it returns ${JSON.stringify(value)} without making any further calls. This is the floor that stops the descent; from here the answers start flowing back up, and ${JSON.stringify(value)} travels along the edge to ${parent}.`;
 }
 
-export function narrateCombineReturn(child, value, parent) {
+export function narrateCombineReturn(child, value, parent, childReturns = null) {
+  // TREE GRAMMAR (mined from Striver's tree lectures — max depth, diameter, max path sum):
+  // the recurring beat is "the left gave you X, the right gave you Y, so this node returns
+  // Z, and Z flows up". The children's answers named here are the RECORDED return values of
+  // this call's real children — the template never claims a formula, only the recorded flow.
+  if (Array.isArray(childReturns) && childReturns.length > 0) {
+    const gave = childReturns.map((v) => JSON.stringify(v)).join(' and ');
+    return `${child} has all the answers it was waiting for: its ${childReturns.length === 1 ? 'child gave it' : 'children gave it'} ${gave}, and combining ${childReturns.length === 1 ? 'that' : 'them'} it returns ${JSON.stringify(value)}. That value now flows up the edge to ${parent}, which is still waiting on the stack until every one of its children reports back.`;
+  }
   return `${child} has finished: all of its own children have answered, and combining them gives ${JSON.stringify(value)}. That value now flows up the edge to ${parent}, which is still waiting on the stack until every one of its children reports back.`;
+}
+
+// BACKTRACKING GRAMMAR (mined from Striver's recursion/backtracking lectures — subsequences
+// pick/not-pick, N-Queens): choose = "we pick X and move ahead"; undo = "since you added X
+// you need to remove it — after removal it is back to the state it was, and only then do you
+// try the next option". Templates are filled ONLY from recorded trace values.
+export function narrateChooseCall(parent, child, varName, value) {
+  return `${parent} makes a choice: it picks ${JSON.stringify(value)} and adds it to ${varName}, then recurses into ${child} to explore everything that choice allows. ${parent} pauses on the stack — and remember, a choice made before a recursive call must be undone when that call comes back.`;
+}
+
+export function narrateBacktrackUndo(child, varName, value, stateBefore, stateAfter) {
+  const states = stateBefore !== undefined && stateAfter !== undefined
+    ? ` ${varName} goes from ${JSON.stringify(stateBefore)} back to ${JSON.stringify(stateAfter)} — exactly the state it was in before the pick, and the recording shows both states.`
+    : '';
+  return `${child} has been fully explored, so we backtrack: we remove ${JSON.stringify(value)} from ${varName}, undoing the choice we made before that call.${states} Only now, with the state restored, are we free to try the next option.`;
 }
 
 export function narrateFinalReturn(root, result, usedMemo) {
