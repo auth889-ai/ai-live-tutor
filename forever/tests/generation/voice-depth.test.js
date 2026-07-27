@@ -64,3 +64,10 @@ test('teaching-moves floor: move-free filler fails even at length; real teaching
   // `rich` fixture has example (imagine/numbers), causal (because), misconception (mistake) => passes
   validateVoiceDepth(rich, objs, { role: 'intuition' });
 });
+
+test('anti-stuffing: keyword-sprinkled repetition fails on phrase diversity; varied teaching passes', () => {
+  const stuffed = Array.from({ length: 10 }, (_, i) => line(`s${i}`,
+    'Normalization is a technique because normalization removes redundancy for example normalization splits tables therefore normalization is a technique because normalization removes redundancy.'));
+  assert.throws(() => validateVoiceDepth(stuffed, objs, { role: 'intuition' }), /phrase diversity/);
+  validateVoiceDepth(rich, objs, { role: 'intuition' }); // varied real teaching untouched
+});

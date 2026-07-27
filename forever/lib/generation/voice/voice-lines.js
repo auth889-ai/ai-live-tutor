@@ -65,6 +65,20 @@ export function validateVoiceDepth(lines, objects, { role = '' } = {}) {
     const missing = Object.keys(moves).filter((k) => !moves[k]);
     throw new Error(`narration shows only ${shown.length}/5 teaching moves (${shown.join(', ') || 'none'}) — a taught scene needs at least 3 of: a DEFINITION in plain words, a CONCRETE example, a BECAUSE/why explanation, a question the student answers, the common mistake. Missing: ${missing.join(', ')}`);
   }
+  // ANTI-STUFFING FLOOR (audit: keywords can trick keyword checks; 220 words of repetition
+  // can trick length checks): lexical DIVERSITY is hard to fake — narration built from
+  // repeated phrases or recycled sentences has few distinct 4-word shingles relative to its
+  // length. Real teaching (every fixture and live lesson measured) sits far above 0.55.
+  const words = (lines ?? []).map((l) => String(l.text ?? '').toLowerCase().replace(/[^a-z0-9']+/g, ' ')).join(' ').split(/\s+/).filter(Boolean);
+  if (words.length >= 60) {
+    const shingles = new Set();
+    for (let i = 0; i + 4 <= words.length; i += 1) shingles.add(words.slice(i, i + 4).join(' '));
+    const diversity = shingles.size / Math.max(1, words.length - 3);
+    if (diversity < 0.55) {
+      throw new Error(`narration repeats itself (phrase diversity ${(diversity * 100).toFixed(0)}% — floor 55%): rewrite with DISTINCT sentences that each add one new idea; repeated phrases and filler do not teach`);
+    }
+  }
+
   const spoken = tokensOfText((lines ?? []).map((l) => l.text).join(' '));
   for (const object of (objects ?? []).filter((o) => o.renderHint === 'image')) {
     const marks = (object.content?.annotations ?? []).filter((a) => a.text?.trim());
