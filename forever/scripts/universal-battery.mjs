@@ -259,6 +259,30 @@ def search(root, val):
             return node
         node = node.left if val < node.val else node.right
     return None`, 'search(tree, 4)'],
+  ['trees', 'LC110 Balanced Binary Tree (height with -1 sentinel)', `${TREE_PRELUDE}
+def height(node):
+    if node is None:
+        return 0
+    lh = height(node.left)
+    rh = height(node.right)
+    if lh == -1 or rh == -1 or abs(lh - rh) > 1:
+        return -1
+    return 1 + max(lh, rh)
+def balanced(root):
+    return height(root) != -1`, 'balanced(tree)'],
+  ['trees', 'LC543 Diameter of Binary Tree (Striver L16 shape)', `${TREE_PRELUDE}
+best = [0]
+def depth(node):
+    if node is None:
+        return 0
+    lh = depth(node.left)
+    rh = depth(node.right)
+    if lh + rh > best[0]:
+        best[0] = lh + rh
+    return 1 + max(lh, rh)
+def diameter(root):
+    depth(root)
+    return best[0]`, 'diameter(tree)'],
   ['trees', 'LC102 Level Order Traversal', `${TREE_PRELUDE}
 from collections import deque
 def levels(root):
@@ -346,6 +370,68 @@ def fib(n):
         perm(cur, rest[:i] + rest[i+1:], out)
         cur.pop()
 out = []`, 'perm([], [1, 2], out)'],
+  ['recursion', 'LC51 N-Queens (choose/undo on sets + path)', `def solve(n):
+    cols = set()
+    d1 = set()
+    d2 = set()
+    placed = []
+    found = []
+
+    def place(r):
+        if r == n:
+            found.append(list(placed))
+            return
+        for c in range(n):
+            if c in cols or (r + c) in d1 or (r - c) in d2:
+                continue
+            cols.add(c)
+            d1.add(r + c)
+            d2.add(r - c)
+            placed.append(c)
+            place(r + 1)
+            placed.pop()
+            cols.remove(c)
+            d1.remove(r + c)
+            d2.remove(r - c)
+
+    place(0)
+    return len(found)`, 'solve(4)'],
+  ['recursion', 'LC22 Generate Parentheses (open/close undo)', `def gen(n):
+    out = []
+    cur = []
+
+    def build(opened, closed):
+        if len(cur) == 2 * n:
+            out.append(''.join(cur))
+            return
+        if opened < n:
+            cur.append('(')
+            build(opened + 1, closed)
+            cur.pop()
+        if closed < opened:
+            cur.append(')')
+            build(opened, closed + 1)
+            cur.pop()
+
+    build(0, 0)
+    return out`, 'gen(2)'],
+  ['recursion', 'LC131 Palindrome Partitioning (slice check + undo)', `def partition(s):
+    res = []
+    path = []
+
+    def dfs(start):
+        if start == len(s):
+            res.append(list(path))
+            return
+        for end in range(start + 1, len(s) + 1):
+            piece = s[start:end]
+            if piece == piece[::-1]:
+                path.append(piece)
+                dfs(end)
+                path.pop()
+
+    dfs(0)
+    return res`, "partition('aab')"],
 
   // ——— grids ———
   ['grids', 'LC994 Rotten Oranges (G-10)', `from collections import deque
