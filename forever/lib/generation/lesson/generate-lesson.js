@@ -175,6 +175,44 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
     await runPass(coverageRescue, 1);
   }
 
+  // TARGETED REPLACEMENT (audit round 4: detection without repair): content STILL lost
+  // after the coverage rescue gets brand-new deterministic briefs — a wall-chart scene per
+  // orphaned figure, deep-dive scenes per ~6 orphaned chunks — one final generation pass.
+  // Only content that fails even this becomes a recorded hole (and blocks 'ready').
+  const survived2 = { chunks: new Set(), figures: new Set() };
+  results.forEach((r, i) => {
+    if (!r) return;
+    for (const id of briefs[i].focusChunkIds ?? []) survived2.chunks.add(id);
+    for (const id of briefs[i].focusFigureIds ?? []) survived2.figures.add(id);
+  });
+  const deadFigures = [...new Set(briefs.flatMap((b, i) => (results[i] ? [] : (b.focusFigureIds ?? []))))].filter((id) => !survived2.figures.has(id));
+  const deadChunks = [...new Set(briefs.flatMap((b, i) => (results[i] ? [] : (b.focusChunkIds ?? []))))].filter((id) => !survived2.chunks.has(id));
+  const fallbackChunks = (deadChunks.length ? deadChunks : (sourcePack.chunks ?? []).slice(0, 4).map((c) => c.id)).slice(0, 6);
+  const replacements = [
+    ...deadFigures.map((figureId) => ({
+      title: 'The Figure, Explained',
+      pedagogicalRole: 'visualize',
+      directive: 'A prior scene for this source figure failed. Teach the figure like a professor at a wall chart: place it, walk EVERY labeled part in order (what it is, what it does, how it connects), tie each part to the source\'s own words, and write 2-4 takeaway notes beside it.',
+      focusChunkIds: fallbackChunks,
+      focusFigureIds: [figureId],
+    })),
+    ...Array.from({ length: Math.ceil(deadChunks.length / 6) }, (_, k) => ({
+      title: `What the Source Also Says (part ${k + 1})`,
+      pedagogicalRole: 'intuition',
+      directive: 'A prior scene covering this material failed. Teach it fully — concrete example first, the idea in plain words, why it matters, the common mistake — never as a summary.',
+      focusChunkIds: deadChunks.slice(k * 6, k * 6 + 6),
+      focusFigureIds: [],
+    })),
+  ];
+  if (replacements.length > 0) {
+    const start = briefs.length;
+    briefs.push(...replacements);
+    results.push(...replacements.map(() => null));
+    failures.push(...replacements.map(() => null));
+    onProgress({ phase: 'generating', message: `Generating ${replacements.length} replacement scene(s) for content lost to failures`, sceneDone: done, sceneTotal });
+    await runPass(replacements.map((_, k) => start + k), 1);
+  }
+
   const scenes = results.filter(Boolean);
   const skippedScenes = failures
     .map((e, i) => (e ? { title: briefs[i].title, pedagogicalRole: briefs[i].pedagogicalRole, reason: String(e?.message ?? e).slice(0, 300) } : null))
