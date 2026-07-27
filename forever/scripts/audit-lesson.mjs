@@ -86,6 +86,24 @@ for (const scene of lesson.scenes ?? []) {
     }
   }
 
+  // 6b. EXPLAINED-NOT-MENTIONED (QAG-proxy, WARN tier per research): each scene's top
+  // source keyterms should appear in a line that also carries a definitional or causal
+  // marker — a keyterm that is only name-dropped was cited, not taught.
+  const MARKER = /\b(is a|is an|is the|refers to|means|defined as|because|so that|therefore|which means|that's why)\b/i;
+  const termCounts = new Map();
+  for (const line of voiceLines) {
+    for (const w of String(line.text ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ')) {
+      if (w.length >= 6) termCounts.set(w, (termCounts.get(w) ?? 0) + 1);
+    }
+  }
+  const topTerms = [...termCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([w]) => w);
+  for (const term of topTerms) {
+    const taught = voiceLines.some((l) => new RegExp(`\\b${term}\\b`, 'i').test(l.text ?? '') && MARKER.test(l.text ?? ''));
+    if (!taught && voiceLines.length >= 6) {
+      add(scene.sceneId, 'WARN', 'mentioned-not-explained', `"${term}" is spoken ${termCounts.get(term)}x but never in a defining/causal sentence`);
+    }
+  }
+
   // 7. DEPTH FLOOR — a "taught" scene with fewer than 6 narration lines is a summary.
   if (voiceLines.length > 0 && voiceLines.length < 6 && !['recap', 'checkpoint', 'practice'].some((r) => scene.pedagogicalRole?.includes(r) || /recap|checkpoint|practice/i.test(scene.title))) {
     add(scene.sceneId, 'WARN', 'thin-narration', `${voiceLines.length} lines — the depth rules demand a real explanation`);
