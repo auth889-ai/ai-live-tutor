@@ -8,6 +8,8 @@
 
 import { useState } from 'react';
 
+import { AskSceneViewer } from '../player/ask/ask-scene-viewer.js';
+
 // Checkpoint telemetry (the learned-vs-watched unlock): every quiz answer is recorded —
 // correct answers verify concepts on the Progress page; misses mark reinforcement needs.
 function recordCheckpoint(lessonId, quizId, correct) {
@@ -173,7 +175,15 @@ function DescriptiveQuestion({ content, onAnswered, lessonId, sceneId }) {
 
 function ChoiceQuiz({ content, onAnswered }) {
   const [picked, setPicked] = useState(null);
+  // ADAPTIVITY v1 (the 2-sigma move, finally WIRED — the diagnose endpoint existed with no
+  // caller): a wrong answer triggers a live misconception diagnosis, and "Reteach this"
+  // sends that exact confusion through the society's ask-scene pipeline.
+  const [diag, setDiag] = useState(null);
+  const [diagBusy, setDiagBusy] = useState(false);
+  const [scene, setScene] = useState(null);
+  const [sceneBusy, setSceneBusy] = useState(false);
   const answered = picked !== null;
+  const pageLessonId = () => (typeof window !== 'undefined' ? window.location.pathname.split('/course/')[1]?.split('?')[0] : null);
 
   function choose(i) {
     if (answered) return;
@@ -181,6 +191,29 @@ function ChoiceQuiz({ content, onAnswered }) {
     const correct = i === content.answerIndex;
     recordCheckpoint(null, content.question?.slice(0, 40), correct);
     onAnswered?.(correct);
+    if (!correct) {
+      setDiagBusy(true);
+      fetch('/api/tutor/diagnose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: content.question,
+          correctAnswer: content.choices[content.answerIndex],
+          studentAnswer: content.choices[i],
+          concept: content.question?.slice(0, 80),
+          lessonId: pageLessonId(),
+        }),
+      }).then((r) => (r.ok ? r.json() : null)).then((d) => setDiag(d)).catch(() => {}).finally(() => setDiagBusy(false));
+    }
+  }
+
+  function reteach() {
+    setSceneBusy(true);
+    fetch(`/api/lessons/${pageLessonId()}/ask-scene`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: `I answered "${content.choices[picked]}" but the correct answer is "${content.choices[content.answerIndex]}" for: ${content.question}. Reteach the idea I'm confusing${diag?.misconception ? ` (my misconception: ${String(diag.misconception).slice(0, 120)})` : ''}.` }),
+    }).then((r) => (r.ok ? r.json() : null)).then((d) => d?.scene && setScene(d.scene)).catch(() => {}).finally(() => setSceneBusy(false));
   }
 
   return (
@@ -219,6 +252,25 @@ function ChoiceQuiz({ content, onAnswered }) {
         <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: '#fef8e7', border: '2px solid #e5c07b', color: '#8a6d12', fontSize: 15, lineHeight: 1.6 }}>
           <strong>{picked === content.answerIndex ? 'Correct! ' : 'Not quite. '}</strong>
           {content.explanation}
+        </div>
+      )}
+      {answered && picked !== content.answerIndex && (
+        <div style={{ marginTop: 10 }}>
+          {diagBusy && <div style={{ fontSize: 13, color: '#8a6d3b' }}>🧑‍🏫 The tutor is looking at what you chose…</div>}
+          {diag && !diag.error && (
+            <div style={{ padding: '12px 16px', borderRadius: 10, background: '#fdece8', border: '2px solid #f6cfc8', color: '#8a3a2e', fontSize: 14.5, lineHeight: 1.6 }}>
+              {diag.misconception && <div><strong>What tripped you:</strong> {diag.misconception}</div>}
+              {(diag.reteach || diag.explanation) && <div style={{ marginTop: 6 }}>{diag.reteach || diag.explanation}</div>}
+              {diag.followUp && <div style={{ marginTop: 6, fontStyle: 'italic' }}>🤔 {diag.followUp}</div>}
+              {!scene && (
+                <button onClick={reteach} disabled={sceneBusy}
+                  style={{ marginTop: 10, border: '1px dashed #e8604c', background: '#fff', borderRadius: 8, padding: '6px 14px', fontSize: 12.5, fontWeight: 700, color: '#e8604c', cursor: 'pointer' }}>
+                  {sceneBusy ? '🏛️ Building your reteach scene… (~1-3 min)' : '🎬 Reteach this on a board'}
+                </button>
+              )}
+            </div>
+          )}
+          {scene && <div style={{ marginTop: 10 }}><AskSceneViewer scene={scene} onClose={() => setScene(null)} /></div>}
         </div>
       )}
     </div>
