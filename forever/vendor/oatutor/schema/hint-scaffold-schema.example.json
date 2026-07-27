@@ -1,0 +1,48 @@
+{
+  "__comment": "SYNTHETIC schema illustration written for Forever. OATutor's real content items are CC BY 4.0 and are deliberately NOT copied; every string below is a placeholder. Field names and shapes are taken from the MIT-licensed walker code vendored beside this file (HintSystem.js reads hints[i].type/.title/.text/.dependencies/.subHints/.variabilization, HintTextbox.js reads hint.hintAnswer/.answerType, Problem.js walks problem.steps and step.knowledgeComponents).",
+  "id": "example_problem_1",
+  "title": "PLACEHOLDER problem title",
+  "steps": [
+    {
+      "id": "example_problem_1a",
+      "stepTitle": "PLACEHOLDER step title",
+      "stepBody": "PLACEHOLDER step body shown to the student",
+      "stepAnswer": ["PLACEHOLDER correct answer"],
+      "problemType": "TextBox",
+      "answerType": "arithmetic",
+      "knowledgeComponents": ["example_skill_kc"],
+      "variabilization": {},
+      "hints": [
+        {
+          "id": "example_problem_1a-h1",
+          "type": "hint",
+          "dependencies": [],
+          "title": "PLACEHOLDER hint 1 title",
+          "text": "PLACEHOLDER hint 1 body — plain unlockable hint",
+          "variabilization": {}
+        },
+        {
+          "id": "example_problem_1a-h2",
+          "type": "scaffold",
+          "dependencies": [0],
+          "title": "PLACEHOLDER scaffold title",
+          "text": "PLACEHOLDER scaffold question the student must answer to proceed",
+          "problemType": "MultipleChoice",
+          "answerType": "string",
+          "hintAnswer": ["PLACEHOLDER scaffold answer"],
+          "choices": ["PLACEHOLDER choice A", "PLACEHOLDER choice B"],
+          "variabilization": {},
+          "subHints": [
+            {
+              "id": "example_problem_1a-h2-s1",
+              "type": "hint",
+              "dependencies": [],
+              "title": "PLACEHOLDER sub-hint title",
+              "text": "PLACEHOLDER sub-hint body nested under the scaffold"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
