@@ -5,28 +5,68 @@
 - **License**: MIT (Copyright (c) 2011- Ville Karavirta and Cliff Shaffer) — see
   `MIT-license.txt` in this directory, copied verbatim (upstream's license file carries this
   name; kept as-is). No NOTICE file exists upstream.
-- **Status**: REFERENCE ONLY. Only the `src/` modules defining data structures + effects were
-  taken — not the built bundle, not the jQuery/Raphael runtime, not exercises/questions/
-  translations. Nothing here is imported, executed, or bundled by Forever.
+- **Status**: FULL LIBRARY SOURCE VENDORED (complete `src/` + `css/` + build entry). JSAV is
+  the *rendering* layer only. Forever's ExecutionTrace remains the single source of truth for
+  what happens on each step — JSAV's hand-authored algorithm demos and exercises are excluded
+  by design and must never be used as step sources. The translation from Forever algorithm
+  steps to abstract visual operations lives in `lib/board/execution/jsav-adapter.js` (pure,
+  DOM-free). Nothing under `vendor/jsav/` is imported by the default build; runtime embedding
+  is gated behind `NEXT_PUBLIC_JSAV_RENDERER=1`.
 
-## Files
+## Files (all copied verbatim from the commit above; modified: none)
 
-| File here | Upstream source | Status |
+| File here | Upstream source | Notes |
 | --- | --- | --- |
-| `MIT-license.txt` | `MIT-license.txt` | copied verbatim |
-| `src/datastructures.js` | `src/datastructures.js` | copied verbatim (reference: common JSavDataStructure base) |
-| `src/array.js` | `src/array.js` | copied verbatim (reference: array structure + index highlight/swap effects) |
-| `src/matrix.js` | `src/matrix.js` | copied verbatim (reference: 2-D array of arrays) |
-| `src/list.js` | `src/list.js` | copied verbatim (reference: linked list nodes + next-edges) |
-| `src/tree.js` | `src/tree.js` | copied verbatim (reference: tree/binary tree nodes, parent/child edges) |
-| `src/graph.js` | `src/graph.js` | copied verbatim (reference: nodes + directed/undirected edges) |
-| `src/keyvaluepair.js` | `src/keyvaluepair.js` | copied verbatim (reference) |
-| `src/effects.js` | `src/effects.js` | copied verbatim (reference: animated value moves/swaps between structures) |
-| `src/anim.js` | `src/anim.js` | copied verbatim (reference: the step/effect recording core — `anim()`-wrapped effects append undo/redo-able operations; `step()`/`stepdone` sequence frames; forward/backward replay) |
+| `MIT-license.txt` | `MIT-license.txt` | license, copied verbatim |
+| `Makefile` | `Makefile` | build entry (reference): concat order of src modules into `build/JSAV.js` |
+| `Gruntfile.js` | `Gruntfile.js` | alternate build entry (reference): same concat order + lint/test config |
+| `src/core.js` | `src/core.js` | JSAV constructor, init, `begin/end/step` API surface |
+| `src/anim.js` | `src/anim.js` | step/effect recording core — `anim()`-wrapped effects, undo/redo, playback |
+| `src/utils.js` | `src/utils.js` | utils (extend, value/position parsing, dialogs, settings) |
+| `src/translations.js` | `src/translations.js` | UI-chrome translation strings (library UI, not lesson content) |
+| `src/messages.js` | `src/messages.js` | `umsg` narration output |
+| `src/effects.js` | `src/effects.js` | animated value moves/swaps between structures |
+| `src/events.js` | `src/events.js` | click/mouse event binding on structures |
+| `src/graphicals.js` | `src/graphicals.js` | Raphael-backed primitives (circle/rect/line/label) |
+| `src/datastructures.js` | `src/datastructures.js` | common JSavDataStructure base |
+| `src/array.js` | `src/array.js` | array structure + index highlight/swap effects |
+| `src/matrix.js` | `src/matrix.js` | 2-D array of arrays |
+| `src/list.js` | `src/list.js` | linked list nodes + next-edges |
+| `src/tree.js` | `src/tree.js` | tree/binary tree nodes, parent/child edges |
+| `src/graph.js` | `src/graph.js` | nodes + directed/undirected edges, layout |
+| `src/keyvaluepair.js` | `src/keyvaluepair.js` | key-value pair structure |
+| `src/code.js` | `src/code.js` | pseudocode display + line highlighting |
+| `src/settings.js` | `src/settings.js` | speed/settings panel |
+| `src/questions.js` | `src/questions.js` | question *framework* (mechanism only; no authored questions vendored) |
+| `src/exercise.js` | `src/exercise.js` | exercise *framework* (grading mechanism only; no authored exercises vendored) |
+| `src/front1.txt`, `src/front2.txt` | same | build fragments concatenated into `front.js` (IIFE wrapper) |
+| `src/version1.txt`, `src/version2.txt` | same | build fragments concatenated into `version.js` |
+| `css/JSAV.css` | `css/JSAV.css` | the library stylesheet |
+| `css/images/settings.png`, `sound-icon.png`, `sound-off.png`, `spinner.gif` | `css/images/*` | assets referenced by JSAV.css |
 
-Files modified: none. Adapter: none executed — this is a design reference for Forever's board
-object model (`lib/board/`). Regression tests: the existing board/execution suites under
-`tests/board/` and `tests/execution/` gate that model; this directory adds no runtime surface.
+## Excluded (by design — hand-authored algorithm content or third-party runtime)
+
+- `examples/` — upstream's hand-authored algorithm demos. Excluded: Forever's ExecutionTrace
+  (engine-verified) decides every step; demo scripts must never become step sources.
+- `exercises/`-style authored content and `doc/`-type material — none vendored for the same
+  reason (only the framework modules `questions.js`/`exercise.js` ship, as library code).
+- `test/` — upstream QUnit suite; not part of the library runtime.
+- `extras/` — optional add-ons (sound effects, stack widget); not needed.
+- `lib/` — third-party runtime bundles (see deps below); if ever embedded, these come from
+  npm, not from a vendored minified blob.
+- `Changelog.txt`, `README.md`, `package.json` — repo metadata.
+
+## Runtime dependencies (NOT vendored; required only if JSAV is actually executed)
+
+Upstream ships these in `lib/`: **jQuery** (`jquery.min.js`), **jQuery UI**
+(`jquery-ui.min.js`), **jquery.transit** (CSS-transition animations), **Raphael**
+(`raphael.js`, needed for graphs/trees/graphicals edges), and **dagre** (`dagre.min.js`,
+optional graph auto-layout). JSAV is a pre-module-era global script: the build concatenates
+`front.js + core.js + ... + version.js` (order in `Makefile`/`Gruntfile.js`) into one IIFE
+expecting `window.jQuery` (and `Raphael` for edge/graphical work) to exist first.
+
+Regression tests: `tests/board/` and `tests/execution/` gate Forever's board model;
+`tests/board/jsav-adapter.test.js` gates the step→op translation.
 
 ## Concept map: JSAV state model -> Forever board-object model
 
