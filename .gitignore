@@ -46,6 +46,8 @@ forever/**/*.md
 !forever/.env.example
 !forever/docs/
 !forever/docs/**/*.md
+!forever/vendor/
+!forever/vendor/**
 !forever/README.md
 !forever/tests/
 !forever/tests/**
