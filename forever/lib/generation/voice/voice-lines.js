@@ -110,17 +110,38 @@ export function validateVoiceDepth(lines, objects, { role = '' } = {}) {
 // the repair message names the missing terms so the retry fixes exactly that.
 const STOP = new Set(['about', 'after', 'before', 'between', 'could', 'every', 'first', 'other', 'their', 'there', 'these', 'thing', 'those', 'through', 'under', 'water', 'where', 'which', 'while', 'would', 'should', 'because', 'table', 'value', 'values', 'using', 'given', 'shown', 'figure']);
 
-export function keytermCoverage(lines, sourceText) {
+const topTerms = (sourceText, limit) => {
   const counts = new Map();
   for (const w of String(sourceText ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ')) {
     if (w.length < 5 || STOP.has(w)) continue;
     counts.set(w, (counts.get(w) ?? 0) + 1);
   }
-  const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([w]) => w);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([w]) => w);
+};
+const spokenSetOf = (lines) => new Set(String((lines ?? []).map((l) => l.text).join(' ')).toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' '));
+
+export function keytermCoverage(lines, sourceText) {
+  const top = topTerms(sourceText, 8);
   if (top.length < 3) return { ratio: 1, missing: [] }; // too little source text to judge
-  const spoken = new Set(String((lines ?? []).map((l) => l.text).join(' ')).toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' '));
+  const spoken = spokenSetOf(lines);
   const missing = top.filter((w) => !spoken.has(w));
   return { ratio: (top.length - missing.length) / top.length, missing };
+}
+
+// PER-CHUNK coverage (audit: "chunk assigned to a scene ≠ concepts explained"): the global
+// check above concatenates all focused chunks, so a scene that teaches chunk A richly and
+// SKIPS chunk B still passes — chunk B's vocabulary is simply diluted out of the combined
+// top terms. Judge each chunk on ITS OWN dominant terms instead (top-5, chunks being much
+// smaller than a whole scene's source). Same guard: a chunk too thin to yield 3 terms is
+// not judged (ratio 1), never failed on noise.
+export function perChunkKeytermCoverage(lines, chunks) {
+  const spoken = spokenSetOf(lines);
+  return (chunks ?? []).map((chunk) => {
+    const top = topTerms(chunk?.text, 5);
+    if (top.length < 3) return { chunkId: chunk?.id, ratio: 1, missing: [] }; // too little chunk text to judge
+    const missing = top.filter((w) => !spoken.has(w));
+    return { chunkId: chunk?.id, ratio: (top.length - missing.length) / top.length, missing };
+  });
 }
 
 export function validateVoiceLine(line) {

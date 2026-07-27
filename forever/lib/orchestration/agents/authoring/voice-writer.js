@@ -5,7 +5,7 @@
 import { z } from 'zod';
 
 import { runAgentChain } from '../../../qwen/client.js';
-import { validateVoiceLines, validateVoiceDepth, keytermCoverage, normalizeVoiceTargets, normalizeFocusRefs, scrubSpokenInternalIds } from '../../../generation/voice/voice-lines.js';
+import { validateVoiceLines, validateVoiceDepth, keytermCoverage, perChunkKeytermCoverage, normalizeVoiceTargets, normalizeFocusRefs, scrubSpokenInternalIds } from '../../../generation/voice/voice-lines.js';
 
 const VOICE_SCHEMA = z.object({
   voiceLines: z.array(z.object({
@@ -84,6 +84,15 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
       const coverage = keytermCoverage(voiceLines, sourcePack.chunks.map((c) => c.text).join(' '));
       if (coverage.ratio < 0.5) {
         throw new Error(`the narration never speaks the source's own key terms (missing: ${coverage.missing.join(', ')}) — teach THIS material, naming its concepts explicitly`);
+      }
+      // PER-CHUNK coverage (audit: "chunk assigned to a scene ≠ concepts explained"): the
+      // global check above is fooled by a scene that teaches chunk A richly and skips
+      // chunk B — every FOCUSED chunk's own vocabulary must be spoken, not just the
+      // concatenation's. Repairable: the retry is told exactly which chunk went untaught.
+      const skippedChunks = perChunkKeytermCoverage(voiceLines, sourcePack.chunks).filter((c) => c.ratio < 0.4);
+      if (skippedChunks.length > 0) {
+        const named = skippedChunks.map((c) => `${c.chunkId} (missing: ${c.missing.join(', ')})`).join('; ');
+        throw new Error(`the narration skips assigned source material — every focused chunk must be taught, but these go unspoken: ${named}. Weave each chunk's concepts into the explanation explicitly`);
       }
       return { voiceLines, usage };
     } catch (error) {

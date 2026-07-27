@@ -2,7 +2,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateVoiceDepth, keytermCoverage } from '../../lib/generation/voice/voice-lines.js';
+import { validateVoiceDepth, keytermCoverage, perChunkKeytermCoverage } from '../../lib/generation/voice/voice-lines.js';
 
 const objs = [
   { id: 'a', renderHint: 'text' }, { id: 'b', renderHint: 'callout' },
@@ -45,6 +45,34 @@ test('keytermCoverage: measures whether the source vocabulary is actually spoken
   const bad = keytermCoverage([line('v', 'Cooking pasta requires salted boiling liquid and patience.')], source);
   assert.ok(bad.ratio < 0.25);
   assert.ok(bad.missing.includes('normalization'));
+});
+
+// PER-CHUNK coverage (audit: "chunk assigned to a scene ≠ concepts explained") — the
+// global keytermCoverage concatenates chunks, so a scene rich on chunk A and silent on
+// chunk B passes globally; the per-chunk check judges each chunk's own vocabulary.
+const chunkA = { id: 'chunk_0001', text: 'Normalization removes redundancy. Normalization splits tables so redundancy never wastes storage; normalization protects consistency.' };
+const chunkB = { id: 'chunk_0002', text: 'Indexes accelerate queries. An index stores sorted pointers so queries touch fewer pages; indexes trade write speed for read speed.' };
+
+test('perChunkKeytermCoverage: a scene speaking BOTH chunks\' vocabulary clears every chunk', () => {
+  const both = [line('v', 'Normalization removes redundancy by splitting tables, while indexes keep queries fast through sorted pointers that trade write speed for read speed.')];
+  const per = perChunkKeytermCoverage(both, [chunkA, chunkB]);
+  assert.equal(per.length, 2);
+  assert.ok(per.every((c) => c.ratio >= 0.4), JSON.stringify(per));
+});
+
+test('perChunkKeytermCoverage: a scene ignoring one chunk fails THAT chunk by id (global check would pass it)', () => {
+  const onlyA = [line('v', 'Normalization removes redundancy by splitting tables so storage stays consistent across the whole schema and redundancy never returns.')];
+  const per = perChunkKeytermCoverage(onlyA, [chunkA, chunkB]);
+  const skipped = per.find((c) => c.chunkId === 'chunk_0002');
+  assert.ok(skipped.ratio < 0.4);
+  assert.ok(skipped.missing.includes('indexes')); // the repair message can name exactly what to add
+  assert.ok(per.find((c) => c.chunkId === 'chunk_0001').ratio >= 0.4); // the taught chunk still passes
+});
+
+test('perChunkKeytermCoverage: a chunk too thin to yield 3 terms is not judged (ratio 1)', () => {
+  const tiny = { id: 'chunk_0003', text: 'See also page nine.' };
+  const per = perChunkKeytermCoverage([line('v', 'Anything at all.')], [tiny]);
+  assert.deepEqual(per, [{ chunkId: 'chunk_0003', ratio: 1, missing: [] }]);
 });
 
 test('figure scenes NEVER bypass the floor — even short roles and single-object boards', () => {
