@@ -27,6 +27,37 @@ export function lessonIdFor(sourcePackId) {
   return `lesson_${String(sourcePackId).replace(/[^a-z0-9]/gi, '').slice(0, 24)}`;
 }
 
+// CODING GATE (audit: "coding lessons lack a final quality gate"): the repair gate below is
+// non-coding-only BY DESIGN (its evidence comes from executing the lesson's numbers), which
+// left coding lessons with NO final verdict at all. This scan is the deterministic
+// equivalent for what makes a coding lesson honest: the dry run must carry a REAL executed
+// trace. Pure and exported so it is unit-testable without the whole processor.
+//   (a) a 'dry_run' scene without an algorithm object holding non-empty trace steps is a
+//       text-only walkthrough wearing a dry run's name;
+//   (b) an algorithm object anywhere whose steps are empty is a dead animation — the player
+//       would show a frozen board while the voice narrates motion.
+export function codingGateViolations(lesson) {
+  const violations = [];
+  const stepsOf = (object) => {
+    const content = object?.content ?? {};
+    // Canonical ExecutionTrace carries steps[]; older/diagram-shaped traces carry trace[].
+    return Array.isArray(content.steps) ? content.steps : Array.isArray(content.trace) ? content.trace : null;
+  };
+  for (const scene of lesson?.scenes ?? []) {
+    const algos = (scene.objects ?? []).filter((o) => o?.renderHint === 'algorithm');
+    if (scene.pedagogicalRole === 'dry_run' && !algos.some((o) => (stepsOf(o)?.length ?? 0) > 0)) {
+      violations.push({ rule: 'coding-dry-run-trace', sceneId: scene.sceneId, reason: 'dry_run scene has no algorithm object with executed trace steps' });
+    }
+    for (const object of algos) {
+      const steps = stepsOf(object);
+      if (!steps || steps.length === 0) {
+        violations.push({ rule: 'coding-dry-run-trace', sceneId: scene.sceneId, objectId: object.id, reason: 'algorithm object carries an empty trace — a dead animation' });
+      }
+    }
+  }
+  return violations;
+}
+
 export async function processLessonJob(rawInput, { report = () => {}, deps = {} } = {}) {
   const { input, ownerId } = validateJobInput(rawInput);
 
@@ -227,6 +258,30 @@ async function produceLesson({ sourcePack, outlineLesson = null, episode = null,
     }
   } catch (e) {
     console.error(`[practice] pack generation failed open: ${String(e?.message ?? e).slice(0, 120)}`);
+  }
+
+  // CODING GATE (audit: "coding lessons lack a final quality gate"): deterministic, zero
+  // tokens — a coding lesson's correctness layer is execution, so its gate checks that the
+  // executed evidence actually SHIPPED (dry runs carry real trace steps, no dead
+  // animations). Runs under the same LESSON_GATE switch as the repair gate; the verdict
+  // lands in the same finalLesson.gate shape the fail-closed logic below already reads.
+  if (env.LESSON_GATE !== '0' && finalLesson.domain && isCodingDomain(finalLesson.domain)) {
+    const codingViolations = codingGateViolations(finalLesson);
+    // Merge, never clobber: coding lessons carry no repair-gate verdict today, but if one
+    // ever appears, both gates' findings must survive side by side.
+    const prior = finalLesson.gate ?? { ok: true, violations: 0, rules: [] };
+    finalLesson = {
+      ...finalLesson,
+      gate: {
+        ...prior,
+        ok: prior.ok === false ? false : codingViolations.length === 0,
+        violations: (prior.violations ?? 0) + codingViolations.length,
+        rules: [...new Set([...(prior.rules ?? []), ...codingViolations.map((v) => v.rule)])],
+      },
+    };
+    if (codingViolations.length > 0) {
+      report(makeProgress({ phase: 'saving', message: `Gate: ${codingViolations.length} coding dry-run issue${codingViolations.length === 1 ? '' : 's'} (${codingViolations.map((v) => v.sceneId).join(', ')})`, ...watchable() }));
+    }
   }
 
   // Wait out any in-flight partial write, then the FINAL save replaces the building shell
