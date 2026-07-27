@@ -11,11 +11,31 @@ export function narrateInit({ rows, cols }) {
   return `The table is created: ${rows} row${rows === 1 ? '' : 's'} × ${cols} column${cols === 1 ? '' : 's'}, seeded with its starting values. These are not answers yet — they are the scaffold the real answers will be built on.`;
 }
 
-export function narrateWrite({ r, c, value, old, isBase , proved = false , informative = true }) {
-  if (isBase) {
-    return `Base case: dp[${r}][${c}] is set to ${JSON.stringify(value)}. Row 0 and column 0 are the "empty problem" answers — they cost nothing to know, and every harder cell will lean on them.`;
-  }
+// Striver's positional vocabulary (mined from the DP-series transcripts, lecture 9: "there
+// are two ways one is up one is left … up plus left and where did you store it in dp of i j";
+// lecture 26: "1 plus f of i minus one j minus one … take the best among them").
+function relName([a, b], r, c) {
+  if (a === r - 1 && b === c) return 'the cell above';
+  if (a === r && b === c - 1) return 'the cell to the left';
+  if (a === r - 1 && b === c - 1) return 'the diagonal';
+  return `dp[${a}][${b}]`;
+}
+
+export function narrateWrite({ r, c, value, old, isBase , proved = false , informative = true , readCells = null , chosen = null , tookBest = false }) {
   const was = old !== undefined && old !== null ? ` (it was ${JSON.stringify(old)})` : '';
+  // STRIVER GRAMMAR, recorded facts only: fires ONLY when this write's timestep RECORDED dp
+  // reads — every cell named below was actually read by the run, so "we look at" is literal.
+  if (informative && Array.isArray(readCells) && readCells.length > 0) {
+    const names = readCells.map((x) => `${relName(x.p, r, c)} (dp[${x.p[0]}][${x.p[1]}] = ${JSON.stringify(x.v)})`);
+    const look = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+    const best = chosen && chosen.length > 0
+      ? `, and take the best among them — dp[${chosen[0][0]}][${chosen[0][1]}] wins`
+      : (tookBest ? ', and take the best among them' : '');
+    return `To fill dp[${r}][${c}] we look at ${look}${best}. So dp[${r}][${c}] = ${JSON.stringify(value)}${was}. Every cell named here was RECORDED being read for this exact write — never a formula guess.`;
+  }
+  if (isBase) {
+    return `Base case first: dp[${r}][${c}] = ${JSON.stringify(value)} because the smallest version of the problem is answered directly — no other cell was read to produce it. Row-0/column-0 cells are the "empty problem" answers every harder cell will lean on.`;
+  }
   // VERIFIED-TEMPLATES LAW (external review #2, reproduced 2026-07-20): 'computed from
   // neighbours' may only be said when neighbour reads were RECORDED — a constant write
   // (dp[i][j] = 1) uses no neighbours, and saying otherwise is a false explanation.

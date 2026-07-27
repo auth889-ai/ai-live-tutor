@@ -158,6 +158,23 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     if (step.traceRow !== undefined && (typeof step.traceRow !== 'object' || Array.isArray(step.traceRow))) {
       throw new Error(`${at} traceRow must be an object`);
     }
+    // dpvis STEP MODEL (2026-07-28, ADDITIVE — every field optional so existing traces pass
+    // untouched): phase = where this beat sits in the DP lifecycle; reads/chosen = the write's
+    // RECORDED dp-cell provenance ([row,col] pairs inside the declared array2d view).
+    if (step.phase !== undefined && !['base', 'fill', 'answer'].includes(step.phase)) {
+      throw new Error(`${at} phase must be "base", "fill" or "answer" (got ${JSON.stringify(step.phase)})`);
+    }
+    for (const key of ['reads', 'chosen']) {
+      if (step[key] === undefined) continue;
+      if (!Array.isArray(step[key])) throw new Error(`${at} ${key} must be an array of [row,col] cells`);
+      if (step[key].length > 0 && !grid) throw new Error(`${at} has ${key} cells but no views.array2d is declared`);
+      for (const cell of step[key]) {
+        if (!Array.isArray(cell) || cell.length !== 2 || !Number.isInteger(cell[0]) || !Number.isInteger(cell[1])
+          || cell[0] < 0 || cell[0] >= grid.rows || cell[1] < 0 || cell[1] >= grid.cols) {
+          throw new Error(`${at} ${key} cell must be an in-bounds [row,col] of the ${grid.rows}x${grid.cols} grid`);
+        }
+      }
+    }
     // Typed events (B2): universal-verb vocabulary enforced; a graphNode target must exist.
     if (step.events !== undefined) {
       validateStepEvents(step.events, at);

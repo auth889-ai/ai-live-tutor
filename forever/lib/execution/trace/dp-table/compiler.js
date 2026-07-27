@@ -83,9 +83,18 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
   }
   const informative = !(totalWrites >= 3 && distinctWritten.size < 2);
 
+  // dpvis STEP MODEL (2026-07-28): phase derivation needs "has ANY dp read happened before
+  // snapshot k's timestep?" — prefix-computed from the RECORDED reads, never from formulas.
+  const dpReadBefore = snapshots.map(() => false);
+  {
+    let seen = false;
+    snapshots.forEach((s, k) => { dpReadBefore[k] = seen; if (directReads && (s.reads?.length ?? 0) > 0) seen = true; });
+  }
+
   const provedByCell = new Map(); // write cell -> { rule, cells:[{p,v}] } — the recon graph
   for (const ev of snapshots) {
     const line = Number(ev.line);
+    const evAt = snapshots.indexOf(ev);
     const writes = [];
     ev.table.forEach((row, r) => {
       row.forEach((v, c) => {
@@ -101,15 +110,51 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
     if (!initialized) {
       // The first snapshot is the table's creation — scaffold, not answers.
       initialized = true;
-      steps.push(snap({
+      const initStep = snap({
         line,
         explanation: narrateInit({ rows: ev.table.length, cols: Math.max(...ev.table.map((r) => r.length)) }),
         writes: writes.map(([r, c]) => [r, c]),
         current: null,
         variables: ev.locals ?? {},
-      }));
+      });
+      initStep.phase = 'base'; // the scaffold IS the base layer — nothing was read to seed it
+      steps.push(initStep);
       continue;
     }
+
+    // TIMESTEP READS (dpvis rule): the dp-array subscript reads recorded since the previous
+    // write — line events fire BEFORE their line runs, so a write observed at snapshot k was
+    // performed by snapshot k-1's line, and k-1's recorded reads are its timestep. Deduped,
+    // straight from the recording; when nothing was recorded the list is EMPTY, never inferred.
+    const stepReads = [];
+    if (directReads) {
+      const seenRd = new Set();
+      for (const rd of snapshots[evAt - 1]?.reads ?? []) {
+        const key = `${rd.p[0]},${rd.p[1]}`;
+        if (!seenRd.has(key)) { seenRd.add(key); stepReads.push(rd); }
+      }
+    }
+    // CHOSEN (max/min winners): only from a RECORDED max/min op whose result IS the written
+    // value and which executed AFTER the last RHS read — the winner cells are the reads whose
+    // recorded value equals that result. No recorded op -> no chosen, ever (never guess).
+    let chosen = null;
+    let tookBest = false;
+    if (directReads && writes.length === 1 && stepReads.length > 0) {
+      const [wr, wc] = writes[0];
+      const val = ev.table[wr]?.[wc];
+      const rhsOps = snapshots[evAt - 1]?.rhsOps ?? [];
+      const lastQ = Math.max(0, ...stepReads.map((x) => x.q ?? 0));
+      const mm = rhsOps.filter((o) => (o.op === 'max' || o.op === 'min') && o.r === val && (o.q ?? 0) > lastQ);
+      if (mm.length === 1) {
+        tookBest = true;
+        const winners = stepReads.filter((x) => x.v === mm[0].r).map((x) => x.p);
+        if (winners.length > 0) chosen = winners;
+      }
+    }
+    // PHASE (dpvis state machine): base = written before the dp array was ever read (or the
+    // row-0/col-0 seeding pattern) with no reads of its own; answer is the terminal beat.
+    const rowCol0 = writes.every(([r, c]) => (rows > 1 ? r === 0 || c === 0 : c === 0));
+    const phase = stepReads.length === 0 && ((directReads ? !dpReadBefore[evAt] : false) || rowCol0) ? 'base' : 'fill';
 
     // PROVED-DEPENDENCY INFERENCE (the AlgoTutor-mockup arrows, honestly): single-cell,
     // non-base writes only. Candidates from the PRE-write state; exactly one matching rule
@@ -120,13 +165,7 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
       // (the previous snapshot's line — line events fire before their line runs). No reads
       // recorded -> no arrows, whatever the arithmetic looks like.
       const [wr, wc] = writes[0];
-      const prevReads = snapshots[snapshots.indexOf(ev) - 1]?.reads ?? [];
-      const seen = new Set();
-      const cells = [];
-      for (const rd of prevReads) {
-        const key = `${rd.p[0]},${rd.p[1]}`;
-        if ((rd.p[0] !== wr || rd.p[1] !== wc) && !seen.has(key)) { seen.add(key); cells.push(rd); }
-      }
+      const cells = stepReads.filter((rd) => rd.p[0] !== wr || rd.p[1] !== wc);
       if (cells.length >= 1 && cells.length <= 3) {
         const val = ev.table[wr]?.[wc];
         const vs = cells.map((c) => c.v);
@@ -134,7 +173,7 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
         let rule = null;
         // RECORDED OPERATOR (phase 2): if the RHS executed an op whose result IS the written
         // value, the rule is a fact — no consensus needed, valid even in constant runs
-        const rhsOps = snapshots[snapshots.indexOf(ev) - 1]?.rhsOps ?? [];
+        const rhsOps = snapshots[evAt - 1]?.rhsOps ?? [];
         const lastReadQ = Math.max(0, ...cells.map((x) => x.q ?? 0));
         // only ops that executed AFTER the last RHS read can be the combining op — index
         // arithmetic (i - 1) runs before its read and must never name the rule
@@ -177,7 +216,14 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
 
     const parts = [];
     for (const [r, c, old] of writes.slice(0, 2)) {
-      parts.push(narrateWrite({ r, c, value: known.get(`${r},${c}`), old, isBase: r === 0 || c === 0, proved: Boolean(proved), informative }));
+      parts.push(narrateWrite({
+        r, c, value: known.get(`${r},${c}`), old, isBase: phase === 'base' || r === 0 || c === 0,
+        proved: Boolean(proved), informative,
+        // Striver-grammar facts (recorded only): the reads this write's timestep logged, and
+        // the max/min winners when a recorded op proved them — single-cell writes only.
+        readCells: directReads && writes.length === 1 ? stepReads : null,
+        chosen, tookBest,
+      }));
     }
     if (writes.length > 2) parts.push(narrateBatch({ count: writes.length - 2 }));
     for (const [r, c] of writes) filled.push([r, c]);
@@ -186,7 +232,6 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
     // non-table variables recorded on the WRITING line — shown only when they exist
     // the compare usually runs one line BEFORE the write (if X[i-1] == Y[j-1]: / dp[i][j] =)
     // — gather inputs from the write line AND its immediate predecessor
-    const evAt = snapshots.indexOf(ev);
     const inputReads = directReads
       ? [...(snapshots[evAt - 2]?.inputs ?? []), ...(snapshots[evAt - 1]?.inputs ?? [])].slice(0, 4)
       : [];
@@ -201,6 +246,12 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
       variables: ev.locals ?? {},
     });
     if (inputReads.length) stepObj.inputs = inputReads;
+    // dpvis STEP MODEL (additive contract): reads = this timestep's RECORDED dp reads (empty
+    // when none were recorded — an empty list is a fact, a guessed list is a lie); chosen =
+    // recorded max/min winners; phase = base|fill from the rules above.
+    stepObj.phase = phase;
+    if (directReads) stepObj.reads = stepReads.map((x) => [x.p[0], x.p[1]]);
+    if (chosen) stepObj.chosen = chosen.map((p) => [p[0], p[1]]);
     if (proved) {
       stepObj.array2d.highlight = proved.reads;
       stepObj.array2d.rule = proved.rule;
@@ -273,23 +324,28 @@ export function compileDpTable({ events, result, code, entry = null, rowLabels =
         });
         st.array2d.highlight = [h.next];
         st.array2d.rule = 'reconstruction';
+        st.phase = 'answer'; // terminal read-only beats — nothing is written past here
         steps.push(st);
       }
-      steps.push(snap({
+      const closeStep = snap({
         line: snapshots.at(-1)?.line ?? 1,
         explanation: `Answer path complete: ${hops.length} hops walked backward, ${contributing} contributing cells — every single hop follows a read this run actually recorded, so the path cannot be invented.`,
         writes: [], current: null, variables: {},
-      }));
+      });
+      closeStep.phase = 'answer';
+      steps.push(closeStep);
     }
   }
 
   const answer = lastWrite ? { r: lastWrite[0], c: lastWrite[1], value: known.get(`${lastWrite[0]},${lastWrite[1]}`) } : { r: null, c: null, value: undefined };
-  steps.push(snap({
+  const doneStep = snap({
     line: steps[steps.length - 1].line,
     explanation: narrateDone({ result, ...answer, truncated }),
     writes: [],
     current: lastWrite ? [lastWrite[0], lastWrite[1]] : null,
-  }));
+  });
+  doneStep.phase = 'answer'; // the dpvis terminal state: a read with no subsequent write
+  steps.push(doneStep);
 
   const labelsOk = (labels, n) => Array.isArray(labels) && labels.length === n && labels.every((l) => typeof l === 'string');
   return validateExecutionTrace({

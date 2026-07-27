@@ -41,6 +41,60 @@ test('LCS: three fingerprints (scaffold, sweep, no frontier) say FILL — dp-tab
   assert.match(trace.steps.at(-1).explanation, /1/, 'the real answer (LCS length 1... reaches the close');
 });
 
+test('dpvis step model end-to-end: LCS write steps carry recorded reads, max writes name their chosen winner, phases sequence base -> fill -> answer', () => {
+  // "aab"/"ab" writes DISTINCT values (1 and 2) — a constant-output run would rightly refuse
+  // value-flow narration (the informative guard), which is its own adversarial test below.
+  const rec = record({ code: LCS, entry: 'lcs("aab", "ab")' });
+  const plan = detectDpTable(rec);
+  const trace = compileDpTableLens({ recording: rec, plan, code: LCS, entry: 'lcs("aab", "ab")' });
+
+  const withReads = trace.steps.filter((s) => Array.isArray(s.reads) && s.reads.length > 0);
+  assert.ok(withReads.length >= 2, 'interior writes carry non-empty recorded reads');
+  // Every emitted read is a REAL recorded dp subscript read — nothing invented.
+  const recorded = new Set(rec.reads.filter((x) => x.n === 'dp' && x.p.length === 2).map((x) => `${x.p[0]},${x.p[1]}`));
+  for (const s of withReads) for (const [a, b] of s.reads) assert.ok(recorded.has(`${a},${b}`), `read [${a},${b}] exists in the recording`);
+  assert.ok(withReads.every((s) => s.phase === 'fill'), 'steps with reads are fill phase');
+
+  // max(dp[i-1][j], dp[i][j-1]) executed for real -> chosen names the winner, a subset of reads.
+  const chosenStep = trace.steps.find((s) => Array.isArray(s.chosen) && s.chosen.length > 0);
+  assert.ok(chosenStep, 'a max write carries chosen (from the RECORDED max op)');
+  for (const [a, b] of chosenStep.chosen) {
+    assert.ok(chosenStep.reads.some(([rr, cc]) => rr === a && cc === b), 'chosen is a subset of that step\'s reads');
+  }
+  assert.match(chosenStep.explanation, /take the best among them/, 'Striver grammar on the max write');
+
+  // Striver cell-fill grammar, filled from recorded facts only.
+  assert.match(withReads[0].explanation, /To fill dp\[\d+\]\[\d+\] we look at .*So dp\[\d+\]\[\d+\] = /s);
+  assert.equal(trace.steps.find((s) => /scaffold/.test(s.explanation))?.phase, 'base', 'the creation beat is base');
+  assert.equal(trace.steps.at(-1).phase, 'answer', 'the terminal read-out is answer');
+});
+
+test('ADVERSARIAL end-to-end: strip the recorded reads -> every emitted dependency is EMPTY (arrows are never fabricated)', () => {
+  const rec = record({ code: LCS, entry: 'lcs("ab", "ba")' });
+  const plan = detectDpTable(rec); // plan from the full recording; compile from crippled ones
+
+  // Variant A: reads infrastructure PRESENT but carrying nothing — provenance mode must
+  // emit empty reads, no chosen, no highlights, even though the arithmetic would "match".
+  const emptied = { ...rec, reads: [], writes: rec.writes.map((w) => ({ ...w, rhs: [], ops: [] })) };
+  const traceA = compileDpTableLens({ recording: emptied, plan, code: LCS, entry: 'lcs("ab", "ba")' });
+  for (const s of traceA.steps) {
+    assert.ok(!Array.isArray(s.reads) || s.reads.length === 0, 'reads stay EMPTY without recorded reads');
+    assert.equal(s.chosen, undefined, 'no chosen without a recorded max/min op');
+    assert.equal(s.array2d?.highlight, undefined, 'no dependency arrows without recorded reads');
+  }
+
+  // Variant B: no reads/writes arrays at all (legacy recording) — the new provenance fields
+  // must be ABSENT (undefined), never invented from formulas.
+  const legacy = { ...rec };
+  delete legacy.reads;
+  delete legacy.writes;
+  const traceB = compileDpTableLens({ recording: legacy, plan, code: LCS, entry: 'lcs("ab", "ba")' });
+  for (const s of traceB.steps) {
+    assert.equal(s.reads, undefined, 'a legacy recording emits NO reads field at all');
+    assert.equal(s.chosen, undefined, 'and no chosen');
+  }
+});
+
 test('Pascal-style GROWING table (rows appended) is a fill too', () => {
   const code = [
     'def pascal(n):',
