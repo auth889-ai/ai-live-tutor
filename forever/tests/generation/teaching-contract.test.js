@@ -1,7 +1,8 @@
 // Typed teaching contract: the Voice Writer DECLARES which lines carry which teaching
 // move, and validateTeachingContract checks the structure deterministically — typed
 // evidence instead of regex-guessing. Plus the writeVoice wiring: violations feed the
-// repair retry by name; an omitted contract falls back silently to the regex path.
+// repair retry by name; an omitted contract is itself a violation (fail-closed) unless
+// TEACHING_CONTRACT_STRICT=0 relaxes to the legacy regex-only path.
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -93,12 +94,39 @@ const OBJECTS = [{ id: 'obj_note', objectType: 'tutor_note', renderHint: 'text',
 const SOURCE_PACK = { chunks: CHUNKS };
 const BRIEF = { pedagogicalRole: 'recap' };
 
-test('writeVoice: an omitted teachingMoves field falls back silently to the regex path', async () => {
+test('writeVoice: an omitted teachingMoves field is retried until the contract is declared', async () => {
+  const systems = [];
   const result = await writeVoice({ objects: OBJECTS, sourcePack: SOURCE_PACK, brief: BRIEF }, {
-    runAgentChain: async () => ({ json: { voiceLines: LINES }, usage: { total: 1 } }),
+    runAgentChain: async ({ system }) => {
+      systems.push(system);
+      return { json: { voiceLines: LINES, ...(systems.length > 1 ? { teachingMoves: GOOD } : {}) }, usage: { total: 1 } };
+    },
   });
-  assert.equal(result.voiceLines.length, LINES.length);
-  assert.equal(result.teachingMoves, null);
+  assert.equal(systems.length, 2);
+  assert.match(systems[1], /no teachingMoves declared/);
+  assert.deepEqual(result.teachingMoves, GOOD);
+});
+
+test('writeVoice: a model that never declares the contract fails honestly (fail-closed)', async () => {
+  await assert.rejects(
+    writeVoice({ objects: OBJECTS, sourcePack: SOURCE_PACK, brief: BRIEF }, {
+      runAgentChain: async () => ({ json: { voiceLines: LINES }, usage: null }),
+    }),
+    /failed contract validation after repair.*no teachingMoves declared/s,
+  );
+});
+
+test('writeVoice: TEACHING_CONTRACT_STRICT=0 relaxes to the legacy regex-only path', async () => {
+  process.env.TEACHING_CONTRACT_STRICT = '0';
+  try {
+    const result = await writeVoice({ objects: OBJECTS, sourcePack: SOURCE_PACK, brief: BRIEF }, {
+      runAgentChain: async () => ({ json: { voiceLines: LINES }, usage: { total: 1 } }),
+    });
+    assert.equal(result.voiceLines.length, LINES.length);
+    assert.equal(result.teachingMoves, null);
+  } finally {
+    delete process.env.TEACHING_CONTRACT_STRICT;
+  }
 });
 
 test('writeVoice: a violated contract is retried with the violations named, then accepted', async () => {

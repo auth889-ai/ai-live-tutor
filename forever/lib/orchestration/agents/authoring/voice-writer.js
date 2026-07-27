@@ -117,17 +117,20 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
         const named = skippedChunks.map((c) => `${c.chunkId} (missing: ${c.missing.join(', ')})`).join('; ');
         throw new Error(`the narration skips assigned source material — every focused chunk must be taught, but these go unspoken: ${named}. Weave each chunk's concepts into the explanation explicitly`);
       }
-      // TYPED TEACHING CONTRACT (structured evidence beats regex-guessing): when the model
-      // declared its moves, they must be structurally sound — every violation is named so
-      // the retry fixes exactly that. When it omitted the field, the regex path above
-      // already gated depth (backward compatible — the field is not hard-required yet).
+      // TYPED TEACHING CONTRACT (structured evidence beats regex-guessing): the contract is
+      // REQUIRED — an omitted field is itself a violation, retried like any other, so the
+      // model cannot dodge the strict rules by staying silent (same fail-closed stance as
+      // every other gate; TEACHING_CONTRACT_STRICT=0 relaxes to the legacy regex-only path).
       let teachingMoves = null;
+      const contractStrict = process.env.TEACHING_CONTRACT_STRICT !== '0';
       if (json.teachingMoves?.length) {
         const violations = validateTeachingContract(json.teachingMoves, voiceLines, sourcePack.chunks);
         if (violations.length > 0) {
           throw new Error(`the declared teaching contract is structurally invalid — ${violations.join('; ')}`);
         }
         teachingMoves = json.teachingMoves;
+      } else if (contractStrict) {
+        throw new Error('no teachingMoves declared — the typed teaching contract is required: list every move (definition, concrete_example, mechanism at minimum) with the voice line ids that carry it and the chunkId it teaches');
       }
       return { voiceLines, teachingMoves, usage };
     } catch (error) {
