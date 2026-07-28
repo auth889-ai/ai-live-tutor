@@ -1413,6 +1413,58 @@ def min_effort(heights):
                     heapq.heappush(pq, (ne, nr, nc))
     return 0`, 'min_effort([[1, 2, 2], [3, 8, 2], [5, 3, 5]])'],
 
+  // ═══ BATCH 2 (2026-07-28) — BFS/Kahn cockpit coverage: the correctness-lock rows ═══
+  ['graphs', 'Kahn topological order (full strip output, list indegree)', `from collections import deque
+def topo_order(n, edges):
+    adj = {i: [] for i in range(n)}
+    indeg = [0] * n
+    for u, v in edges:
+        adj[u].append(v)
+        indeg[v] += 1
+    q = deque([i for i in range(n) if indeg[i] == 0])
+    order = []
+    while q:
+        u = q.popleft()
+        order.append(u)
+        for v in adj[u]:
+            indeg[v] -= 1
+            if indeg[v] == 0:
+                q.append(v)
+    return order`, 'topo_order(4, [[0, 1], [0, 2], [1, 3], [2, 3]])'],
+
+  ['graphs', 'Kahn with a CYCLE (cycle gate: partial order + cycleDetected)', `from collections import deque
+def can_finish(n, pres):
+    adj = {i: [] for i in range(n)}
+    indeg = [0] * n
+    for a, b in pres:
+        adj[b].append(a)
+        indeg[a] += 1
+    q = deque(i for i in range(n) if indeg[i] == 0)
+    done = 0
+    while q:
+        u = q.popleft()
+        done += 1
+        for v in adj[u]:
+            indeg[v] -= 1
+            if indeg[v] == 0:
+                q.append(v)
+    return done == n`, 'can_finish(5, [[1, 0], [2, 0], [3, 4], [4, 3]])'],
+
+  ['graphs', 'BFS levels (level dict rides as the distance table)', `from collections import deque
+def levels(adj, start):
+    level = {start: 0}
+    q = deque([start])
+    order = []
+    while q:
+        u = q.popleft()
+        order.append(u)
+        for v in adj[u]:
+            if v not in level:
+                level[v] = level[u] + 1
+                q.append(v)
+    return level
+g = {'A': ['B', 'C'], 'B': ['A', 'D', 'E'], 'C': ['A', 'F'], 'D': ['B'], 'E': ['B'], 'F': ['C']}`, "levels(g, 'A')"],
+
   ['graphs', 'LC133 Clone Graph (object graph via neighbors attribute)', `class Node:
     def __init__(self, val):
         self.val = val
@@ -1517,6 +1569,50 @@ INF = float('inf')`, 'floyd_warshall([[0, 3, INF, 7], [8, 0, 2, INF], [5, INF, 0
     return -1`, 'find_judge(3, [[1, 3], [2, 3], [3, 1]])'],
 ];
 
+// ═══ CORRECTNESS-LOCK INVARIANTS (2026-07-28) — part of what structural-elite MEANS for
+// graph rows, wherever the evidence exists. Cockpit fields are OPTIONAL evidence (a bare
+// honest step is still elite; arrows/cockpits are never required) — but evidence that IS
+// present must be lawful:
+//   dequeue-order law : cockpit dequeues must prefix-align with the drawn take order
+//   indegree consistency (Kahn) : counts are non-negative ints; once the walk is running
+//     they only count DOWN, one satisfied edge at a time (drop magnitude exactly 1)
+// A violating row counts as an ERROR, not as elite — strengthening the bar, never weakening.
+function graphInvariantIssue(trace) {
+  const takes = [];
+  let lastCur = null;
+  const dequeues = [];
+  let prevIndeg = null;
+  let walking = false; // indegree may still be BUILT (+1s) before the first dequeue
+  for (const s of trace.steps ?? []) {
+    const cur = s.graph?.current;
+    if (cur != null && String(cur) !== lastCur) {
+      lastCur = String(cur);
+      takes.push(lastCur);
+    }
+    if (s.cockpit?.dequeued !== undefined) {
+      dequeues.push(String(s.cockpit.dequeued));
+      walking = true;
+    }
+    const indeg = s.cockpit?.indegree;
+    if (indeg) {
+      for (const [k, v] of Object.entries(indeg)) {
+        if (!Number.isInteger(v) || v < 0) return `indegree[${k}] = ${JSON.stringify(v)} is not a non-negative integer`;
+        if (walking && prevIndeg && prevIndeg[k] !== undefined) {
+          if (v > prevIndeg[k]) return `indegree[${k}] rose ${prevIndeg[k]} -> ${v} mid-walk (Kahn only counts DOWN)`;
+          if (prevIndeg[k] - v > 1) return `indegree[${k}] dropped ${prevIndeg[k]} -> ${v} in one step (edges are satisfied one at a time)`;
+        }
+      }
+      prevIndeg = indeg;
+    }
+  }
+  for (let i = 0; i < dequeues.length; i += 1) {
+    if (takes[i] !== undefined && takes[i] !== dequeues[i]) {
+      return `cockpit dequeue #${i + 1} is ${dequeues[i]} but the drawn take order says ${takes[i]}`;
+    }
+  }
+  return null;
+}
+
 const rows = [];
 let structural = 0;
 let floor = 0;
@@ -1525,6 +1621,12 @@ for (const [cat, name, code, entry] of PROBLEMS) {
   try {
     const { trace, lens } = await traceUniversal({ code, entry, exec });
     const gate = dryRunQualityIssue({ steps: trace.steps, directive: name, code });
+    const invariant = graphInvariantIssue(trace);
+    if (invariant) {
+      errors += 1;
+      rows.push({ cat, name, lens, steps: trace.steps.length, gate: `INVARIANT: ${invariant.slice(0, 50)}` });
+      continue;
+    }
     const isFloor = lens === 'line-floor';
     if (isFloor) floor += 1; else structural += 1;
     rows.push({ cat, name, lens, steps: trace.steps.length, gate: gate ? 'GATE' : 'ok' });
