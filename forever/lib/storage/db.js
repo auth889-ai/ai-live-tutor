@@ -59,6 +59,13 @@ export async function notebooksCollection(env = process.env) {
   return (await getDb(env))?.collection('notebooks');
 }
 
+export async function masteryCollection(env = process.env) {
+  // BKT mastery state — one tiny doc per (user, skill), owner-scoped like study records.
+  // getDbSafe: mastery tracking degrades gracefully offline (answers still get a routed
+  // response computed from the prior; nothing persists until the DB is back).
+  return (await getDbSafe(env))?.collection('mastery');
+}
+
 export async function coursesCollection(env = process.env) {
   return (await getDb(env)).collection('courses');
 }

@@ -21,14 +21,14 @@ function recordCheckpoint(lessonId, quizId, correct) {
   }).catch(() => {});
 }
 
-export function QuizView({ content, onAnswered, lessonId = null, sceneId = null }) {
+export function QuizView({ content, onAnswered, lessonId = null, sceneId = null, quizId = null, skillId = null }) {
   if (content.kind === 'descriptive') {
     return <DescriptiveQuestion content={content} onAnswered={onAnswered} lessonId={lessonId} sceneId={sceneId} />;
   }
   if (content.kind === 'teach_back') {
     return <TeachBack content={content} onAnswered={onAnswered} lessonId={lessonId} sceneId={sceneId} />;
   }
-  return <ChoiceQuiz content={content} onAnswered={onAnswered} />;
+  return <ChoiceQuiz content={content} onAnswered={onAnswered} quizId={quizId} skillId={skillId} />;
 }
 
 // TEACH-BACK — the Feynman checkpoint: the student teaches the concept to a named audience in
@@ -173,7 +173,7 @@ function DescriptiveQuestion({ content, onAnswered, lessonId, sceneId }) {
   );
 }
 
-function ChoiceQuiz({ content, onAnswered }) {
+function ChoiceQuiz({ content, onAnswered, quizId = null, skillId = null }) {
   const [picked, setPicked] = useState(null);
   // ADAPTIVITY v1 (the 2-sigma move, finally WIRED — the diagnose endpoint existed with no
   // caller): a wrong answer triggers a live misconception diagnosis, and "Reteach this"
@@ -182,6 +182,11 @@ function ChoiceQuiz({ content, onAnswered }) {
   const [diagBusy, setDiagBusy] = useState(false);
   const [scene, setScene] = useState(null);
   const [sceneBusy, setSceneBusy] = useState(false);
+  // ADAPTIVITY v2 (BKT wired into the runtime): every judged answer updates per-skill
+  // mastery (skillId = the quiz's source chunk) and the returned ROUTE drives what the
+  // player offers next — 'reteach' makes the existing diagnose->reteach affordance
+  // prominent; higher bands surface as the computed next step.
+  const [masteryState, setMasteryState] = useState(null);
   const answered = picked !== null;
   const pageLessonId = () => (typeof window !== 'undefined' ? window.location.pathname.split('/course/')[1]?.split('?')[0] : null);
 
@@ -191,6 +196,15 @@ function ChoiceQuiz({ content, onAnswered }) {
     const correct = i === content.answerIndex;
     recordCheckpoint(null, content.question?.slice(0, 40), correct);
     onAnswered?.(correct);
+    // Non-blocking mastery update: the lesson never waits on it, and a failed call
+    // costs only the routing hint (the quiz flow above already completed).
+    if (skillId) {
+      fetch('/api/mastery/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonId: pageLessonId(), questionId: quizId ?? content.question?.slice(0, 40), skillId, correct }),
+      }).then((r) => (r.ok ? r.json() : null)).then((d) => d && typeof d.mastery === 'number' && setMasteryState(d)).catch(() => {});
+    }
     if (!correct) {
       setDiagBusy(true);
       fetch('/api/tutor/diagnose', {
@@ -254,6 +268,28 @@ function ChoiceQuiz({ content, onAnswered }) {
           {content.explanation}
         </div>
       )}
+      {/* BKT routing surfaced: 'reteach' promotes the existing reteach-on-a-board
+          affordance to a prominent call-to-action; other bands show the computed next
+          step. Rendered only when the mastery endpoint actually responded. */}
+      {answered && masteryState && (masteryState.route === 'reteach' ? (
+        <div style={{ marginTop: 10, padding: '12px 16px', borderRadius: 10, background: '#fdece8', border: '2px solid #e8604c', color: '#8a3a2e', fontSize: 14.5, lineHeight: 1.6 }}>
+          <strong>📉 This concept isn't solid yet</strong> — your mastery here is {Math.round(masteryState.mastery * 100)}%. The fastest fix is a fresh explanation built around exactly what you picked.
+          {!scene && picked !== content.answerIndex && (
+            <div>
+              <button onClick={reteach} disabled={sceneBusy}
+                style={{ marginTop: 10, border: 'none', background: '#e8604c', borderRadius: 8, padding: '9px 18px', fontSize: 13.5, fontWeight: 750, color: '#fff', cursor: 'pointer' }}>
+                {sceneBusy ? '🏛️ Building your reteach scene… (~1-3 min)' : '🎬 Reteach this on a board'}
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ marginTop: 8, fontSize: 13, color: '#8a6d3b' }}>
+          📈 Mastery on this concept: {Math.round(masteryState.mastery * 100)}% — next: {
+            { guided_practice: 'more practice with guidance', faded_practice: 'practice with less support', transfer: 'apply it in a new context' }[masteryState.route] ?? masteryState.route
+          }
+        </div>
+      ))}
       {answered && picked !== content.answerIndex && (
         <div style={{ marginTop: 10 }}>
           {diagBusy && <div style={{ fontSize: 13, color: '#8a6d3b' }}>🧑‍🏫 The tutor is looking at what you chose…</div>}
@@ -262,7 +298,9 @@ function ChoiceQuiz({ content, onAnswered }) {
               {diag.misconception && <div><strong>What tripped you:</strong> {diag.misconception}</div>}
               {(diag.reteach || diag.explanation) && <div style={{ marginTop: 6 }}>{diag.reteach || diag.explanation}</div>}
               {diag.followUp && <div style={{ marginTop: 6, fontStyle: 'italic' }}>🤔 {diag.followUp}</div>}
-              {!scene && (
+              {/* The small dashed button stays for non-reteach routes; the prominent
+                  mastery block above owns the affordance when BKT says 'reteach'. */}
+              {!scene && masteryState?.route !== 'reteach' && (
                 <button onClick={reteach} disabled={sceneBusy}
                   style={{ marginTop: 10, border: '1px dashed #e8604c', background: '#fff', borderRadius: 8, padding: '6px 14px', fontSize: 12.5, fontWeight: 700, color: '#e8604c', cursor: 'pointer' }}>
                   {sceneBusy ? '🏛️ Building your reteach scene… (~1-3 min)' : '🎬 Reteach this on a board'}

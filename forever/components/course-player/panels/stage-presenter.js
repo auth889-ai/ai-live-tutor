@@ -139,7 +139,9 @@ export function StagePresenter({ scene, tMs, title, setHold }) {
 
 function Focus({ object, state, focusRef, activeStep, setHold, onQuizAnswered, progressOverride = null }) {
   if (object.renderHint === 'quiz') {
-    return <QuizView content={object.content} onAnswered={onQuizAnswered} />;
+    // skillId = the source chunk this question teaches (the quiz object's own provenance,
+    // sourceRef.chunkId) — the BKT mastery update tracks the material itself.
+    return <QuizView content={object.content} onAnswered={onQuizAnswered} quizId={object.id} skillId={object.sourceRef?.chunkId ?? null} />;
   }
   if (object.renderHint === 'code') {
     // focusRef = the line number the tutor is currently discussing (highlight it).
