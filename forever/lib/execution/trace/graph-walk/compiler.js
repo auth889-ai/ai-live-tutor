@@ -126,10 +126,13 @@ function dropMisdeclaredRoles(roles, events, graph) {
   }
 }
 
-// compileGraphWalk({ events, result, code, entry?, graph, lens, language })
+// compileGraphWalk({ events, result, code, entry?, graph, lens, collops?, language })
 // events/result: from parseLineEvents (line-simulator run). graph: the declared views.graph
 // (node ids MUST equal the node keys the student's code uses). lens: role -> variable name.
-export function compileGraphWalk({ events, result, code, entry = null, graph, lens = {}, mask = null, language = 'python' } = {}) {
+// collops (optional, ADDITIVE): the recorder's direct collection-operation events
+// (q.popleft()/q.append(x)/seen.add(x)), each re-indexed by the caller so `at` points into
+// THIS events array — the evidence channel the BFS cockpit and its invariants read.
+export function compileGraphWalk({ events, result, code, entry = null, graph, lens = {}, mask = null, collops = null, language = 'python' } = {}) {
   if (!Array.isArray(events) || events.length === 0) throw new Error('graph walk recorded no events');
   const truncated = events[events.length - 1]?.truncated === true;
   if (truncated) events = events.slice(0, -1);
@@ -181,6 +184,93 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     return items.map(displayItem);
   };
 
+  // ═══ BFS TEACHING COCKPIT (2026-07-28, trace-proven side-state) ═══
+  // When the recording carries DIRECT queue operations for the declared FIFO frontier
+  // (q.popleft()/q.append(x) collops from the universal recorder), take steps gain
+  // {queue, dequeued, enqueued, level} — every field read off the recorded ops, never
+  // re-simulated. Stacks and heaps attach nothing (LIFO/priority order is not a queue story).
+  // A member is only used when it resolves to exactly ONE node id (a scalar id, or a tuple
+  // carrying exactly one) — ambiguity claims nothing.
+  const nodeIdOf = (v) => {
+    if (isNode(v)) return String(v);
+    if (Array.isArray(v)) {
+      const members = v.filter(isNode);
+      if (members.length === 1) return String(members[0]);
+    }
+    return null;
+  };
+  const opsFor = (varName, ops) => (Array.isArray(collops) && varName
+    ? collops.filter((o) => o && o.n === varName && ops.includes(o.op) && Number.isInteger(o.at))
+      .sort((a, b) => (a.q ?? 0) - (b.q ?? 0))
+    : []);
+  const queueOps = frontierRole === 'queue' ? opsFor(roles.queue, ['popleft', 'append', 'appendleft']) : [];
+  const dequeueOps = queueOps.filter((o) => o.op === 'popleft');
+  // Evidence bar: at least one recorded dequeue and EVERY dequeue resolvable to a node —
+  // a queue whose items the recorder cannot name gets no cockpit and no claims.
+  const bfsEvidence = dequeueOps.length > 0 && dequeueOps.every((o) => nodeIdOf(o.ret) !== null);
+  const dequeueSegs = []; // per recorded dequeue: { node, at, enqueued: [node ids] }
+  const seedEnqueues = [];
+  if (bfsEvidence) {
+    let seg = null;
+    for (const o of queueOps) {
+      if (o.op === 'popleft') {
+        seg = { node: nodeIdOf(o.ret), at: o.at, enqueued: [] };
+        dequeueSegs.push(seg);
+      } else {
+        const nid = nodeIdOf(o.arg);
+        if (nid === null) continue;
+        if (seg) seg.enqueued.push(nid); else seedEnqueues.push(nid);
+      }
+    }
+    // HARD INVARIANT — every inspected edge exists in the recorded adjacency: a node may
+    // only join the queue while X is being processed if the declared graph actually connects
+    // X and that node (orientation-agnostic membership: reverse-graph walks like eventual-
+    // safe-states legitimately ride the declared edges backwards; a connection that exists
+    // in NO orientation is invented, and the compiler refuses to ship it).
+    for (const s of dequeueSegs) {
+      for (const nid of s.enqueued) {
+        if (!edgePairs.has(`${s.node}>${nid}`) && !edgePairs.has(`${nid}>${s.node}`)) {
+          throw new Error(`graph-walk invariant violated: ${nid} was enqueued while processing ${s.node}, but no edge between ${s.node} and ${nid} exists in the recorded adjacency`);
+        }
+      }
+    }
+  }
+  // BFS LEVELS, derived only from recorded queue ops + FIFO law: seeds (the frontier's first
+  // recorded contents plus anything appended before the first dequeue) sit at level 0; a node
+  // enqueued while X is processed sits at level[X] + 1. Unknown stays unknown — never guessed.
+  const levelOf = new Map();
+  if (bfsEvidence) {
+    const firstSight = events.map((e) => (e.locals && typeof e.locals === 'object' ? e.locals[roles.queue] : undefined)).find(Array.isArray) ?? [];
+    for (const item of firstSight) {
+      const nid = nodeIdOf(item);
+      if (nid !== null) levelOf.set(nid, 0);
+    }
+    for (const nid of seedEnqueues) if (!levelOf.has(nid)) levelOf.set(nid, 0);
+    for (const s of dequeueSegs) {
+      const base = levelOf.get(s.node);
+      if (base === undefined) continue;
+      for (const nid of s.enqueued) if (!levelOf.has(nid)) levelOf.set(nid, base + 1);
+    }
+  }
+  // HARD INVARIANT — a node is marked visited only at its RECORDED discovery: when the
+  // recording carries visited.append/seen.add ops, every member the compiler finalizes must
+  // either be in the visited collection's first recorded sighting or have a recorded
+  // discovery op at-or-before the event where it appears.
+  const visitedOps = opsFor(roles.visited, ['append', 'add']);
+  const discoveryAt = new Map(); // node id -> earliest recorded discovery event index
+  for (const o of visitedOps) {
+    const nid = nodeIdOf(o.arg);
+    if (nid !== null && !discoveryAt.has(nid)) discoveryAt.set(nid, o.at);
+  }
+  const initialVisited = new Set();
+  if (visitedOps.length > 0) {
+    const firstVis = events.map((e) => (e.locals && typeof e.locals === 'object' ? e.locals[roles.visited] : undefined)).find(Array.isArray) ?? [];
+    for (const m of firstVis) {
+      const nid = nodeIdOf(m);
+      if (nid !== null) initialVisited.add(nid);
+    }
+  }
+
   // EXECUTION PHASE SEGMENTATION (external review, verified live on HEAD: Dijkstra's and
   // Tarjan's BUILD loops — `for u, v in edges: adj[u].append(v)` — were narrated as the
   // traversal: "Now 3 is taken out of the frontier" while the frontier did not exist yet,
@@ -208,6 +298,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
   let everTaken = false; // no take yet -> dist writes are SETUP, never relaxations
   let seededAfterBuild = buildEndIndex < 0; // no build phase -> nothing stale to absorb
   const visitOrder = []; // finalize ORDER is ours to track — sets are unordered (research pitfall)
+  const processedOrder = []; // CLAIMED takes in event order — checked against the recorded dequeues
   let knownDist = {};
   let prevParent = null;
   let prevIndegree = null;
@@ -276,13 +367,39 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     }
 
     // TAKE: the processing pointer lands on a new node (extract-min / dequeue / pop).
+    let cockpit = null; // BFS cockpit fields for THIS step (additive, evidence-gated)
     if (isNode(curRaw) && String(curRaw) !== current) {
       current = String(curRaw);
       currentClaimed = true;
       everTaken = true;
+      processedOrder.push(current);
+      // HARD INVARIANT — dequeue order === recorded execution order: the K-th claimed take
+      // must be the K-th node the recorded popleft actually released. A recording where the
+      // two disagree is corrupted evidence, and no step may be narrated from it.
+      if (bfsEvidence && dequeueSegs.length >= processedOrder.length) {
+        const expected = dequeueSegs[processedOrder.length - 1].node;
+        if (expected !== current) {
+          throw new Error(`graph-walk invariant violated: the recorded dequeue order releases ${expected} at position ${processedOrder.length}, but execution processed ${current} there`);
+        }
+      }
       emit('visit', { semanticRole: 'frontier_take', target: { entityId: `graphNode:${current}` } });
       const distNow = plainObj(locals[roles.dist]);
-      parts.push(narrateTake({ node: name(current), via: frontierRole === 'stack' ? 'stack' : frontierRole ? 'queue' : null, dist: distNow?.[curRaw] }));
+      // The queue beat rides the take when the recorded segment backs it: dequeued/enqueued/
+      // level are facts of the collops channel, and the narration names the joining nodes.
+      const seg = bfsEvidence ? dequeueSegs[processedOrder.length - 1] : null;
+      if (seg && seg.node === current) {
+        cockpit = {
+          dequeued: current,
+          enqueued: [...seg.enqueued],
+          ...(levelOf.has(current) ? { level: levelOf.get(current) } : {}),
+        };
+      }
+      parts.push(narrateTake({
+        node: name(current),
+        via: frontierRole === 'stack' ? 'stack' : frontierRole ? 'queue' : null,
+        dist: distNow?.[curRaw],
+        joined: cockpit ? cockpit.enqueued.map(name) : null,
+      }));
     }
 
     // RELAX: the distance table changed — old -> new per node, first change lights its edge.
@@ -313,13 +430,25 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     if (Array.isArray(visitedRaw)) {
       for (const m of visitedRaw) {
         if (isNode(m) && !visitOrder.includes(String(m))) {
+          // HARD INVARIANT — visited only at its RECORDED discovery: with visited-collection
+          // ops in the recording, a member with neither an initial-sighting seat nor a
+          // recorded append/add at-or-before this event was never discovered — refuse it.
+          if (visitedOps.length > 0 && !initialVisited.has(String(m))) {
+            const disc = discoveryAt.get(String(m));
+            if (disc === undefined || disc > evIndex) {
+              throw new Error(`graph-walk invariant violated: ${String(m)} appears in the visited set with no recorded discovery (no ${roles.visited}.append/.add op at or before this moment)`);
+            }
+          }
           visitOrder.push(String(m));
           parts.push(narrateFinalize({ node: name(m) }));
           emit('finalize', { target: { entityId: `graphNode:${String(m)}` } });
           // Finalization PROVES processing: when the stale-seeded current coincides with the
           // algorithm's real first node (so no change-based take fired), the visited growth
           // is the evidence that claims it — relaxations may now attribute and light edges.
-          if (!currentClaimed && current === String(m)) currentClaimed = true;
+          if (!currentClaimed && current === String(m)) {
+            currentClaimed = true;
+            processedOrder.push(current);
+          }
         }
       }
     }
@@ -378,6 +507,9 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     const frontierRaw = frontierRole ? locals[roles[frontierRole]] : null;
     if (Array.isArray(frontierRaw)) {
       frontier = displayFrontier(frontierRaw);
+      // Cockpit queue contents = the frontier as RECORDED at this event (post-dequeue for a
+      // take step — line events fire before their line runs, so the pop is already visible).
+      if (bfsEvidence && cockpit) cockpit.queue = [...frontier];
       const key = JSON.stringify(frontier);
       if (parts.length === 0 && key !== prevFrontier) {
         parts.push(narrateCollection({ kind: frontierRole === 'stack' ? 'stack' : 'queue', items: frontier }));
@@ -396,6 +528,9 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
         && !(typeof v === 'string' && v.startsWith('<') && /function|object|module|method|class '| at 0x[0-9a-f]/.test(v))),
     );
     const stepOut = snap({ line, explanation: parts.join(' '), activeEdge, frontier, variables, events: stepEvents });
+    // BFS cockpit passthrough (ADDITIVE — a new optional field; renderers that do not know
+    // it are unaffected): {queue, dequeued, enqueued, level}, all recorded-op facts.
+    if (cockpit) stepOut.cockpit = cockpit;
     // CallFrame channel passthrough (B3): the live stack + the most recent completed frame.
     if (Array.isArray(ev.frames) && ev.frames.length) {
       stepOut.frames = ev.frames;

@@ -9,8 +9,16 @@ export function narrateStart({ entry }) {
 }
 
 // A node is pulled out of the frontier to be processed (Dijkstra's extract-min, Kahn's dequeue).
-export function narrateTake({ node, via, dist }) {
+// joined (BFS cockpit, recorded queue ops only): the nodes that entered the queue while this
+// node was being processed — null when no queue-op evidence exists, so nothing is invented.
+export function narrateTake({ node, via, dist, joined = null }) {
   const cost = dist !== undefined ? ` Its tentative distance is ${JSON.stringify(dist)} — the smallest of everything still waiting, which is exactly why it goes next.` : '';
+  if (Array.isArray(joined)) {
+    const beat = joined.length
+      ? ` its neighbours ${joined.join(', ')} join the back of the queue — every one of those enqueues was recorded as the run performed it.`
+      : ` nothing new joins the queue while it is processed — its neighbours are all already discovered or done.`;
+    return `We take ${node} from the front of the queue;${beat}${cost} Whatever we learn in this moment, we learn by looking along ${node}'s edges.`;
+  }
   const engine = via === 'stack' ? 'off the stack' : via === 'queue' ? 'out of the frontier' : 'up next';
   return `Now ${node} is taken ${engine} and becomes the node under the pointer.${cost} Whatever we learn in this moment, we learn by looking along ${node}'s edges.`;
 }

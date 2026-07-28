@@ -274,15 +274,25 @@ export function compileGraphAdjacency({ recording, plan, code, entry = null, lan
   const all = recording?.events ?? [];
   const timeline = buildFrameTimeline(all);
   const recursive = timeline.frames.length > 1;
+  const lineIdxByOrig = new Map(); // original event index -> index in the line-only array
   const events = all
     .map((e, i) => ({ e, i }))
     .filter(({ e }) => e.ev === 'line')
-    .map(({ e, i }) => ({
-      line: e.line,
-      locals: e.locals,
-      ...(recursive ? { frames: timeline.stackAt(i), lastReturn: timeline.finishedBefore(i) } : {}),
-    }));
+    .map(({ e, i }, li) => {
+      lineIdxByOrig.set(i, li);
+      return {
+        line: e.line,
+        locals: e.locals,
+        ...(recursive ? { frames: timeline.stackAt(i), lastReturn: timeline.finishedBefore(i) } : {}),
+      };
+    });
   if (recording?.events?.at(-1)?.truncated === true) events.push({ truncated: true });
+  // Collection-op passthrough (BFS cockpit evidence channel): an op logged at _events length
+  // L ran DURING the line event at original index L-1 — same convention as reads. Re-indexed
+  // into the line-only array; ops during non-line events (none in practice) are dropped.
+  const collops = (recording?.collops ?? [])
+    .map((o) => ({ ...o, at: lineIdxByOrig.get(o.i - 1) }))
+    .filter((o) => Number.isInteger(o.at));
   const trace = compileGraphWalk({
     events,
     result: recording.result,
@@ -292,6 +302,7 @@ export function compileGraphAdjacency({ recording, plan, code, entry = null, lan
     graph: plan.graph,
     lens: plan.roles,
     mask: plan.mask ?? null,
+    collops,
   });
   if (!plan.roles.visited) synthesizeVisitedFromTakes(trace);
   return trace;
