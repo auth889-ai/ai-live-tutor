@@ -85,6 +85,11 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
             layout: result.scene.layout,
             objects: result.scene.objects,
             voiceLines: result.scene.voiceLines,
+            // The Voice Writer's typed teaching contract must SURVIVE flattening: every
+            // scene (first-pass, rescue, or targeted replacement) declares its moves, and
+            // auditors read the stored declaration — dropping it here silently un-audited
+            // every lesson-level scene while generate-scene dutifully attached it.
+            ...(result.scene.teachingMoves?.length ? { teachingMoves: result.scene.teachingMoves } : {}),
             timeline: result.timeline,
             durationMs: result.durationMs,
             reviewRounds: result.reviewRounds,
