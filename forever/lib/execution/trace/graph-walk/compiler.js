@@ -252,6 +252,15 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
       for (const nid of s.enqueued) if (!levelOf.has(nid)) levelOf.set(nid, base + 1);
     }
   }
+  // ═══ KAHN COCKPIT (2026-07-28): an indegree countdown + FIFO frontier is Kahn's shape —
+  // steps additionally carry {indegree, topoOrder, dropped}, all read from the recorded
+  // dict/counter mutations and queue ops the loop below already diffs. The cycle gate at the
+  // bottom is Kahn's own termination proof, applied to the recording.
+  const kahnShaped = Boolean(roles.indegree) && frontierRole === 'queue';
+  const nodeIndegree = (src) => Object.fromEntries(
+    Object.entries(src ?? {}).filter(([k]) => isNode(k)).map(([k, v]) => [String(k), Number(v)]),
+  );
+
   // HARD INVARIANT — a node is marked visited only at its RECORDED discovery: when the
   // recording carries visited.append/seen.add ops, every member the compiler finalizes must
   // either be in the visited collection's first recorded sighting or have a recorded
@@ -470,11 +479,17 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     const indegRaw = Array.isArray(locals[roles.indegree])
       ? Object.fromEntries(locals[roles.indegree].map((v, i) => [i, v]))
       : plainObj(locals[roles.indegree]);
+    let droppedNow = null; // Kahn cockpit: this step's recorded countdowns, with attribution
     if (indegRaw && prevIndegree) {
       const drops = Object.entries(indegRaw).filter(([k, v]) => isNode(k) && Number(v) < Number(prevIndegree[k] ?? Infinity));
       for (const [k, v] of drops.slice(0, 3)) {
         parts.push(narrateIndegree({ node: name(k), value: v }));
         emit('write', { semanticRole: 'indegree_drop', target: { entityId: `graphNode:${String(k)}`, field: roles.indegree }, before: prevIndegree[k], after: v });
+      }
+      // `from` = the node whose processing satisfied the edge — only a CLAIMED current may
+      // be credited (the same attribution law relaxations follow); otherwise null, not a guess.
+      if (kahnShaped && drops.length > 0) {
+        droppedNow = drops.map(([k]) => ({ node: String(k), from: currentClaimed && current && current !== String(k) ? current : null }));
       }
     }
     if (indegRaw) prevIndegree = { ...indegRaw };
@@ -527,9 +542,18 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
         // (prefix-only match: the recorder truncates long strings, so the closing ">" may be cut)
         && !(typeof v === 'string' && v.startsWith('<') && /function|object|module|method|class '| at 0x[0-9a-f]/.test(v))),
     );
+    // Kahn cockpit fields ride EVERY emitted step of a Kahn-shaped walk: the live indegree
+    // table, the topological strip built so far, and this step's recorded countdowns.
+    if (kahnShaped) {
+      cockpit = cockpit ?? {};
+      if (prevIndegree) cockpit.indegree = nodeIndegree(prevIndegree);
+      cockpit.topoOrder = [...processedOrder];
+      if (droppedNow) cockpit.dropped = droppedNow;
+    }
     const stepOut = snap({ line, explanation: parts.join(' '), activeEdge, frontier, variables, events: stepEvents });
-    // BFS cockpit passthrough (ADDITIVE — a new optional field; renderers that do not know
-    // it are unaffected): {queue, dequeued, enqueued, level}, all recorded-op facts.
+    // Cockpit passthrough (ADDITIVE — a new optional field; renderers that do not know it
+    // are unaffected): BFS {queue, dequeued, enqueued, level} + Kahn {indegree, topoOrder,
+    // dropped}, all recorded-op facts.
     if (cockpit) stepOut.cockpit = cockpit;
     // CallFrame channel passthrough (B3): the live stack + the most recent completed frame.
     if (Array.isArray(ev.frames) && ev.frames.length) {
@@ -539,6 +563,30 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     steps.push(stepOut);
   }
   if (steps.length === 0) throw new Error('graph walk saw no lensed state change — check the lens variable names against the code');
+
+  // KAHN CYCLE GATE (2026-07-28): Kahn's own termination proof, applied to the recording —
+  // the run ended (NOT truncated: a capped recording stops early and proves nothing) with
+  // fewer scheduled nodes than the graph has, so the leftover nodes wait on incoming edges
+  // that can never be satisfied. A distinct 'cycle' phase step names them, and the terminal
+  // step carries cycleDetected so the close cannot read like a completed order.
+  const kahnCycle = kahnShaped && !truncated && processedOrder.length > 0 && processedOrder.length < nodes.length;
+  if (kahnCycle) {
+    const leftover = nodes.map((n) => String(n.id)).filter((id) => !processedOrder.includes(id));
+    const cyc = snap({
+      line: steps[steps.length - 1].line,
+      explanation: `CYCLE DETECTED — Kahn's own termination proof: the queue is empty, yet only ${processedOrder.length} of ${nodes.length} nodes ever reached indegree 0. ${leftover.map(name).join(', ')} still wait on incoming edges that can never be satisfied, because they point at one another — that is a cycle, so no topological order exists. The strip built so far (${processedOrder.map(name).join(' → ')}) is the largest order the acyclic part of this graph allows.`,
+      frontier: [],
+      variables: {},
+      events: [{ eventType: 'state_transition', semanticRole: 'cycle_detected', target: { entityId: 'collection:queue' }, after: leftover }],
+    });
+    cyc.phase = 'cycle';
+    cyc.cockpit = {
+      cycleDetected: true,
+      topoOrder: [...processedOrder],
+      ...(prevIndegree ? { indegree: nodeIndegree(prevIndegree) } : {}),
+    };
+    steps.push(cyc);
+  }
 
   // The tutor's opening frame beat, then the terminal read-back.
   if (entry) {
@@ -550,13 +598,17 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
       variables: {},
     });
   }
-  steps.push(snap({
+  const doneStep = snap({
     line: steps[steps.length - 1].line,
     explanation: narrateDone({ result, orderNames: visitOrder.map(name), truncated }),
     frontier: null,
     variables: {},
     events: [{ eventType: 'solution_emit', after: result }],
-  }));
+  });
+  if (kahnShaped) {
+    doneStep.cockpit = { topoOrder: [...processedOrder], ...(kahnCycle ? { cycleDetected: true } : {}) };
+  }
+  steps.push(doneStep);
 
   return validateExecutionTrace({
     language,

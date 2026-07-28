@@ -26,7 +26,7 @@ const TYPES = new Set(EVENT_TYPES);
 export const SEMANTIC_ROLES = Object.freeze([
   // emitted today
   'frontier_take', 'first_discovery', 'improvement', 'indegree_drop', 'state_write',
-  'mask_update', 'dp_recurrence_update',
+  'mask_update', 'dp_recurrence_update', 'cycle_detected',
   // reserved contract names (Director bindings / future invariant-backed upgrades)
   'low_link_update', 'bridge_confirmed', 'backtrack', 'memo_hit', 'swap', 'partition_move',
   'union_merge', 'level_advance', 'window_slide', 'pop_reason',

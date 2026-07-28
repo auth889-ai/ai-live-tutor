@@ -77,7 +77,21 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
 
   // CURRENT: subscripts the adjacency in code, only ever holds node ids, takes >=2 of them.
   // Several may qualify (adj[b].append during BUILD also subscripts) — the WALKER visits the
-  // most distinct nodes, so the widest candidate wins.
+  // most distinct nodes, so the widest candidate wins. DEQUEUE PROVENANCE outranks width
+  // (live-caught 2026-07-28 on a cyclic Kahn fixture: the build loop's `b` TIED the walker
+  // `u` at 3 distinct node values and won on iteration order, silencing every take): the
+  // recorded frontier releases (popleft/pop/heappop rets) name the true walker, so the
+  // candidate covering more of them wins; distinct count only breaks remaining ties.
+  const dequeuedIds = new Set();
+  for (const o of recording?.collops ?? []) {
+    if (!['popleft', 'pop', 'heappop'].includes(o?.op) || o.ret === undefined) continue;
+    if ((typeof o.ret === 'string' || typeof o.ret === 'number') && adj.ids.has(String(o.ret))) {
+      dequeuedIds.add(String(o.ret));
+    } else if (Array.isArray(o.ret)) {
+      const m = o.ret.filter((x) => (typeof x === 'string' || typeof x === 'number') && adj.ids.has(String(x)));
+      if (m.length === 1) dequeuedIds.add(String(m[0]));
+    }
+  }
   let currentBest = null;
   for (const name of new Set(lines.flatMap((e) => Object.keys(e.locals)))) {
     if (name === adj.name) continue;
@@ -85,9 +99,14 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
     const seen = lines.map((e) => e.locals[name]).filter((v) => v !== undefined && v !== null);
     const scalars = seen.filter((v) => typeof v === 'string' || typeof v === 'number');
     if (scalars.length === 0 || !scalars.every(isNodeVal)) continue;
-    const distinct = new Set(scalars.map(String)).size;
+    const values = new Set(scalars.map(String));
+    const distinct = values.size;
     if (distinct < 2) continue;
-    if (!currentBest || distinct > currentBest.distinct) currentBest = { name, distinct };
+    const dequeued = [...values].filter((v) => dequeuedIds.has(v)).length;
+    if (!currentBest || dequeued > currentBest.dequeued
+      || (dequeued === currentBest.dequeued && distinct > currentBest.distinct)) {
+      currentBest = { name, distinct, dequeued };
+    }
   }
   if (currentBest) roles.current = currentBest.name;
 

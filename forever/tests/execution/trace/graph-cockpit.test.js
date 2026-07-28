@@ -134,6 +134,62 @@ test('HARD INVARIANT 3: an enqueue across a non-existent edge throws (in any ori
   );
 });
 
+const KAHN = [
+  'from collections import deque',
+  'def can_finish(n, pres):',
+  '    adj = {i: [] for i in range(n)}',
+  '    indeg = [0] * n',
+  '    for a, b in pres:',
+  '        adj[b].append(a)',
+  '        indeg[a] += 1',
+  '    q = deque(i for i in range(n) if indeg[i] == 0)',
+  '    done = 0',
+  '    while q:',
+  '        u = q.popleft()',
+  '        done += 1',
+  '        for v in adj[u]:',
+  '            indeg[v] -= 1',
+  '            if indeg[v] == 0:',
+  '                q.append(v)',
+  '    return done == n',
+].join('\n');
+
+test('KAHN COCKPIT on a DAG (real run): indegree/topoOrder/dropped ride the steps; full strip, no cycle claim', () => {
+  const entry = 'can_finish(3, [[1, 0], [2, 1]])';
+  const rec = record({ code: KAHN, entry });
+  const plan = detectGraphAdjacency(rec, { code: KAHN });
+  assert.ok(plan?.roles?.indegree, 'the indegree countdown is recognized');
+  const trace = compileGraphAdjacency({ recording: rec, plan, code: KAHN, entry });
+
+  const withIndeg = trace.steps.filter((s) => s.cockpit?.indegree);
+  assert.ok(withIndeg.length > 0, 'the live indegree table rides the cockpit');
+  const drop = trace.steps.find((s) => Array.isArray(s.cockpit?.dropped));
+  assert.ok(drop, 'recorded countdowns surface as dropped entries');
+  assert.equal(drop.cockpit.dropped[0].node, '1', 'the first satisfied edge points at node 1');
+  assert.equal(drop.cockpit.dropped[0].from, '0', "attributed to node 0's processing — the claimed current, never a guess");
+  assert.deepEqual(trace.steps.at(-1).cockpit.topoOrder, ['0', '1', '2'], 'the full topological strip reaches the close');
+  assert.equal(trace.steps.at(-1).cockpit.cycleDetected, undefined, 'a DAG earns no cycle flag');
+  assert.ok(trace.steps.every((s) => s.phase !== 'cycle'), 'no cycle phase step on a DAG');
+});
+
+test('KAHN CYCLE GATE (real run): a cyclic graph flags cycleDetected, emits the cycle phase step, shows the partial order', () => {
+  // 0 -> 1, 0 -> 2 schedule fine; 3 <-> 4 wait on each other forever.
+  const entry = 'can_finish(5, [[1, 0], [2, 0], [3, 4], [4, 3]])';
+  const rec = record({ code: KAHN, entry });
+  const plan = detectGraphAdjacency(rec, { code: KAHN });
+  assert.ok(plan?.roles?.indegree, 'the indegree countdown is recognized on the cyclic run too');
+  const trace = compileGraphAdjacency({ recording: rec, plan, code: KAHN, entry });
+
+  const cyc = trace.steps.find((s) => s.phase === 'cycle');
+  assert.ok(cyc, 'a distinct cycle-phase step is emitted');
+  assert.equal(cyc.cockpit.cycleDetected, true);
+  assert.deepEqual(cyc.cockpit.topoOrder, ['0', '1', '2'], 'the partial order is shown, not hidden');
+  assert.match(cyc.explanation, /CYCLE DETECTED.*only 3 of 5 nodes.*3, 4/s, 'the leftover nodes are named');
+  assert.ok(cyc.events.some((e) => e.semanticRole === 'cycle_detected'), 'the typed cycle event rides the step');
+  assert.equal(trace.steps.at(-1).cockpit.cycleDetected, true, 'the final step carries the flag');
+  assert.match(trace.steps.at(-1).explanation, /false/i, 'the real answer still reaches the close');
+});
+
 test('clean synthetic run passes all three invariants and carries the cockpit', () => {
   const events = [
     { line: 1, locals: { q: ['A'], visited: ['A'] } },

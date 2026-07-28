@@ -161,11 +161,12 @@ export function validateExecutionTrace(trace, context = 'execution trace') {
     // dpvis STEP MODEL (2026-07-28, ADDITIVE — every field optional so existing traces pass
     // untouched): phase = where this beat sits in the DP lifecycle; reads/chosen = the write's
     // RECORDED dp-cell provenance ([row,col] pairs inside the declared array2d view).
-    // Two phase vocabularies share the field, both closed sets: the DP lifecycle
-    // (base/fill/answer) and the call lifecycle (enter/compute/return/backtrack — the
-    // brpapa-grade recursion step model, 2026-07-28, equally additive).
-    if (step.phase !== undefined && !['base', 'fill', 'answer', 'enter', 'compute', 'return', 'backtrack'].includes(step.phase)) {
-      throw new Error(`${at} phase must be one of base|fill|answer (DP) or enter|compute|return|backtrack (calls) — got ${JSON.stringify(step.phase)}`);
+    // Three phase vocabularies share the field, all closed sets: the DP lifecycle
+    // (base/fill/answer), the call lifecycle (enter/compute/return/backtrack — the
+    // brpapa-grade recursion step model, 2026-07-28, equally additive), and the graph
+    // walk's terminal 'cycle' beat (Kahn's cycle gate, 2026-07-28, additive too).
+    if (step.phase !== undefined && !['base', 'fill', 'answer', 'enter', 'compute', 'return', 'backtrack', 'cycle'].includes(step.phase)) {
+      throw new Error(`${at} phase must be one of base|fill|answer (DP), enter|compute|return|backtrack (calls), or cycle (Kahn's gate) — got ${JSON.stringify(step.phase)}`);
     }
     for (const key of ['reads', 'chosen']) {
       if (step[key] === undefined) continue;
