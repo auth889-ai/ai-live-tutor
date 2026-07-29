@@ -82,10 +82,15 @@ export function narrateNodeState({ varName, node, oldValue, newValue }) {
 }
 
 // Terminal beat: read the answer OUT of the walk (or cut the recording openly).
-export function narrateDone({ result, orderNames, truncated }) {
+// cycle: the Kahn gate fired — the close must read as the cycle's consequence, never as a
+// completed walk ("every number was earned" over a graph nothing ever walked is a lie).
+export function narrateDone({ result, orderNames, truncated, cycle = false }) {
   if (truncated) {
     return `The recording stops HERE, on purpose: the walk kept repeating the same pattern past the recording cap, so watching more of it teaches nothing new. The run itself continued to completion and returned ${JSON.stringify(result)} — recorded honestly, cut openly.`;
   }
   const order = orderNames.length ? ` Read the processing order back: ${orderNames.join(' → ')}.` : '';
+  if (cycle) {
+    return `The run ends and the call returns ${JSON.stringify(result)} — and you watched exactly why: the cycle caught above means some nodes can never be scheduled, so no complete ordering of this graph exists.${order}`;
+  }
   return `The walk is complete and the call returns ${JSON.stringify(result)}.${order} Every number in the final table was earned by a relaxation you watched happen — that is the whole proof, performed in front of you.`;
 }

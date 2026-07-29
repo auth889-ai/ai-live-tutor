@@ -190,6 +190,75 @@ test('KAHN CYCLE GATE (real run): a cyclic graph flags cycleDetected, emits the 
   assert.match(trace.steps.at(-1).explanation, /false/i, 'the real answer still reaches the close');
 });
 
+test('KAHN PURE CYCLE (real run): zero takes — no node ever reaches indegree 0, and the gate still fires', () => {
+  // 0 -> 1 -> 2 -> 0: the queue is born empty, the while loop never runs. The old gate
+  // required at least one take, making the WORST cycle the one invisible case (external
+  // audit 2026-07-28, verified live: the close claimed "The walk is complete").
+  const entry = 'can_finish(3, [[1, 0], [2, 1], [0, 2]])';
+  const rec = record({ code: KAHN, entry });
+  const plan = detectGraphAdjacency(rec, { code: KAHN });
+  assert.ok(plan?.roles?.indegree, 'the indegree table is recognized WITHOUT countdowns — its peak matches the recorded adjacency');
+  assert.equal(plan.roles.queue, 'q', 'the always-empty queue is recognized as the frontier');
+  const trace = compileGraphAdjacency({ recording: rec, plan, code: KAHN, entry });
+
+  const cyc = trace.steps.find((s) => s.phase === 'cycle');
+  assert.ok(cyc, 'the cycle-phase step is emitted with zero takes');
+  assert.equal(cyc.cockpit.cycleDetected, true);
+  assert.deepEqual(cyc.cockpit.topoOrder, [], 'no node was ever scheduled — the strip is honestly empty');
+  assert.match(cyc.explanation, /not one of the 3 nodes starts at indegree 0/, 'the zero-take story is told as such');
+  assert.match(cyc.explanation, /0, 1, 2/, 'every waiting node is named');
+  assert.equal(trace.steps.at(-1).cockpit.cycleDetected, true, 'the final step carries the flag');
+  assert.doesNotMatch(trace.steps.at(-1).explanation, /walk is complete/i, 'the close no longer reads like a completed walk');
+});
+
+test('KAHN SELF-LOOP (real run): one take, one countdown — the gate fires and the real walker wins the role', () => {
+  // 0 -> 1 plus 1 -> 1: node 1 waits on itself forever. Locks two live-caught bugs at once:
+  // the single countdown was below the old >=2-drop indegree law, and the build loop's `b`
+  // outranked the walker `u` on set-overlap (u only ever held one node).
+  const entry = 'can_finish(2, [[1, 0], [1, 1]])';
+  const rec = record({ code: KAHN, entry });
+  const plan = detectGraphAdjacency(rec, { code: KAHN });
+  assert.equal(plan?.roles?.current, 'u', 'release alignment names the true walker, not the build variable');
+  assert.ok(plan?.roles?.indegree, 'one countdown + adjacency-peak evidence is enough');
+  const trace = compileGraphAdjacency({ recording: rec, plan, code: KAHN, entry });
+
+  const cyc = trace.steps.find((s) => s.phase === 'cycle');
+  assert.ok(cyc, 'the cycle-phase step is emitted');
+  assert.deepEqual(cyc.cockpit.topoOrder, ['0'], 'the schedulable prefix is shown');
+  assert.match(cyc.explanation, /only 1 of 2 nodes/, 'the counts are honest');
+  assert.equal(trace.steps.at(-1).cockpit.cycleDetected, true);
+});
+
+test('KAHN DISCONNECTED CYCLIC COMPONENT (real run): the acyclic part schedules, the cyclic island is caught', () => {
+  // 0 -> 1 schedules fine; 2 <-> 3 is an untouched island that never reaches the queue.
+  const entry = 'can_finish(4, [[1, 0], [2, 3], [3, 2]])';
+  const rec = record({ code: KAHN, entry });
+  const plan = detectGraphAdjacency(rec, { code: KAHN });
+  assert.ok(plan?.roles?.indegree, 'the indegree table is recognized from a single recorded countdown');
+  const trace = compileGraphAdjacency({ recording: rec, plan, code: KAHN, entry });
+
+  const cyc = trace.steps.find((s) => s.phase === 'cycle');
+  assert.ok(cyc, 'the cycle-phase step is emitted');
+  assert.deepEqual(cyc.cockpit.topoOrder, ['0', '1'], 'the acyclic component is fully scheduled first');
+  assert.match(cyc.explanation, /2, 3/, 'the cyclic island is named');
+  assert.equal(trace.steps.at(-1).cockpit.cycleDetected, true);
+});
+
+test('KAHN EARLY BREAK (real run): a drained queue after an interrupted run is NOT claimed as a cycle', () => {
+  // Chain 0 -> 1 -> 2, but the loop breaks after the first take, before relaxing 0's
+  // out-edge. One of three nodes scheduled, queue empty — yet claiming CYCLE would be a lie.
+  // Kahn's proof needs the countdown work DONE: recorded drops must equal the scheduled
+  // nodes' total out-degree, and here they do not (0 recorded vs 1 owed).
+  const KAHN_BREAK = KAHN.replace("        done += 1\n", "        done += 1\n        if done == 1:\n            break\n");
+  assert.notEqual(KAHN_BREAK, KAHN, 'the break was actually inserted');
+  const entry = 'can_finish(3, [[1, 0], [2, 1]])';
+  const rec = record({ code: KAHN_BREAK, entry });
+  const plan = detectGraphAdjacency(rec, { code: KAHN_BREAK });
+  const trace = compileGraphAdjacency({ recording: rec, plan, code: KAHN_BREAK, entry });
+  assert.ok(trace.steps.every((s) => s.phase !== 'cycle'), 'no cycle step on an interrupted run');
+  assert.equal(trace.steps.at(-1).cockpit?.cycleDetected, undefined, 'no cycle flag on the close either');
+});
+
 test('clean synthetic run passes all three invariants and carries the cockpit', () => {
   const events = [
     { line: 1, locals: { q: ['A'], visited: ['A'] } },

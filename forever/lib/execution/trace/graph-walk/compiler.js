@@ -70,12 +70,17 @@ function structureBuildEnd(events, ids) {
 // like its role in the recording or it is dropped; the freed variable then falls through to
 // the aux nodeState detector, which reads behavior, not names. Same tests the universal
 // graph-adjacency detector applies — declared and derived paths now share one truth bar.
-function dropMisdeclaredRoles(roles, events, graph) {
+function dropMisdeclaredRoles(roles, events, graph, collops = null) {
   const ids = new Set((graph?.nodes ?? []).map((n) => String(n.id)));
   const isNodeVal = (v) => (typeof v === 'string' || typeof v === 'number') && ids.has(String(v));
   const snapsOf = (name) => events
     .map((e) => (e.locals && typeof e.locals === 'object' ? e.locals[name] : undefined))
     .filter((v) => v !== undefined && v !== null);
+  // Variables the recorder saw release ops from — a drain-only frontier (seeded once, only
+  // popped) never grows, but its recorded releases are stronger proof than any length curve.
+  const releaseVars = new Set((Array.isArray(collops) ? collops : [])
+    .filter((o) => o && ['pop', 'popleft', 'heappop'].includes(o.op) && o.ret !== undefined && typeof o.n === 'string')
+    .map((o) => o.n));
 
   const behaves = {
     current(snaps) {
@@ -88,10 +93,15 @@ function dropMisdeclaredRoles(roles, events, graph) {
       if (!arrays.every((s) => s.every(isNodeVal))) return false; // disc's -1 scaffold fails here
       return arrays.every((s, i) => i === 0 || s.length >= arrays[i - 1].length);
     },
-    frontier(snaps) {
+    frontier(snaps, varName) {
       const arrays = snaps.filter(Array.isArray);
       if (arrays.length < 2) return false;
       if (!arrays.every((s) => s.every((m) => isNodeVal(m) || (Array.isArray(m) && m.some(isNodeVal))))) return false;
+      if (releaseVars.has(varName)) return true; // recorded releases prove the role outright
+      // The pure-cycle Kahn queue: born empty, dies empty — kept only when the indegree
+      // table survived its own behavior check, because that is the evidence the zero-take
+      // cycle story rests on. (Frontier roles validate AFTER indegree — see the sort below.)
+      if (roles.indegree && arrays.every((s) => s.length === 0)) return true;
       let grew = false;
       let shrank = false;
       for (let i = 1; i < arrays.length; i += 1) {
@@ -119,10 +129,14 @@ function dropMisdeclaredRoles(roles, events, graph) {
     },
   };
 
-  for (const [role, varName] of Object.entries(roles)) {
+  // Frontier roles validate LAST: the always-empty-queue acceptance reads roles.indegree,
+  // so indegree must have passed (or been dropped) before any frontier role is judged.
+  const entries = Object.entries(roles)
+    .sort(([a], [b]) => Number(a === 'pq' || a === 'queue' || a === 'stack') - Number(b === 'pq' || b === 'queue' || b === 'stack'));
+  for (const [role, varName] of entries) {
     const check = role === 'pq' || role === 'queue' || role === 'stack' ? behaves.frontier : behaves[role];
     if (!check) continue;
-    if (!check(snapsOf(varName))) delete roles[role];
+    if (!check(snapsOf(varName), varName)) delete roles[role];
   }
 }
 
@@ -143,7 +157,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
     Object.entries(lens).filter(([role, varName]) => GRAPH_LENS_ROLES.includes(role) && typeof varName === 'string' && varName),
   );
   if (Object.keys(roles).length === 0) throw new Error(`graph walk needs a lens: at least one of ${GRAPH_LENS_ROLES.join(', ')}`);
-  dropMisdeclaredRoles(roles, events, graph);
+  dropMisdeclaredRoles(roles, events, graph, collops);
   if (Object.keys(roles).length === 0) {
     throw new Error('none of the declared lens roles match the recorded behavior (a visited set must grow with node members; a frontier must grow AND shrink; a dist table must be a node-keyed dict) — output "auto": {"entry": ...} instead and let the engine derive the roles from the run itself');
   }
@@ -569,12 +583,53 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
   // fewer scheduled nodes than the graph has, so the leftover nodes wait on incoming edges
   // that can never be satisfied. A distinct 'cycle' phase step names them, and the terminal
   // step carries cycleDetected so the close cannot read like a completed order.
-  const kahnCycle = kahnShaped && !truncated && processedOrder.length > 0 && processedOrder.length < nodes.length;
+  // Zero-take fix (external audit 2026-07-28, verified live): the old `processedOrder.length
+  // > 0` guard made the WORST cycle — a pure cycle, where NO node ever reaches indegree 0 and
+  // the queue is born empty — the one case the gate could not see. Scheduled nodes are now
+  // counted from claimed takes ∪ RECORDED dequeues (a misassigned walker can under-claim;
+  // recorded releases cannot), and the queue must be SEEN drained in its last sighting — a
+  // run that left the loop with work still waiting proves an early break, not a cycle.
+  const scheduled = new Set(processedOrder);
+  for (const o of dequeueOps) {
+    const nid = nodeIdOf(o.ret);
+    if (nid !== null) scheduled.add(nid);
+  }
+  const queueSeenDrained = prevFrontier === '[]';
+  // COMPLETENESS: Kahn's proof also needs every scheduled node's out-edges COUNTED DOWN — an
+  // early `break` can leave the queue empty without doing that work, and the leftover nodes
+  // are then interrupted, not cyclic. The recorded countdown total must equal the scheduled
+  // nodes' total out-degree, or the gate refuses the claim (fail closed, never a false CYCLE).
+  let recordedDrops = 0;
+  if (kahnShaped) {
+    const indegSnaps = events
+      .map((e) => (e.locals && typeof e.locals === 'object' ? e.locals[roles.indegree] : undefined))
+      .filter((v) => v !== undefined && v !== null);
+    for (let i = 1; i < indegSnaps.length; i += 1) {
+      const prev = indegSnaps[i - 1];
+      const cur = indegSnaps[i];
+      if (Array.isArray(prev) && Array.isArray(cur)) {
+        for (let k = 0; k < cur.length; k += 1) {
+          if (typeof prev[k] === 'number' && typeof cur[k] === 'number' && cur[k] < prev[k]) recordedDrops += prev[k] - cur[k];
+        }
+      } else if (plainObj(prev) && plainObj(cur)) {
+        for (const [k, v] of Object.entries(cur)) {
+          if (typeof prev[k] === 'number' && typeof v === 'number' && v < prev[k]) recordedDrops += prev[k] - v;
+        }
+      }
+    }
+  }
+  const outDeg = new Map(nodes.map((n) => [String(n.id), 0]));
+  for (const e of edges) outDeg.set(String(e.from), (outDeg.get(String(e.from)) ?? 0) + 1);
+  const expectedDrops = [...scheduled].reduce((s, id) => s + (outDeg.get(id) ?? 0), 0);
+  const kahnCycle = kahnShaped && !truncated && queueSeenDrained
+    && recordedDrops === expectedDrops && scheduled.size < nodes.length;
   if (kahnCycle) {
-    const leftover = nodes.map((n) => String(n.id)).filter((id) => !processedOrder.includes(id));
+    const leftover = nodes.map((n) => String(n.id)).filter((id) => !scheduled.has(id));
     const cyc = snap({
       line: steps[steps.length - 1].line,
-      explanation: `CYCLE DETECTED — Kahn's own termination proof: the queue is empty, yet only ${processedOrder.length} of ${nodes.length} nodes ever reached indegree 0. ${leftover.map(name).join(', ')} still wait on incoming edges that can never be satisfied, because they point at one another — that is a cycle, so no topological order exists. The strip built so far (${processedOrder.map(name).join(' → ')}) is the largest order the acyclic part of this graph allows.`,
+      explanation: scheduled.size === 0
+        ? `CYCLE DETECTED — Kahn's own termination proof, before a single step: not one of the ${nodes.length} nodes starts at indegree 0, so the queue is empty from the very first moment and nothing can ever be scheduled. ${leftover.map(name).join(', ')} all wait on an incoming edge — every node is someone else's prerequisite, a closed ring of waiting. That is a cycle, and no topological order exists at all.`
+        : `CYCLE DETECTED — Kahn's own termination proof: the queue is empty, yet only ${scheduled.size} of ${nodes.length} nodes ever reached indegree 0. ${leftover.map(name).join(', ')} still wait on incoming edges that can never be satisfied, because they point at one another — that is a cycle, so no topological order exists. The strip built so far (${processedOrder.map(name).join(' → ')}) is the largest order the acyclic part of this graph allows.`,
       frontier: [],
       variables: {},
       events: [{ eventType: 'state_transition', semanticRole: 'cycle_detected', target: { entityId: 'collection:queue' }, after: leftover }],
@@ -600,7 +655,7 @@ export function compileGraphWalk({ events, result, code, entry = null, graph, le
   }
   const doneStep = snap({
     line: steps[steps.length - 1].line,
-    explanation: narrateDone({ result, orderNames: visitOrder.map(name), truncated }),
+    explanation: narrateDone({ result, orderNames: visitOrder.map(name), truncated, cycle: kahnCycle }),
     frontier: null,
     variables: {},
     events: [{ eventType: 'solution_emit', after: result }],

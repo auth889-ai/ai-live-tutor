@@ -1450,6 +1450,42 @@ def can_finish(n, pres):
                 q.append(v)
     return done == n`, 'can_finish(5, [[1, 0], [2, 0], [3, 4], [4, 3]])'],
 
+  ['graphs', 'Kahn with a PURE cycle (zero takes — queue born empty, gate still fires)', `from collections import deque
+def can_finish(n, pres):
+    adj = {i: [] for i in range(n)}
+    indeg = [0] * n
+    for a, b in pres:
+        adj[b].append(a)
+        indeg[a] += 1
+    q = deque(i for i in range(n) if indeg[i] == 0)
+    done = 0
+    while q:
+        u = q.popleft()
+        done += 1
+        for v in adj[u]:
+            indeg[v] -= 1
+            if indeg[v] == 0:
+                q.append(v)
+    return done == n`, 'can_finish(3, [[1, 0], [2, 1], [0, 2]])'],
+
+  ['graphs', 'Kahn with a SELF-LOOP (one take, one countdown — cycle gate on the island of one)', `from collections import deque
+def can_finish(n, pres):
+    adj = {i: [] for i in range(n)}
+    indeg = [0] * n
+    for a, b in pres:
+        adj[b].append(a)
+        indeg[a] += 1
+    q = deque(i for i in range(n) if indeg[i] == 0)
+    done = 0
+    while q:
+        u = q.popleft()
+        done += 1
+        for v in adj[u]:
+            indeg[v] -= 1
+            if indeg[v] == 0:
+                q.append(v)
+    return done == n`, 'can_finish(2, [[1, 0], [1, 1]])'],
+
   ['graphs', 'BFS levels (level dict rides as the distance table)', `from collections import deque
 def levels(adj, start):
     level = {start: 0}

@@ -79,19 +79,47 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
   // Several may qualify (adj[b].append during BUILD also subscripts) — the WALKER visits the
   // most distinct nodes, so the widest candidate wins. DEQUEUE PROVENANCE outranks width
   // (live-caught 2026-07-28 on a cyclic Kahn fixture: the build loop's `b` TIED the walker
-  // `u` at 3 distinct node values and won on iteration order, silencing every take): the
-  // recorded frontier releases (popleft/pop/heappop rets) name the true walker, so the
-  // candidate covering more of them wins; distinct count only breaks remaining ties.
+  // `u` at 3 distinct node values and won on iteration order, silencing every take), and the
+  // provenance is POSITIONAL, not set-overlap (live-caught same day on a self-loop Kahn: `b`
+  // covered the single dequeued id BY COINCIDENCE and outranked the real walker `u`, which
+  // the width floor had excluded for only ever holding one node): the walker is the variable
+  // each released node LANDS IN right after its recorded release. Alignment ranks first;
+  // set-coverage, then distinct count, only break remaining ties.
   const dequeuedIds = new Set();
+  const releases = []; // { at: line-event index, ret: node id } in recorded order
+  const lineIdxByOrig = new Map();
+  {
+    let li = 0;
+    (recording?.events ?? []).forEach((e, i) => {
+      if (e.ev === 'line') { lineIdxByOrig.set(i, li); li += 1; }
+    });
+  }
   for (const o of recording?.collops ?? []) {
     if (!['popleft', 'pop', 'heappop'].includes(o?.op) || o.ret === undefined) continue;
+    let rid = null;
     if ((typeof o.ret === 'string' || typeof o.ret === 'number') && adj.ids.has(String(o.ret))) {
-      dequeuedIds.add(String(o.ret));
+      rid = String(o.ret);
     } else if (Array.isArray(o.ret)) {
       const m = o.ret.filter((x) => (typeof x === 'string' || typeof x === 'number') && adj.ids.has(String(x)));
-      if (m.length === 1) dequeuedIds.add(String(m[0]));
+      if (m.length === 1) rid = String(m[0]);
     }
+    if (rid === null) continue;
+    dequeuedIds.add(rid);
+    const at = lineIdxByOrig.get(o.i - 1); // op logged at _events length L ran during original event L-1
+    if (Number.isInteger(at)) releases.push({ at, ret: rid });
   }
+  releases.sort((a, b) => a.at - b.at);
+  const alignedCount = (name) => {
+    let aligned = 0;
+    for (let r = 0; r < releases.length; r += 1) {
+      const end = Math.min(r + 1 < releases.length ? releases[r + 1].at : lines.length - 1, lines.length - 1);
+      for (let li = releases[r].at; li <= end; li += 1) {
+        const v = lines[li]?.locals?.[name];
+        if ((typeof v === 'string' || typeof v === 'number') && String(v) === releases[r].ret) { aligned += 1; break; }
+      }
+    }
+    return aligned;
+  };
   let currentBest = null;
   for (const name of new Set(lines.flatMap((e) => Object.keys(e.locals)))) {
     if (name === adj.name) continue;
@@ -101,11 +129,13 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
     if (scalars.length === 0 || !scalars.every(isNodeVal)) continue;
     const values = new Set(scalars.map(String));
     const distinct = values.size;
-    if (distinct < 2) continue;
+    const aligned = alignedCount(name);
+    if (distinct < 2 && aligned === 0) continue; // the width floor yields only to release provenance
     const dequeued = [...values].filter((v) => dequeuedIds.has(v)).length;
-    if (!currentBest || dequeued > currentBest.dequeued
-      || (dequeued === currentBest.dequeued && distinct > currentBest.distinct)) {
-      currentBest = { name, distinct, dequeued };
+    if (!currentBest || aligned > currentBest.aligned
+      || (aligned === currentBest.aligned && dequeued > currentBest.dequeued)
+      || (aligned === currentBest.aligned && dequeued === currentBest.dequeued && distinct > currentBest.distinct)) {
+      currentBest = { name, distinct, dequeued, aligned };
     }
   }
   if (currentBest) roles.current = currentBest.name;
@@ -133,6 +163,32 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
       const kind = /\bheappush\b|\bheapq\b/.test(code) ? 'pq' : /\bpopleft\b|\.pop\(0\)/.test(code) ? 'queue' : 'stack';
       roles[kind] = name;
       break;
+    }
+  }
+
+  // FRONTIER BY RELEASE EVIDENCE (2026-07-28, drain-only queues): a frontier seeded once and
+  // only drained (self-loop Kahn: q = deque([0]) → one popleft, no append ever) never GROWS,
+  // so the breathing law above misses it. The recorded release ops ARE frontier proof — the
+  // variable the recorder saw node ids released from is the frontier, whatever its length
+  // curve did; the op vocabulary names the kind (heappop → pq, popleft → queue, pop → stack).
+  if (!roles.pq && !roles.queue && !roles.stack) {
+    const relByVar = new Map(); // varName -> { count, ops }
+    for (const o of recording?.collops ?? []) {
+      if (!['popleft', 'heappop', 'pop'].includes(o?.op) || o.ret === undefined || typeof o.n !== 'string') continue;
+      if (o.n === adj.name || o.n === roles.current) continue;
+      const scalarOk = (typeof o.ret === 'string' || typeof o.ret === 'number') && adj.ids.has(String(o.ret));
+      const tupleOk = Array.isArray(o.ret) && o.ret.filter((x) => (typeof x === 'string' || typeof x === 'number') && adj.ids.has(String(x))).length === 1;
+      if (!scalarOk && !tupleOk) continue;
+      const info = relByVar.get(o.n) ?? { count: 0, ops: new Set() };
+      info.count += 1;
+      info.ops.add(o.op);
+      relByVar.set(o.n, info);
+    }
+    let bestRel = null;
+    for (const [name, info] of relByVar) if (!bestRel || info.count > bestRel.info.count) bestRel = { name, info };
+    if (bestRel) {
+      const kind = bestRel.info.ops.has('heappop') ? 'pq' : bestRel.info.ops.has('popleft') ? 'queue' : 'stack';
+      roles[kind] = bestRel.name;
     }
   }
 
@@ -192,7 +248,50 @@ export function detectGraphAdjacency(recording, { code = '' } = {}) {
           else jumpy = true;
         }
       }
-      if (drops >= 2 && !jumpy) roles.indegree = name;
+      // KAHN'S TABLE BY CONSTRUCTION (2026-07-28, zero/low-take cycle fix): a run whose queue
+      // never (or barely) drains records almost no countdowns, so the >=2-drop law goes blind
+      // exactly when the cycle story matters most — a PURE cycle has no drops at all. The
+      // missing drops are replaced by stronger evidence, measured against the recorded
+      // adjacency itself: the list's per-index PEAK equals the graph's incoming-edge count at
+      // every node, so this list IS this graph's indegree column — not a guess. Any jumpy
+      // drop the recording does show still disqualifies (Prim's key[], Tarjan's low[]).
+      const peakMatchesAdjacency = () => {
+        const n = ilists.at(-1).length;
+        if (n !== adj.ids.size) return false;
+        for (let k = 0; k < n; k += 1) if (!adj.ids.has(String(k))) return false;
+        const incoming = new Array(n).fill(0);
+        for (const [, to] of adj.edges) {
+          const t = Number(to);
+          if (!Number.isInteger(t) || t < 0 || t >= n) return false;
+          incoming[t] += 1;
+        }
+        if (!incoming.some((x) => x > 0)) return false;
+        const peak = new Array(n).fill(0);
+        for (const v of ilists) {
+          if (v.length !== n) return false;
+          for (let k = 0; k < n; k += 1) peak[k] = Math.max(peak[k], v[k]);
+        }
+        return peak.every((x, k) => x === incoming[k]);
+      };
+      if (!jumpy && (drops >= 2 || peakMatchesAdjacency())) roles.indegree = name;
+    }
+  }
+
+  // A PURE CYCLE'S QUEUE NEVER BREATHES AT ALL (2026-07-28): no node starts at indegree 0,
+  // so the frontier is born empty and dies empty — zero releases, zero appends, invisible to
+  // both frontier laws above. With the indegree table already PROVEN against the recorded
+  // adjacency, an always-empty list the code drains FIFO-style is accepted as that queue:
+  // every recorded sighting being [] is itself the evidence the cycle story stands on
+  // ("nothing could ever be scheduled") — not a guess about unseen contents.
+  if (roles.indegree && !roles.pq && !roles.queue && !roles.stack) {
+    for (const name of new Set(lines.flatMap((e) => Object.keys(e.locals)))) {
+      if (name === adj.name || Object.values(roles).includes(name)) continue;
+      if (!new RegExp(`\\b${name}\\s*\\.\\s*popleft\\s*\\(|\\b${name}\\s*=\\s*(?:collections\\s*\\.\\s*)?deque\\s*\\(`).test(code)) continue;
+      const snaps = lines.map((e) => e.locals[name]).filter((v) => v !== undefined);
+      if (snaps.length >= 2 && snaps.every((v) => Array.isArray(v) && v.length === 0)) {
+        roles.queue = name;
+        break;
+      }
     }
   }
 
