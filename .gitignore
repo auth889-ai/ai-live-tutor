@@ -132,3 +132,6 @@ tmp/
 forever/public/images/image*.png
 forever/public/images/study-*.png
 forever/public/images/*copy*.png
+
+# cloned upstream repos for study — never part of the build (vendor/ holds what we actually adopt)
+research/open-source/

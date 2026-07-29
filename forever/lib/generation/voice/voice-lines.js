@@ -206,6 +206,13 @@ const BOARD_PRIMITIVES = new Set([
   'sketch', 'sketches', 'thumbnail', 'thumbnails', 'sticker', 'stickers', 'object', 'objects',
 ]);
 const wordsOf = (text) => String(text ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ').filter(Boolean);
+// Light suffix stripping so inflections of one word agree ("flows"/"flowing" -> "flow",
+// "stores"/"stored" -> "stor"). Not linguistics — just enough that an honest paraphrase of
+// a sentence is recognised as coming from it. Never shortens below 3 chars.
+const stemOf = (w) => {
+  const cut = String(w).replace(/(ing|ed|es|s)$/, '').replace(/e$/, '');
+  return cut.length >= 3 ? cut : String(w);
+};
 // A drawing word the SOURCE never uses — board vocabulary for this lesson, not material.
 const foreignBoardWords = (text, sourceWords) => wordsOf(text).filter((w) => BOARD_PRIMITIVES.has(w) && !sourceWords.has(w));
 
@@ -297,8 +304,8 @@ export function validateTeachingContract(moves, lines, chunks, { role = '' } = {
       if (move?.type === 'definition') {
         const frame = citedText.match(DEFINING_PATTERN);
         if (frame) {
-          const genus = wordsOf(citedText.slice(frame.index + frame[0].length)).slice(0, 3);
-          const drawn = genus.filter((w) => BOARD_PRIMITIVES.has(w) && !sourceWords.has(w));
+          const genus = citedText.slice(frame.index + frame[0].length);
+          const drawn = foreignBoardWords(wordsOf(genus).slice(0, 3).join(' '), sourceWords);
           if (drawn.length > 0) {
             violations.push(`${label}: this "definition" says the concept IS a ${drawn[0]} — that describes the drawing, not the material. Define what it IS in the source's own terms (e.g. ${named.join(', ')}), then point at the ${drawn[0]} separately`);
           }
@@ -313,12 +320,56 @@ export function validateTeachingContract(moves, lines, chunks, { role = '' } = {
         const counted = [];
         toks.forEach((tok, i) => {
           if (!/^\d+$/.test(tok)) return;
-          for (const next of toks.slice(i + 1, i + 3)) {
-            if (BOARD_PRIMITIVES.has(next) && !sourceWords.has(next)) counted.push(`${tok} ${next}`);
+          for (const next of foreignBoardWords(toks.slice(i + 1, i + 3).join(' '), sourceWords)) {
+            counted.push(`${tok} ${next}`);
           }
         });
         if (counted.length > 0) {
           violations.push(`${label}: the example counts the BOARD, not the material ("${counted[0]}") — a concrete example uses real quantities from ${move.chunkId} (e.g. ${named.join(', ')}), never a tally of shapes on screen`);
+        }
+      }
+
+      // BOARD-DESCRIPTION LAW, rule C — THE MECHANISM'S PROPOSITION (2026-07-29). Rules A
+      // and B judge sentences, and a sentence is exactly where board vocabulary is
+      // LEGITIMATE: pointing is how a teacher teaches ("the arrow shows heat flowing in").
+      // That is why every sentence-level rule tried against a spatial mechanism
+      // ("...because the sunlight arrow points at it") false-positived on real figure
+      // teaching. The fix is to move the judgment off the sentence and onto the PROPOSITION
+      // the move claims to teach: a mechanism now declares {cause, effect}, and a
+      // proposition never needs drawing words unless the source itself uses them. The
+      // deixis stays in the sentence where it belongs; the claim must be about the world.
+      if (move?.type === 'mechanism') {
+        const cause = String(move?.cause ?? '').trim();
+        const effect = String(move?.effect ?? '').trim();
+        if (!cause || !effect) {
+          // Fail closed, exactly like an omitted contract: silence must not be a way out.
+          violations.push(`${label}: declares no cause/effect — state the CAUSE and the EFFECT as two short propositions taken from your own cited sentence, written about the material (not about the drawing)`);
+        } else {
+          // C1 GROUNDED: the proposition must be recoverable from the sentence it claims to
+          // come from — otherwise a writer can narrate board furniture and declare
+          // something prettier. Inflection-tolerant on purpose: restating a sentence
+          // ALWAYS changes verb forms ("the arrow shows energy flowing" -> "energy flows"),
+          // and rejecting that would punish exactly the honest paraphrase this rule wants.
+          const saidStems = new Set([...contentWordsOf(citedText)].map(stemOf));
+          const ungrounded = [...contentWordsOf(`${cause} ${effect}`)].filter((w) => !saidStems.has(stemOf(w)));
+          if (ungrounded.length > 0) {
+            violations.push(`${label}: the declared cause/effect says "${ungrounded.join(', ')}", which the cited line never says — declare the mechanism your sentence actually states, or rewrite the sentence to state it`);
+          }
+          // C2 MATERIAL: the proposition may not be built out of drawing words the source
+          // never uses. Same self-calibration as rules A and B — a diagram-conventions
+          // lesson whose source really is about arrows keeps every one of them.
+          const drawnCause = foreignBoardWords(cause, sourceWords);
+          const drawnEffect = foreignBoardWords(effect, sourceWords);
+          if (drawnCause.length > 0 || drawnEffect.length > 0) {
+            const word = drawnCause[0] ?? drawnEffect[0];
+            const half = drawnCause.length > 0 ? 'cause' : 'effect';
+            violations.push(`${label}: the ${half} you state is about the DRAWING ("${word}"), not the material — point at the ${word} in your sentence if it helps, but the mechanism itself must explain what ${move.chunkId} says happens (e.g. ${named.join(', ')})`);
+          }
+          // C3 ABOUT THE CHUNK: sharper than the sentence-level check above, because the
+          // pointing words are gone — what remains must be this chunk's own material.
+          if (![...contentWordsOf(`${cause} ${effect}`)].some((w) => chunkWords.has(w))) {
+            violations.push(`${label}: the declared cause/effect never speaks ${move.chunkId}'s own content — explain WHY using the chunk's terms (e.g. ${named.join(', ')})`);
+          }
         }
       }
     }

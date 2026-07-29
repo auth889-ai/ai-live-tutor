@@ -38,7 +38,8 @@ const GOOD_LINES = [
 const GOOD_MOVES = [
   { type: 'definition', voiceLineIds: ['v1'], chunkId: 'chunk_0001' },
   { type: 'concrete_example', voiceLineIds: ['v2'], chunkId: 'chunk_0001' },
-  { type: 'mechanism', voiceLineIds: ['v3'], chunkId: 'chunk_0001' },
+  // Board law C: a mechanism declares the proposition it teaches, lifted from its own line.
+  { type: 'mechanism', voiceLineIds: ['v3'], chunkId: 'chunk_0001', cause: 'a child smaller than its parent breaks the order property', effect: 'insert bubbles the new value upward' },
   { type: 'learner_check', voiceLineIds: ['v6'], chunkId: 'chunk_0001' },
 ];
 

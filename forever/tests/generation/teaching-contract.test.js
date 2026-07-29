@@ -29,7 +29,8 @@ const CHUNKS = [
 const GOOD = [
   { type: 'definition', voiceLineIds: ['v1'], chunkId: 'chunk_0001' },
   { type: 'concrete_example', voiceLineIds: ['v2'], chunkId: 'chunk_0001' },
-  { type: 'mechanism', voiceLineIds: ['v3'], chunkId: 'chunk_0002' },
+  // A mechanism declares the PROPOSITION it teaches, both halves lifted from its own line.
+  { type: 'mechanism', voiceLineIds: ['v3'], chunkId: 'chunk_0002', cause: 'the last plate in', effect: 'the first plate out' },
   { type: 'worked_step', voiceLineIds: ['v4'], chunkId: 'chunk_0001' },
   { type: 'learner_check', voiceLineIds: ['v5'], chunkId: 'chunk_0002' },
 ];
@@ -69,7 +70,9 @@ test('rule d: a concrete_example whose cited lines carry no concrete value fails
 test('rule e: a mechanism whose cited lines carry no cause-effect marker fails', () => {
   // v4 narrates a step — no because/so that/therefore/which means/leads to/that's why.
   const violations = validateTeachingContract(
-    GOOD.map((m) => (m.type === 'mechanism' ? { ...m, voiceLineIds: ['v4'] } : m)), LINES, CHUNKS);
+    GOOD.map((m) => (m.type === 'mechanism'
+      ? { ...m, voiceLineIds: ['v4'], chunkId: 'chunk_0001', cause: 'we push the value', effect: 'the empty stack structure' }
+      : m)), LINES, CHUNKS);
   assert.equal(violations.length, 1, violations.join('; '));
   assert.match(violations[0], /no cause-effect marker/);
 });
@@ -94,13 +97,16 @@ test('semantic floor: "for example, 5 things because reasons" against an unrelat
   const moves = [
     { type: 'definition', voiceLineIds: ['g1'], chunkId: 'chunk_0001' },
     { type: 'concrete_example', voiceLineIds: ['g2'], chunkId: 'chunk_0001' },
-    { type: 'mechanism', voiceLineIds: ['g3'], chunkId: 'chunk_0001' },
+    { type: 'mechanism', voiceLineIds: ['g3'], chunkId: 'chunk_0001', cause: 'reasons that will become clear later', effect: 'it matters' },
   ];
   const violations = validateTeachingContract(moves, genericLines, chunks);
-  assert.equal(violations.length, 3, violations.join('; '));
+  // 4, not 3: the declared cause/effect is filler too, so the proposition-level rule fires
+  // alongside the sentence-level one — filler fails at BOTH altitudes, by design.
+  assert.equal(violations.length, 4, violations.join('; '));
   assert.ok(violations.some((v) => /definition.*without using any content word from chunk_0001/.test(v)), violations.join('; '));
   assert.ok(violations.some((v) => /concrete_example.*never speak the cited chunk's own content/.test(v)), violations.join('; '));
   assert.ok(violations.some((v) => /mechanism.*cause-effect sentence never mentions chunk_0001/.test(v)), violations.join('; '));
+  assert.ok(violations.some((v) => /mechanism.*declared cause\/effect never speaks chunk_0001/.test(v)), violations.join('; '));
   // Repair-friendly: each message names the chunk AND its candidate terms.
   for (const v of violations) assert.match(v, /chunk_0001.*(photosynthesis|sunlight|chemical|energy|chloroplast|converts)/s);
 });
@@ -115,7 +121,7 @@ test('semantic floor: real evidence built from the chunk still passes', () => {
   const moves = [
     { type: 'definition', voiceLineIds: ['r1'], chunkId: 'chunk_0001' },
     { type: 'concrete_example', voiceLineIds: ['r2'], chunkId: 'chunk_0001' },
-    { type: 'mechanism', voiceLineIds: ['r3'], chunkId: 'chunk_0001' },
+    { type: 'mechanism', voiceLineIds: ['r3'], chunkId: 'chunk_0001', cause: 'light becomes chemical energy', effect: 'the chloroplast matters' },
   ];
   assert.deepEqual(validateTeachingContract(moves, realLines, chunks), []);
 });
@@ -133,6 +139,8 @@ test('semantic floor: a mechanism whose "because" sentence is filler fails even 
   ];
   const violations = validateTeachingContract(moves, lines, chunks);
   assert.ok(violations.some((v) => /mechanism.*cause-effect sentence never mentions chunk_0001/.test(v)), violations.join('; '));
+  // This move declares no proposition at all, so the omission is what it owes first.
+  assert.ok(violations.some((v) => /mechanism.*declares no cause\/effect/.test(v)), violations.join('; '));
 });
 
 test('semantic floor: a definition without a defining pattern is named even when it speaks the chunk', () => {
@@ -202,7 +210,7 @@ test('BOARD LAW: SOURCE-CALIBRATED — a geometry lesson may still define a tria
   const geoMoves = [
     { type: 'definition', voiceLineIds: ['g1'], chunkId: 'chunk_0001' },
     { type: 'concrete_example', voiceLineIds: ['g2'], chunkId: 'chunk_0001' },
-    { type: 'mechanism', voiceLineIds: ['g3'], chunkId: 'chunk_0001' },
+    { type: 'mechanism', voiceLineIds: ['g3'], chunkId: 'chunk_0001', cause: 'a triangle splits into a straight angle', effect: 'the angles always total 180 degrees' },
   ];
   assert.deepEqual(validateTeachingContract(geoMoves, geoLines, geoChunks, { role: 'intuition' }), []);
 });
@@ -212,6 +220,60 @@ test('BOARD LAW: a real definition pointing at a figure is NOT punished — only
   const lines = [{ id: 'b3', text: 'Photosynthesis is the process that converts light energy into chemical energy, shown by the arrow on this figure.' }];
   const moves = [{ type: 'definition', voiceLineIds: ['b3'], chunkId: 'chunk_0001' }];
   assert.deepEqual(validateTeachingContract(moves, lines, BIO_CHUNKS, { role: 'qa' }), []);
+});
+
+// ── BOARD LAW C: THE MECHANISM'S PROPOSITION (2026-07-29) ────────────────────────────
+// Rules A and B judge SENTENCES, and a sentence is where board vocabulary is legitimate —
+// pointing is how a teacher teaches. That is why "...because the sunlight arrow points at
+// it" survived every sentence-level rule attempted: any rule strong enough to kill it also
+// killed honest figure teaching. The judgment moves off the sentence and onto the declared
+// {cause, effect} proposition, which never needs drawing words unless the source uses them.
+const MECH_BIO = [{
+  id: 'chunk_0001',
+  text: 'Photosynthesis converts light energy into chemical energy. Chlorophyll absorbs sunlight in the chloroplast, and the plant stores glucose.',
+}];
+const mech = (lines, move, chunks = MECH_BIO) =>
+  validateTeachingContract([{ type: 'mechanism', chunkId: 'chunk_0001', ...move }], lines, chunks, { role: 'qa' });
+
+test('BOARD LAW C: the spatial mechanism the sentence-level rules could not catch is REJECTED', () => {
+  const lines = [{ id: 'm1', text: 'The chlorophyll box sits there because the sunlight arrow points at it.' }];
+  const violations = mech(lines, { voiceLineIds: ['m1'], cause: 'the sunlight arrow points at it', effect: 'the chlorophyll box sits there' });
+  assert.equal(violations.length, 1, violations.join('; '));
+  assert.match(violations[0], /the cause you state is about the DRAWING \("arrow"\)/);
+});
+
+test('BOARD LAW C: legitimate figure teaching PASSES — the arrow may live in the sentence', () => {
+  // The deixis ("the arrow shows…") stays; only the PROPOSITION must be about the world.
+  // Inflection-tolerant grounding: the sentence says "flowing", the cause says "flows".
+  const lines = [{ id: 'm2', text: 'The chloroplast warms because the arrow shows sunlight energy flowing into the chlorophyll.' }];
+  assert.deepEqual(mech(lines, { voiceLineIds: ['m2'], cause: 'sunlight energy flows into the chlorophyll', effect: 'the chloroplast warms' }), []);
+});
+
+test('BOARD LAW C: declaring a prettier proposition than the sentence states is REJECTED', () => {
+  // The pincer: a writer cannot escape rule C2 by declaring a clean cause it never said.
+  const lines = [{ id: 'm1', text: 'The chlorophyll box sits there because the sunlight arrow points at it.' }];
+  const violations = mech(lines, { voiceLineIds: ['m1'], cause: 'sunlight reaches the chlorophyll', effect: 'glucose is stored' });
+  assert.equal(violations.length, 1, violations.join('; '));
+  assert.match(violations[0], /which the cited line never says/);
+});
+
+test('BOARD LAW C: an omitted proposition fails CLOSED — silence is not an escape', () => {
+  const lines = [{ id: 'm2', text: 'The chloroplast warms because sunlight energy flows into the chlorophyll.' }];
+  const violations = mech(lines, { voiceLineIds: ['m2'] });
+  assert.equal(violations.length, 1, violations.join('; '));
+  assert.match(violations[0], /declares no cause\/effect/);
+});
+
+test('BOARD LAW C: SOURCE-CALIBRATED — a lesson ABOUT diagrams keeps its arrows and boxes', () => {
+  // Here the drawing words ARE the material, so the identical proposition is legitimate.
+  const diagram = [{ id: 'chunk_0001', text: 'In a flow diagram an arrow shows the direction of energy transfer. A box marks a store of energy.' }];
+  const lines = [{ id: 'm3', text: 'The box fills because the arrow carries energy transfer into that store.' }];
+  assert.deepEqual(mech(lines, { voiceLineIds: ['m3'], cause: 'the arrow carries energy transfer', effect: 'the box fills' }, diagram), []);
+});
+
+test('BOARD LAW C: an ordinary mechanism with no figure at all is untouched', () => {
+  const lines = [{ id: 'm4', text: 'The plant stores glucose because chlorophyll absorbs sunlight and converts it into chemical energy.' }];
+  assert.deepEqual(mech(lines, { voiceLineIds: ['m4'], cause: 'chlorophyll absorbs sunlight', effect: 'the plant stores glucose' }), []);
 });
 
 // ── ROLE-AWARE REQUIRED SET (external audit 2026-07-28) ──────────────────────────────

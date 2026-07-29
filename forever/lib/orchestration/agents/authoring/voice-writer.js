@@ -32,6 +32,11 @@ const VOICE_SCHEMA = z.object({
       type: z.coerce.string(),
       voiceLineIds: z.preprocess((v) => (Array.isArray(v) ? v : []), z.array(z.coerce.string())),
       chunkId: z.coerce.string().optional(),
+      // A mechanism additionally declares the PROPOSITION it teaches, split in two. Loose
+      // and optional here for the same reason as `type`: an omission must reach the named
+      // repair path, never die as a schema error.
+      cause: z.coerce.string().optional(),
+      effect: z.coerce.string().optional(),
     })).optional(),
   ),
 });
@@ -58,6 +63,11 @@ DECLARE YOUR TEACHING MOVES (typed evidence, not vibes): in "teachingMoves", say
 ${requiredLine}
 - A concrete_example's cited lines must contain a real value (a number, a quoted value, or "for example/suppose/imagine").
 - A mechanism's cited lines must contain a cause-effect word (because/so that/therefore/which means/leads to/that's why).
+- A mechanism must ALSO declare "cause" and "effect": the two halves of the thing you are teaching, each a short
+  proposition lifted from your own cited sentence. Write them about the MATERIAL, never about the picture —
+  cause "heat flows into the system", effect "the temperature rises", NOT "the arrow points at the box". You may
+  still point at the board in the sentence itself ("the arrow shows heat flowing in"); just keep the drawing out
+  of the two propositions, and use only words your cited sentence actually says.
 - One line may carry at most 2 move types — a single sentence cannot be the definition AND the example AND the why.
 POINT WHILE YOU SPEAK (this is what makes it feel like a real teacher, not a slideshow):
 - When a line discusses a specific SUB-ELEMENT of its target object, set "focusRef" to that element's id so it
