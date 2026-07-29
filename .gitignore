@@ -133,5 +133,7 @@ forever/public/images/image*.png
 forever/public/images/study-*.png
 forever/public/images/*copy*.png
 
-# cloned upstream repos for study — never part of the build (vendor/ holds what we actually adopt)
-research/open-source/
+# cloned upstream repos for study — never part of the build (vendor/ holds what we actually adopt).
+# The provenance ledger IS tracked; only the clones are ignored.
+research/open-source/*
+!research/open-source/README.md
