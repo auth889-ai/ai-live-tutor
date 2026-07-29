@@ -38,12 +38,24 @@ const VOICE_SCHEMA = z.object({
 
 export async function writeVoice({ objects, sourcePack, brief = null }, deps = {}) {
   const call = deps.runAgentChain ?? runAgentChain;
+  // The required-move line is ROLE-SHAPED (same law as validateTeachingContract's
+  // REQUIRED_MOVES_BY_ROLE): telling a recap to produce a definition+example+mechanism
+  // triad makes it re-teach instead of making the learner retrieve, and telling practice
+  // to explain the mechanism leaks the answer the learner is supposed to produce.
+  const role = brief?.pedagogicalRole ?? '';
+  const requiredLine = role === 'recap' || role === 'practice' || role === 'checkpoint'
+    ? `- Required for this ${role} scene: at least one learner_check — the prompt that makes the learner RETRIEVE or ATTEMPT it themselves. Do not re-teach full definitions here${role === 'practice' ? ', and never reveal the answer before the learner attempts it' : ''}.`
+    : role === 'motivate'
+      ? '- Required for this motivate scene: at least one concrete_example — the hook, built from real values. Full definitions and mechanisms belong to later scenes.'
+      : role === 'qa'
+        ? '- Declare the moves the answer actually uses; every declared move must pass its evidence rule.'
+        : '- Required: at least one definition, one concrete_example, and one mechanism.';
   const system = `You are the Voice Writer of an AI tutor: what the teacher SAYS while the board is written.
 Output ONLY JSON: {"voiceLines":[{"id","text","targetObjectId","focusRef"?,"traceStep"?}],"teachingMoves":[{"type","voiceLineIds","chunkId"}]}
 DECLARE YOUR TEACHING MOVES (typed evidence, not vibes): in "teachingMoves", say which lines carry which move.
 - "type" is one of "definition" | "concrete_example" | "mechanism" | "worked_step" | "learner_check".
 - "voiceLineIds" lists the ids of the voice lines that CARRY that move; "chunkId" is the id of the source chunk it teaches.
-- Required: at least one definition, one concrete_example, and one mechanism.
+${requiredLine}
 - A concrete_example's cited lines must contain a real value (a number, a quoted value, or "for example/suppose/imagine").
 - A mechanism's cited lines must contain a cause-effect word (because/so that/therefore/which means/leads to/that's why).
 - One line may carry at most 2 move types — a single sentence cannot be the definition AND the example AND the why.
@@ -123,9 +135,9 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
       // every other gate). No env opt-out: the old TEACHING_CONTRACT_STRICT=0 escape let a
       // deployment silently ship regex-only narration; the audit closed it for good.
       if (!json.teachingMoves?.length) {
-        throw new Error('no teachingMoves declared — the typed teaching contract is required: list every move (definition, concrete_example, mechanism at minimum) with the voice line ids that carry it and the chunkId it teaches');
+        throw new Error('no teachingMoves declared — the typed teaching contract is required: list every move this scene\'s role owes (a taught scene: definition, concrete_example, mechanism at minimum; a recap/practice scene: at least the learner_check) with the voice line ids that carry it and the chunkId it teaches');
       }
-      const violations = validateTeachingContract(json.teachingMoves, voiceLines, sourcePack.chunks);
+      const violations = validateTeachingContract(json.teachingMoves, voiceLines, sourcePack.chunks, { role: brief?.pedagogicalRole ?? '' });
       if (violations.length > 0) {
         throw new Error(`the declared teaching contract is structurally invalid — ${violations.join('; ')}`);
       }

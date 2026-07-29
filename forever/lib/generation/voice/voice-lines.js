@@ -153,6 +153,24 @@ export function perChunkKeytermCoverage(lines, chunks) {
 // array of violation strings (empty = pass) so the repair retry is told exactly what to fix.
 const MOVE_TYPES = new Set(['definition', 'concrete_example', 'mechanism', 'worked_step', 'learner_check']);
 const CORE_MOVES = ['definition', 'concrete_example', 'mechanism'];
+// ROLE-AWARE REQUIRED SET (external audit 2026-07-28: hard rules must be scene-role-specific
+// — same stance as validateVoiceDepth's SHORT_ROLES): forcing every scene into the full
+// definition+example+mechanism triad made recap RE-DEFINE instead of making the learner
+// retrieve, and pushed practice toward leaking the very explanation the learner is supposed
+// to produce. Each short-form role owes its own floor instead; every declared move still
+// passes the full per-move evidence rules below — only the REQUIRED set is role-shaped.
+// Unknown or absent roles keep the strict triad (fail closed).
+const REQUIRED_MOVES_BY_ROLE = {
+  recap: ['learner_check'], // retrieval first — the learner recalls, the tutor confirms
+  practice: ['learner_check'], // the question IS the scene; the full teach-back would leak it
+  checkpoint: ['learner_check'],
+  motivate: ['concrete_example'], // the hook is concrete; definitions come in later scenes
+  qa: [], // reactive — the declared moves are shaped by the question asked
+};
+const ROLE_MOVE_REASON = {
+  learner_check: 'the prompt that makes the learner retrieve or attempt it themselves',
+  concrete_example: 'the concrete hook built from real values',
+};
 // Quoted-value detection deliberately excludes the straight apostrophe — contractions
 // ("let's", "that's") would false-positive it; double/curly quotes and backticks are safe.
 const CONCRETE_MARKER = /\d|["“”`]|\b(for example|suppose|say we|imagine)\b/i;
@@ -170,7 +188,28 @@ const contentWordsOf = (text) => new Set(
     .filter((w) => w.length >= 5 && !STOP.has(w)),
 );
 
-export function validateTeachingContract(moves, lines, chunks) {
+// BOARD-DESCRIPTION LAW (external audit 2026-07-28: "Photosynthesis is a triangle containing
+// chlorophyll beside sunlight" passed every rule — it carries the defining frame AND the
+// chunk's own words, yet defines nothing). The tell is that the sentence describes the
+// DRAWING instead of the material: the thing photosynthesis is said to BE is a rendering
+// primitive. Two affirmative violations below, both SELF-CALIBRATED against the source —
+// a word is only "board vocabulary" when the source never uses it, so a geometry lesson
+// may freely say "a triangle is a polygon" and a diagram walkthrough may name its arrows.
+// Deliberately narrow: only unambiguous drawing primitives, never words that carry real
+// meaning in some subject (graph, node, line, cell, row, column, block, list, table…).
+const BOARD_PRIMITIVES = new Set([
+  'triangle', 'triangles', 'rectangle', 'rectangles', 'square', 'squares', 'circle', 'circles',
+  'oval', 'ovals', 'ellipse', 'ellipses', 'box', 'boxes', 'arrow', 'arrows', 'shape', 'shapes',
+  'diagram', 'diagrams', 'panel', 'panels', 'slide', 'slides', 'callout', 'callouts',
+  'bubble', 'bubbles', 'icon', 'icons', 'picture', 'pictures', 'image', 'images',
+  'figure', 'figures', 'chart', 'charts', 'graphic', 'graphics', 'drawing', 'drawings',
+  'sketch', 'sketches', 'thumbnail', 'thumbnails', 'sticker', 'stickers', 'object', 'objects',
+]);
+const wordsOf = (text) => String(text ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ').filter(Boolean);
+// A drawing word the SOURCE never uses — board vocabulary for this lesson, not material.
+const foreignBoardWords = (text, sourceWords) => wordsOf(text).filter((w) => BOARD_PRIMITIVES.has(w) && !sourceWords.has(w));
+
+export function validateTeachingContract(moves, lines, chunks, { role = '' } = {}) {
   const violations = [];
   const lineById = new Map((lines ?? []).map((l) => [String(l.id), String(l.text ?? '')]));
   const chunkIds = (chunks ?? []).length ? new Set(chunks.map((c) => String(c?.id))) : null;
@@ -178,9 +217,12 @@ export function validateTeachingContract(moves, lines, chunks) {
   const typesByLine = new Map(); // lineId -> Set of move types citing it
 
   const present = new Set((moves ?? []).map((m) => m?.type));
-  for (const core of CORE_MOVES) {
-    if (!present.has(core)) {
-      violations.push(`no ${core} move declared — a taught scene needs at least a definition, a concrete_example, and a mechanism`);
+  const required = Object.hasOwn(REQUIRED_MOVES_BY_ROLE, role) ? REQUIRED_MOVES_BY_ROLE[role] : CORE_MOVES;
+  for (const req of required) {
+    if (!present.has(req)) {
+      violations.push(required === CORE_MOVES
+        ? `no ${req} move declared — a taught scene needs at least a definition, a concrete_example, and a mechanism`
+        : `no ${req} move declared — a ${role} scene must carry ${ROLE_MOVE_REASON[req] ?? `its ${req}`}`);
     }
   }
 
@@ -243,6 +285,40 @@ export function validateTeachingContract(moves, lines, chunks) {
           .some((sentence) => [...contentWordsOf(sentence)].some((w) => chunkWords.has(w)));
         if (!causalOnChunk) {
           violations.push(`${label}: the cause-effect sentence never mentions ${move.chunkId}'s own content — explain WHY using the chunk's terms (e.g. ${named.join(', ')})`);
+        }
+      }
+
+      // BOARD-DESCRIPTION LAW, rule A — a definition may not classify the concept as a
+      // DRAWING PRIMITIVE. "X is a triangle…" says what the picture looks like, not what X
+      // is. Only the genus is judged (the 3 words after the defining frame), and only words
+      // the source itself never uses: a geometry chunk that talks about triangles keeps its
+      // right to define one.
+      const sourceWords = new Set(wordsOf(chunk.text));
+      if (move?.type === 'definition') {
+        const frame = citedText.match(DEFINING_PATTERN);
+        if (frame) {
+          const genus = wordsOf(citedText.slice(frame.index + frame[0].length)).slice(0, 3);
+          const drawn = genus.filter((w) => BOARD_PRIMITIVES.has(w) && !sourceWords.has(w));
+          if (drawn.length > 0) {
+            violations.push(`${label}: this "definition" says the concept IS a ${drawn[0]} — that describes the drawing, not the material. Define what it IS in the source's own terms (e.g. ${named.join(', ')}), then point at the ${drawn[0]} separately`);
+          }
+        }
+      }
+      // BOARD-DESCRIPTION LAW, rule B — an example's numbers must count the MATERIAL, not
+      // the picture. "5 photosynthesis objects carry chlorophyll" wears a real number and
+      // real source words, yet quantifies board furniture. A number is rejected when the
+      // noun it counts (within 2 words) is a drawing primitive the source never uses.
+      if (move?.type === 'concrete_example') {
+        const toks = wordsOf(citedText);
+        const counted = [];
+        toks.forEach((tok, i) => {
+          if (!/^\d+$/.test(tok)) return;
+          for (const next of toks.slice(i + 1, i + 3)) {
+            if (BOARD_PRIMITIVES.has(next) && !sourceWords.has(next)) counted.push(`${tok} ${next}`);
+          }
+        });
+        if (counted.length > 0) {
+          violations.push(`${label}: the example counts the BOARD, not the material ("${counted[0]}") — a concrete example uses real quantities from ${move.chunkId} (e.g. ${named.join(', ')}), never a tally of shapes on screen`);
         }
       }
     }

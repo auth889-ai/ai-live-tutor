@@ -160,6 +160,117 @@ test('an unknown move type and an empty citation list are both named violations'
   assert.ok(violations.some((v) => /cites no voiceLineIds/.test(v)), violations.join('; '));
 });
 
+// ── BOARD-DESCRIPTION LAW (external audit 2026-07-28) ────────────────────────────────
+// The audit's counterexample passed every rule: it carried the defining frame, a number,
+// a causal marker AND the chunk's own vocabulary — while describing the PICTURE instead of
+// the material. Both rules are self-calibrated against the source, so a lesson whose
+// subject genuinely IS shapes keeps its full vocabulary.
+const BIO_CHUNKS = [{
+  id: 'chunk_0001',
+  text: 'Photosynthesis converts light energy into chemical energy. Chlorophyll absorbs sunlight in the chloroplast, and the plant stores glucose.',
+}];
+
+test('BOARD LAW A: a "definition" that says the concept IS a drawing primitive is rejected', () => {
+  const lines = [{ id: 'b1', text: 'Photosynthesis is a triangle containing chlorophyll beside sunlight.' }];
+  const moves = [{ type: 'definition', voiceLineIds: ['b1'], chunkId: 'chunk_0001' }];
+  // Isolated with the recap role so only the definition's own evidence is judged.
+  const violations = validateTeachingContract(moves, lines, BIO_CHUNKS, { role: 'qa' });
+  assert.equal(violations.length, 1, violations.join('; '));
+  assert.match(violations[0], /says the concept IS a triangle — that describes the drawing/);
+});
+
+test('BOARD LAW B: an example that counts board furniture instead of material is rejected', () => {
+  const lines = [{ id: 'b2', text: 'For example, 5 photosynthesis objects carry chlorophyll near sunlight.' }];
+  const moves = [{ type: 'concrete_example', voiceLineIds: ['b2'], chunkId: 'chunk_0001' }];
+  const violations = validateTeachingContract(moves, lines, BIO_CHUNKS, { role: 'qa' });
+  assert.equal(violations.length, 1, violations.join('; '));
+  assert.match(violations[0], /counts the BOARD, not the material \("5 objects"\)/);
+});
+
+test('BOARD LAW: SOURCE-CALIBRATED — a geometry lesson may still define a triangle and count its angles', () => {
+  // The identical words are legitimate vocabulary here because the SOURCE uses them. A
+  // blanket ban would have made this lesson ungeneratable — the law must read the source.
+  const geoChunks = [{
+    id: 'chunk_0001',
+    text: 'A triangle is a polygon with three sides and three angles. The interior angles of any triangle sum to 180 degrees.',
+  }];
+  const geoLines = [
+    { id: 'g1', text: 'A triangle is a polygon that has exactly three straight sides.' },
+    { id: 'g2', text: 'For example, take a triangle whose angles are 60, 60 and 60 degrees.' },
+    { id: 'g3', text: 'The angles always total 180 degrees because a triangle splits into a straight angle.' },
+  ];
+  const geoMoves = [
+    { type: 'definition', voiceLineIds: ['g1'], chunkId: 'chunk_0001' },
+    { type: 'concrete_example', voiceLineIds: ['g2'], chunkId: 'chunk_0001' },
+    { type: 'mechanism', voiceLineIds: ['g3'], chunkId: 'chunk_0001' },
+  ];
+  assert.deepEqual(validateTeachingContract(geoMoves, geoLines, geoChunks, { role: 'intuition' }), []);
+});
+
+test('BOARD LAW: a real definition pointing at a figure is NOT punished — only the genus is judged', () => {
+  // Naming board furniture is fine; CLASSIFYING the concept as furniture is not.
+  const lines = [{ id: 'b3', text: 'Photosynthesis is the process that converts light energy into chemical energy, shown by the arrow on this figure.' }];
+  const moves = [{ type: 'definition', voiceLineIds: ['b3'], chunkId: 'chunk_0001' }];
+  assert.deepEqual(validateTeachingContract(moves, lines, BIO_CHUNKS, { role: 'qa' }), []);
+});
+
+// ── ROLE-AWARE REQUIRED SET (external audit 2026-07-28) ──────────────────────────────
+// Hard rules must not stop a scene from being generated for owing a move its ROLE does not
+// owe. The required SET is role-shaped; every declared move still faces the full evidence
+// rules. Default (unknown/absent role) stays the strict triad — fail closed.
+
+test('ROLE recap: a retrieval-only contract passes — a recap makes the learner recall, it does not re-define', () => {
+  const recap = [{ type: 'learner_check', voiceLineIds: ['v5'], chunkId: 'chunk_0002' }];
+  assert.deepEqual(validateTeachingContract(recap, LINES, CHUNKS, { role: 'recap' }), []);
+  // …and the same contract IS a violation for a normal taught scene.
+  const strict = validateTeachingContract(recap, LINES, CHUNKS, { role: 'intuition' });
+  assert.equal(strict.length, 3, strict.join('; '));
+  assert.ok(strict.every((v) => /no (definition|concrete_example|mechanism) move declared/.test(v)), strict.join('; '));
+});
+
+test('ROLE recap/practice/checkpoint: the learner_check is REQUIRED — a recap that only re-teaches is rejected', () => {
+  const reTeach = GOOD.filter((m) => m.type !== 'learner_check');
+  for (const role of ['recap', 'practice', 'checkpoint']) {
+    const violations = validateTeachingContract(reTeach, LINES, CHUNKS, { role });
+    assert.equal(violations.length, 1, `${role}: ${violations.join('; ')}`);
+    assert.match(violations[0], /no learner_check move declared/);
+    assert.match(violations[0], /retrieve or attempt it themselves/);
+  }
+});
+
+test('ROLE motivate: the concrete hook is required, the definition/mechanism triad is not', () => {
+  const hook = [{ type: 'concrete_example', voiceLineIds: ['v2'], chunkId: 'chunk_0001' }];
+  assert.deepEqual(validateTeachingContract(hook, LINES, CHUNKS, { role: 'motivate' }), []);
+  const noHook = [{ type: 'definition', voiceLineIds: ['v1'], chunkId: 'chunk_0001' }];
+  const violations = validateTeachingContract(noHook, LINES, CHUNKS, { role: 'motivate' });
+  assert.equal(violations.length, 1, violations.join('; '));
+  assert.match(violations[0], /no concrete_example move declared/);
+});
+
+test('ROLE default: an unknown or absent role keeps the strict triad (fail closed)', () => {
+  const thin = [{ type: 'definition', voiceLineIds: ['v1'], chunkId: 'chunk_0001' }];
+  for (const role of ['', 'dry_run', 'edge_cases', 'some_new_role']) {
+    const violations = validateTeachingContract(thin, LINES, CHUNKS, { role });
+    assert.equal(violations.length, 2, `${role}: ${violations.join('; ')}`);
+    assert.ok(violations.some((v) => /no concrete_example move declared/.test(v)));
+    assert.ok(violations.some((v) => /no mechanism move declared/.test(v)));
+  }
+  // No options argument at all behaves identically to the strict default.
+  assert.deepEqual(validateTeachingContract(thin, LINES, CHUNKS), validateTeachingContract(thin, LINES, CHUNKS, { role: '' }));
+});
+
+test('ROLE relaxation never relaxes EVIDENCE: a recap\'s declared moves still face every rule', () => {
+  // v1 defines but carries no concrete value — declaring it as the example still fails,
+  // recap or not. The role changes WHICH moves are owed, never what a move must prove.
+  const recap = [
+    { type: 'learner_check', voiceLineIds: ['v5'], chunkId: 'chunk_0002' },
+    { type: 'concrete_example', voiceLineIds: ['v1'], chunkId: 'chunk_0001' },
+  ];
+  const violations = validateTeachingContract(recap, LINES, CHUNKS, { role: 'recap' });
+  assert.equal(violations.length, 1, violations.join('; '));
+  assert.match(violations[0], /no concrete value/);
+});
+
 // ── writeVoice wiring: repairable violations, silent fallback when moves are omitted ──
 // The recap role bypasses the depth floor and the tiny chunks are below the keyterm-
 // coverage judging threshold, so these tests exercise ONLY the contract path.
@@ -218,6 +329,41 @@ test('writeVoice: a violated contract is retried with the violations named, then
   assert.match(systems[1], /teaching contract is structurally invalid/);
   assert.match(systems[1], /no cause-effect marker/);
   assert.deepEqual(result.teachingMoves, GOOD);
+});
+
+test('writeVoice: the ROLE reaches the validator AND the prompt — a practice scene is asked for the learner_check, not the triad', async () => {
+  const systems = [];
+  const practiceMoves = [{ type: 'learner_check', voiceLineIds: ['v5'], chunkId: 'chunk_0002' }];
+  const result = await writeVoice({ objects: OBJECTS, sourcePack: SOURCE_PACK, brief: { pedagogicalRole: 'practice' } }, {
+    runAgentChain: async ({ system }) => {
+      systems.push(system);
+      return { json: { voiceLines: LINES, teachingMoves: practiceMoves }, usage: null };
+    },
+  });
+  // One call: a retrieval-only contract is ACCEPTED for practice — no repair round needed.
+  assert.equal(systems.length, 1);
+  assert.match(systems[0], /Required for this practice scene: at least one learner_check/);
+  assert.match(systems[0], /never reveal the answer before the learner attempts it/);
+  assert.doesNotMatch(systems[0], /Required: at least one definition/);
+  assert.deepEqual(result.teachingMoves, practiceMoves);
+});
+
+test('writeVoice: a taught scene still gets the strict triad instruction (and still owes the depth floor)', async () => {
+  const systems = [];
+  // These 6 lines pass the contract but sit under the 8-line depth floor — which a TAUGHT
+  // role owes and recap/practice do not. So this asserts both halves of role-awareness at
+  // once: the strict prompt goes out, and the taught scene is still held to lecture depth.
+  await assert.rejects(
+    writeVoice({ objects: OBJECTS, sourcePack: SOURCE_PACK, brief: { pedagogicalRole: 'intuition' } }, {
+      runAgentChain: async ({ system }) => {
+        systems.push(system);
+        return { json: { voiceLines: LINES, teachingMoves: GOOD }, usage: null };
+      },
+    }),
+    /only 6 voice lines — a taught scene needs at least 8/,
+  );
+  assert.match(systems[0], /Required: at least one definition, one concrete_example, and one mechanism/);
+  assert.doesNotMatch(systems[0], /Required for this/);
 });
 
 test('writeVoice: a contract still violated after repair fails honestly', async () => {
