@@ -53,6 +53,17 @@ export function validateBoardObject(object, layout) {
   if (object.renderHint === 'table' && object.content && typeof object.content === 'object') {
     validateDiagramContent({ ...object.content, diagramType: 'comparison' }, context);
   }
+  // An EMPTY list is not a list — it renders as blank space and teaches nothing. This was
+  // never checked: the only reason an empty list ever failed was that it also happened to
+  // lack a sourceRef, so the citation rule caught it by accident (exposed 2026-07-30 when
+  // single-chunk citation coercion removed that accident and an items:[] object sailed
+  // through). Content emptiness is the content contract's job, not the citation rule's.
+  if (object.renderHint === 'list' && object.decorative !== true) {
+    const items = object.content?.items;
+    if (!Array.isArray(items) || items.length === 0) {
+      throw new Error(`${context} is a list with no items — a list must carry at least one point the student can read`);
+    }
+  }
   if (object.renderHint === 'chart') validateChartContent(object.content, context);
   if (object.renderHint === 'math') validateMathContent(object.content, context);
   if (object.renderHint === 'image') validateImageContent(object.content, context);
