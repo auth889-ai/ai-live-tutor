@@ -4,6 +4,7 @@
 // OpenAI-compatible DashScope endpoint (user decision 2026-07-13).
 
 import dns from 'node:dns';
+import https from 'node:https';
 
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
@@ -26,6 +27,22 @@ if ((process.env.QWEN_DNS_ORDER ?? 'ipv4first') === 'ipv4first') {
     // Older runtimes without the API: leave the default order alone rather than crash.
   }
 }
+
+// KEEP-ALIVE HTTPS AGENT — the fix for the failure that cost a whole day's lessons.
+// Node's built-in fetch (undici) could not open CONCURRENT connections to the workspace
+// gateway: measured 2026-07-30, three parallel board-sized calls ALL died at undici's 10s
+// connect cap ("Request timed out" / "Connection error") while the SAME three calls through
+// this agent finished in 6-7s, and three parallel curls always worked. So the gateway and
+// the network were fine the whole time — only Node's default transport was not. Because
+// Forever generates scenes in parallel, every scene's first call collided and a 12-scene
+// lesson lost EVERY scene, twice, with zero contract violations among the drops.
+// keepAlive also means the TLS handshake is paid once, not per call.
+const httpAgent = new https.Agent({
+  keepAlive: true,
+  keepAliveMsecs: 30_000,
+  maxSockets: Number(process.env.QWEN_MAX_SOCKETS || 8),
+  timeout: 120_000,
+});
 
 const DEFAULT_BASE_URL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
 
@@ -145,7 +162,7 @@ export async function runAgentChain({
       temperature,
       maxTokens,
       apiKey,
-      configuration: { baseURL: baseUrl },
+      configuration: { baseURL: baseUrl, httpAgent },
       modelKwargs: { response_format: { type: 'json_object' } },
       maxRetries: 0,
     });
