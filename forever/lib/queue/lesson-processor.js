@@ -202,10 +202,23 @@ async function produceLesson({ sourcePack, outlineLesson = null, episode = null,
   } else {
     const sceneTotal = lesson.scenes.length;
     report(makeProgress({ phase: 'voicing', message: 'Synthesizing the tutor voice', sceneDone: 0, sceneTotal, ...watchable() }));
-    finalLesson = await voice(lesson, {
-      onProgress: ({ sceneDone }) =>
-        report(makeProgress({ phase: 'voicing', message: `Voiced scene ${sceneDone}/${sceneTotal}`, sceneDone, sceneTotal, ...watchable() })),
-    });
+    // SAME LAW AS THE PER-SCENE PASS ABOVE, and the reason that fix looked incomplete: a
+    // fully built lesson — every scene generated, critiqued, narrated and SAVED — still
+    // died here, at the very last step, because this second voicing call was unguarded.
+    // Measured 2026-07-30/31: `job 7 failed: TTS failed after 3 attempts: HTTP 404 Model
+    // not exist` AFTER its scenes were already in MongoDB, and BullMQ then retried the
+    // whole 30-minute build from scratch. A dead speech vendor must never discard finished
+    // teaching, and must never trigger a full rebuild.
+    try {
+      finalLesson = await voice(lesson, {
+        onProgress: ({ sceneDone }) =>
+          report(makeProgress({ phase: 'voicing', message: `Voiced scene ${sceneDone}/${sceneTotal}`, sceneDone, sceneTotal, ...watchable() })),
+      });
+    } catch (error) {
+      console.error(`[lesson] lesson-level voicing failed (${String(error?.message ?? error).slice(0, 160)}) — publishing the lesson as TEXT rather than discarding a finished build`);
+      report(makeProgress({ phase: 'voicing', message: 'Voice unavailable — publishing the lesson as text', sceneDone: 0, sceneTotal, ...watchable() }));
+      finalLesson = { ...lesson, voiced: false };
+    }
   }
 
   report(makeProgress({ phase: 'saving', message: 'Publishing images and saving', ...watchable() }));
