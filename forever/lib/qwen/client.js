@@ -37,11 +37,17 @@ if ((process.env.QWEN_DNS_ORDER ?? 'ipv4first') === 'ipv4first') {
 // Forever generates scenes in parallel, every scene's first call collided and a 12-scene
 // lesson lost EVERY scene, twice, with zero contract violations among the drops.
 // keepAlive also means the TLS handshake is paid once, not per call.
+// NO socket timeout here on purpose. A first cut set 120s and made things WORSE: the
+// Board Director asks for up to 10k tokens of board JSON, and this file's own timeout
+// comment records why 300s exists — a heavy board at DashScope's slow-window decode
+// (~20 tok/s) genuinely runs minutes. A 2-minute socket cap guillotined exactly those
+// calls, and board_director became 7 of 9 scene drops in a live lesson. The request
+// deadline belongs to ONE owner: the AbortController below, driven by timeoutMs
+// (QWEN_TIMEOUT_MS), which the retry loop already understands.
 const httpAgent = new https.Agent({
   keepAlive: true,
   keepAliveMsecs: 30_000,
   maxSockets: Number(process.env.QWEN_MAX_SOCKETS || 8),
-  timeout: 120_000,
 });
 
 const DEFAULT_BASE_URL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
