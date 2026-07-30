@@ -253,11 +253,24 @@ export function providerDegraded(now = Date.now()) {
   return now < breaker.degradedUntil;
 }
 
+// WHAT COUNTS AS TRANSIENT decides whether a failed call is RETRIED (here) and whether a
+// dead scene earns a second attempt (generate-lesson's second-chance pass). Getting it
+// wrong is silent and expensive: the OpenAI SDK reports the two most common real-world
+// failures as the bare strings "Request timed out." and "Connection error.", and NEITHER
+// matched the old pattern — "timed out" is not "ETIMEDOUT", and "connection" appeared
+// nowhere. So every timeout and connection drop today was judged PERMANENT, thrown on the
+// first attempt, and never retried at either level; raising QWEN_RETRIES changed nothing
+// because the retry was being skipped. Measured 2026-07-30: 46 of 51 scene drops in one
+// day were these two strings. Matched explicitly below, alongside the undici error codes
+// that surface when connections stall.
 export function isTransient(error) {
   const m = String(error?.message || error);
+  const code = String(error?.code || error?.cause?.code || '');
   return (
     error?.name === 'AbortError' ||
     /aborted|network|fetch failed|ECONNRESET|ETIMEDOUT|socket/i.test(m) ||
+    /timed out|timeout|connection error|connection refused|ECONNREFUSED|EAI_AGAIN|EPIPE/i.test(m) ||
+    /^UND_ERR_/.test(code) ||
     /HTTP (429|500|502|503|504)/.test(m)
   );
 }

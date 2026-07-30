@@ -16,12 +16,31 @@ import { FOREVER_AGENT_ROLES } from '../../roles/agent-roles.js';
 const KNOWLEDGE_DOMAINS = new Set(['dsa', 'programming', 'ml_ai', 'math', 'science', 'systems_swe', 'business_finance',
   'architecture', 'networking', 'srs', 'sqa', 'os_arch', 'physics', 'chemistry', 'biology', 'agents_rag', 'economics']);
 
+// MECHANICAL-SLIP COERCION, not a looser contract (the codebase's standing rule: never
+// waste a retry on formatting). Measured live 2026-07-30: a dry-run scene was LOST because
+// the auditor returned one objection as a bare string among objects — `objections.1:
+// expected object, received string` — a schema death with no repair path, which cost a
+// whole scene over punctuation. A critic that says "obj_3 is ungrounded" in prose has still
+// raised a real objection; the shape is our problem, not the teaching's. A bare string
+// becomes an objection whose reason is that string. Anything still unusable is dropped
+// rather than invented, so the auditor can never be silently weakened into passing.
+const OBJECTION = z.preprocess(
+  // A stringified objection still NAMES its target in the prose ("obj_3 claims a number the
+  // source never gives"), so recover the id rather than discarding the objection — an
+  // objection whose target cannot be resolved is dropped downstream as a phantom, and
+  // silently losing a real grounding complaint is the one outcome worse than a lost scene.
+  (v) => (typeof v === 'string' ? { objectId: (v.match(/\bobj[_a-zA-Z0-9]*\b/) ?? [''])[0], reason: v } : v),
+  z.object({
+    objectId: z.coerce.string(),
+    reason: z.coerce.string(),
+    citedChunkId: z.coerce.string().optional(),
+  }),
+);
 const OBJECTIONS_SCHEMA = z.object({
-  objections: z.array(z.object({
-    objectId: z.string(),
-    reason: z.string(),
-    citedChunkId: z.string().optional(),
-  })),
+  objections: z.preprocess(
+    (v) => (Array.isArray(v) ? v.filter((o) => o !== null && o !== undefined) : v),
+    z.array(OBJECTION),
+  ),
 });
 
 export async function auditGrounding({ sceneId, objects, sourcePack, domain = 'general', deps = {} }) {
