@@ -116,7 +116,20 @@ COMPLETE BEGINNER who has never seen this topic. Evidence-based depth rules:
   let lastError;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const repair = attempt === 0 ? '' : `\nYour previous output was rejected: ${lastError}. Fix exactly that and output the full JSON again.`;
-    const { json, usage } = await call({ agent: 'voice_writer', system: system + repair, user, temperature: 0.6, schema: VOICE_SCHEMA });
+    // THE VOICE IS THE TEACHING, so it gets a PROSE model, not whatever is fastest.
+    // Measured 2026-07-30: after MODEL_SCENE was switched to qwen3-coder-plus (20x faster,
+    // right for board/code JSON), SIX of twelve scene drops in one lesson were this agent
+    // failing its own contract — "never actually DEFINE", "no cause-effect marker", "never
+    // speaks the source's key terms". A coder model writes correct JSON and flat teaching.
+    // Speed belongs to the board; depth belongs to the narration. MODEL_VOICE splits them.
+    const { json, usage } = await call({
+      agent: 'voice_writer',
+      system: system + repair,
+      user,
+      temperature: 0.6,
+      schema: VOICE_SCHEMA,
+      model: process.env.MODEL_VOICE || process.env.MODEL_SCENE || undefined,
+    });
     try {
       // Unambiguous slips (targeting a node id instead of its object) are repaired
       // structurally before validation — no model round-trip for a mechanical fix.
