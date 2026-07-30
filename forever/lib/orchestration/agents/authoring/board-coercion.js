@@ -94,6 +94,25 @@ export function coerceBoardObjects(objects, { layout = null, brief = null, chunk
       out.grounding = 'analogy';
     }
 
+    // A missing citation in a SINGLE-CHUNK scene is the same unambiguous case the repoint
+    // above already handles: the scene was handed exactly one chunk, so the only source a
+    // factual object can have is that chunk. Attaching it states a fact about the scene's
+    // own inputs — it does not GUESS among candidates, and multi-chunk scenes keep the loud
+    // failure exactly as before, because there a citation really would be a fabrication.
+    // Measured live 2026-07-30: "needs a sourceRef" was 3 of 5 object losses in one lesson
+    // (gus_lookup_trace, comparison_table, collisions_highlight) — real teaching content
+    // thrown away over a field the scene's own brief already determined.
+    // CHROME IS EXCLUDED ON PURPOSE. A title carries no factual claim, so a citation would
+    // not make it teachable — and attaching one would let a title-only board pass the
+    // "at least one non-decorative object" gate, shipping a scene that teaches nothing.
+    // (Caught by tests/orchestration/authoring/decomposed-board.test.js when a first cut
+    // of this rule rescued exactly that board.) Chrome keeps failing the citation check
+    // and dropping, which is what makes the empty-scene gate meaningful.
+    const isChrome = out.objectType === 'scene_title' || out.renderHint === 'title';
+    if (!out.sourceRef && !isChrome && out.decorative !== true && out.grounding === undefined && knownChunks.size === 1) {
+      out.sourceRef = { chunkId: [...knownChunks][0] };
+    }
+
     // An unsourced MANIPULABLE is a teaching device by nature — its curve is computed by the
     // ENGINE's whitelisted formula, so the number on screen is self-verifying; the sourceRef
     // rule exists for facts a model asserts, not math the engine performs (live-caught: the
