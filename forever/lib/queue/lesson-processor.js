@@ -162,7 +162,21 @@ async function produceLesson({ sourcePack, outlineLesson = null, episode = null,
       // Voice + publish THIS scene now, so what lands in the store is immediately watchable.
       let scene = record;
       if (env.DISABLE_TTS !== '1' && scene.voiceLines?.length) {
-        scene = await voiceScene(scene, { lessonKey: lessonAudioKey(pack.id) });
+        // AUDIO IS AN ENHANCEMENT, NOT THE TEACHING. A scene whose board was designed,
+        // survived the critics and the Arbiter, and whose narration passed the teaching
+        // contract is GOOD TEACHING — losing it because a speech vendor is down destroys
+        // work the student could have read perfectly well. Measured 2026-07-30: every
+        // ElevenLabs key returns 401 and the Qwen voice model answers "Model not exist",
+        // so a full 12-scene lesson was thrown away with "Every scene failed to generate"
+        // whose FIRST failure was TTS — not one word of it a teaching problem.
+        // The scene now ships unvoiced (the player already renders text voice lines; the
+        // manifest's `voiced` flag records the truth), and the failure is logged LOUDLY so
+        // a dead vendor can never masquerade as a quality problem again.
+        try {
+          scene = await voiceScene(scene, { lessonKey: lessonAudioKey(pack.id) });
+        } catch (error) {
+          console.error(`[lesson] scene "${scene.title ?? scene.sceneId}" could not be voiced (${String(error?.message ?? error).slice(0, 160)}) — shipping it as TEXT rather than losing the teaching`);
+        }
       }
       scene = await publishSceneAssets(scene, { lessonKey: lessonAssetKey(pack.id) });
       const { before, after } = await writer.recordScene(index, scene);
