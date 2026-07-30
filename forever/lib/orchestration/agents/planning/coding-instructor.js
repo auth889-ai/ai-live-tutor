@@ -186,13 +186,43 @@ HARD RULES:
       problem = 'no valid scenes — every scene needs title, directive, and focusChunkIds drawn from the provided chunk ids.';
       continue;
     }
+    // REQUIRED BEATS: ask the model to fix its own plan first (its content is better), but
+    // on the LAST attempt REPAIR STRUCTURALLY instead of dying — the exact stance the general
+    // Teacher already takes ("content stays AI-written, the BEATS are non-negotiable",
+    // teacher.js). This asymmetry was a real single point of failure, measured 2026-07-30: a
+    // hash-table lesson was lost outright to `no practice scene` before one scene existed,
+    // while the identical omission from the general Teacher is silently repaired. A missing
+    // beat is a hole in the PLAN, and a deterministic brief fills a hole — the same tool
+    // generate-lesson.js already uses for content orphaned by failures.
+    const lastAttempt = attempt === 1;
+    const allChunkIds = [...new Set(scenes.flatMap((scene) => scene.focusChunkIds))];
     if (!scenes.some((scene) => scene.pedagogicalRole === 'dry_run' || scene.pedagogicalRole === 'worked_example')) {
-      problem = 'the plan has no executable beat — include a dry_run trace scene (algorithms/systems) or a worked_example with runnable code.';
-      continue;
+      if (!lastAttempt) {
+        problem = 'the plan has no executable beat — include a dry_run trace scene (algorithms/systems) or a worked_example with runnable code.';
+        continue;
+      }
+      console.error('[coding-instructor] plan still had no executable beat after repair — appending a deterministic dry_run brief rather than losing the lesson');
+      scenes.push({
+        title: 'Dry Run — Watch the Algorithm Execute',
+        pedagogicalRole: 'dry_run',
+        directive: 'Run the algorithm from this material on ONE small concrete input and trace it step by step: name what each variable means, then walk every step showing the real state change, and read the answer out of the final state.',
+        focusChunkIds: allChunkIds,
+        focusFigureIds: [],
+      });
     }
     if (!scenes.some((scene) => scene.pedagogicalRole === 'practice')) {
-      problem = 'the plan has no practice scene — retrieval questions with worked answers are mandatory.';
-      continue;
+      if (!lastAttempt) {
+        problem = 'the plan has no practice scene — retrieval questions with worked answers are mandatory.';
+        continue;
+      }
+      console.error('[coding-instructor] plan still had no practice scene after repair — appending a deterministic practice brief rather than losing the lesson');
+      scenes.push({
+        title: 'Practice — Check Your Understanding',
+        pedagogicalRole: 'practice',
+        directive: 'Create a QUIZ checkpoint: 2-3 concrete questions with real values from this material, plausible wrong choices, and explanations that teach why the right answer is right.',
+        focusChunkIds: allChunkIds,
+        focusFigureIds: [],
+      });
     }
     return { lessonTitle: String(json.lessonTitle || sourcePack.title).trim(), scenes, usage };
   }

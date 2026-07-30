@@ -222,3 +222,34 @@ test('coding material is architected by the Coding Instructor, not the general T
   });
   assert.deepEqual(planners, ['instructor', 'teacher']);
 });
+
+// SINGLE POINT OF FAILURE (measured 2026-07-30): a 12-scene lesson died on the FIRST call,
+// the domain classifier, before any scene existed. Classification only selects a specialist
+// teacher — losing it must cost SPECIALISM, never the lesson.
+test('a dead domain-router call degrades to the Universal Teacher instead of killing the lesson', async () => {
+  let sawGeneral = null;
+  const lesson = await generateLessonFromText(TEXT, {
+    agents: {
+      routeDomain: async () => { throw new Error('Qwen call failed for agent "domain_router": Request timed out.'); },
+      designPedagogy: async ({ sourcePack, domain }) => {
+        sawGeneral = domain;
+        return {
+          lessonTitle: 'Survived The Router',
+          scenes: [{ title: 'Only', pedagogicalRole: 'intuition', directive: 'x', focusChunkIds: [sourcePack.chunks[0].id] }],
+          usage: null,
+        };
+      },
+      generateScene: async (focused, { sceneId }) => ({
+        scene: { sceneId, layout: 'teacher_notebook_code', objects: [{ id: 'o1', objectType: 't', renderHint: 'text', region: 'notebook_area', content: 'x', sourceRef: { chunkId: focused.chunks[0].id } }], voiceLines: [{ id: 'v1', text: 'Line.', targetObjectId: 'o1' }] },
+        timeline: { sceneId, timingSource: 'provisional', actions: [] },
+        durationMs: 5000,
+        reviewRounds: 0,
+      }),
+    },
+  });
+
+  assert.equal(lesson.lessonTitle, 'Survived The Router', 'the lesson was built despite the classifier dying');
+  assert.equal(lesson.scenes.length, 1);
+  assert.equal(sawGeneral, 'general', "the planner was told 'general' — the documented fallback, not a guess");
+  assert.equal(lesson.domain, 'general', 'the stored manifest records the honest domain');
+});

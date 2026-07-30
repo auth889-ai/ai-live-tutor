@@ -3,8 +3,29 @@
 // honest failure (no fallbacks). Transport: LangChain ChatOpenAI over the
 // OpenAI-compatible DashScope endpoint (user decision 2026-07-13).
 
+import dns from 'node:dns';
+
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
+
+// IPv4 FIRST — hardening for hosts whose IPv6 route to Alibaba is broken (containers and
+// some CI/agent sandboxes commonly are). The MAAS workspace gateway publishes AAAA records
+// (240b:4005:…) alongside its A records, and Node's default DNS order is `verbatim`, so it
+// dials IPv6 first; where that route is dead every connection hangs until undici's 10s
+// connect cap and dies as UND_ERR_CONNECT_TIMEOUT ("Request timed out" one layer up). curl
+// never showed the problem because curl races both families (Happy Eyeballs); Node does not.
+// Measured 2026-07-30 on one such host, same endpoint and key: IPv6-first failed after
+// 10.5s, IPv4-first returned HTTP 200 in 1.16s. Set here because this module is the ONE
+// door every provider call passes through, so the fix reaches the web app, the worker and
+// every script without touching any of them. On a healthy dual-stack host this changes
+// nothing measurable. Escape hatch for IPv6-only networks: QWEN_DNS_ORDER=verbatim.
+if ((process.env.QWEN_DNS_ORDER ?? 'ipv4first') === 'ipv4first') {
+  try {
+    dns.setDefaultResultOrder('ipv4first');
+  } catch {
+    // Older runtimes without the API: leave the default order alone rather than crash.
+  }
+}
 
 const DEFAULT_BASE_URL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1';
 

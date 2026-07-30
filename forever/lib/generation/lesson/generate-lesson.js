@@ -36,7 +36,20 @@ export async function generateLessonFromSourcePack(sourcePack, { agents = {}, on
   // material goes to the Coding Instructor (brute->better->optimal arc with mandatory
   // dry-run traces); everything else to the general Teacher. Same brief contract out.
   onProgress({ phase: 'routing', message: 'Identifying the subject domain' });
-  const { domain } = await routeDomain({ sourcePack });
+  // SINGLE POINT OF FAILURE, REMOVED (measured 2026-07-30: a whole 12-scene lesson died on
+  // this ONE call — `domain_router: Request timed out` — before a single scene existed).
+  // Classification is an OPTIMISATION: it picks a specialist teacher. The Universal Teacher
+  // handles 'general' perfectly well, and domain-router's own contract already says it
+  // "falls back to 'general' on any doubt" — a dead classification call is the deepest
+  // possible doubt. So a transport failure here degrades the lesson's SPECIALISM, it no
+  // longer destroys the lesson. Loud, never silent: the fallback is logged with its reason.
+  let domain = 'general';
+  try {
+    ({ domain } = await routeDomain({ sourcePack }));
+  } catch (error) {
+    console.error(`[lesson] domain routing failed (${String(error?.message ?? error).slice(0, 160)}) — teaching as 'general' with the Universal Teacher rather than losing the lesson`);
+    onProgress({ phase: 'routing', message: 'Subject routing unavailable — teaching with the Universal Teacher' });
+  }
   // ONE SPECIALIST TEACHER PER COURSE (user design): coding -> the Coding Instructor;
   // the 14 course domains -> their own named teacher agent; anything else -> the
   // Universal Teacher. Injected stubs keep overriding everything for tests.
